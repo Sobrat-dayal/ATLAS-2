@@ -1,11 +1,12 @@
 import logging
 from typing import AsyncGenerator
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from .engine import create_engine, redact_database_url
-from .session import create_session_factory
 from .errors import DatabaseConfigurationError
+from .session import create_session_factory
 
 logger = logging.getLogger(__name__)
 

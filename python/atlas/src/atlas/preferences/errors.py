@@ -1,5 +1,5 @@
-from typing import Optional, Any
 from atlas.core.exceptions import AtlasError
+
 
 class PreferenceError(AtlasError):
     pass

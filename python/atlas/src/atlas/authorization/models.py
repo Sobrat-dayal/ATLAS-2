@@ -1,16 +1,15 @@
 import uuid
 from datetime import datetime, timezone
+from typing import List, Optional
+
 from sqlalchemy import (
     Boolean,
-    Column,
     DateTime,
     ForeignKey,
-    String,
     Text,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship, Mapped, mapped_column
-from typing import List, Optional
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from atlas.database import Base
 

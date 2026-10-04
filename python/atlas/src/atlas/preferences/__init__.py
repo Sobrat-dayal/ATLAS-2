@@ -1,15 +1,15 @@
+from .errors import (
+    InvalidPreferenceKeyError,
+    InvalidPreferencePayloadError,
+    PreferenceConflictError,
+    PreferenceError,
+    PreferenceNotFoundError,
+    PreferenceTooLargeError,
+    UnsupportedPreferenceVersionError,
+)
 from .models import UserPreference
 from .repository import UserPreferenceRepository
 from .service import UserPreferenceService
-from .errors import (
-    PreferenceError,
-    PreferenceNotFoundError,
-    InvalidPreferenceKeyError,
-    InvalidPreferencePayloadError,
-    UnsupportedPreferenceVersionError,
-    PreferenceTooLargeError,
-    PreferenceConflictError
-)
 
 __all__ = [
     "UserPreference",

@@ -1,11 +1,10 @@
-from typing import FrozenSet, Set
-import uuid
+import os
+from typing import FrozenSet
 
 from atlas.auth import AuthPrincipal
-import os
 
+from .errors import AuthorizationUnavailableError, PermissionDeniedError
 from .repository import AuthorizationRepository
-from .errors import PermissionDeniedError, InvalidRoleError, AuthorizationUnavailableError
 from .types import PermissionCode
 
 

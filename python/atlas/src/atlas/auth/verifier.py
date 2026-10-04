@@ -11,14 +11,14 @@ The JWKS URL is derived from the Supabase project URL:
 
 from __future__ import annotations
 
+import json
 import logging
 import time
-from typing import Any, Dict, List, Optional
-from urllib.request import urlopen, Request
-import json
+from typing import Any, Optional
+from urllib.request import Request, urlopen
 
 import jwt
-from jwt import PyJWK, PyJWKSet
+from jwt import PyJWKSet
 
 from .principal import AuthPrincipal
 

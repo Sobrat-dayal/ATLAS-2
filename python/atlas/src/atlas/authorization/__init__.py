@@ -1,12 +1,12 @@
 from .errors import (
     AuthorizationError,
-    PermissionDeniedError,
     AuthorizationUnavailableError,
     InvalidRoleError,
+    PermissionDeniedError,
     UnknownPermissionError,
 )
-from .models import AuthzRole, AuthzPermission, AuthzRolePermission, AuthzUserRole
-from .permissions import PermissionRiskClass, PermissionCode, CANONICAL_PERMISSIONS
+from .models import AuthzPermission, AuthzRole, AuthzRolePermission, AuthzUserRole
+from .permissions import CANONICAL_PERMISSIONS, PermissionCode, PermissionRiskClass
 from .repository import AuthorizationRepository
 from .service import AuthorizationContext, AuthorizationService
 

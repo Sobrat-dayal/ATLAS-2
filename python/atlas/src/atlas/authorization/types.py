@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+
 class PermissionRiskClass(StrEnum):
     READ = "read"
     WRITE = "write"

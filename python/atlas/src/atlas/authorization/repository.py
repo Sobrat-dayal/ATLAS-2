@@ -1,10 +1,10 @@
-from typing import Sequence, Optional, List
 import uuid
-from sqlalchemy import select, and_, delete
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from typing import Optional, Sequence
 
-from .models import AuthzRole, AuthzPermission, AuthzUserRole, AuthzRolePermission
+from sqlalchemy import and_, delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .models import AuthzPermission, AuthzRole, AuthzRolePermission, AuthzUserRole
 
 
 class AuthorizationRepository:

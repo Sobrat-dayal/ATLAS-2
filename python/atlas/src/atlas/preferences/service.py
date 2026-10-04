@@ -1,17 +1,17 @@
 import json
 import uuid
-from typing import Sequence, Any, Optional
+from typing import Any, Optional, Sequence
 
-from .repository import UserPreferenceRepository
-from .models import UserPreference
 from .errors import (
     InvalidPreferenceKeyError,
     InvalidPreferencePayloadError,
-    PreferenceTooLargeError,
     PreferenceConflictError,
     PreferenceNotFoundError,
-    UnsupportedPreferenceVersionError
+    PreferenceTooLargeError,
+    UnsupportedPreferenceVersionError,
 )
+from .models import UserPreference
+from .repository import UserPreferenceRepository
 
 # Canonical Registry of valid account-sync preferences
 VALID_PREFERENCE_KEYS = {

@@ -1,7 +1,7 @@
 import uuid
-from typing import Sequence, Optional, Any
+from typing import Any, Optional, Sequence
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import UserPreference

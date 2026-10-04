@@ -22,6 +22,7 @@ from atlas_api.config import get_settings
 import atlas.authorization.models  # noqa: F401
 import atlas.preferences.models  # noqa: F401
 import atlas.entities.models  # noqa: F401
+import atlas.instruments.models  # noqa: F401
 # add your model's MetaData object here
 # for 'autogenerate' support
 target_metadata = Base.metadata
