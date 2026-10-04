@@ -8,10 +8,10 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default: "border-transparent bg-atlas-surface-hover text-atlas-text-primary",
-        primary: "border-transparent bg-[#1E2B4D] text-[#60A5FA]", // Reusing the primary blue text tone
-        positive: "border-transparent bg-green-900/40 text-atlas-positive",
-        negative: "border-transparent bg-red-900/40 text-atlas-negative",
-        warning: "border-transparent bg-yellow-900/40 text-atlas-warning",
+        primary: "border-transparent bg-atlas-accent-soft text-atlas-accent",
+        positive: "border-transparent bg-atlas-positive/15 text-atlas-positive",
+        negative: "border-transparent bg-atlas-negative/15 text-atlas-negative",
+        warning: "border-transparent bg-atlas-warning/15 text-atlas-warning",
         outline: "text-atlas-text-secondary border-atlas-border-default",
       },
     },

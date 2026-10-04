@@ -17,7 +17,7 @@ export function AtlasResizeHandle({
   return (
     <Separator
       className={cn(
-        "relative flex w-1.5 shrink-0 items-center justify-center bg-transparent transition-colors hover:bg-atlas-blue/20 active:bg-atlas-blue/40 hover:cursor-col-resize active:cursor-col-resize z-10",
+        "relative flex w-1.5 shrink-0 items-center justify-center bg-transparent transition-colors hover:bg-atlas-accent/20 active:bg-atlas-accent/40 hover:cursor-col-resize active:cursor-col-resize z-10",
         // Horizontal support (when parent group is vertical, handle is horizontal)
         "data-[panel-group-direction=vertical]:h-1.5 data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:hover:cursor-row-resize data-[panel-group-direction=vertical]:active:cursor-row-resize",
         // Visual divider

@@ -72,7 +72,7 @@ export function MetricCard({
         {sparkline && (
           <div className="mt-3 h-8 w-full border-b border-dashed border-atlas-border-subtle flex items-end">
              {/* If real chart engine was here, it would render a path. For stage 5 we just want to ensure it has space. */}
-             <div className="h-full w-full opacity-20 bg-gradient-to-t from-atlas-blue to-transparent"></div>
+             <div className="h-full w-full opacity-20 bg-gradient-to-t from-atlas-accent to-transparent"></div>
           </div>
         )}
       </PanelContent>

@@ -13,7 +13,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (moduleFullscreen) {
     return (
-      <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[#0A0D14] text-white">
+      <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-atlas-bg-0 text-atlas-text-primary">
         <MainWorkspace>
           {children}
         </MainWorkspace>
@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[#0A0D14] text-white">
+    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-atlas-bg-0 text-atlas-text-primary">
       {/* Persistent Top Layer */}
       <TopBar />
       <MarketTickerBar />

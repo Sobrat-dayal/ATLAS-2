@@ -55,7 +55,7 @@ export default function DataPage() {
                 {/* Vertical split: SQL editor vs Results (Simulated via flex for now, or we can use another split!) */}
                 <AtlasSplit id="layout.data.preview.vertical" direction="vertical" defaultLayout={[30, 70]}>
                   <AtlasPanel id="data.query" minSize={20} defaultSize={30} className="p-4 border-b border-atlas-border-default">
-                    <div className="font-mono text-sm text-atlas-blue mb-2">SELECT * FROM SEC_EDGAR LIMIT 100;</div>
+                    <div className="font-mono text-sm text-atlas-accent mb-2">SELECT * FROM SEC_EDGAR LIMIT 100;</div>
                     <div className="text-xs text-atlas-text-muted">Press Ctrl+Enter to execute</div>
                   </AtlasPanel>
                   <AtlasResizeHandle />

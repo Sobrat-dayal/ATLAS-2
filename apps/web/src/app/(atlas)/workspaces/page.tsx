@@ -43,11 +43,11 @@ export default function WorkspacesPage() {
               <div>
                 <h4 className="text-xs font-semibold text-atlas-text-primary uppercase tracking-wider mb-3">Saved Layouts</h4>
                 <div className="space-y-2">
-                  <div className="p-3 border border-atlas-border-default rounded-sm hover:border-atlas-blue transition-colors cursor-pointer bg-atlas-surface-hover">
+                  <div className="p-3 border border-atlas-border-default rounded-sm hover:border-atlas-accent transition-colors cursor-pointer bg-atlas-surface-hover">
                     <div className="text-sm font-medium">Morning Research</div>
                     <div className="text-xs text-atlas-text-muted mt-1">3 Panels • News, Chart, Order Book</div>
                   </div>
-                  <div className="p-3 border border-atlas-border-default rounded-sm hover:border-atlas-blue transition-colors cursor-pointer bg-atlas-surface-hover">
+                  <div className="p-3 border border-atlas-border-default rounded-sm hover:border-atlas-accent transition-colors cursor-pointer bg-atlas-surface-hover">
                     <div className="text-sm font-medium">Global Macro</div>
                     <div className="text-xs text-atlas-text-muted mt-1">2 Panels • Map, Event Feed</div>
                   </div>

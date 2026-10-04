@@ -4,11 +4,11 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "../utils/cn"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-sm text-sm font-medium ring-offset-atlas-bg-0 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-atlas-blue disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-sm text-sm font-medium ring-offset-atlas-bg-0 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-atlas-accent disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        primary: "bg-atlas-blue text-white hover:bg-atlas-blue-hover",
+        primary: "bg-atlas-accent text-white hover:bg-atlas-accent-hover",
         secondary: "bg-atlas-surface-2 border border-atlas-border-default text-atlas-text-primary hover:bg-atlas-surface-hover hover:border-atlas-border-strong",
         ghost: "hover:bg-atlas-surface-hover text-atlas-text-primary",
         danger: "bg-atlas-negative text-white hover:bg-red-600",

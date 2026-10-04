@@ -57,9 +57,9 @@ export function TabsTrigger({ className, value, children, ...props }: TabsTrigge
       aria-selected={isActive}
       onClick={() => context.onValueChange(value)}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap px-4 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-atlas-blue disabled:pointer-events-none disabled:opacity-50 border-b-2",
+        "inline-flex items-center justify-center whitespace-nowrap px-4 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-atlas-accent disabled:pointer-events-none disabled:opacity-50 border-b-2",
         isActive
-          ? "border-atlas-blue text-atlas-text-primary"
+          ? "border-atlas-accent text-atlas-text-primary"
           : "border-transparent text-atlas-text-muted hover:text-atlas-text-secondary hover:border-atlas-border-strong",
         className
       )}
@@ -84,7 +84,7 @@ export function TabsContent({ className, value, children, ...props }: TabsConten
     <div
       role="tabpanel"
       className={cn(
-        "mt-2 ring-offset-atlas-bg-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-atlas-blue",
+        "mt-2 ring-offset-atlas-bg-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-atlas-accent",
         className
       )}
       {...props}

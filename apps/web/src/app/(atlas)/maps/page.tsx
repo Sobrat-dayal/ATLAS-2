@@ -44,7 +44,7 @@ export default function MapsPage() {
 
           {/* Main Map Content - No background, simulates map canvas */}
           <AtlasPanel id="maps.canvas" minSize={40} defaultSize={65}>
-            <div className="h-full w-full bg-[#0a101d] flex flex-col items-center justify-center text-atlas-text-muted">
+            <div className="h-full w-full bg-atlas-surface-1 flex flex-col items-center justify-center text-atlas-text-muted">
                <MapPin className="w-12 h-12 mb-4 text-atlas-border-strong" />
                <p className="text-xl font-medium text-atlas-text-secondary">Global Geospatial Canvas</p>
                <p className="text-sm mt-2">Map Engine Initializing...</p>

@@ -43,7 +43,7 @@ export default function AIPage() {
           {/* AI Workspace */}
           <AtlasPanel id="ai.workspace" minSize={40} defaultSize={55} className="flex flex-col bg-atlas-bg-0">
             <div className="flex-1 p-6 flex flex-col items-center justify-center text-atlas-text-muted">
-              <Bot className="w-12 h-12 mb-4 text-atlas-blue" />
+              <Bot className="w-12 h-12 mb-4 text-atlas-accent" />
               <p>How can I help you analyze the markets today?</p>
             </div>
             <div className="p-4 border-t border-atlas-border-default bg-atlas-surface-1">

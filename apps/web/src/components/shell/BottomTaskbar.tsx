@@ -19,29 +19,29 @@ export function BottomTaskbar() {
   ];
 
   return (
-    <div className="flex h-8 shrink-0 flex-col border-t border-[#1E2330] bg-[#0F131C]">
+    <div className="flex h-8 shrink-0 flex-col border-t border-atlas-border-default bg-atlas-surface-1">
       {/* Optional: Future Bottom Panel Area (Rendered here when activeBottomPanel is set) */}
       {activeBottomPanel && (
-        <div className="absolute bottom-8 left-[var(--atlas-sidebar-width,160px)] right-0 h-[260px] border-t border-[#1E2330] bg-[#0F131C] z-20 flex flex-col shadow-lg">
-          <div className="flex h-8 items-center justify-between border-b border-[#1E2330] px-3 bg-[#141824]">
-            <span className="text-xs font-semibold uppercase text-gray-300">{activeBottomPanel}</span>
-            <button onClick={() => setActiveBottomPanel(null)} className="text-gray-500 hover:text-white">✕</button>
+        <div className="absolute bottom-8 left-[var(--atlas-sidebar-width,160px)] right-0 h-[260px] border-t border-atlas-border-default bg-atlas-surface-1 z-20 flex flex-col shadow-lg">
+          <div className="flex h-8 items-center justify-between border-b border-atlas-border-default px-3 bg-atlas-surface-2">
+            <span className="text-xs font-semibold uppercase text-atlas-text-primary">{activeBottomPanel}</span>
+            <button onClick={() => setActiveBottomPanel(null)} className="text-atlas-text-muted hover:text-atlas-text-primary">✕</button>
           </div>
-          <div className="flex-1 p-3 text-sm text-gray-500 overflow-y-auto">
+          <div className="flex-1 p-3 text-sm text-atlas-text-muted overflow-y-auto">
             {activeBottomPanel} panel placeholder. Logic deferred.
           </div>
         </div>
       )}
 
       {/* Taskbar */}
-      <div className="flex h-full items-center justify-between px-2 text-[11px] font-medium uppercase tracking-wider text-gray-400">
+      <div className="flex h-full items-center justify-between px-2 text-[11px] font-medium uppercase tracking-wider text-atlas-text-muted">
         <div className="flex h-full items-center">
           {panels.map((panel) => (
             <button
               key={panel.id}
               onClick={() => togglePanel(panel.id)}
-              className={`flex h-full items-center px-3 transition-colors hover:bg-[#1A202E] hover:text-gray-200 ${
-                activeBottomPanel === panel.id ? "bg-[#1E2B4D] text-[#60A5FA]" : ""
+              className={`flex h-full items-center px-3 transition-colors hover:bg-atlas-surface-hover hover:text-atlas-text-primary ${
+                activeBottomPanel === panel.id ? "bg-atlas-surface-selected text-atlas-accent" : ""
               }`}
             >
               <panel.icon className="mr-1.5 h-3.5 w-3.5" />
@@ -53,8 +53,8 @@ export function BottomTaskbar() {
         <div className="flex h-full items-center">
           <button
             onClick={() => togglePanel("terminal")}
-            className={`flex h-full items-center px-3 transition-colors hover:bg-[#1A202E] hover:text-gray-200 ${
-              activeBottomPanel === "terminal" ? "bg-[#1E2B4D] text-[#60A5FA]" : ""
+            className={`flex h-full items-center px-3 transition-colors hover:bg-atlas-surface-hover hover:text-atlas-text-primary ${
+              activeBottomPanel === "terminal" ? "bg-atlas-surface-selected text-atlas-accent" : ""
             }`}
           >
             <Terminal className="mr-1.5 h-3.5 w-3.5" />

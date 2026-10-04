@@ -24,7 +24,7 @@ export function Sidebar() {
       <div className="flex h-10 items-center justify-end px-2 border-b border-atlas-border-default">
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="p-1 text-atlas-text-muted hover:text-atlas-text-primary focus:outline-none focus:ring-1 focus:ring-atlas-blue rounded-sm"
+          className="p-1 text-atlas-text-muted hover:text-atlas-text-primary focus:outline-none focus:ring-1 focus:ring-atlas-accent rounded-sm"
           title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           aria-label={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
@@ -46,9 +46,9 @@ export function Sidebar() {
               href={module.route}
               title={sidebarCollapsed ? `${module.label}\n${module.description}` : undefined}
               aria-current={isActive ? "page" : undefined}
-              className={`flex items-center px-3 py-1.5 mx-1 mb-0.5 rounded-sm text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-atlas-blue ${
+              className={`flex items-center px-3 py-1.5 mx-1 mb-0.5 rounded-sm text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-atlas-accent ${
                 isActive
-                  ? "bg-atlas-surface-selected text-atlas-blue"
+                  ? "bg-atlas-surface-selected text-atlas-accent"
                   : "text-atlas-text-muted hover:bg-atlas-surface-hover hover:text-atlas-text-primary"
               }`}
             >
@@ -66,7 +66,7 @@ export function Sidebar() {
         <Link
           href="/settings"
           title={sidebarCollapsed ? "Settings" : undefined}
-          className="flex items-center px-1.5 py-1.5 rounded-sm text-sm text-atlas-text-muted hover:bg-atlas-surface-hover hover:text-atlas-text-primary focus:outline-none focus:ring-1 focus:ring-atlas-blue"
+          className="flex items-center px-1.5 py-1.5 rounded-sm text-sm text-atlas-text-muted hover:bg-atlas-surface-hover hover:text-atlas-text-primary focus:outline-none focus:ring-1 focus:ring-atlas-accent"
         >
           <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
           {!sidebarCollapsed && <span className="ml-3">Settings</span>}
@@ -74,7 +74,7 @@ export function Sidebar() {
         <Link
           href="/help"
           title={sidebarCollapsed ? "Help" : undefined}
-          className="flex items-center px-1.5 py-1.5 rounded-sm text-sm text-atlas-text-muted hover:bg-atlas-surface-hover hover:text-atlas-text-primary focus:outline-none focus:ring-1 focus:ring-atlas-blue"
+          className="flex items-center px-1.5 py-1.5 rounded-sm text-sm text-atlas-text-muted hover:bg-atlas-surface-hover hover:text-atlas-text-primary focus:outline-none focus:ring-1 focus:ring-atlas-accent"
         >
           <HelpCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
           {!sidebarCollapsed && <span className="ml-3">Help</span>}

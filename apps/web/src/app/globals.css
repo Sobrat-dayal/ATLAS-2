@@ -1,32 +1,38 @@
 @import "tailwindcss";
 
 @theme {
-  /* Colors */
-  --color-atlas-bg-0: #080B10;
-  --color-atlas-bg-1: #091019;
+  /* Dynamic Semantic Colors */
+  --color-atlas-bg-0: var(--atlas-bg-0);
+  --color-atlas-bg-1: var(--atlas-bg-1);
   
-  --color-atlas-surface-1: #0B111A;
-  --color-atlas-surface-2: #0E1621;
-  --color-atlas-surface-3: #101A26;
-  --color-atlas-surface-hover: #132131;
-  --color-atlas-surface-selected: #102A46;
+  --color-atlas-surface-1: var(--atlas-surface-1);
+  --color-atlas-surface-2: var(--atlas-surface-2);
+  --color-atlas-surface-3: var(--atlas-surface-3);
+  --color-atlas-surface-hover: var(--atlas-surface-hover);
+  --color-atlas-surface-selected: var(--atlas-surface-selected);
   
-  --color-atlas-border-subtle: #152738;
-  --color-atlas-border-default: #1C3449;
-  --color-atlas-border-strong: #245173;
+  --color-atlas-border-subtle: var(--atlas-border-subtle);
+  --color-atlas-border-default: var(--atlas-border-default);
+  --color-atlas-border-strong: var(--atlas-border-strong);
 
-  --color-atlas-text-primary: #F1F5F9;
-  --color-atlas-text-secondary: #AAB7C4;
-  --color-atlas-text-muted: #6F8090;
+  --color-atlas-text-primary: var(--atlas-text-primary);
+  --color-atlas-text-secondary: var(--atlas-text-secondary);
+  --color-atlas-text-muted: var(--atlas-text-muted);
 
-  --color-atlas-blue: #1486F8;
-  --color-atlas-blue-hover: #2696FF;
+  --color-atlas-accent: var(--atlas-accent);
+  --color-atlas-accent-hover: var(--atlas-accent-hover);
+  --color-atlas-accent-soft: var(--atlas-accent-soft);
+  
+  /* Fallbacks for specific hardcoded uses (if needed, but prefer accent) */
+  --color-atlas-blue: var(--atlas-accent);
+  --color-atlas-blue-hover: var(--atlas-accent-hover);
   --color-atlas-cyan: #18BCEB;
   
-  --color-atlas-positive: #11D994;
-  --color-atlas-negative: #FF4D5A;
-  --color-atlas-warning: #F6B73C;
-  --color-atlas-neutral: #7F91A4;
+  /* Financial status colors (stable across themes mostly) */
+  --color-atlas-positive: var(--atlas-positive);
+  --color-atlas-negative: var(--atlas-negative);
+  --color-atlas-warning: var(--atlas-warning);
+  --color-atlas-neutral: var(--atlas-neutral);
 
   /* Font Families */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -39,22 +45,215 @@
   --radius-lg: 8px;
 }
 
+/* =========================================
+   BASE THEME VARIABLES
+   ========================================= */
 :root {
-  --background: var(--color-atlas-bg-0);
-  --foreground: var(--color-atlas-text-primary);
+  color-scheme: dark;
+
+  /* DARK THEME (DEFAULT) */
+  --atlas-bg-0: #080B10;
+  --atlas-bg-1: #091019;
+  
+  --atlas-surface-1: #0B111A;
+  --atlas-surface-2: #0E1621;
+  --atlas-surface-3: #101A26;
+  --atlas-surface-hover: #132131;
+  --atlas-surface-selected: #102A46;
+  
+  --atlas-border-subtle: #152738;
+  --atlas-border-default: #1C3449;
+  --atlas-border-strong: #245173;
+
+  --atlas-text-primary: #F1F5F9;
+  --atlas-text-secondary: #AAB7C4;
+  --atlas-text-muted: #6F8090;
+
+  --atlas-positive: #11D994;
+  --atlas-negative: #FF4D5A;
+  --atlas-warning: #F6B73C;
+  --atlas-neutral: #7F91A4;
+
+  /* Default Base Accent: ATLAS Blue */
+  --atlas-accent-base: #1486F8;
+  --atlas-accent-hover-base: #2696FF;
+  --atlas-accent-soft-base: rgba(20, 134, 248, 0.15);
+
+  --atlas-accent: var(--atlas-accent-base);
+  --atlas-accent-hover: var(--atlas-accent-hover-base);
+  --atlas-accent-soft: var(--atlas-accent-soft-base);
+
+  /* Legacy layout */
+  --background: var(--atlas-bg-0);
+  --foreground: var(--atlas-text-primary);
   
   --atlas-sidebar-width: 160px;
   --atlas-sidebar-collapsed-width: 56px;
   --atlas-topbar-height: 44px;
   --atlas-ticker-height: 28px;
   --atlas-taskbar-height: 32px;
+
+  /* Density: Compact (Default) */
+  --atlas-control-height: 28px;
+  --atlas-table-row-height: 28px;
+  --atlas-toolbar-height: 32px;
+  --atlas-tab-height: 30px;
+  --atlas-panel-padding: 8px;
+  --atlas-section-gap: 8px;
+  --atlas-nav-item-height: 32px;
 }
 
+/* =========================================
+   LIGHT THEME
+   ========================================= */
+[data-theme="light"] {
+  color-scheme: light;
+  
+  --atlas-bg-0: #EDF1F5;
+  --atlas-bg-1: #F5F7FA;
+  
+  --atlas-surface-1: #FFFFFF;
+  --atlas-surface-2: #F7F9FB;
+  --atlas-surface-3: #EEF3F7;
+  --atlas-surface-hover: #E8EEF3;
+  --atlas-surface-selected: #D6E4F0;
+  
+  --atlas-border-subtle: #D9E1E8;
+  --atlas-border-default: #C6D0DA;
+  --atlas-border-strong: #A9B8C7;
+
+  --atlas-text-primary: #101820;
+  --atlas-text-secondary: #4F6070;
+  --atlas-text-muted: #748493;
+
+  /* Slightly darker for contrast on light */
+  --atlas-positive: #0C9E6A;
+  --atlas-negative: #D93643;
+  --atlas-warning: #D1911D;
+  --atlas-neutral: #6B7B8D;
+
+  --atlas-accent: var(--atlas-accent-base);
+  --atlas-accent-hover: var(--atlas-accent-hover-base);
+  --atlas-accent-soft: var(--atlas-accent-soft-base);
+}
+
+/* =========================================
+   TERMINAL THEME
+   ========================================= */
+[data-theme="terminal"] {
+  color-scheme: dark;
+
+  --atlas-bg-0: #05070A;
+  --atlas-bg-1: #070A0E;
+  
+  --atlas-surface-1: #070A0E;
+  --atlas-surface-2: #0A0E13;
+  --atlas-surface-3: #0C1217;
+  --atlas-surface-hover: #101720;
+  --atlas-surface-selected: #0C1E32;
+  
+  --atlas-border-subtle: #111A24;
+  --atlas-border-default: #17222E;
+  --atlas-border-strong: #1E2D3D;
+
+  --atlas-text-primary: #DCE5ED;
+  --atlas-text-secondary: #8798A8;
+  --atlas-text-muted: #566778;
+
+  --atlas-positive: #11D994;
+  --atlas-negative: #FF4D5A;
+  --atlas-warning: #F6B73C;
+  --atlas-neutral: #7F91A4;
+  
+  --atlas-accent: var(--atlas-accent-base);
+  --atlas-accent-hover: var(--atlas-accent-hover-base);
+  --atlas-accent-soft: var(--atlas-accent-soft-base);
+}
+
+/* =========================================
+   ACCENTS
+   ========================================= */
+
+/* Cyan */
+[data-accent="cyan"] {
+  --atlas-accent-base: #18BCEB;
+  --atlas-accent-hover-base: #3ACDF5;
+  --atlas-accent-soft-base: rgba(24, 188, 235, 0.15);
+}
+[data-theme="light"][data-accent="cyan"] {
+  --atlas-accent-base: #0E92BA;
+  --atlas-accent-hover-base: #107594;
+  --atlas-accent-soft-base: rgba(14, 146, 186, 0.15);
+}
+
+/* Emerald */
+[data-accent="emerald"] {
+  --atlas-accent-base: #10B981;
+  --atlas-accent-hover-base: #34D399;
+  --atlas-accent-soft-base: rgba(16, 185, 129, 0.15);
+}
+[data-theme="light"][data-accent="emerald"] {
+  --atlas-accent-base: #059669;
+  --atlas-accent-hover-base: #047857;
+  --atlas-accent-soft-base: rgba(5, 150, 105, 0.15);
+}
+
+/* Amber */
+[data-accent="amber"] {
+  --atlas-accent-base: #F59E0B;
+  --atlas-accent-hover-base: #FBBF24;
+  --atlas-accent-soft-base: rgba(245, 158, 11, 0.15);
+}
+[data-theme="light"][data-accent="amber"] {
+  --atlas-accent-base: #D97706;
+  --atlas-accent-hover-base: #B45309;
+  --atlas-accent-soft-base: rgba(217, 119, 6, 0.15);
+}
+
+/* Blue (already default, but explicit darker for light) */
+[data-theme="light"][data-accent="blue"],
+[data-theme="light"] {
+  --atlas-accent-base: #0B6BC8;
+  --atlas-accent-hover-base: #08519B;
+  --atlas-accent-soft-base: rgba(11, 107, 200, 0.15);
+}
+[data-theme="dark"][data-accent="blue"],
+[data-theme="terminal"][data-accent="blue"] {
+  --atlas-accent-base: #1486F8;
+  --atlas-accent-hover-base: #2696FF;
+  --atlas-accent-soft-base: rgba(20, 134, 248, 0.15);
+}
+
+/* =========================================
+   DENSITY
+   ========================================= */
+[data-density="default"] {
+  --atlas-control-height: 32px;
+  --atlas-table-row-height: 32px;
+  --atlas-toolbar-height: 36px;
+  --atlas-tab-height: 34px;
+  --atlas-panel-padding: 12px;
+  --atlas-section-gap: 12px;
+  --atlas-nav-item-height: 34px;
+}
+
+[data-density="comfortable"] {
+  --atlas-control-height: 36px;
+  --atlas-table-row-height: 38px;
+  --atlas-toolbar-height: 40px;
+  --atlas-tab-height: 38px;
+  --atlas-panel-padding: 16px;
+  --atlas-section-gap: 16px;
+  --atlas-nav-item-height: 38px;
+}
+
+/* =========================================
+   GLOBAL STYLES
+   ========================================= */
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--atlas-bg-0);
+  color: var(--atlas-text-primary);
   overflow: hidden;
-  /* Numerical consistency for financial UI */
   font-variant-numeric: tabular-nums lining-nums;
   -webkit-font-smoothing: antialiased;
 }
@@ -70,15 +269,14 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: var(--color-atlas-border-default);
+  background-color: var(--atlas-border-default);
   border-radius: var(--radius-xs);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-atlas-border-strong);
+  background-color: var(--atlas-border-strong);
 }
 
-/* Tabular Nums utility if ever needed individually */
 .tabular-nums {
   font-variant-numeric: tabular-nums lining-nums;
 }

@@ -8,7 +8,7 @@ interface MainWorkspaceProps {
 
 export function MainWorkspace({ children }: MainWorkspaceProps) {
   return (
-    <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#0A0D14] relative">
+    <main className="flex-1 overflow-y-auto overflow-x-hidden bg-atlas-bg-0 relative">
       <div className="h-full w-full">
         {children}
       </div>
