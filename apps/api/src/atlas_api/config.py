@@ -31,6 +31,16 @@ class Settings(BaseSettings):
     
     slow_request_ms: int = 1000
 
+    # Database Settings
+    database_url: str = "postgresql+asyncpg://atlas:atlas@127.0.0.1:5432/atlas"
+    test_database_url: str = "postgresql+asyncpg://atlas:atlas@127.0.0.1:5432/atlas_test"
+    database_echo: bool = False
+    database_pool_size: int = 5
+    database_max_overflow: int = 10
+    database_pool_timeout: int = 30
+    database_pool_recycle: int = 1800
+    database_health_timeout: int = 3
+
     model_config = SettingsConfigDict(
         env_prefix="ATLAS_",
         env_file=".env",

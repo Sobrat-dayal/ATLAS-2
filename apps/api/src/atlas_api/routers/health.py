@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..config import Settings
 from ..dependencies import get_app_settings
 from ..schemas.health import HealthResponse, ReadinessResponse, VersionResponse
+from ..database import db_manager
 
 router = APIRouter(tags=["System"])
 
@@ -18,7 +19,13 @@ async def health_check(settings: Settings = Depends(get_app_settings)):
 
 @router.get("/ready", response_model=ReadinessResponse)
 async def readiness_check():
-    # Future stages will check DB/Redis connectivity
+    # Perform database connectivity check
+    is_connected = await db_manager.check_connectivity()
+    if not is_connected:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is unavailable"
+        )
     return ReadinessResponse(status="ready")
 
 

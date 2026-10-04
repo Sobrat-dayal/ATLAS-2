@@ -3,7 +3,11 @@ name = "atlas"
 version = "0.1.0"
 description = "ATLAS Modular Monolith Backend"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "alembic>=1.20.0",
+    "asyncpg>=0.31.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+]
 
 [build-system]
 requires = ["hatchling"]
