@@ -61,6 +61,7 @@ export async function listBackgroundAssets(): Promise<AtlasBackgroundAsset[]> {
     request.onsuccess = () => {
       // Exclude blob and thumbnail to save memory when listing
       const assets = request.result.map((record: AssetRecord) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { blob, thumbnail, ...meta } = record;
         return meta;
       });

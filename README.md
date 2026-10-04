@@ -20,10 +20,20 @@ ATLAS uses a monorepo architecture:
 - `docs/`: Full documentation
 
 ## Setup
-- **Python**: Use `uv` with python 3.12 (`python/atlas/pyproject.toml`)
+- **Python**: Use `uv` with python 3.12 (`python/atlas/pyproject.toml`, `apps/api/pyproject.toml`)
 - **Node**: Use `pnpm` workspaces (`pnpm-workspace.yaml`, `package.json`)
 
-## Documentation
+## Run
+To run the full stack locally:
+
+```bash
+# Terminal A (Frontend):
+pnpm run dev:web
+
+# Terminal B (Backend):
+cd apps/api
+uv run uvicorn atlas_api.main:app --reload
+```
 The full product specification is located in the `docs/` directory. Check the [Documentation Index](docs/README.md) for more details.
 
 ## The 20 Modules

@@ -53,6 +53,7 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
 
   // Initial load
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsClient(true);
     try {
       const saved = localStorage.getItem(STORAGE_KEY);

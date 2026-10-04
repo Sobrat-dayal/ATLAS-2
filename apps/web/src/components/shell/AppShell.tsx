@@ -8,6 +8,7 @@ import { MainWorkspace } from "./MainWorkspace";
 import { AgentDock } from "./AgentDock";
 import { BottomTaskbar } from "./BottomTaskbar";
 import { MarketTickerBar } from "./MarketTickerBar";
+import { SectionSettingsDrawer } from "@/components/settings/SectionSettingsDrawer";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { moduleFullscreen } = useShellState();
@@ -43,6 +44,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Bottom Layer */}
       <BottomTaskbar />
+      
+      {/* Overlays */}
+      <SectionSettingsDrawer />
     </div>
   );
 }

@@ -2,6 +2,13 @@
 
 This document records the major architectural and product decisions established. These decisions are binding for future implementation stages.
 
+## Stage 11: Backend Foundation
+13. **FastAPI**: Primary ATLAS backend HTTP framework, maintaining modular monolith structure.
+14. **Configuration**: Uses `pydantic-settings` for typed environment configurations.
+15. **Observability**: Request IDs and unified structured logging are mandatory.
+16. **Errors**: Errors use a stable ATLAS error envelope format (`AtlasError`).
+17. **Separation**: Domain logic is decoupled from HTTP routers.
+
 ## Stage 1: Core Product & Navigation
 1. The 20-module navigation structure is strictly frozen.
 2. The `Home` module is the default launch page and serves as the operational command center.

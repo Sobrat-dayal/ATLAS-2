@@ -8,7 +8,7 @@ ATLAS uses a monorepo structure to centrally manage the web frontend, Python bac
 ## Major Directories
 
 - `apps/web`: The primary Next.js/React web frontend application.
-- `apps/api`: The structural home for the future FastAPI backend application.
+- `apps/api`: The structural home for the FastAPI backend application entry point and HTTP infrastructure (Stage 11).
 - `packages/`: Shared frontend packages (`ui`, `config`, `types`, `schemas`).
 - `python/atlas/`: The core Python modular monolith, split into domain subpackages.
 - `workers/`: Placeholder for future background workers (e.g., market-worker, ai-worker).

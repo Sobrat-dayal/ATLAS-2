@@ -35,6 +35,7 @@ export function BackgroundProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem(BACKGROUND_STORAGE_KEY);
       if (stored) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSettings({ ...DEFAULT_BACKGROUND_SETTINGS, ...JSON.parse(stored) });
       }
     } catch (e) {
@@ -72,6 +73,7 @@ export function BackgroundProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setActiveImageUrl(null);
       });
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveImageUrl(null);
     }
 

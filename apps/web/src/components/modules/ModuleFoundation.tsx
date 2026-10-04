@@ -1,4 +1,5 @@
 import { AtlasModuleDefinition } from "@/config/atlas-modules";
+import { PageHeader } from "@/design-system/patterns/PageHeader";
 
 interface ModuleFoundationProps {
   module: AtlasModuleDefinition;
@@ -8,13 +9,11 @@ interface ModuleFoundationProps {
 export function ModuleFoundation({ module, plannedStage }: ModuleFoundationProps) {
   return (
     <div className="flex h-full flex-col p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-atlas-text-primary flex items-center">
-          <module.icon className="mr-3 h-6 w-6 text-atlas-accent" />
-          {module.label}
-        </h1>
-        <p className="mt-2 text-atlas-text-secondary max-w-2xl">{module.description}</p>
-      </div>
+      <PageHeader 
+        title={<span className="flex items-center"><module.icon className="mr-3 h-6 w-6 text-atlas-accent" />{module.label}</span>}
+        description={module.description}
+        moduleId={module.id}
+      />
 
       <div className="flex-1 flex items-center justify-center rounded-md border border-dashed border-atlas-border-default bg-atlas-surface-1 p-8 text-center">
         <div className="max-w-md">
