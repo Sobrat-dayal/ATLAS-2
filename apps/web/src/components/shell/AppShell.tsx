@@ -1,6 +1,7 @@
 "use client";
 
 import { useShellState } from "@/hooks/shell/useShellState";
+import { AtlasBackgroundLayer } from "./AtlasBackgroundLayer";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { MainWorkspace } from "./MainWorkspace";
@@ -13,7 +14,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (moduleFullscreen) {
     return (
-      <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-atlas-bg-0 text-atlas-text-primary">
+      <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-atlas-bg-0 text-atlas-text-primary relative z-0">
+        <AtlasBackgroundLayer />
         <MainWorkspace>
           {children}
         </MainWorkspace>
@@ -22,7 +24,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-atlas-bg-0 text-atlas-text-primary">
+    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-atlas-bg-0 text-atlas-text-primary relative z-0">
+      <AtlasBackgroundLayer />
       {/* Persistent Top Layer */}
       <TopBar />
       <MarketTickerBar />

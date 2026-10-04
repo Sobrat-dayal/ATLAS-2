@@ -79,6 +79,9 @@ Contextual settings specific to a module. Examples:
 
 ## Background / Watermark System
 
-Users can customize the application background without compromising readability.
-- **Features:** Image upload, saved library, opacity, blur, brightness, contrast, grayscale, dark overlay, watermark mode.
-- **Scope:** Backgrounds can be global, section-specific, or workspace-specific.
+Users can customize the application background without compromising financial readability. Stage 8 introduced the foundational global background engine.
+- **Visual Layer**: The custom background resides in a separate visual layer beneath all application content (`AtlasBackgroundLayer`), preventing the need for content opacity manipulation (glassmorphism).
+- **Features**: Image upload (local-only via IndexedDB), configurable opacity, blur, brightness, contrast, saturation, grayscale, fit, position, and readability overlay.
+- **Quick Access**: Accessible via a top-bar quick control button for fast adjustments and live previewing.
+- **Scope**: The architecture supports a Global Background state and prepares hooks for future Workspace Override logic.
+- **Future Integration**: The background state (`BackgroundProvider`) is built to seamlessly integrate with the Stage 9 Global Settings module.

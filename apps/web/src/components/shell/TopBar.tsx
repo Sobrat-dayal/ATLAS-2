@@ -5,6 +5,7 @@ import { GlobalSearch } from "./GlobalSearch";
 import { useEffect, useState } from "react";
 import { useShellState } from "@/hooks/shell/useShellState";
 import { DevAppearanceSwitcher } from "./DevAppearanceSwitcher";
+import { BackgroundQuickControl } from "./BackgroundQuickControl";
 
 export function TopBar() {
   const [utcTime, setUtcTime] = useState("");
@@ -60,6 +61,7 @@ export function TopBar() {
           </button>
         )}
 
+        <BackgroundQuickControl />
         <DevAppearanceSwitcher />
 
         {/* User Profile Hook */}

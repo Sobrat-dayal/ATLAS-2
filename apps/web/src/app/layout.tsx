@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 import { AppearanceProvider } from "@/hooks/appearance";
+import { BackgroundProvider } from "@/hooks/background";
 
 export default function RootLayout({
   children,
@@ -50,11 +51,13 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`}>
         <AppearanceProvider>
-          <ShellProvider>
-            <AppShell>
-              {children}
-            </AppShell>
-          </ShellProvider>
+          <BackgroundProvider>
+            <ShellProvider>
+              <AppShell>
+                {children}
+              </AppShell>
+            </ShellProvider>
+          </BackgroundProvider>
         </AppearanceProvider>
       </body>
     </html>
