@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-atlas-bg-0: #080B10;
+  --color-atlas-bg-1: #091019;
+  
+  --color-atlas-surface-1: #0B111A;
+  --color-atlas-surface-2: #0E1621;
+  --color-atlas-surface-3: #101A26;
+  --color-atlas-surface-hover: #132131;
+  --color-atlas-surface-selected: #102A46;
+  
+  --color-atlas-border-subtle: #152738;
+  --color-atlas-border-default: #1C3449;
+  --color-atlas-border-strong: #245173;
+
+  --color-atlas-text-primary: #F1F5F9;
+  --color-atlas-text-secondary: #AAB7C4;
+  --color-atlas-text-muted: #6F8090;
+
+  --color-atlas-blue: #1486F8;
+  --color-atlas-blue-hover: #2696FF;
+  --color-atlas-cyan: #18BCEB;
+  
+  --color-atlas-positive: #11D994;
+  --color-atlas-negative: #FF4D5A;
+  --color-atlas-warning: #F6B73C;
+  --color-atlas-neutral: #7F91A4;
+
+  /* Font Families */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Radii */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+:root {
+  --background: var(--color-atlas-bg-0);
+  --foreground: var(--color-atlas-text-primary);
+  
+  --atlas-sidebar-width: 160px;
+  --atlas-sidebar-collapsed-width: 56px;
+  --atlas-topbar-height: 44px;
+  --atlas-ticker-height: 28px;
+  --atlas-taskbar-height: 32px;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  overflow: hidden;
+  /* Numerical consistency for financial UI */
+  font-variant-numeric: tabular-nums lining-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom minimal scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-atlas-border-default);
+  border-radius: var(--radius-xs);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-atlas-border-strong);
+}
+
+/* Tabular Nums utility if ever needed individually */
+.tabular-nums {
+  font-variant-numeric: tabular-nums lining-nums;
+}

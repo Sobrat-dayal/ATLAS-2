@@ -1,0 +1,3 @@
+"""
+ATLAS Economics Domain
+"""

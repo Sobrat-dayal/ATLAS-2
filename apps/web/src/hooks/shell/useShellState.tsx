@@ -1,0 +1,91 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+
+interface ShellState {
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  
+  agentDockOpen: boolean;
+  setAgentDockOpen: (open: boolean) => void;
+  
+  agentDockWidth: number;
+  setAgentDockWidth: (width: number) => void;
+  
+  activeBottomPanel: string | null;
+  setActiveBottomPanel: (panel: string | null) => void;
+}
+
+const defaultState: ShellState = {
+  sidebarCollapsed: false,
+  setSidebarCollapsed: () => {},
+  agentDockOpen: false,
+  setAgentDockOpen: () => {},
+  agentDockWidth: 320,
+  setAgentDockWidth: () => {},
+  activeBottomPanel: null,
+  setActiveBottomPanel: () => {},
+};
+
+const ShellContext = createContext<ShellState>(defaultState);
+
+export function ShellProvider({ children }: { children: ReactNode }) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [agentDockOpen, setAgentDockOpen] = useState(false);
+  const [agentDockWidth, setAgentDockWidth] = useState(320);
+  const [activeBottomPanel, setActiveBottomPanel] = useState<string | null>(null);
+
+  // Hydrate from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("atlas-shell-state");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.sidebarCollapsed === "boolean") setSidebarCollapsed(parsed.sidebarCollapsed);
+        if (typeof parsed.agentDockOpen === "boolean") setAgentDockOpen(parsed.agentDockOpen);
+        if (typeof parsed.agentDockWidth === "number") setAgentDockWidth(parsed.agentDockWidth);
+        if (typeof parsed.activeBottomPanel !== "undefined") setActiveBottomPanel(parsed.activeBottomPanel);
+      }
+    } catch (e) {
+      console.warn("Failed to parse shell state from localStorage");
+    }
+  }, []);
+
+  // Save to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "atlas-shell-state",
+        JSON.stringify({
+          sidebarCollapsed,
+          agentDockOpen,
+          agentDockWidth,
+          activeBottomPanel,
+        })
+      );
+    } catch (e) {
+      console.warn("Failed to save shell state to localStorage");
+    }
+  }, [sidebarCollapsed, agentDockOpen, agentDockWidth, activeBottomPanel]);
+
+  return (
+    <ShellContext.Provider
+      value={{
+        sidebarCollapsed,
+        setSidebarCollapsed,
+        agentDockOpen,
+        setAgentDockOpen,
+        agentDockWidth,
+        setAgentDockWidth,
+        activeBottomPanel,
+        setActiveBottomPanel,
+      }}
+    >
+      {children}
+    </ShellContext.Provider>
+  );
+}
+
+export function useShellState() {
+  return useContext(ShellContext);
+}
