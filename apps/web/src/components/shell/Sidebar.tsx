@@ -5,10 +5,12 @@ import { ATLAS_MODULES_LIST, getActiveAtlasModule } from "@/config/atlas-modules
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Settings, HelpCircle } from "lucide-react";
+import { useAuthorization } from "@/hooks/authorization";
 
 export function Sidebar() {
   const { sidebarCollapsed, setSidebarCollapsed } = useShellState();
   const pathname = usePathname();
+  const { canViewModule, isLoading } = useAuthorization();
   
   // Resolve active module safely
   const activeModule = getActiveAtlasModule(pathname);
@@ -38,7 +40,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 custom-scrollbar" aria-label="Main Navigation">
-        {ATLAS_MODULES_LIST.map((module) => {
+        {isLoading ? null : ATLAS_MODULES_LIST.filter((module) => canViewModule(module.id)).map((module) => {
           const isActive = activeId === module.id;
           return (
             <Link

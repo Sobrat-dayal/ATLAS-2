@@ -20,7 +20,11 @@ The backend uses a standard modular FastAPI structure located in `apps/api/src/a
 - **Capability Layer**: Future features (e.g., Agents, UI, Workflows) will route operations through a Shared Capability Layer that handles permissions and orchestrates access to Domain Packages.
 - **Dependency Direction**:
   ```text
-  Frontend -> API -> Application/Capability Layer -> Domain Packages -> Persistence/Providers
+  Frontend -> API Router -> Application/Service Layer -> Repository Layer -> Persistence/Providers
+  ```
+  Example (Entities):
+  ```text
+  Entity Router -> EntityService -> EntityRepository -> PostgreSQL
   ```
 - **Future Expansions**:
   - *Authentication*: Not yet implemented (Stage 13).

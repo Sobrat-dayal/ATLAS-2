@@ -11,6 +11,7 @@ ATLAS uses a monorepo structure to centrally manage the web frontend, Python bac
 - `apps/api`: The structural home for the FastAPI backend application entry point and HTTP infrastructure (Stage 11).
 - `packages/`: Shared frontend packages (`ui`, `config`, `types`, `schemas`).
 - `python/atlas/`: The core Python modular monolith, split into domain subpackages.
+  - `python/atlas/src/atlas/entities`: Universal entity domain (Stage 16).
 - `workers/`: Placeholder for future background workers (e.g., market-worker, ai-worker).
 - `agents/`: Built-in agent manifests, templates, and downloadable agent packages.
 - `workflows/`: Portable visual-workflow definitions and templates.

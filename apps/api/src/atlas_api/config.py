@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     database_pool_recycle: int = 1800
     database_health_timeout: int = 3
 
+    # Supabase Authentication
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_jwt_secret: str = ""
+
     model_config = SettingsConfigDict(
         env_prefix="ATLAS_",
         env_file=".env",

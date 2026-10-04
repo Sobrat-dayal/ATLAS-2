@@ -19,7 +19,9 @@ if config.config_file_name is not None:
 import os
 from atlas.database import Base, normalize_database_url
 from atlas_api.config import get_settings
-
+import atlas.authorization.models  # noqa: F401
+import atlas.preferences.models  # noqa: F401
+import atlas.entities.models  # noqa: F401
 # add your model's MetaData object here
 # for 'autogenerate' support
 target_metadata = Base.metadata

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 interface ShellState {
   sidebarCollapsed: boolean;
@@ -41,31 +42,31 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const [activeBottomPanel, setActiveBottomPanel] = useState<string | null>(null);
   const [moduleFullscreen, setModuleFullscreen] = useState(false);
 
+  const { session } = useAuth();
+  const userId = session?.user?.id;
+  const storageKey = userId ? `atlas.user.${userId}.shell-state` : "atlas-shell-state";
+
   // Hydrate from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("atlas-shell-state");
+      const saved = localStorage.getItem(storageKey) || (!userId ? null : localStorage.getItem("atlas-shell-state"));
       if (saved) {
         const parsed = JSON.parse(saved);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (typeof parsed.sidebarCollapsed === "boolean") setSidebarCollapsed(parsed.sidebarCollapsed);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (typeof parsed.agentDockOpen === "boolean") setAgentDockOpen(parsed.agentDockOpen);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (typeof parsed.agentDockWidth === "number") setAgentDockWidth(parsed.agentDockWidth);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (typeof parsed.activeBottomPanel !== "undefined") setActiveBottomPanel(parsed.activeBottomPanel);
       }
     } catch {
       console.warn("Failed to parse shell state from localStorage");
     }
-  }, []);
+  }, [storageKey, userId]);
 
   // Save to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(
-        "atlas-shell-state",
+        storageKey,
         JSON.stringify({
           sidebarCollapsed,
           agentDockOpen,
@@ -76,7 +77,8 @@ export function ShellProvider({ children }: { children: ReactNode }) {
     } catch {
       console.warn("Failed to save shell state to localStorage");
     }
-  }, [sidebarCollapsed, agentDockOpen, agentDockWidth, activeBottomPanel]);
+  }, [sidebarCollapsed, agentDockOpen, agentDockWidth, activeBottomPanel, storageKey]);
+
 
   return (
     <ShellContext.Provider

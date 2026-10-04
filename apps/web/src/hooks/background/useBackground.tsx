@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { AtlasBackgroundSettings, DEFAULT_BACKGROUND_SETTINGS, AtlasBackgroundAsset } from "./types";
 import { getBackgroundAsset, listBackgroundAssets, saveBackgroundAsset, deleteBackgroundAsset } from "@/lib/background-db";
 
@@ -30,12 +31,15 @@ export function BackgroundProvider({ children }: { children: ReactNode }) {
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
   const [assets, setAssets] = useState<AtlasBackgroundAsset[]>([]);
 
+  const { session } = useAuth();
+  const userId = session?.user?.id;
+  const storageKey = userId ? `atlas.user.${userId}.${BACKGROUND_STORAGE_KEY}` : BACKGROUND_STORAGE_KEY;
+
   // Load from localStorage on mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(BACKGROUND_STORAGE_KEY);
+      const stored = localStorage.getItem(storageKey) || (!userId ? null : localStorage.getItem(BACKGROUND_STORAGE_KEY));
       if (stored) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSettings({ ...DEFAULT_BACKGROUND_SETTINGS, ...JSON.parse(stored) });
       }
     } catch (e) {
@@ -44,14 +48,14 @@ export function BackgroundProvider({ children }: { children: ReactNode }) {
     
     // Load asset list
     listBackgroundAssets().then(setAssets).catch(console.error);
-  }, []);
+  }, [storageKey, userId]);
 
   // Save to localStorage when settings change
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(BACKGROUND_STORAGE_KEY, JSON.stringify(settings));
+      localStorage.setItem(storageKey, JSON.stringify(settings));
     }
-  }, [settings]);
+  }, [settings, storageKey]);
 
   // Load image blob URL when active image ID changes
   useEffect(() => {

@@ -77,3 +77,26 @@ This document records the major architectural and product decisions established.
 51. Existing functionality (like the Home screen) is preserved, while foundation pages are injected seamlessly for the remaining unbuilt modules.
 52. The root route `/` performs a permanent redirect to `/home`.
 53. Future permissions, commands, and contexts will directly consume this established module registry.
+
+## Stage 16: Universal Entity Architecture
+80. ATLAS uses a Universal Entity identity model.
+81. Every entity receives an immutable internal UUID `entity_id`.
+82. External identifiers are not primary keys.
+83. Tickers are not primary keys.
+84. Companies and their securities are explicitly separate entities.
+85. Entity types are defined through a canonical registry (`entity_types`).
+86. Each entity has one primary entity type.
+87. Type hierarchy is represented through parent type keys.
+88. The base entity table stays intentionally small.
+89. Specialized attributes live in future specialization tables.
+90. Specialized tables should generally use `entity_id` as PK/FK.
+91. Generic JSON metadata is not used as a substitute for domain schemas in the base entity table.
+92. Canonical names are not globally unique.
+93. Duplicate names are allowed.
+94. Generic entity type changes are not exposed.
+95. Generic public entity creation and deletion are not exposed.
+96. Identifiers, Aliases, Relationships, and Provenance are deferred to Stages 21-24.
+97. Global Context and Search are deferred to Stages 25, 26, and 45.
+98. Provider integration remains deferred.
+99. Entity master data lives in PostgreSQL.
+100. Entity creation must support atomic future specialization transactions without premature auto-commits.

@@ -53,6 +53,7 @@ export interface AtlasModuleDefinition {
   availability: "active" | "foundation" | "coming-soon";
   layoutMode: "standard" | "dense" | "fullBleed";
   settingsNamespace: string;
+  requiredPermission: string;
   aliases?: string[];
   legacyRoutes?: string[];
 }
@@ -68,6 +69,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "active",
     layoutMode: "dense",
     settingsNamespace: "settings.home",
+    requiredPermission: "module.home.view",
   },
   markets: {
     id: "markets",
@@ -79,6 +81,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.markets",
+    requiredPermission: "module.markets.view",
     aliases: ["markets", "market", "mkt", "mkts"],
   },
   charts: {
@@ -91,6 +94,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "fullBleed",
     settingsNamespace: "settings.charts",
+    requiredPermission: "module.charts.view",
     aliases: ["chart", "charts", "ch"],
   },
   watchlists: {
@@ -103,6 +107,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.watchlists",
+    requiredPermission: "module.watchlists.view",
     aliases: ["watchlist", "watchlists", "wl"],
   },
   screeners: {
@@ -115,6 +120,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.screeners",
+    requiredPermission: "module.screeners.view",
     aliases: ["screen", "screener", "screeners", "scr"],
     legacyRoutes: ["/screener"],
   },
@@ -128,6 +134,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.companies",
+    requiredPermission: "module.companies.view",
     aliases: ["company", "companies", "co"],
   },
   economics: {
@@ -140,6 +147,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.economics",
+    requiredPermission: "module.economics.view",
     aliases: ["economics", "economy", "macro", "eco"],
     legacyRoutes: ["/economy"],
   },
@@ -153,6 +161,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.news",
+    requiredPermission: "module.news.view",
     aliases: ["news", "nw"],
   },
   research: {
@@ -165,6 +174,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.research",
+    requiredPermission: "module.research.view",
     aliases: ["research", "res"],
   },
   maps: {
@@ -177,6 +187,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "fullBleed",
     settingsNamespace: "settings.maps",
+    requiredPermission: "module.maps.view",
     aliases: ["map", "maps", "geo"],
     legacyRoutes: ["/map"],
   },
@@ -190,6 +201,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "fullBleed",
     settingsNamespace: "settings.intelligence",
+    requiredPermission: "module.intelligence.view",
     aliases: ["intelligence", "intel"],
   },
   options: {
@@ -202,6 +214,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.options",
+    requiredPermission: "module.options.view",
     aliases: ["options", "opt"],
   },
   trading: {
@@ -214,6 +227,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "fullBleed",
     settingsNamespace: "settings.trading",
+    requiredPermission: "module.trading.view",
     aliases: ["trading", "trade", "trd"],
   },
   portfolios: {
@@ -226,6 +240,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.portfolios",
+    requiredPermission: "module.portfolios.view",
     aliases: ["portfolio", "portfolios", "port"],
     legacyRoutes: ["/portfolio"],
   },
@@ -239,6 +254,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.risk",
+    requiredPermission: "module.risk.view",
     aliases: ["risk"],
     legacyRoutes: ["/analytics"],
   },
@@ -252,6 +268,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "fullBleed",
     settingsNamespace: "settings.ai",
+    requiredPermission: "module.ai.view",
     aliases: ["ai", "assistant"],
   },
   data: {
@@ -264,6 +281,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.data",
+    requiredPermission: "module.data.view",
     aliases: ["data"],
   },
   saved: {
@@ -276,6 +294,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "dense",
     settingsNamespace: "settings.saved",
+    requiredPermission: "module.saved.view",
     aliases: ["saved", "save"],
   },
   workspaces: {
@@ -288,6 +307,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "fullBleed",
     settingsNamespace: "settings.workspaces",
+    requiredPermission: "module.workspaces.view",
     aliases: ["workspace", "workspaces", "ws"],
   },
   agents: {
@@ -300,6 +320,7 @@ export const ATLAS_MODULES: Record<AtlasModuleId, AtlasModuleDefinition> = {
     availability: "foundation",
     layoutMode: "fullBleed",
     settingsNamespace: "settings.agents",
+    requiredPermission: "module.agents.view",
     aliases: ["agent", "agents"],
   },
 };

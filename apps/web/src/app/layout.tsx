@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ShellProvider } from "@/hooks/shell/useShellState";
-import { AppShell } from "@/components/shell";
+import { AuthProvider } from "@/hooks/auth";
+import { AuthorizationProvider } from "@/hooks/authorization";
+import { AppearanceProvider } from "@/hooks/appearance";
+import { BackgroundProvider } from "@/hooks/background";
+import { PreferenceSyncProvider } from "@/hooks/preferences/PreferenceSyncProvider";
+
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -10,9 +14,6 @@ export const metadata: Metadata = {
   title: "ATLAS | Terminal",
   description: "AI-native financial operating system",
 };
-
-import { AppearanceProvider } from "@/hooks/appearance";
-import { BackgroundProvider } from "@/hooks/background";
 
 export default function RootLayout({
   children,
@@ -50,15 +51,17 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className={`${inter.className} antialiased`}>
-        <AppearanceProvider>
-          <BackgroundProvider>
-            <ShellProvider>
-              <AppShell>
-                {children}
-              </AppShell>
-            </ShellProvider>
-          </BackgroundProvider>
-        </AppearanceProvider>
+        <AuthProvider>
+          <AuthorizationProvider>
+            <PreferenceSyncProvider>
+              <AppearanceProvider>
+                <BackgroundProvider>
+                  {children}
+                </BackgroundProvider>
+              </AppearanceProvider>
+            </PreferenceSyncProvider>
+          </AuthorizationProvider>
+        </AuthProvider>
       </body>
     </html>
   );

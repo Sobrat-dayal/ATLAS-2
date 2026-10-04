@@ -1,6 +1,9 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 import { AtlasModuleId } from "@/config/atlas-modules";
 import { SECTION_SETTINGS_REGISTRY } from "@/config/section-settings";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { usePreferenceSync } from "@/hooks/preferences/PreferenceSyncProvider";
 
 interface SectionSettingsDrawerState {
   isOpen: boolean;
@@ -25,13 +28,18 @@ function getStorageKey(moduleId: AtlasModuleId) {
   return def.storageNamespace;
 }
 
-function loadModuleSettings(moduleId: AtlasModuleId): ModuleSettingsData {
+function loadModuleSettings(moduleId: AtlasModuleId, userId?: string): ModuleSettingsData {
   if (typeof window === "undefined") return {};
-  const key = getStorageKey(moduleId);
-  if (!key) return {};
+  const baseKey = getStorageKey(moduleId);
+  if (!baseKey) return {};
+  const key = userId ? `atlas.user.${userId}.${baseKey}` : baseKey;
   
   try {
-    const raw = localStorage.getItem(key);
+    // Try user scoped first, fallback to anon
+    let raw = localStorage.getItem(key);
+    if (!raw && userId) {
+       raw = localStorage.getItem(baseKey);
+    }
     if (raw) {
       return JSON.parse(raw) as ModuleSettingsData;
     }
@@ -41,10 +49,11 @@ function loadModuleSettings(moduleId: AtlasModuleId): ModuleSettingsData {
   return {};
 }
 
-function saveModuleSettings(moduleId: AtlasModuleId, data: ModuleSettingsData) {
+function saveModuleSettings(moduleId: AtlasModuleId, data: ModuleSettingsData, userId?: string) {
   if (typeof window === "undefined") return;
-  const key = getStorageKey(moduleId);
-  if (!key) return;
+  const baseKey = getStorageKey(moduleId);
+  if (!baseKey) return;
+  const key = userId ? `atlas.user.${userId}.${baseKey}` : baseKey;
 
   try {
     localStorage.setItem(key, JSON.stringify(data));
@@ -57,9 +66,10 @@ function saveModuleSettings(moduleId: AtlasModuleId, data: ModuleSettingsData) {
 interface SectionSettingsStore {
   data: Record<string, ModuleSettingsData>;
   getResolvedSetting: (moduleId: AtlasModuleId, settingId: string) => unknown;
-  setSetting: (moduleId: AtlasModuleId, settingId: string, value: unknown) => void;
-  resetSettings: (moduleId: AtlasModuleId) => void;
-  _hydrate: (moduleId: AtlasModuleId) => void;
+  setSetting: (moduleId: AtlasModuleId, settingId: string, value: unknown, userId?: string) => void;
+  resetSettings: (moduleId: AtlasModuleId, userId?: string) => void;
+  _hydrate: (moduleId: AtlasModuleId, userId?: string) => void;
+  _setFullData: (moduleId: AtlasModuleId, payload: ModuleSettingsData, userId?: string) => void;
 }
 
 export const useSectionSettingsStore = create<SectionSettingsStore>((set, get) => ({
@@ -86,11 +96,11 @@ export const useSectionSettingsStore = create<SectionSettingsStore>((set, get) =
     return undefined;
   },
   
-  setSetting: (moduleId, settingId, value) => {
+  setSetting: (moduleId, settingId, value, userId) => {
     set((state) => {
-      const currentData = state.data[moduleId] || loadModuleSettings(moduleId);
+      const currentData = state.data[moduleId] || loadModuleSettings(moduleId, userId);
       const newData = { ...currentData, [settingId]: value };
-      saveModuleSettings(moduleId, newData);
+      saveModuleSettings(moduleId, newData, userId);
       return {
         data: {
           ...state.data,
@@ -100,9 +110,9 @@ export const useSectionSettingsStore = create<SectionSettingsStore>((set, get) =
     });
   },
   
-  resetSettings: (moduleId) => {
+  resetSettings: (moduleId, userId) => {
     set((state) => {
-      saveModuleSettings(moduleId, {});
+      saveModuleSettings(moduleId, {}, userId);
       return {
         data: {
           ...state.data,
@@ -112,43 +122,84 @@ export const useSectionSettingsStore = create<SectionSettingsStore>((set, get) =
     });
   },
 
-  _hydrate: (moduleId) => {
+  _hydrate: (moduleId, userId) => {
     set((state) => {
       if (state.data[moduleId]) return state; // Already hydrated
       return {
         data: {
           ...state.data,
-          [moduleId]: loadModuleSettings(moduleId)
+          [moduleId]: loadModuleSettings(moduleId, userId)
         }
       };
     });
+  },
+  
+  _setFullData: (moduleId, payload, userId) => {
+     set((state) => {
+       saveModuleSettings(moduleId, payload, userId);
+       return {
+         data: {
+           ...state.data,
+           [moduleId]: payload
+         }
+       };
+     });
   }
 }));
 
-// Hook for components to use settings easily
-export function useSectionSetting<T = unknown>(moduleId: AtlasModuleId, settingId: string) {
-  // Ensure we are hydrated for this module
-  useSectionSettingsStore(state => state._hydrate)(moduleId);
-  
-  const value = useSectionSettingsStore(state => state.getResolvedSetting(moduleId, settingId)) as T;
-  const setSetting = useSectionSettingsStore(state => state.setSetting);
-  
-  return [value, (val: T) => setSetting(moduleId, settingId, val)] as const;
-}
-
 // Hook to access the whole module's settings (reactive)
 export function useModuleSettings(moduleId: AtlasModuleId) {
-  useSectionSettingsStore(state => state._hydrate)(moduleId);
+  const { session } = useAuth();
+  const userId = session?.user?.id;
+  
+  useSectionSettingsStore(state => state._hydrate)(moduleId, userId);
   
   const data = useSectionSettingsStore(state => state.data[moduleId]) || {};
-  const setSetting = useSectionSettingsStore(state => state.setSetting);
-  const resetSettings = useSectionSettingsStore(state => state.resetSettings);
+  const setSettingStore = useSectionSettingsStore(state => state.setSetting);
+  const resetSettingsStore = useSectionSettingsStore(state => state.resetSettings);
   const getResolvedSetting = useSectionSettingsStore(state => state.getResolvedSetting);
+  const _setFullData = useSectionSettingsStore(state => state._setFullData);
+  
+  const { preferences, syncPreference, isLoading } = usePreferenceSync();
+  const backendKey = `section.${moduleId}`;
+  
+  // Sync from backend
+  useEffect(() => {
+    if (!isLoading && preferences[backendKey]) {
+      const payload = preferences[backendKey].payload;
+      if (JSON.stringify(payload) !== JSON.stringify(data)) {
+        _setFullData(moduleId, payload, userId);
+      }
+    }
+  }, [preferences, isLoading, backendKey, moduleId, data, _setFullData, userId]);
+  
+  const setSetting = (settingId: string, value: unknown) => {
+    setSettingStore(moduleId, settingId, value, userId);
+    if (session?.access_token) {
+      const newData = { ...data, [settingId]: value };
+      syncPreference(backendKey, 1, newData);
+    }
+  };
+
+  const resetSettings = () => {
+    resetSettingsStore(moduleId, userId);
+    if (session?.access_token) {
+      syncPreference(backendKey, 1, {});
+    }
+  };
   
   return {
     data,
-    setSetting: (settingId: string, value: unknown) => setSetting(moduleId, settingId, value),
-    resetSettings: () => resetSettings(moduleId),
+    setSetting,
+    resetSettings,
     getResolvedSetting: (settingId: string) => getResolvedSetting(moduleId, settingId),
   };
+}
+
+// Hook for components to use settings easily
+export function useSectionSetting<T = unknown>(moduleId: AtlasModuleId, settingId: string) {
+  const { getResolvedSetting, setSetting } = useModuleSettings(moduleId);
+  const value = getResolvedSetting(settingId) as T;
+  
+  return [value, (val: T) => setSetting(settingId, val)] as const;
 }

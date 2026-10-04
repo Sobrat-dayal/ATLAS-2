@@ -1,6 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { usePreferenceSync } from "@/hooks/preferences/PreferenceSyncProvider";
+
 
 export type AtlasTheme = "system" | "dark" | "light" | "terminal";
 export type AtlasDensity = "compact" | "default" | "comfortable";
@@ -50,26 +53,42 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   const [prefs, setPrefs] = useState<AppearancePreferences>(DEFAULT_APPEARANCE);
   const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light" | "terminal">("dark");
   const [isClient, setIsClient] = useState(false);
+  const { session } = useAuth();
+  const { preferences, syncPreference, isLoading } = usePreferenceSync();
 
-  // Initial load
+  const userKey = session?.user?.id ? `atlas.user.${session.user.id}.appearance.v1` : STORAGE_KEY;
+  const backendKey = "global.appearance";
+
+  // Initial load from local cache or backend
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsClient(true);
+    let loadedPrefs = DEFAULT_APPEARANCE;
+    
+    // 1. Try local storage first for immediate render
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(userKey) || localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (isValidAppearance(parsed)) {
-          setPrefs(parsed);
-          return;
+          loadedPrefs = parsed;
         }
       }
     } catch (e) {
       console.warn("Failed to parse appearance state", e);
     }
-    // Fallback to default if invalid/missing
-    setPrefs(DEFAULT_APPEARANCE);
-  }, []);
+    
+    setPrefs(loadedPrefs);
+  }, [userKey]);
+
+  // Sync from backend when it loads
+  useEffect(() => {
+    if (!isLoading && preferences[backendKey]) {
+      const payload = preferences[backendKey].payload;
+      if (isValidAppearance(payload)) {
+        setPrefs(payload);
+      }
+    }
+  }, [preferences, isLoading]);
 
   // Update resolved theme when prefs change or OS theme changes
   useEffect(() => {
@@ -101,13 +120,32 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     root.setAttribute("data-density", prefs.density);
     root.setAttribute("data-accent", prefs.accent);
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-  }, [prefs, resolvedTheme, isClient]);
+    localStorage.setItem(userKey, JSON.stringify(prefs));
+  }, [prefs, resolvedTheme, isClient, userKey]);
+  
+  // Custom setter that also syncs to backend
+  const updatePrefs = useCallback((newPrefs: AppearancePreferences) => {
+    setPrefs(newPrefs);
+    if (session?.access_token) {
+      syncPreference(backendKey, 1, newPrefs);
+    }
+  }, [session, syncPreference, backendKey]);
 
-  const setTheme = (theme: AtlasTheme) => setPrefs((prev) => ({ ...prev, theme }));
-  const setDensity = (density: AtlasDensity) => setPrefs((prev) => ({ ...prev, density }));
-  const setAccent = (accent: AtlasAccent) => setPrefs((prev) => ({ ...prev, accent }));
-  const resetAppearance = () => setPrefs(DEFAULT_APPEARANCE);
+  const setTheme = useCallback((theme: AtlasTheme) => {
+    updatePrefs({ ...prefs, theme });
+  }, [prefs, updatePrefs]);
+  
+  const setDensity = useCallback((density: AtlasDensity) => {
+    updatePrefs({ ...prefs, density });
+  }, [prefs, updatePrefs]);
+  
+  const setAccent = useCallback((accent: AtlasAccent) => {
+    updatePrefs({ ...prefs, accent });
+  }, [prefs, updatePrefs]);
+  
+  const resetAppearance = useCallback(() => {
+    updatePrefs(DEFAULT_APPEARANCE);
+  }, [updatePrefs]);
 
   return (
     <AppearanceContext.Provider

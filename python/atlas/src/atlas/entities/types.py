@@ -1,0 +1,25 @@
+from enum import StrEnum
+
+
+class EntityTypeKey(StrEnum):
+    SECURITY = "security"
+    EQUITY = "equity"
+    ETF = "etf"
+    BOND = "bond"
+    OPTION = "option"
+    FUTURE = "future"
+    FUND = "fund"
+    CRYPTO = "crypto"
+    CURRENCY = "currency"
+    COMMODITY = "commodity"
+    INDEX = "index"
+    COMPANY = "company"
+    PERSON = "person"
+    COUNTRY = "country"
+    FACILITY = "facility"
+    PORT = "port"
+    AIRPORT = "airport"
+    EXCHANGE = "exchange"
+    ECONOMIC_SERIES = "economic_series"
+    NEWS_EVENT = "news_event"
+    RESEARCH_DOCUMENT = "research_document"

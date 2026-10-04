@@ -1,0 +1,67 @@
+# ATLAS Authorization Architecture
+
+## Overview
+
+The ATLAS platform uses a centralized, database-backed Role-Based Access Control (RBAC) system to authorize access to system capabilities. This system operates downstream of Supabase Authentication.
+
+Supabase Auth proves **who** the user is.
+ATLAS Authorization determines **what** the user can do.
+
+## Core Concepts
+
+### Principal
+A user accessing the system, represented by an `AuthPrincipal` extracted from the Supabase JWT.
+
+### Permission Code
+A fine-grained, machine-readable string representing a specific capability (e.g., `module.markets.view`, `authz.manage`).
+
+### Risk Class
+A categorization of a permission (e.g., `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`). Used for auditing and potential step-up authentication requirements.
+
+### Role
+A named collection of permissions.
+* **Implicit Role**: The default role (`member`) automatically granted to all authenticated users.
+* **Explicit Role**: Roles (like `admin` or `moderator`) explicitly assigned to a user via the database.
+
+## Architecture & Flow
+
+### Backend Flow (FastAPI)
+
+1. A request arrives with a Supabase JWT in the `Authorization` header.
+2. The `get_current_user` dependency validates the JWT and returns an `AuthPrincipal`.
+3. The `get_authorization_context` dependency:
+    - Queries the database for explicitly assigned roles (`authz_user_roles`).
+    - Appends the implicit `member` role.
+    - Resolves all associated permissions (`authz_role_permissions`).
+    - Caches the resulting `AuthorizationContext` on `request.state`.
+4. Endpoint-specific dependencies like `RequirePermission(PermissionCode.MARKETS_VIEW)` evaluate the context and raise a 403 Forbidden (`PermissionDeniedError`) if the capability is lacking.
+
+### Frontend Flow (Next.js)
+
+1. The `useAuth` hook establishes the user's session.
+2. The `AuthorizationProvider` calls `GET /api/v1/authz/me` to retrieve the user's active roles and permissions.
+3. The `useAuthorization` hook exposes utility functions like `hasPermission()` and `canViewModule()`.
+4. Component-level enforcement:
+    - **Sidebar**: Only displays modules the user is authorized to view.
+    - **MainWorkspace**: Renders the `<AccessDenied />` component if a direct route is accessed without adequate permissions.
+
+## Database Schema (PostgreSQL)
+
+The source of truth for authorization resides in PostgreSQL (via SQLAlchemy/Alembic migrations).
+
+- `authz_roles`: Defines roles (e.g., `admin`, `member`).
+- `authz_permissions`: Defines permissions and risk classes.
+- `authz_role_permissions`: Maps permissions to roles.
+- `authz_user_roles`: Assigns roles to Supabase user IDs.
+
+## Deny-by-Default
+
+By default, any capability or module is inaccessible unless explicitly permitted by an assigned role. The only exception is the `member` role, which is implicitly granted to all valid users and typically contains permissions to view foundational modules (like Home, Markets, News).
+
+## Management
+
+A command-line tool exists in `apps/api/src/atlas_api/cli.py` to manage user roles directly against the database:
+
+```bash
+uv run python apps/api/src/atlas_api/cli.py grant-role --user-id <UUID> --role admin
+```
