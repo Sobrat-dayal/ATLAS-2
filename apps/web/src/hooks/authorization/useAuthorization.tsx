@@ -47,6 +47,15 @@ export function AuthorizationProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || supabaseUrl.includes("placeholder")) {
+      // Mock authorization
+      setRoles(["admin"]);
+      setPermissions(Object.values(ATLAS_MODULES).map(m => m.requiredPermission));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);

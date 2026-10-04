@@ -10,6 +10,7 @@ from .errors import (
 from .models import Entity, EntityType
 from .registry import get_entity_type_definition
 from .repository import EntityRepository
+from .name_normalization import normalize_entity_name
 
 
 class EntityService:
@@ -80,7 +81,9 @@ class EntityService:
             entity_id=eid,
             entity_type=entity_type,
             canonical_name=canonical_name,
+            canonical_name_normalized=normalize_entity_name(canonical_name),
             display_name=display_name,
+            display_name_normalized=normalize_entity_name(display_name),
             description=description,
         )
 
@@ -95,9 +98,11 @@ class EntityService:
 
         if canonical_name is not None:
             entity.canonical_name = self._validate_name(canonical_name)
+            entity.canonical_name_normalized = normalize_entity_name(entity.canonical_name)
 
         if display_name is not None:
             entity.display_name = self._validate_name(display_name)
+            entity.display_name_normalized = normalize_entity_name(entity.display_name)
 
         if description is not None:
             entity.description = self._validate_description(description)

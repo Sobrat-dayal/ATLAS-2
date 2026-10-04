@@ -39,6 +39,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+    // Bypass authentication entirely for local dev with placeholder
+    const { pathname } = request.nextUrl;
+    if (isPublicRoute(pathname) && pathname !== '/auth/callback' && pathname !== '/auth/confirm') {
+      const homeUrl = request.nextUrl.clone();
+      homeUrl.pathname = '/home';
+      return NextResponse.redirect(homeUrl);
+    }
+    return NextResponse.next();
+  }
+
   const { supabaseResponse, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
 

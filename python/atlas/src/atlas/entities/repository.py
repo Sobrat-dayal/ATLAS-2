@@ -31,7 +31,9 @@ class EntityRepository:
         entity_id: uuid.UUID,
         entity_type: str,
         canonical_name: str,
+        canonical_name_normalized: str,
         display_name: str,
+        display_name_normalized: str,
         description: Optional[str],
     ) -> Entity:
         """
@@ -42,7 +44,9 @@ class EntityRepository:
             entity_id=entity_id,
             entity_type=entity_type,
             canonical_name=canonical_name,
+            canonical_name_normalized=canonical_name_normalized,
             display_name=display_name,
+            display_name_normalized=display_name_normalized,
             description=description,
         )
         self.session.add(entity)

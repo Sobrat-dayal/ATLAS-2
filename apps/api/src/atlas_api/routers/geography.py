@@ -13,7 +13,8 @@ from atlas.geography.service import GeographicEntityService
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.orm import Session
 
-from atlas_api.dependencies import get_current_user_with_access, get_db_session
+from atlas_api.dependencies import get_db_session
+from atlas_api.auth.dependencies import get_current_user
 
 router = APIRouter(
     prefix="/api/v1/geographic-entities",
@@ -31,7 +32,7 @@ router = APIRouter(
 def get_geographic_entity(
     entity_id: uuid.UUID = Path(..., description="The geographic entity UUID"),
     session: Session = Depends(get_db_session),
-    _user=Depends(get_current_user_with_access),
+    _user=Depends(get_current_user),
 ):
     service = GeographicEntityService(session)
     try:

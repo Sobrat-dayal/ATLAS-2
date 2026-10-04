@@ -40,7 +40,9 @@ class Entity(Base):
         ForeignKey("entity_types.key", ondelete="RESTRICT"), nullable=False, index=True
     )
     canonical_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    canonical_name_normalized: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
     display_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    display_name_normalized: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime.datetime] = mapped_column(
