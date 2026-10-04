@@ -1,21 +1,16 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response
-from pydantic import BaseModel
-
 from atlas.auth import AuthPrincipal
 from atlas.authorization import PermissionCode
 from atlas.preferences import UserPreferenceService
+from fastapi import APIRouter, Depends, Response
 
 from atlas_api.auth.dependencies import get_current_user
 from atlas_api.authorization.dependencies import RequirePermission
+
 from .dependencies import get_preference_service
-from .schemas import (
-    PreferenceResponse,
-    PreferenceListResponse,
-    PreferenceUpdateRequest
-)
+from .schemas import PreferenceListResponse, PreferenceResponse, PreferenceUpdateRequest
 
 router = APIRouter(prefix="/preferences", tags=["Preferences"])
 
@@ -25,7 +20,7 @@ async def list_preferences(
     response: Response,
     principal: Annotated[AuthPrincipal, Depends(get_current_user)],
     service: Annotated[UserPreferenceService, Depends(get_preference_service)],
-    _: None = Depends(RequirePermission(PermissionCode.SETTINGS_READ))
+    _: None = Depends(RequirePermission(PermissionCode.SETTINGS_READ)),
 ):
     """
     List all account-synced preferences for the current authenticated user.
@@ -42,7 +37,7 @@ async def get_preference(
     response: Response,
     principal: Annotated[AuthPrincipal, Depends(get_current_user)],
     service: Annotated[UserPreferenceService, Depends(get_preference_service)],
-    _: None = Depends(RequirePermission(PermissionCode.SETTINGS_READ))
+    _: None = Depends(RequirePermission(PermissionCode.SETTINGS_READ)),
 ):
     """
     Get a specific preference namespace for the current user.
@@ -59,7 +54,7 @@ async def update_preference(
     request: PreferenceUpdateRequest,
     principal: Annotated[AuthPrincipal, Depends(get_current_user)],
     service: Annotated[UserPreferenceService, Depends(get_preference_service)],
-    _: None = Depends(RequirePermission(PermissionCode.SETTINGS_WRITE_SELF))
+    _: None = Depends(RequirePermission(PermissionCode.SETTINGS_WRITE_SELF)),
 ):
     """
     Create or update a preference namespace for the current user.
@@ -71,7 +66,7 @@ async def update_preference(
         key=preference_key,
         schema_version=request.schema_version,
         payload=request.payload,
-        expected_revision=request.expected_revision
+        expected_revision=request.expected_revision,
     )
     return pref
 
@@ -81,7 +76,7 @@ async def delete_preference(
     preference_key: str,
     principal: Annotated[AuthPrincipal, Depends(get_current_user)],
     service: Annotated[UserPreferenceService, Depends(get_preference_service)],
-    _: None = Depends(RequirePermission(PermissionCode.SETTINGS_WRITE_SELF))
+    _: None = Depends(RequirePermission(PermissionCode.SETTINGS_WRITE_SELF)),
 ):
     """
     Delete a specific preference namespace, causing it to revert to ATLAS defaults.
@@ -94,7 +89,7 @@ async def delete_preference(
 async def reset_all_preferences(
     principal: Annotated[AuthPrincipal, Depends(get_current_user)],
     service: Annotated[UserPreferenceService, Depends(get_preference_service)],
-    _: None = Depends(RequirePermission(PermissionCode.SETTINGS_WRITE_SELF))
+    _: None = Depends(RequirePermission(PermissionCode.SETTINGS_WRITE_SELF)),
 ):
     """
     Delete all account-synced preferences for the current user, reverting everything to defaults.

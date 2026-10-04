@@ -5,72 +5,110 @@ Revises: 08480975c632
 Create Date: 2026-10-04 12:13:00.000000
 
 """
-from typing import Sequence, Union
-import uuid
 
-from alembic import op
+import uuid
+from typing import Sequence, Union
+
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
-
 # revision identifiers, used by Alembic.
-revision: str = 'stage14_authorization'
-down_revision: Union[str, Sequence[str], None] = '08480975c632'
+revision: str = "stage14_authorization"
+down_revision: Union[str, Sequence[str], None] = "08480975c632"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
     # 1. Create Tables
-    authz_roles = op.create_table('authz_roles',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('key', sa.Text(), nullable=False),
-        sa.Column('name', sa.Text(), nullable=False),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('is_system', sa.Boolean(), nullable=False, server_default=sa.text('false')),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('key')
+    authz_roles = op.create_table(
+        "authz_roles",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("key", sa.Text(), nullable=False),
+        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("is_system", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("key"),
     )
 
-    authz_permissions = op.create_table('authz_permissions',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('code', sa.Text(), nullable=False),
-        sa.Column('name', sa.Text(), nullable=False),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('risk_class', sa.Text(), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('code')
+    authz_permissions = op.create_table(
+        "authz_permissions",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("code", sa.Text(), nullable=False),
+        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("risk_class", sa.Text(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("code"),
     )
-    
+
     op.create_check_constraint(
-        'check_risk_class_valid',
-        'authz_permissions',
-        "risk_class IN ('read', 'write', 'action', 'critical')"
+        "check_risk_class_valid",
+        "authz_permissions",
+        "risk_class IN ('read', 'write', 'action', 'critical')",
     )
 
-    authz_role_permissions = op.create_table('authz_role_permissions',
-        sa.Column('role_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('permission_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.ForeignKeyConstraint(['permission_id'], ['authz_permissions.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['role_id'], ['authz_roles.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('role_id', 'permission_id')
+    authz_role_permissions = op.create_table(
+        "authz_role_permissions",
+        sa.Column("role_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("permission_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.ForeignKeyConstraint(["permission_id"], ["authz_permissions.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["role_id"], ["authz_roles.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("role_id", "permission_id"),
     )
 
-    authz_user_roles = op.create_table('authz_user_roles',
-        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('role_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('assigned_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('assigned_by_user_id', postgresql.UUID(as_uuid=True), nullable=True),
-        sa.ForeignKeyConstraint(['role_id'], ['authz_roles.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('user_id', 'role_id')
+    authz_user_roles = op.create_table(
+        "authz_user_roles",
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("role_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column(
+            "assigned_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column("assigned_by_user_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.ForeignKeyConstraint(["role_id"], ["authz_roles.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("user_id", "role_id"),
     )
-    op.create_index(op.f('ix_authz_user_roles_role_id'), 'authz_user_roles', ['role_id'], unique=False)
-    op.create_index(op.f('ix_authz_user_roles_user_id'), 'authz_user_roles', ['user_id'], unique=False)
+    op.create_index(
+        op.f("ix_authz_user_roles_role_id"), "authz_user_roles", ["role_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_authz_user_roles_user_id"), "authz_user_roles", ["user_id"], unique=False
+    )
 
     # 2. Seed Permissions
     permissions = [
@@ -98,9 +136,14 @@ def upgrade() -> None:
         ("settings.read", "Read Settings", "View application settings.", "read"),
         ("settings.write_self", "Write Settings (Self)", "Modify own settings.", "write"),
         ("authz.read", "Read Authorization", "View roles and permissions.", "read"),
-        ("authz.manage", "Manage Authorization", "Manage user roles and authorization settings.", "critical"),
+        (
+            "authz.manage",
+            "Manage Authorization",
+            "Manage user roles and authorization settings.",
+            "critical",
+        ),
     ]
-    
+
     perm_map = {}
     for code, name, desc, risk in permissions:
         perm_id = uuid.uuid4()
@@ -123,7 +166,7 @@ def upgrade() -> None:
             key="member",
             name="Member",
             description="Default member access",
-            is_system=True
+            is_system=True,
         )
     )
 
@@ -134,7 +177,7 @@ def upgrade() -> None:
             key="admin",
             name="Administrator",
             description="System administrator",
-            is_system=True
+            is_system=True,
         )
     )
 
@@ -162,41 +205,35 @@ def upgrade() -> None:
         "module.workspaces.view",
         "module.agents.view",
         "settings.read",
-        "settings.write_self"
+        "settings.write_self",
     ]
-    
+
     for perm_code in member_permissions:
         op.execute(
             authz_role_permissions.insert().values(
-                role_id=member_id,
-                permission_id=perm_map[perm_code]
+                role_id=member_id, permission_id=perm_map[perm_code]
             )
         )
         # Admin gets everything member gets, plus admin permissions
         op.execute(
             authz_role_permissions.insert().values(
-                role_id=admin_id,
-                permission_id=perm_map[perm_code]
+                role_id=admin_id, permission_id=perm_map[perm_code]
             )
         )
-        
-    admin_only_permissions = [
-        "authz.read",
-        "authz.manage"
-    ]
+
+    admin_only_permissions = ["authz.read", "authz.manage"]
     for perm_code in admin_only_permissions:
         op.execute(
             authz_role_permissions.insert().values(
-                role_id=admin_id,
-                permission_id=perm_map[perm_code]
+                role_id=admin_id, permission_id=perm_map[perm_code]
             )
         )
 
 
 def downgrade() -> None:
-    op.drop_index(op.f('ix_authz_user_roles_user_id'), table_name='authz_user_roles')
-    op.drop_index(op.f('ix_authz_user_roles_role_id'), table_name='authz_user_roles')
-    op.drop_table('authz_user_roles')
-    op.drop_table('authz_role_permissions')
-    op.drop_table('authz_permissions')
-    op.drop_table('authz_roles')
+    op.drop_index(op.f("ix_authz_user_roles_user_id"), table_name="authz_user_roles")
+    op.drop_index(op.f("ix_authz_user_roles_role_id"), table_name="authz_user_roles")
+    op.drop_table("authz_user_roles")
+    op.drop_table("authz_role_permissions")
+    op.drop_table("authz_permissions")
+    op.drop_table("authz_roles")

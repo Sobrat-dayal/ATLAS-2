@@ -16,7 +16,7 @@ class RequestIdFilter(logging.Filter):
 def setup_logging():
     """Initialize structured logging foundation."""
     settings = get_settings()
-    
+
     # Configure root logger
     logging.basicConfig(
         level=getattr(logging, settings.log_level.upper(), logging.INFO),
@@ -24,7 +24,7 @@ def setup_logging():
         datefmt="%Y-%m-%dT%H:%M:%SZ",
         stream=sys.stdout,
     )
-    
+
     # Add request ID filter to root logger handlers
     request_filter = RequestIdFilter()
     for handler in logging.getLogger().handlers:

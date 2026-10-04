@@ -12,11 +12,10 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Optional
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
 from atlas.auth import AuthPrincipal, SupabaseTokenVerifier
 from atlas.auth.verifier import TokenVerificationError
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ..config import Settings, get_settings
 
@@ -42,9 +41,7 @@ def _get_verifier(settings: Settings = Depends(get_settings)) -> SupabaseTokenVe
 
 
 async def get_current_user(
-    credentials: Annotated[
-        Optional[HTTPAuthorizationCredentials], Depends(_bearer_scheme)
-    ] = None,
+    credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(_bearer_scheme)] = None,
     verifier: SupabaseTokenVerifier = Depends(_get_verifier),
 ) -> AuthPrincipal:
     """
@@ -73,9 +70,7 @@ async def get_current_user(
 
 
 async def get_optional_user(
-    credentials: Annotated[
-        Optional[HTTPAuthorizationCredentials], Depends(_bearer_scheme)
-    ] = None,
+    credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(_bearer_scheme)] = None,
     verifier: SupabaseTokenVerifier = Depends(_get_verifier),
 ) -> Optional[AuthPrincipal]:
     """

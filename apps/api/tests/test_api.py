@@ -64,9 +64,11 @@ async def test_request_id_in_header(app, settings):
         response = await client.get(f"{settings.api_prefix}/health")
         assert response.status_code == 200
         assert "X-Request-ID" in response.headers
-        
+
         # Test custom ID
-        response2 = await client.get(f"{settings.api_prefix}/health", headers={"X-Request-ID": "custom-id-123"})
+        response2 = await client.get(
+            f"{settings.api_prefix}/health", headers={"X-Request-ID": "custom-id-123"}
+        )
         assert response2.status_code == 200
         assert response2.headers["X-Request-ID"] == "custom-id-123"
 

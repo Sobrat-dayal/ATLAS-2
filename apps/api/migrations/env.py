@@ -1,11 +1,10 @@
 import asyncio
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from alembic import context
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -17,12 +16,17 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 import os
-from atlas.database import Base, normalize_database_url
-from atlas_api.config import get_settings
+
 import atlas.authorization.models  # noqa: F401
-import atlas.preferences.models  # noqa: F401
+import atlas.companies.models  # noqa: F401
 import atlas.entities.models  # noqa: F401
+import atlas.geography.models  # noqa: F401
 import atlas.instruments.models  # noqa: F401
+import atlas.preferences.models  # noqa: F401
+from atlas.database import Base, normalize_database_url
+
+from atlas_api.config import get_settings
+
 # add your model's MetaData object here
 # for 'autogenerate' support
 target_metadata = Base.metadata
@@ -30,7 +34,9 @@ target_metadata = Base.metadata
 # Set SQLAlchemy URL from settings
 settings = get_settings()
 # Use test database if running in test environment
-db_url = settings.test_database_url if os.environ.get("ATLAS_ENV") == "test" else settings.database_url
+db_url = (
+    settings.test_database_url if os.environ.get("ATLAS_ENV") == "test" else settings.database_url
+)
 config.set_main_option("sqlalchemy.url", normalize_database_url(db_url))
 
 # other values from the config, defined by the needs of env.py,

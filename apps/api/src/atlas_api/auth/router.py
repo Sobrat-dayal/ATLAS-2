@@ -7,9 +7,8 @@ This is the only authenticated endpoint created in Stage 13.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
-
 from atlas.auth import AuthPrincipal
+from fastapi import APIRouter, Depends
 
 from .dependencies import get_current_user
 

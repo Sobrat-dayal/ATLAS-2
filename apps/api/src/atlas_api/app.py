@@ -12,7 +12,7 @@ from .routers import api_router
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    
+
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
@@ -22,7 +22,7 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if settings.debug else None,
         openapi_url="/openapi.json" if settings.debug else None,
     )
-    
+
     # 1. CORS
     if settings.cors_origins:
         app.add_middleware(
@@ -32,23 +32,23 @@ def create_app() -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
-        
+
     # 2. Request ID Generation/Propagation
     app.add_middleware(RequestIdMiddleware)
-    
+
     # 3. Access Logging and Timing
     app.add_middleware(TimingMiddleware)
-    
+
     # Setup Exception Handlers
     setup_exception_handlers(app)
-    
+
     # Include main API router
     app.include_router(api_router, prefix=settings.api_prefix)
-    
+
     @app.get("/", include_in_schema=False)
     async def root_redirect():
         if settings.debug:
             return RedirectResponse(url="/docs")
         return {"service": settings.app_name}
-    
+
     return app

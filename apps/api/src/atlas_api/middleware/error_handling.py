@@ -17,38 +17,34 @@ def setup_exception_handlers(app: FastAPI):
     async def atlas_error_handler(request: Request, exc: AtlasError):
         req_id = getattr(request.state, "request_id", request_id_var.get())
         logger.warning(f"AtlasError: {exc.code} - {exc.message}")
-        
+
         error = AtlasErrorModel(
-            code=exc.code,
-            message=exc.message,
-            request_id=req_id,
-            details=exc.details
+            code=exc.code, message=exc.message, request_id=req_id, details=exc.details
         )
         return JSONResponse(
             status_code=exc.status_code,
-            content=AtlasErrorEnvelope(error=error).model_dump(exclude_none=True)
+            content=AtlasErrorEnvelope(error=error).model_dump(exclude_none=True),
         )
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         req_id = getattr(request.state, "request_id", request_id_var.get())
-        
+
         details = []
         for error in exc.errors():
             field_path = ".".join(str(loc) for loc in error.get("loc", []))
             details.append({"field": field_path, "message": error.get("msg", "")})
-            
+
         logger.warning(f"Validation error for {request.method} {request.url.path}: {details}")
 
         error = AtlasErrorModel(
             code="VALIDATION_ERROR",
             message="Request validation failed.",
             request_id=req_id,
-            details=details
+            details=details,
         )
         return JSONResponse(
-            status_code=422,
-            content=AtlasErrorEnvelope(error=error).model_dump(exclude_none=True)
+            status_code=422, content=AtlasErrorEnvelope(error=error).model_dump(exclude_none=True)
         )
 
     @app.exception_handler(StarletteHTTPException)
@@ -60,32 +56,27 @@ def setup_exception_handlers(app: FastAPI):
             403: "FORBIDDEN",
             404: "NOT_FOUND",
             405: "METHOD_NOT_ALLOWED",
-            409: "CONFLICT"
+            409: "CONFLICT",
         }
         code = code_mapping.get(exc.status_code, f"HTTP_{exc.status_code}")
-        
-        error = AtlasErrorModel(
-            code=code,
-            message=str(exc.detail),
-            request_id=req_id
-        )
+
+        error = AtlasErrorModel(code=code, message=str(exc.detail), request_id=req_id)
         return JSONResponse(
             status_code=exc.status_code,
-            content=AtlasErrorEnvelope(error=error).model_dump(exclude_none=True)
+            content=AtlasErrorEnvelope(error=error).model_dump(exclude_none=True),
         )
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
         req_id = getattr(request.state, "request_id", request_id_var.get())
         logger.exception("Unhandled exception occurred", exc_info=exc)
-        
+
         # Production safe error message
         error = AtlasErrorModel(
             code="INTERNAL_ERROR",
             message="An unexpected internal error occurred.",
-            request_id=req_id
+            request_id=req_id,
         )
         return JSONResponse(
-            status_code=500,
-            content=AtlasErrorEnvelope(error=error).model_dump(exclude_none=True)
+            status_code=500, content=AtlasErrorEnvelope(error=error).model_dump(exclude_none=True)
         )
