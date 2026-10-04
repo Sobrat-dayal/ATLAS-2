@@ -14,6 +14,9 @@ interface ShellState {
   
   activeBottomPanel: string | null;
   setActiveBottomPanel: (panel: string | null) => void;
+  
+  moduleFullscreen: boolean;
+  setModuleFullscreen: (fullscreen: boolean) => void;
 }
 
 const defaultState: ShellState = {
@@ -25,6 +28,8 @@ const defaultState: ShellState = {
   setAgentDockWidth: () => {},
   activeBottomPanel: null,
   setActiveBottomPanel: () => {},
+  moduleFullscreen: false,
+  setModuleFullscreen: () => {},
 };
 
 const ShellContext = createContext<ShellState>(defaultState);
@@ -34,6 +39,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const [agentDockOpen, setAgentDockOpen] = useState(false);
   const [agentDockWidth, setAgentDockWidth] = useState(320);
   const [activeBottomPanel, setActiveBottomPanel] = useState<string | null>(null);
+  const [moduleFullscreen, setModuleFullscreen] = useState(false);
 
   // Hydrate from localStorage
   useEffect(() => {
@@ -79,6 +85,8 @@ export function ShellProvider({ children }: { children: ReactNode }) {
         setAgentDockWidth,
         activeBottomPanel,
         setActiveBottomPanel,
+        moduleFullscreen,
+        setModuleFullscreen,
       }}
     >
       {children}

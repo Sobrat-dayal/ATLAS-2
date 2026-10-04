@@ -9,5 +9,7 @@ export * from "./components/DataTable";
 export * from "./patterns/MetricCard";
 export * from "./patterns/PageHeader";
 
+export * from "./layout";
+
 export * from "./utils/cn";
 export * from "./utils/formatters";

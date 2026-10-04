@@ -9,6 +9,18 @@ import { BottomTaskbar } from "./BottomTaskbar";
 import { MarketTickerBar } from "./MarketTickerBar";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { moduleFullscreen } = useShellState();
+
+  if (moduleFullscreen) {
+    return (
+      <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[#0A0D14] text-white">
+        <MainWorkspace>
+          {children}
+        </MainWorkspace>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[#0A0D14] text-white">
       {/* Persistent Top Layer */}
