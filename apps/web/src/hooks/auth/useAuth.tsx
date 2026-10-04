@@ -103,6 +103,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Bootstrap: get initial session and subscribe to auth changes
   useEffect(() => {
+    // Development bypass if Supabase is not configured or using placeholders
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const isPlaceholder = supabaseUrl?.includes('placeholder');
+
+    if (!supabaseUrl || isPlaceholder) {
+      const mockUser = {
+        id: '00000000-0000-0000-0000-000000000000',
+        email: 'dev@atlas.local',
+        role: 'authenticated',
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+      } as User;
+      
+      setUser(mockUser);
+      setSession({
+        access_token: 'mock-token',
+        refresh_token: 'mock-token',
+        expires_in: 3600,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        token_type: 'bearer',
+        user: mockUser,
+      });
+      setLoading(false);
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);

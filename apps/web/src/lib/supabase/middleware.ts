@@ -6,9 +6,27 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const isPlaceholder = supabaseUrl?.includes('placeholder');
+
+  if (!supabaseUrl || !supabaseKey || isPlaceholder) {
+    // Development bypass if Supabase is not configured or using placeholders
+    const mockUser = {
+      id: '00000000-0000-0000-0000-000000000000',
+      email: 'dev@atlas.local',
+      role: 'authenticated',
+      app_metadata: {},
+      user_metadata: {},
+      aud: 'authenticated',
+      created_at: new Date().toISOString(),
+    };
+    return { supabaseResponse, user: mockUser };
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
