@@ -156,6 +156,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const isPlaceholder = supabaseUrl?.includes("placeholder");
+
+      if (!supabaseUrl || isPlaceholder) {
+        // Mock success
+        const mockUser = {
+          id: '00000000-0000-0000-0000-000000000000',
+          email: email,
+          role: 'authenticated',
+          app_metadata: {},
+          user_metadata: {},
+          aud: 'authenticated',
+          created_at: new Date().toISOString(),
+        } as User;
+
+        setUser(mockUser);
+        setSession({
+          access_token: 'mock-token',
+          refresh_token: 'mock-token',
+          expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          token_type: 'bearer',
+          user: mockUser,
+        });
+        return { error: null };
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -167,6 +194,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(
     async (email: string, password: string) => {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const isPlaceholder = supabaseUrl?.includes("placeholder");
+
+      if (!supabaseUrl || isPlaceholder) {
+        // Mock success
+        const mockUser = {
+          id: '00000000-0000-0000-0000-000000000000',
+          email: email,
+          role: 'authenticated',
+          app_metadata: {},
+          user_metadata: {},
+          aud: 'authenticated',
+          created_at: new Date().toISOString(),
+        } as User;
+
+        setUser(mockUser);
+        setSession({
+          access_token: 'mock-token',
+          refresh_token: 'mock-token',
+          expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          token_type: 'bearer',
+          user: mockUser,
+        });
+        return { error: null, needsVerification: false };
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -190,6 +244,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const isPlaceholder = supabaseUrl?.includes("placeholder");
+
+    if (!supabaseUrl || isPlaceholder) {
+      setUser(null);
+      setSession(null);
+      window.location.href = "/sign-in";
+      return;
+    }
+
     await supabase.auth.signOut();
     // Middleware will handle the redirect on next navigation
     window.location.href = "/sign-in";

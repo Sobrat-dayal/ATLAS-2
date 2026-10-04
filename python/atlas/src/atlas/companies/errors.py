@@ -1,5 +1,6 @@
 from atlas.core.exceptions import AtlasError
 
+
 class CompanyError(AtlasError):
     def __init__(self, message: str, code: str = "COMPANY_ERROR", status_code: int = 400):
         super().__init__(message, code=code, status_code=status_code)

@@ -1,21 +1,23 @@
 import uuid
 from datetime import date
-from typing import Optional, Any
+from typing import Any, Optional
 from urllib.parse import urlparse
 
-from atlas.entities.service import EntityService
 from atlas.entities.models import Entity
-from .repository import CompanyRepository
-from .models import Company
-from .types import OrganizationType, CompanyStatus
+from atlas.entities.service import EntityService
+
 from .errors import (
-    CompanyNotFoundError,
     CompanyDataInconsistentError,
-    InvalidOrganizationTypeError,
-    InvalidCompanyStatusError,
+    CompanyNotFoundError,
     InvalidCompanyCountryError,
-    InvalidCompanyURLError
+    InvalidCompanyStatusError,
+    InvalidCompanyURLError,
+    InvalidOrganizationTypeError,
 )
+from .models import Company
+from .repository import CompanyRepository
+from .types import CompanyStatus, OrganizationType
+
 
 class CompanyService:
     def __init__(

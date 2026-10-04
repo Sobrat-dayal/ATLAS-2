@@ -22,6 +22,9 @@ import atlas.companies.models  # noqa: F401
 import atlas.entities.models  # noqa: F401
 import atlas.geography.models  # noqa: F401
 import atlas.instruments.models  # noqa: F401
+import atlas.economics.models  # noqa: F401
+import atlas.research.models  # noqa: F401
+import atlas.news.models  # noqa: F401
 import atlas.preferences.models  # noqa: F401
 from atlas.database import Base, normalize_database_url
 

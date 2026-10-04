@@ -2,10 +2,11 @@ import uuid
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import UUID, Date, ForeignKey, String, Text, CheckConstraint
+from sqlalchemy import UUID, CheckConstraint, Date, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from atlas.database import Base
+
 
 class Company(Base):
     __tablename__ = "companies"

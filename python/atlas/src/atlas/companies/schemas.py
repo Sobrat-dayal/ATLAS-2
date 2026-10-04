@@ -1,10 +1,11 @@
 import uuid
 from datetime import date, datetime
-from typing import Optional, Literal
+from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict
 
-from .types import OrganizationType, CompanyStatus
+from .types import CompanyStatus, OrganizationType
+
 
 class CompanyResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

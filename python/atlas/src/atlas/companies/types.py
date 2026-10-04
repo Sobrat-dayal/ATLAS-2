@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+
 class OrganizationType(StrEnum):
     PUBLIC_COMPANY = "public_company"
     PRIVATE_COMPANY = "private_company"
