@@ -2,6 +2,9 @@
 
 This document details the purpose and future feature set of the 20 core ATLAS modules.
 
+## Cross-Module Rule: Global Application Context
+Modules consume the Global Application Context (Stage 26) instead of inventing competing cross-module context stores for entities, time ranges, maps, etc. If a module cannot use the current global context (e.g. an incompatible entity type), it must gracefully ignore it rather than automatically clearing the global selection.
+
 ## 1. Home
 **Purpose**: Main operational command center. Not a marketing landing page. Answers: What is happening? What matters to me? What are my agents doing? Where should I go next?
 **Features**:

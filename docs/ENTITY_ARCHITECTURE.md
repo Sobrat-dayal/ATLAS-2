@@ -8,6 +8,8 @@ The central principle of ATLAS Identity is:
 
 This `entity_id` is the foundation for later capabilities like search, tagging, graph relationships, portfolios, and AI reasoning.
 
+Entities can also be referenced by the global application **Selected Entity Context**. This frontend context uses the `entity_id` as the singular identity pointer across the application.
+
 ## Architecture
 
 ```text

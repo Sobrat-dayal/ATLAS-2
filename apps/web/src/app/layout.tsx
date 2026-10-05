@@ -6,7 +6,7 @@ import { AuthorizationProvider } from "@/hooks/authorization";
 import { AppearanceProvider } from "@/hooks/appearance";
 import { BackgroundProvider } from "@/hooks/background";
 import { PreferenceSyncProvider } from "@/hooks/preferences/PreferenceSyncProvider";
-
+import { GlobalApplicationContextProvider } from "@/hooks/application-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -56,7 +56,9 @@ export default function RootLayout({
             <PreferenceSyncProvider>
               <AppearanceProvider>
                 <BackgroundProvider>
-                  {children}
+                  <GlobalApplicationContextProvider>
+                    {children}
+                  </GlobalApplicationContextProvider>
                 </BackgroundProvider>
               </AppearanceProvider>
             </PreferenceSyncProvider>

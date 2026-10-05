@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, Suspense } from "react";
 import { useAuth } from "@/hooks/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function SignInPage() {
+function SignInForm() {
   const { signIn } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -118,5 +118,13 @@ export default function SignInPage() {
         </span>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="auth-card">Loading...</div>}>
+      <SignInForm />
+    </Suspense>
   );
 }

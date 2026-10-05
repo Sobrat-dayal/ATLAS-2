@@ -5,7 +5,7 @@ This document describes the foundational desktop-first application shell designe
 ## Shell Layout
 The shell mimics a professional financial terminal, filling `100dvh` without standard browser body scrolling.
 
-- **Top Bar**: Persistent header with brand, Global Search/Command input, ATLAS AI hook, UTC time, Notifications, and Profile.
+- **Top Bar**: Persistent header with brand, Context controls (Entity, Time Range), Global Search/Command input, ATLAS AI hook, UTC time, Notifications, and Profile.
 - **Market Ticker**: Optional slim horizontal strip showing market indices or forex/crypto values.
 - **Left Sidebar**: Expandable/collapsible navigation area for the 20 ATLAS modules.
 - **Agent Dock**: Right-side resizable overlay/dock for Agent tracking and activity.
@@ -15,14 +15,16 @@ The shell mimics a professional financial terminal, filling `100dvh` without sta
 ## Component Hierarchy
 ```text
 <ShellProvider>
-  <AppShell>
-    <TopBar />
-    <MarketTickerBar />
-    <Sidebar />
-    <MainWorkspace>{children}</MainWorkspace>
-    <AgentDock />
-    <BottomTaskbar />
-  </AppShell>
+  <GlobalApplicationContextProvider>
+    <AppShell>
+      <TopBar />
+      <MarketTickerBar />
+      <Sidebar />
+      <MainWorkspace>{children}</MainWorkspace>
+      <AgentDock />
+      <BottomTaskbar />
+    </AppShell>
+  </GlobalApplicationContextProvider>
 </ShellProvider>
 ```
 
@@ -32,6 +34,11 @@ Shell state is isolated from business logic and persisted using `localStorage` t
 - `agentDockOpen` (boolean)
 - `agentDockWidth` (number)
 - `activeBottomPanel` (string | null)
+
+## Global Application Context
+The App Shell mounts the `GlobalApplicationContextProvider` which maintains the canonical global semantic context (Selected Entity, Time Range, etc).
+- Context is maintained across module navigation (Sidebar route changes do not clear context).
+- Context indicators live in the Top Bar (`SelectedEntityControl`, `GlobalTimeRangeControl`).
 
 ## Future Extension Points
 - **Agent Dock**: Currently contains empty state placeholders. Will handle AI chat and autonomous agent flows.

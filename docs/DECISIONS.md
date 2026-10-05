@@ -100,3 +100,102 @@ This document records the major architectural and product decisions established.
 98. Provider integration remains deferred.
 99. Entity master data lives in PostgreSQL.
 100. Entity creation must support atomic future specialization transactions without premature auto-commits.
+
+## Stage 25: Global Selected Entity Context
+101. ATLAS now has one global selected Universal Entity context.
+102. The canonical selected value is `entity_id`.
+103. Tickers, names, aliases and provider IDs are never canonical selection keys.
+104. Company and Security remain distinct selectable Entities.
+105. Selected Entity Context supports all Universal Entity types.
+106. Global selected Entity is distinct from local table/list selection.
+107. Hover/focus does not change global Entity context.
+108. Global selection changes only through deliberate semantic selection actions.
+109. Initial selected Entity is null.
+110. No fake default Entity exists.
+111. One browser tab supports zero or one global selected Entity.
+112. Stage 25 does not support global multi-selection.
+113. Selected Entity Context is mounted once at App Shell level.
+114. Modules must not create competing global Entity stores.
+115. The context persists across module navigation.
+116. Sidebar route changes do not clear Entity selection.
+117. App fullscreen does not clear selection.
+118. Agent Dock/Terminal toggles do not clear selection.
+119. Stage 25 uses the Stage 16 Entity endpoint for metadata.
+120. Selected context stores only Entity ID as durable session state.
+121. Base Entity metadata remains query-cache owned.
+122. Full Entity payloads are not persisted to browser storage.
+123. Session persistence uses sessionStorage by default.
+124. Selected Entity is transient context, not a user preference.
+125. Selected Entity is not persisted in PostgreSQL.
+126. Selected Entity is not stored in JWT/session claims.
+127. Selected Entity is not globally synchronized between browser tabs.
+128. Selected Entity is not automatically serialized into all URLs.
+129. Existing Entity detail routes may deliberately set selection if they already exist.
+130. Logout clears selected Entity.
+131. Authenticated account changes clear selected Entity.
+132. Temporary API failures do not automatically clear selection.
+133. Stale 404 selections are cleared.
+134. Client-selected Entity ID never bypasses backend authorization.
+135. Stage 22 Resolver remains responsible for converting strings/symbols into Entity IDs.
+136. SelectedEntityProvider accepts Entity IDs, not free-form symbols.
+137. Ambiguous resolution never changes global selection automatically.
+138. Not-found resolution does not destroy existing selection.
+139. Selected Entity Context does not automatically load Identifiers, Aliases, Relationships, or Provenance.
+140. Selected Entity Context does not load domain market/fundamental data.
+141. Selected Entity Context is a pointer, not a global data warehouse.
+142. Modules may decide whether the selected Entity type is relevant without clearing it.
+143. The Top Bar exposes selected Entity identity compactly.
+144. Selected Entity UI follows the ATLAS design system.
+145. No new top-level navigation item is created.
+146. No database migration is normally required for Stage 25.
+147. Stage 26 composed Selected Entity into the broader Global Application Context.
+
+## Stage 26: Global Application Context
+148. ATLAS now has one Global Application Context architecture.
+149. Global Application Context represents semantic working context, not all frontend global state.
+150. Authentication remains outside Global Application Context.
+151. Appearance remains outside Global Application Context.
+152. Settings remain outside Global Application Context.
+153. Layout geometry remains outside Global Application Context.
+154. Stage 25 selected Entity becomes a focused slice of Stage 26 context.
+155. `selectedEntityId` remains the canonical Entity context pointer.
+156. Stage 25 `useSelectedEntity()` compatibility is preserved.
+157. No second selected Entity store exists.
+158. Global Application Context stores references and analysis parameters, not domain datasets.
+159. Query/cache layers remain authoritative for API data.
+160. Global Time Range is introduced as shared analysis context.
+161. Global Time Range is not a market-session engine.
+162. Global Time Range does not equal chart candle interval.
+163. Global Time Range supports presets and custom ranges.
+164. The chosen default Time Range is documented centrally (1m).
+165. Portfolio context is foundation-only until Stage 110.
+166. Workspace context is foundation-only until Stage 120.
+167. Stage 26 does not create Portfolio or Workspace domain data.
+168. Map Context is foundation-only until Stage 129.
+169. Stage 26 does not integrate MapLibre/Cesium/deck.gl.
+170. Map Context stores viewport/layer references, not map features.
+171. Global Filter Context is typed and intentionally minimal.
+172. Stage 26 avoids arbitrary global `Record<string, any>` filter storage.
+173. Selected Object foundation is distinct from Selected Entity.
+174. Universal Entity remains first-class in context.
+175. Initial selected object is null.
+176. Global context uses versioned sessionStorage persistence.
+177. Context is isolated per browser tab.
+178. No cross-tab synchronization exists.
+179. No backend application-context table exists.
+180. No application-context API exists.
+181. No context is stored in JWT/auth claims.
+182. Logout resets Global Application Context.
+183. Authenticated principal changes reset Global Application Context.
+184. Stage 25 storage is safely migrated into Stage 26 storage.
+185. Entity ID is preserved during Stage 25-to-26 migration.
+186. New context storage becomes authoritative after migration.
+187. Context storage is validated before use.
+188. Corrupt context storage cannot crash ATLAS.
+189. Storage failure falls back to in-memory context.
+190. Context reset does not reset Settings, Appearance, Auth or Layout.
+191. Context changes do not mutate backend domain data.
+192. Context changes do not automatically trigger AI, Agents, or trades.
+193. Stage 26 does not implement context history, cloud sync, or shareable context URLs.
+194. Stage 26 does not automatically serialize context into routes.
+195. Stage 26 prepares a read-only serializable context snapshot for future Stage 27 capabilities.

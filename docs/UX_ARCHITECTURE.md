@@ -13,6 +13,10 @@ Includes:
 - Bottom Taskbar
 - Market Ticker
 
+## Global Semantic Context
+- **Global Application Context**: ATLAS maintains one shared semantic context containing the Selected Entity, Global Time Range, and foundational concepts for Portfolios, Workspaces, and Maps. It persists across module navigation.
+- **Local UI Selection**: Temporary local state such as table row selection or hover states do not alter the global context.
+
 ## Module Navigation
 - 20 distinct domain modules (e.g., Home, Markets, Charts).
 - Located in the primary sidebar.

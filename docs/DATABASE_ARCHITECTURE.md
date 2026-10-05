@@ -34,3 +34,6 @@ CREATE TABLE companies (
 - External Identifiers (Tickers, ISIN, etc.) are **NEVER** primary keys.
 - Entities do not change their ID.
 - Generic metadata JSON blobs are not permitted in the `entities` table.
+
+## Global Application Context
+Global Application Context (Stage 26) is transient browser-session state. No PostgreSQL tables are used for context persistence.

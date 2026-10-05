@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { useShellState } from "@/hooks/shell/useShellState";
 import { DevAppearanceSwitcher } from "./DevAppearanceSwitcher";
 import { BackgroundQuickControl } from "./BackgroundQuickControl";
+import { SelectedEntityControl } from "./SelectedEntityControl";
+import { GlobalTimeRangeControl } from "./GlobalTimeRangeControl";
 
 export function TopBar() {
   const [utcTime, setUtcTime] = useState("");
@@ -27,6 +29,8 @@ export function TopBar() {
       {/* Brand area */}
       <div className="flex items-center space-x-4">
         <span className="font-bold tracking-widest text-atlas-text-primary">ATLAS</span>
+        <SelectedEntityControl />
+        <GlobalTimeRangeControl />
       </div>
 
       {/* Center Global Search */}

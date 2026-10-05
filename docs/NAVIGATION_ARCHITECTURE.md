@@ -45,3 +45,6 @@ Missing modules are rendered using a standardized `ModuleFoundation.tsx` placeho
 ## Distinction from Shell Surfaces
 - **Agent Dock:** This is a persistent right-side shell surface, NOT the `/agents` module itself (which acts as the full autonomous agent management workstation).
 - **ATLAS AI:** The top-bar button is a quick overlay/assistant hook. The `/ai` module is the full AI workspace.
+
+## Context Preservation
+Navigating between any of the 20 modules preserves the Global Application Context (including `selectedEntityId` and `timeRange`). Route changes in the sidebar do not clear the user's semantic working context unless explicitly commanded.
