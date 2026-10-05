@@ -39,6 +39,10 @@ from .provenance import (
     RelationshipProvenanceListInput, relationship_provenance_list_factory
 )
 
+# Providers
+from atlas.providers.catalog import register_provider_capabilities
+from atlas.providers.bootstrap import build_provider_registry
+
 def register_all_handlers(registry: CapabilityRegistry):
     # --- entities ---
     registry.register(
@@ -275,3 +279,8 @@ def register_all_handlers(registry: CapabilityRegistry):
         ),
         relationship_provenance_list_factory
     )
+
+    # --- providers ---
+    # Register provider capabilities (list, get)
+    provider_registry = build_provider_registry()
+    register_provider_capabilities(registry, provider_registry)

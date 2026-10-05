@@ -61,3 +61,7 @@ Settings import/export foundation is architected but its implementation is defer
 ## Cloud Sync
 
 Currently, global settings are stored locally. The architecture natively supports adding cloud sync capabilities in future stages once user authentication is introduced.
+
+
+## OpenBB Integration
+See [OPENBB_INTEGRATION.md](OPENBB_INTEGRATION.md) for details on the Stage 29 OpenBB Framework Provider integration.

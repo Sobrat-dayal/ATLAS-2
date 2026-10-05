@@ -10,6 +10,10 @@ class CapabilityNotFoundError(CapabilityError):
             msg = f"Capability '{key}' version {version} not found"
         super().__init__(message=msg, code="CAPABILITY_NOT_FOUND", status_code=404)
 
+class CapabilityVersionNotFoundError(CapabilityNotFoundError):
+    def __init__(self, key: str, version: int):
+        super().__init__(key=key, version=version)
+
 class CapabilityInputInvalidError(CapabilityError):
     def __init__(self, details: list):
         super().__init__(

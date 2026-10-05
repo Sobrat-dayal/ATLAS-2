@@ -32,3 +32,7 @@ The backend uses a standard modular FastAPI structure located in `apps/api/src/a
   - *Database/Providers*: Deferred to later stages.
 
 *(Note: Stage 25/26 Global Application Context uses existing endpoints and introduces no new backend endpoints.)*
+
+
+## OpenBB Integration
+See [OPENBB_INTEGRATION.md](OPENBB_INTEGRATION.md) for details on the Stage 29 OpenBB Framework Provider integration.

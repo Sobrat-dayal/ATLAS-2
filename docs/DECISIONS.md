@@ -199,3 +199,91 @@ This document records the major architectural and product decisions established.
 193. Stage 26 does not implement context history, cloud sync, or shareable context URLs.
 194. Stage 26 does not automatically serialize context into routes.
 195. Stage 26 prepares a read-only serializable context snapshot for future Stage 27 capabilities.
+
+## Stage 29: Integrate OpenBB as Provider Framework
+
+1. OpenBB is integrated behind the Stage 28 Provider abstraction.
+2. ATLAS domain code does not import OpenBB directly.
+3. OpenBB integration uses the Python runtime in-process.
+4. Stage 29 does not deploy OpenBB as a REST sidecar.
+5. Stage 29 does not expose OpenBB REST routes.
+6. Stage 29 does not integrate OpenBB Workspace.
+7. Stage 29 does not integrate OpenBB MCP.
+8. Stage 29 uses a minimal OpenBB runtime dependency rather than installing every provider automatically.
+9. The OpenBB dependency is version-constrained and lockfile-pinned.
+10. OpenBB major-version compatibility is validated.
+11. Incompatible OpenBB generations are not mixed.
+12. OpenBB build/interface preparation occurs before normal request handling where required.
+13. OpenBB is not rebuilt on each request.
+14. OpenBB is not rebuilt for each Capability execution.
+15. OpenBB imports are isolated to the OpenBB integration package.
+16. `provider_key = openbb`.
+17. Initial OpenBB adapter version is 1.
+18. OpenBB is registered through the existing Stage 28 Provider Registry.
+19. No second Provider Registry is created.
+20. OpenBB registration is explicit.
+21. OpenBB Provider extensions are not automatically promoted to ATLAS Providers.
+22. OpenBB Provider construction uses the Stage 28 ProviderFactory architecture.
+23. Provider Catalog listing does not instantiate OpenBB adapters.
+24. OpenBB adapter construction is lazy.
+25. OpenBB Provider registration does not fetch external data.
+26. OpenBB Runtime provides an isolated integration boundary.
+27. OpenBB Coverage Inspector reads only local runtime metadata.
+28. Stage 29 does not expose a generic OpenBB command executor.
+29. Arbitrary command paths are never accepted from users.
+30. Stage 29 does not use `eval` or `exec`.
+31. Future OpenBB data calls must be explicitly implemented through typed Provider methods.
+32. OpenBB-specific result objects must not leak into Domain Services.
+33. OpenBB-specific result objects must not leak into Capability outputs.
+34. OpenBB-specific result objects must not leak into FastAPI schemas.
+35. OpenBB-specific result objects must not leak into the frontend.
+36. Future OpenBB results should retain source/provider metadata long enough for provenance handling.
+37. OpenBB itself is not automatically treated as the underlying Provenance Source.
+38. OpenBB Provider registration creates no Provenance Source record.
+39. OpenBB Provider registration creates no Provenance Record.
+40. Stage 29 does not create canonical Market Data models.
+41. Stage 29 does not create canonical Fundamental models.
+42. Stage 29 does not create canonical Economic models.
+43. Stage 29 does not create canonical News/Research models.
+44. Stage 29 performs no real financial-data fetch in production integration code.
+45. Stage 29 requires no Provider API keys.
+46. OpenBB credentials remain Stage 30.
+47. Per-user OpenBB credentials must not be implemented through unsafe process-global mutation.
+48. OpenBB global runtime preferences must not be used to leak one user's settings to another.
+49. OpenBB runtime availability is not Provider health.
+50. Provider health remains Stage 31.
+51. OpenBB registration does not make OpenBB the default Provider.
+52. Automatic Provider routing remains Stage 32.
+53. OpenBB failure does not trigger automatic fallback during Stage 29.
+54. Stage 29 adds no retries.
+55. Stage 29 adds no circuit breakers.
+56. Stage 29 adds no rate-limit architecture.
+57. Stage 29 adds no Provider cost tracking.
+58. Stage 29 adds no quota tracking.
+59. Stage 29 adds no OpenBB data cache.
+60. Stage 29 adds no Redis dependency.
+61. Stage 29 adds no ClickHouse integration.
+62. Stage 29 adds no ingestion workers.
+63. Stage 29 adds no live feeds.
+64. Stage 29 adds no WebSocket infrastructure.
+65. OpenBB package/runtime diagnostics contain no secrets.
+66. Unit tests remain offline.
+67. CI does not depend on public financial APIs.
+68. At least one real OpenBB import/runtime smoke test exists.
+69. OpenBB registration appears through existing `provider.list` and `provider.get`.
+70. Stage 30 remains responsible for Provider configuration and credentials.
+
+## Stage 30: Provider Configuration and Credential Management
+
+1. Provider configuration defaults to `enabled=false`.
+2. Configuration is strictly user-scoped and not globally applied.
+3. ATLAS must never store Provider secret values in plaintext application tables.
+4. Secret values are write-only through user-facing APIs. Users may set, replace, or delete, but never GET.
+5. Supabase Vault is the preferred production secret backend.
+6. The `SecretStore` abstraction handles the underlying Vault interactions.
+7. `ProviderConfiguration` models define the configuration state in the database.
+8. `ProviderCredentialBinding` maps credentials to Vault UUIDs, never storing the raw value.
+9. No generic secret stores are implemented.
+10. No plaintext fallback exists.
+11. Decrypted secrets are not cached in the application layer.
+12. Multi-user isolation is enforced by keeping credential handling within the ATLAS Service layer rather than mutating process-global OpenBB runtime state.

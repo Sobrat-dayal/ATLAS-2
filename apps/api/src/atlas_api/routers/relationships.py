@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.capabilities import CapabilityGateway, CapabilityRef, CapabilityExecutionContext
 from atlas_api.capabilities_dependencies import get_capability_gateway, get_capability_execution_context
-from atlas_api.dependencies.database import get_db
+from atlas_api.dependencies import get_db_session as get_db
 from atlas.relationships.schemas import (
     RelationshipTypeResponse,
     EntityRelationshipResponse,

@@ -15,6 +15,7 @@ from .aliases import router as aliases_router
 from .resolution import router as resolution_router
 from .relationships import router as relationships_router
 from .provenance import router as provenance_router
+from .providers import router as providers_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -32,3 +33,4 @@ api_router.include_router(aliases_router, prefix="")
 api_router.include_router(resolution_router, prefix="")
 api_router.include_router(relationships_router, prefix="")
 api_router.include_router(provenance_router, prefix="")
+api_router.include_router(providers_router, prefix="")

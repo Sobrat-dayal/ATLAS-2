@@ -62,3 +62,7 @@ Provider/Data
 
 ### Workflow Dependency Rule
 Future workflows should orchestrate agents, tools, capabilities, and approved code nodes. They should not duplicate domain business logic.
+
+
+## OpenBB Integration
+See [OPENBB_INTEGRATION.md](OPENBB_INTEGRATION.md) for details on the Stage 29 OpenBB Framework Provider integration.
