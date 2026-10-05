@@ -2,6 +2,7 @@ from atlas.providers.base import BaseProvider
 from atlas.providers.descriptor import ProviderDescriptor
 from atlas.providers.types import ProviderDomain
 from atlas.providers.openbb.runtime import OpenBBRuntime
+from atlas.market_data import MarketDataProviderCapabilities
 
 OPENBB_DESCRIPTOR = ProviderDescriptor(
     key="openbb",
@@ -29,6 +30,10 @@ class OpenBBProviderAdapter(BaseProvider):
     @property
     def descriptor(self) -> ProviderDescriptor:
         return OPENBB_DESCRIPTOR
+
+    @property
+    def market_data_capabilities(self) -> MarketDataProviderCapabilities:
+        return MarketDataProviderCapabilities(operations=frozenset())
 
     @property
     def runtime(self) -> OpenBBRuntime:

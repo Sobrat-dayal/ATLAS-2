@@ -2,12 +2,16 @@ from typing import Protocol
 from atlas.providers.base import BaseProvider
 
 
+from atlas.market_data import MarketDataProviderCapabilities
+
 class MarketDataProvider(BaseProvider, Protocol):
     """
     Abstractions for external market data sources (e.g., quotes, bars, trades, FX).
     Specific canonical methods will be introduced in Stage 33.
     """
-    pass
+    @property
+    def market_data_capabilities(self) -> MarketDataProviderCapabilities:
+        ...
 
 
 class FundamentalProvider(BaseProvider, Protocol):
