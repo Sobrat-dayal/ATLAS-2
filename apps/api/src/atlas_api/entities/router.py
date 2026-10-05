@@ -1,15 +1,10 @@
 import uuid
 from typing import Annotated
 
-from atlas.auth import AuthPrincipal
-from atlas.authorization import PermissionCode
-from atlas.entities import EntityService
 from fastapi import APIRouter, Depends, Response
 
-from atlas_api.auth.dependencies import get_current_user
-from atlas_api.authorization.dependencies import RequirePermission
-
-from .dependencies import get_entity_service
+from atlas.capabilities import CapabilityGateway, CapabilityRef, CapabilityExecutionContext
+from atlas_api.capabilities_dependencies import get_capability_gateway, get_capability_execution_context
 from .schemas import EntityResponse, EntityTypeListResponse
 
 router = APIRouter(tags=["Entities"])
@@ -19,28 +14,36 @@ router = APIRouter(tags=["Entities"])
 async def get_entity(
     entity_id: uuid.UUID,
     response: Response,
-    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
-    service: Annotated[EntityService, Depends(get_entity_service)],
-    _: None = Depends(RequirePermission(PermissionCode.ATLAS_ACCESS)),
+    gateway: Annotated[CapabilityGateway, Depends(get_capability_gateway)],
+    context: Annotated[CapabilityExecutionContext, Depends(get_capability_execution_context)],
 ):
     """
     Get a universal entity by its ID.
     """
     response.headers["Cache-Control"] = "private, max-age=60"
-    entity = await service.get_entity(entity_id)
-    return entity
+    
+    result = await gateway.execute(
+        ref=CapabilityRef(key="entity.get"),
+        payload={"entity_id": entity_id},
+        execution_context=context
+    )
+    return result
 
 
 @router.get("/entity-types", response_model=EntityTypeListResponse)
 async def list_entity_types(
     response: Response,
-    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
-    service: Annotated[EntityService, Depends(get_entity_service)],
-    _: None = Depends(RequirePermission(PermissionCode.ATLAS_ACCESS)),
+    gateway: Annotated[CapabilityGateway, Depends(get_capability_gateway)],
+    context: Annotated[CapabilityExecutionContext, Depends(get_capability_execution_context)],
 ):
     """
     List all supported canonical entity types.
     """
     response.headers["Cache-Control"] = "public, max-age=3600"
-    types = await service.list_entity_types()
-    return EntityTypeListResponse(types=types)
+    
+    result = await gateway.execute(
+        ref=CapabilityRef(key="entity.type.list"),
+        payload={},
+        execution_context=context
+    )
+    return result

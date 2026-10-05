@@ -3,23 +3,14 @@ from typing import Annotated, List
 
 from atlas_api.auth.dependencies import get_current_user
 from atlas_api.authorization.dependencies import RequirePermission
-from atlas_api.dependencies import get_db_session
-from atlas_api.entities.dependencies import get_entity_service
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.auth import AuthPrincipal
 from atlas.authorization import PermissionCode
-from atlas.entities.service import EntityService
 from atlas.identifiers.schemas import EntityIdentifierResponse, IdentifierSchemeResponse
-from atlas.identifiers.service import IdentifierService
 
-
-def get_identifier_service(
-    session: Annotated[AsyncSession, Depends(get_db_session)],
-) -> IdentifierService:
-    return IdentifierService(session)
-
+from atlas.capabilities import CapabilityGateway, CapabilityRef, CapabilityExecutionContext
+from atlas_api.capabilities_dependencies import get_capability_gateway, get_capability_execution_context
 
 router = APIRouter(tags=["Identifiers"])
 
@@ -30,11 +21,16 @@ router = APIRouter(tags=["Identifiers"])
     description="List all available identifier schemes.",
 )
 async def list_identifier_schemes(
-    identifier_service: Annotated[IdentifierService, Depends(get_identifier_service)],
+    gateway: Annotated[CapabilityGateway, Depends(get_capability_gateway)],
+    context: Annotated[CapabilityExecutionContext, Depends(get_capability_execution_context)],
     principal: Annotated[AuthPrincipal, Depends(get_current_user)],
     _: None = Depends(RequirePermission(PermissionCode.ATLAS_ACCESS)),
 ):
-    return await identifier_service.list_identifier_schemes()
+    return await gateway.execute(
+        ref=CapabilityRef(key="identifier.scheme.list"),
+        payload={},
+        execution_context=context
+    )
 
 
 @router.get(
@@ -45,14 +41,17 @@ async def list_identifier_schemes(
 )
 async def get_entity_identifiers(
     entity_id: uuid.UUID,
-    entity_service: Annotated[EntityService, Depends(get_entity_service)],
-    identifier_service: Annotated[IdentifierService, Depends(get_identifier_service)],
+    gateway: Annotated[CapabilityGateway, Depends(get_capability_gateway)],
+    context: Annotated[CapabilityExecutionContext, Depends(get_capability_execution_context)],
     principal: Annotated[AuthPrincipal, Depends(get_current_user)],
     _: None = Depends(RequirePermission(PermissionCode.ATLAS_ACCESS)),
     include_history: bool = Query(False, description="Include historical retired identifiers"),
 ):
-    entity = await entity_service.get_entity(entity_id)
-    if not entity:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found")
-        
-    return await identifier_service.get_entity_identifiers(entity_id, include_history)
+    return await gateway.execute(
+        ref=CapabilityRef(key="entity.identifiers.list"),
+        payload={
+            "entity_id": entity_id,
+            "include_history": include_history
+        },
+        execution_context=context
+    )

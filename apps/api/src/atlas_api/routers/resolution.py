@@ -1,19 +1,12 @@
-from typing import Optional, List
 import uuid
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional, List, Annotated
 
-from atlas.resolution.schemas import EntityResolutionResponse, EntityResolutionRequest
-from atlas.resolution.service import EntityResolutionService
-from atlas_api.dependencies import get_db_session
+from fastapi import APIRouter, Depends, Query
+from atlas.capabilities import CapabilityGateway, CapabilityRef, CapabilityExecutionContext
+from atlas_api.capabilities_dependencies import get_capability_gateway, get_capability_execution_context
+from atlas.resolution.schemas import EntityResolutionResponse
 
 router = APIRouter(prefix="/resolution", tags=["Resolution"])
-
-
-def get_resolution_service(
-    session: AsyncSession = Depends(get_db_session),
-) -> EntityResolutionService:
-    return EntityResolutionService(session)
 
 
 @router.get("/resolve", response_model=EntityResolutionResponse)
@@ -26,19 +19,26 @@ async def resolve_entity(
     language_code: Optional[str] = Query(None),
     include_historical: bool = Query(False),
     max_candidates: int = Query(10, ge=1, le=25),
-    service: EntityResolutionService = Depends(get_resolution_service),
+    gateway: Annotated[CapabilityGateway, Depends(get_capability_gateway)] = None,
+    context: Annotated[CapabilityExecutionContext, Depends(get_capability_execution_context)] = None,
 ):
     """
     Deterministically resolves a string to one or more Universal Entities.
     """
-    req = EntityResolutionRequest(
-        query=query,
-        entity_type_hints=entity_type_hints,
-        identifier_scheme_hint=identifier_scheme_hint,
-        scope_entity_id=scope_entity_id,
-        namespace=namespace,
-        language_code=language_code,
-        include_historical=include_historical,
-        max_candidates=max_candidates
+    payload = {
+        "query": query,
+        "entity_type_hints": entity_type_hints,
+        "identifier_scheme_hint": identifier_scheme_hint,
+        "scope_entity_id": scope_entity_id,
+        "namespace": namespace,
+        "language_code": language_code,
+        "include_historical": include_historical,
+        "max_candidates": max_candidates
+    }
+    
+    result = await gateway.execute(
+        ref=CapabilityRef(key="entity.resolve"),
+        payload=payload,
+        execution_context=context
     )
-    return await service.resolve_entity(req)
+    return result
