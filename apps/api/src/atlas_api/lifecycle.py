@@ -36,10 +36,40 @@ async def lifespan(app: FastAPI):
     app.state.ready = True
     app.state.db = db_manager
 
+    # Stage 31: Provider Health Monitor
+    from atlas.providers.bootstrap import build_provider_registry, build_provider_health_registry
+    from atlas.providers.health.monitor import ProviderHealthMonitor
+    from atlas.providers.health.service import ProviderHealthService
+    from atlas.providers.health.repository import ProviderHealthRepository
+    from atlas.providers.configuration.service import ProviderConfigurationService
+    from atlas.providers.configuration.secrets import SupabaseVaultSecretStore
+
+    provider_registry = build_provider_registry()
+    health_registry = build_provider_health_registry(provider_registry)
+
+    def service_factory(session):
+        secret_store = SupabaseVaultSecretStore(session)
+        config_service = ProviderConfigurationService(session, secret_store)
+        repo = ProviderHealthRepository(session)
+        return ProviderHealthService(health_registry, provider_registry, repo, config_service)
+
+    monitor = ProviderHealthMonitor(
+        health_registry=health_registry,
+        session_factory=db_manager.session,
+        service_factory=service_factory,
+        enabled=True,
+        interval_seconds=300
+    )
+    app.state.health_monitor = monitor
+    monitor.start()
+
     yield
 
     logger.info("Shutting down ATLAS API foundation...")
     app.state.ready = False
+
+    if hasattr(app.state, "health_monitor"):
+        await app.state.health_monitor.stop()
 
     # Dispose database engine
     await db_manager.dispose()

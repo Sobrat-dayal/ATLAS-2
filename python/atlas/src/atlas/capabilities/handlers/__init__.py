@@ -41,7 +41,11 @@ from .provenance import (
 
 # Providers
 from atlas.providers.catalog import register_provider_capabilities
-from atlas.providers.bootstrap import build_provider_registry
+from atlas.providers.bootstrap import build_provider_registry, build_provider_health_registry
+from atlas.providers.health.capabilities import register_provider_health_capabilities
+from atlas.providers.health.service import ProviderHealthService
+from atlas.providers.health.repository import ProviderHealthRepository
+from atlas.providers.configuration.service import ProviderConfigurationService
 
 def register_all_handlers(registry: CapabilityRegistry):
     # --- entities ---
@@ -284,3 +288,6 @@ def register_all_handlers(registry: CapabilityRegistry):
     # Register provider capabilities (list, get)
     provider_registry = build_provider_registry()
     register_provider_capabilities(registry, provider_registry)
+    
+    health_registry = build_provider_health_registry(provider_registry)
+    register_provider_health_capabilities(registry, provider_registry, health_registry)
