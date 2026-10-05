@@ -32,6 +32,7 @@ import atlas.relationships.models  # noqa: F401
 import atlas.provenance.models  # noqa: F401
 import atlas.providers.configuration.models  # noqa: F401
 import atlas.providers.health.db_models  # noqa: F401
+import atlas.providers.routing.db_models  # noqa: F401
 from atlas.database import Base, normalize_database_url
 
 from atlas_api.config import get_settings

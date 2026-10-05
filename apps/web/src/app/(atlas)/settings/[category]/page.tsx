@@ -9,6 +9,7 @@ import { AccessibilitySettings } from "@/components/settings/categories/Accessib
 import { DeveloperSettings } from "@/components/settings/categories/DeveloperSettings";
 import { AdvancedSettings } from "@/components/settings/categories/AdvancedSettings";
 import { FoundationSettings } from "@/components/settings/categories/FoundationSettings";
+import { RoutingSettings } from "@/components/settings/categories/RoutingSettings";
 
 export default function SettingsCategoryPage({
   params,
@@ -37,6 +38,8 @@ export default function SettingsCategoryPage({
         return <DeveloperSettings />;
       case "advanced":
         return <AdvancedSettings />;
+      case "routing":
+        return <RoutingSettings />;
       default:
         // Render foundation state for unavailable categories
         return <FoundationSettings category={category} />;

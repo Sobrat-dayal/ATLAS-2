@@ -39,6 +39,7 @@ export type SettingsCategoryId =
   | "mcp"
   | "apiKeys"
   | "dataProviders"
+  | "routing"
   | "marketData"
   | "trading"
   | "brokers"
@@ -182,6 +183,16 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
     keywords: ["financial data", "economics", "news", "alternative data"],
     availability: "foundation",
     order: 120,
+  },
+  {
+    id: "routing",
+    label: "Routing & Fallback",
+    route: "/settings/routing",
+    icon: Network,
+    description: "Manage provider routing, priorities, and fallback strategies.",
+    keywords: ["routing", "fallback", "priority", "providers"],
+    availability: "active",
+    order: 125,
   },
   {
     id: "marketData",

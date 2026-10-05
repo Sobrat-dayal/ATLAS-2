@@ -289,5 +289,34 @@ def register_all_handlers(registry: CapabilityRegistry):
     provider_registry = build_provider_registry()
     register_provider_capabilities(registry, provider_registry)
     
-    health_registry = build_provider_health_registry(provider_registry)
+    # Providers Stage 32
+    from atlas.providers.routing.repository import ProviderRoutingRepository
+    from atlas.providers.routing.service import ProviderRoutingService
+    from atlas.providers.routing.selection import ProviderSelectionService
+    
+    def routing_service_factory(session):
+        repo = ProviderRoutingRepository(session)
+        return ProviderRoutingService(repo, provider_registry)
+
+    def selection_service_factory(session):
+        routing_service = routing_service_factory(session)
+        from atlas.providers.configuration.secrets import SupabaseVaultSecretStore
+        from atlas.providers.configuration.service import ProviderConfigurationService
+        config_service = ProviderConfigurationService(session, SupabaseVaultSecretStore(session))
+        
+        from atlas.providers.health.repository import ProviderHealthRepository
+        from atlas.providers.health.service import ProviderHealthService
+        health_repo = ProviderHealthRepository(session)
+        health_service = ProviderHealthService(health_registry, provider_registry, health_repo, config_service)
+        
+        return ProviderSelectionService(routing_service, provider_registry, config_service, health_service)
+
+    # Note: capability handlers operate inside a gateway context that provides the session
+    # but the capability register function doesn't get the session. 
+    # Oh, wait. In Stage 31, I built the health capabilities to construct their services per-request inside the handler.
+    # I need to do the same for routing. Let's look at how health is registered.
     register_provider_health_capabilities(registry, provider_registry, health_registry)
+    
+    from atlas.providers.routing.capabilities import register_provider_routing_capabilities
+    # I need to change register_provider_routing_capabilities to instantiate services inside the handler
+    register_provider_routing_capabilities(registry, provider_registry, health_registry)

@@ -101,3 +101,84 @@ async def get_provider_health_history(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/routing", response_model=None, dependencies=[Depends(RequirePermission("atlas.access"))])
+async def list_provider_routing_policies(
+    gateway: CapabilityGateway = Depends(get_capability_gateway),
+) -> dict:
+    try:
+        response = await gateway.execute_capability(
+            capability_key="provider.routing.list",
+            inputs={}
+        )
+        return response.result.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/routing/{domain}", response_model=None, dependencies=[Depends(RequirePermission("atlas.access"))])
+async def get_provider_routing_policy(
+    domain: str,
+    gateway: CapabilityGateway = Depends(get_capability_gateway),
+) -> dict:
+    try:
+        response = await gateway.execute_capability(
+            capability_key="provider.routing.get",
+            inputs={"domain": domain}
+        )
+        return response.result.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ProviderRoutingUpdatePayload(BaseModel):
+    enabled: bool
+    fallback_enabled: bool
+    provider_keys: list[str]
+
+@router.put("/routing/{domain}", response_model=None, dependencies=[Depends(RequirePermission("atlas.access"))])
+async def update_provider_routing_policy(
+    domain: str,
+    payload: ProviderRoutingUpdatePayload,
+    gateway: CapabilityGateway = Depends(get_capability_gateway),
+) -> dict:
+    try:
+        response = await gateway.execute_capability(
+            capability_key="provider.routing.update",
+            inputs={
+                "domain": domain,
+                "enabled": payload.enabled,
+                "fallback_enabled": payload.fallback_enabled,
+                "provider_keys": payload.provider_keys
+            }
+        )
+        return response.result.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/routing/{domain}/reset", response_model=None, dependencies=[Depends(RequirePermission("atlas.access"))])
+async def reset_provider_routing_policy(
+    domain: str,
+    gateway: CapabilityGateway = Depends(get_capability_gateway),
+) -> dict:
+    try:
+        response = await gateway.execute_capability(
+            capability_key="provider.routing.reset",
+            inputs={"domain": domain}
+        )
+        return {"status": "reset"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/routing/{domain}/plan", response_model=None, dependencies=[Depends(RequirePermission("atlas.access"))])
+async def get_provider_routing_plan(
+    domain: str,
+    gateway: CapabilityGateway = Depends(get_capability_gateway),
+) -> dict:
+    try:
+        response = await gateway.execute_capability(
+            capability_key="provider.routing.plan",
+            inputs={"domain": domain}
+        )
+        return response.result.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
