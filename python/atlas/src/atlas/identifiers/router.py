@@ -3,16 +3,19 @@ from typing import Annotated, List
 
 from atlas_api.auth.dependencies import get_current_user
 from atlas_api.authorization.dependencies import RequirePermission
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from atlas_api.capabilities_dependencies import (
+    get_capability_execution_context,
+    get_capability_gateway,
+)
+from fastapi import APIRouter, Depends, Query
 
 from atlas.auth import AuthPrincipal
 from atlas.authorization import PermissionCode
+from atlas.capabilities import CapabilityExecutionContext, CapabilityGateway, CapabilityRef
 from atlas.identifiers.schemas import EntityIdentifierResponse, IdentifierSchemeResponse
 
-from atlas.capabilities import CapabilityGateway, CapabilityRef, CapabilityExecutionContext
-from atlas_api.capabilities_dependencies import get_capability_gateway, get_capability_execution_context
-
 router = APIRouter(tags=["Identifiers"])
+
 
 @router.get(
     "/api/v1/identifier-schemes",
@@ -27,9 +30,7 @@ async def list_identifier_schemes(
     _: None = Depends(RequirePermission(PermissionCode.ATLAS_ACCESS)),
 ):
     return await gateway.execute(
-        ref=CapabilityRef(key="identifier.scheme.list"),
-        payload={},
-        execution_context=context
+        ref=CapabilityRef(key="identifier.scheme.list"), payload={}, execution_context=context
     )
 
 
@@ -49,9 +50,6 @@ async def get_entity_identifiers(
 ):
     return await gateway.execute(
         ref=CapabilityRef(key="entity.identifiers.list"),
-        payload={
-            "entity_id": entity_id,
-            "include_history": include_history
-        },
-        execution_context=context
+        payload={"entity_id": entity_id, "include_history": include_history},
+        execution_context=context,
     )

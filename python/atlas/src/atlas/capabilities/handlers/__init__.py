@@ -1,51 +1,73 @@
-from atlas.capabilities.registry import CapabilityRegistry, CapabilityDefinition
-from atlas.capabilities.types import CapabilityPermissionClass, CapabilityExposure
+from atlas.capabilities.registry import CapabilityDefinition, CapabilityRegistry
+from atlas.capabilities.types import CapabilityExposure, CapabilityPermissionClass
+from atlas.providers.bootstrap import build_provider_health_registry, build_provider_registry
+
+# Providers
+from atlas.providers.catalog import register_provider_capabilities
+from atlas.providers.configuration.service import ProviderConfigurationService
+from atlas.providers.health.capabilities import register_provider_health_capabilities
+from atlas.providers.health.repository import ProviderHealthRepository
+from atlas.providers.health.service import ProviderHealthService
+
+# Aliases
+from .aliases import (
+    AliasTypeListInput,
+    AliasTypeListOutput,
+    EntityAliasesListInput,
+    EntityAliasesListOutput,
+    alias_type_list_factory,
+    entity_aliases_list_factory,
+)
 
 # Entities
 from .entities import (
-    EntityGetInput, EntityOutput, entity_get_factory,
-    EntityTypeListInput, EntityTypeListOutput, entity_type_list_factory
-)
-
-# Resolution
-from .resolution import (
-    EntityResolutionRequest, EntityResolutionResponse, entity_resolve_factory
+    EntityGetInput,
+    EntityOutput,
+    EntityTypeListInput,
+    EntityTypeListOutput,
+    entity_get_factory,
+    entity_type_list_factory,
 )
 
 # Identifiers
 from .identifiers import (
-    IdentifierSchemeListInput, IdentifierSchemeListOutput, identifier_scheme_list_factory,
-    EntityIdentifiersListInput, EntityIdentifiersListOutput, entity_identifiers_list_factory
-)
-
-# Aliases
-from .aliases import (
-    AliasTypeListInput, AliasTypeListOutput, alias_type_list_factory,
-    EntityAliasesListInput, EntityAliasesListOutput, entity_aliases_list_factory
-)
-
-# Relationships
-from .relationships import (
-    RelationshipTypeListInput, RelationshipTypeListOutput, relationship_type_list_factory,
-    EntityRelationshipsListInput, EntityRelationshipsListOutput, entity_relationships_list_factory
+    EntityIdentifiersListInput,
+    EntityIdentifiersListOutput,
+    IdentifierSchemeListInput,
+    IdentifierSchemeListOutput,
+    entity_identifiers_list_factory,
+    identifier_scheme_list_factory,
 )
 
 # Provenance
 from .provenance import (
-    ProvenanceSourceListInput, ProvenanceSourceListResponse, provenance_source_list_factory,
-    EntityProvenanceListInput, TargetProvenanceListResponse, entity_provenance_list_factory,
-    IdentifierProvenanceListInput, identifier_provenance_list_factory,
-    AliasProvenanceListInput, alias_provenance_list_factory,
-    RelationshipProvenanceListInput, relationship_provenance_list_factory
+    AliasProvenanceListInput,
+    EntityProvenanceListInput,
+    IdentifierProvenanceListInput,
+    ProvenanceSourceListInput,
+    ProvenanceSourceListResponse,
+    RelationshipProvenanceListInput,
+    TargetProvenanceListResponse,
+    alias_provenance_list_factory,
+    entity_provenance_list_factory,
+    identifier_provenance_list_factory,
+    provenance_source_list_factory,
+    relationship_provenance_list_factory,
 )
 
-# Providers
-from atlas.providers.catalog import register_provider_capabilities
-from atlas.providers.bootstrap import build_provider_registry, build_provider_health_registry
-from atlas.providers.health.capabilities import register_provider_health_capabilities
-from atlas.providers.health.service import ProviderHealthService
-from atlas.providers.health.repository import ProviderHealthRepository
-from atlas.providers.configuration.service import ProviderConfigurationService
+# Relationships
+from .relationships import (
+    EntityRelationshipsListInput,
+    EntityRelationshipsListOutput,
+    RelationshipTypeListInput,
+    RelationshipTypeListOutput,
+    entity_relationships_list_factory,
+    relationship_type_list_factory,
+)
+
+# Resolution
+from .resolution import EntityResolutionRequest, EntityResolutionResponse, entity_resolve_factory
+
 
 def register_all_handlers(registry: CapabilityRegistry):
     # --- entities ---
@@ -61,9 +83,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=EntityGetInput,
-            output_model=EntityOutput
+            output_model=EntityOutput,
         ),
-        entity_get_factory
+        entity_get_factory,
     )
     registry.register(
         CapabilityDefinition(
@@ -77,9 +99,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=EntityTypeListInput,
-            output_model=EntityTypeListOutput
+            output_model=EntityTypeListOutput,
         ),
-        entity_type_list_factory
+        entity_type_list_factory,
     )
 
     # --- resolution ---
@@ -95,9 +117,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=EntityResolutionRequest,
-            output_model=EntityResolutionResponse
+            output_model=EntityResolutionResponse,
         ),
-        entity_resolve_factory
+        entity_resolve_factory,
     )
 
     # --- identifiers ---
@@ -113,9 +135,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=IdentifierSchemeListInput,
-            output_model=IdentifierSchemeListOutput
+            output_model=IdentifierSchemeListOutput,
         ),
-        identifier_scheme_list_factory
+        identifier_scheme_list_factory,
     )
     registry.register(
         CapabilityDefinition(
@@ -129,9 +151,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=EntityIdentifiersListInput,
-            output_model=EntityIdentifiersListOutput
+            output_model=EntityIdentifiersListOutput,
         ),
-        entity_identifiers_list_factory
+        entity_identifiers_list_factory,
     )
 
     # --- aliases ---
@@ -147,9 +169,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=AliasTypeListInput,
-            output_model=AliasTypeListOutput
+            output_model=AliasTypeListOutput,
         ),
-        alias_type_list_factory
+        alias_type_list_factory,
     )
     registry.register(
         CapabilityDefinition(
@@ -163,9 +185,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=EntityAliasesListInput,
-            output_model=EntityAliasesListOutput
+            output_model=EntityAliasesListOutput,
         ),
-        entity_aliases_list_factory
+        entity_aliases_list_factory,
     )
 
     # --- relationships ---
@@ -181,9 +203,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=RelationshipTypeListInput,
-            output_model=RelationshipTypeListOutput
+            output_model=RelationshipTypeListOutput,
         ),
-        relationship_type_list_factory
+        relationship_type_list_factory,
     )
     registry.register(
         CapabilityDefinition(
@@ -197,9 +219,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=EntityRelationshipsListInput,
-            output_model=EntityRelationshipsListOutput
+            output_model=EntityRelationshipsListOutput,
         ),
-        entity_relationships_list_factory
+        entity_relationships_list_factory,
     )
 
     # --- provenance ---
@@ -215,9 +237,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=ProvenanceSourceListInput,
-            output_model=ProvenanceSourceListResponse
+            output_model=ProvenanceSourceListResponse,
         ),
-        provenance_source_list_factory
+        provenance_source_list_factory,
     )
     registry.register(
         CapabilityDefinition(
@@ -231,9 +253,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=EntityProvenanceListInput,
-            output_model=TargetProvenanceListResponse
+            output_model=TargetProvenanceListResponse,
         ),
-        entity_provenance_list_factory
+        entity_provenance_list_factory,
     )
     registry.register(
         CapabilityDefinition(
@@ -247,9 +269,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=IdentifierProvenanceListInput,
-            output_model=TargetProvenanceListResponse
+            output_model=TargetProvenanceListResponse,
         ),
-        identifier_provenance_list_factory
+        identifier_provenance_list_factory,
     )
     registry.register(
         CapabilityDefinition(
@@ -263,9 +285,9 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=AliasProvenanceListInput,
-            output_model=TargetProvenanceListResponse
+            output_model=TargetProvenanceListResponse,
         ),
-        alias_provenance_list_factory
+        alias_provenance_list_factory,
     )
     registry.register(
         CapabilityDefinition(
@@ -279,21 +301,21 @@ def register_all_handlers(registry: CapabilityRegistry):
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=RelationshipProvenanceListInput,
-            output_model=TargetProvenanceListResponse
+            output_model=TargetProvenanceListResponse,
         ),
-        relationship_provenance_list_factory
+        relationship_provenance_list_factory,
     )
 
     # --- providers ---
     # Register provider capabilities (list, get)
     provider_registry = build_provider_registry()
     register_provider_capabilities(registry, provider_registry)
-    
+
     # Providers Stage 32
     from atlas.providers.routing.repository import ProviderRoutingRepository
-    from atlas.providers.routing.service import ProviderRoutingService
     from atlas.providers.routing.selection import ProviderSelectionService
-    
+    from atlas.providers.routing.service import ProviderRoutingService
+
     def routing_service_factory(session):
         repo = ProviderRoutingRepository(session)
         return ProviderRoutingService(repo, provider_registry)
@@ -301,22 +323,26 @@ def register_all_handlers(registry: CapabilityRegistry):
     def selection_service_factory(session):
         routing_service = routing_service_factory(session)
         from atlas.providers.configuration.secrets import SupabaseVaultSecretStore
-        from atlas.providers.configuration.service import ProviderConfigurationService
+
         config_service = ProviderConfigurationService(session, SupabaseVaultSecretStore(session))
-        
-        from atlas.providers.health.repository import ProviderHealthRepository
-        from atlas.providers.health.service import ProviderHealthService
+
+
         health_repo = ProviderHealthRepository(session)
-        health_service = ProviderHealthService(health_registry, provider_registry, health_repo, config_service)
-        
-        return ProviderSelectionService(routing_service, provider_registry, config_service, health_service)
+        health_service = ProviderHealthService(
+            health_registry, provider_registry, health_repo, config_service
+        )
+
+        return ProviderSelectionService(
+            routing_service, provider_registry, config_service, health_service
+        )
 
     # Note: capability handlers operate inside a gateway context that provides the session
-    # but the capability register function doesn't get the session. 
+    # but the capability register function doesn't get the session.
     # Oh, wait. In Stage 31, I built the health capabilities to construct their services per-request inside the handler.
     # I need to do the same for routing. Let's look at how health is registered.
     register_provider_health_capabilities(registry, provider_registry, health_registry)
-    
+
     from atlas.providers.routing.capabilities import register_provider_routing_capabilities
+
     # I need to change register_provider_routing_capabilities to instantiate services inside the handler
     register_provider_routing_capabilities(registry, provider_registry, health_registry)

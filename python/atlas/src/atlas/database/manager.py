@@ -55,7 +55,7 @@ class DatabaseManager:
         """Disposes the engine pool."""
         if not self.is_initialized or self.engine is None:
             return
-        
+
         logger.info("Disposing database engine...")
         await self.engine.dispose()
         self.is_initialized = False
@@ -65,7 +65,7 @@ class DatabaseManager:
         """Checks if the database is reachable by executing SELECT 1."""
         if not self.is_initialized or self.engine is None:
             return False
-            
+
         try:
             async with self.engine.connect() as conn:
                 # Use a timeout context if needed, but for now we just try a lightweight query

@@ -1,11 +1,12 @@
-import uuid
-from typing import Sequence, Optional
 import datetime
+import uuid
+from typing import Optional, Sequence
+
+from atlas.entities.name_normalization import normalize_entity_name
 
 from .errors import InvalidAliasError, UnknownAliasTypeError
 from .registry import get_alias_type_definition, get_all_alias_type_definitions
 from .repository import AliasRepository
-from atlas.entities.name_normalization import normalize_entity_name
 
 
 class AliasService:
@@ -34,7 +35,7 @@ class AliasService:
         value: str,
         language_code: Optional[str] = None,
         valid_from: Optional[datetime.date] = None,
-        is_current: bool = True
+        is_current: bool = True,
     ):
         if not get_alias_type_definition(alias_type):
             raise UnknownAliasTypeError(alias_type)
@@ -48,15 +49,15 @@ class AliasService:
             normalized = normalize_entity_name(value)
         except ValueError as e:
             raise InvalidAliasError(str(e))
-            
+
         if len(normalized) == 0:
             raise InvalidAliasError("Alias cannot be empty")
-            
+
         if len(value) > 512:
-             raise InvalidAliasError("Alias value exceeds length limit of 512")
-             
+            raise InvalidAliasError("Alias value exceeds length limit of 512")
+
         if language_code and len(language_code) > 35:
-             raise InvalidAliasError("Language code exceeds length limit of 35")
+            raise InvalidAliasError("Language code exceeds length limit of 35")
 
         return await self.repository.add_alias(
             entity_id=entity_id,
@@ -65,13 +66,11 @@ class AliasService:
             normalized_value=normalized,
             language_code=language_code,
             valid_from=valid_from,
-            is_current=is_current
+            is_current=is_current,
         )
 
     async def get_entity_aliases(self, entity_id: uuid.UUID, include_history: bool = False):
         return await self.repository.get_entity_aliases(entity_id, include_history)
 
-    async def retire_alias(
-        self, alias_id: uuid.UUID, valid_to: Optional[datetime.date] = None
-    ):
+    async def retire_alias(self, alias_id: uuid.UUID, valid_to: Optional[datetime.date] = None):
         return await self.repository.retire_alias(alias_id, valid_to)

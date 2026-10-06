@@ -13,7 +13,9 @@ class ResearchDocumentRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def get_research_document(self, entity_id: uuid.UUID) -> Optional[tuple[Entity, ResearchDocument]]:
+    def get_research_document(
+        self, entity_id: uuid.UUID
+    ) -> Optional[tuple[Entity, ResearchDocument]]:
         stmt = (
             select(Entity, ResearchDocument)
             .join(ResearchDocument, Entity.entity_id == ResearchDocument.entity_id)

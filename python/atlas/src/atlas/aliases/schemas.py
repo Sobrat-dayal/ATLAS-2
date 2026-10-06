@@ -1,5 +1,5 @@
-import uuid
 import datetime
+import uuid
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -12,7 +12,7 @@ class AliasTypeResponse(BaseModel):
     category: str
     normalization_strategy: str
     is_system: bool
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -24,7 +24,7 @@ class EntityAliasResponse(BaseModel):
     is_current: bool
     valid_from: Optional[datetime.date]
     valid_to: Optional[datetime.date]
-    
+
     @classmethod
     def from_orm(cls, obj):
         return cls(
@@ -36,6 +36,7 @@ class EntityAliasResponse(BaseModel):
             valid_from=obj.valid_from,
             valid_to=obj.valid_to,
         )
-    
+
+
 class EntityAliasListResponse(BaseModel):
     aliases: list[EntityAliasResponse]

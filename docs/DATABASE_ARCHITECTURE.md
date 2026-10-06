@@ -39,5 +39,8 @@ CREATE TABLE companies (
 Global Application Context (Stage 26) is transient browser-session state. No PostgreSQL tables are used for context persistence.
 
 
+## Market Data (Stage 33)
+Stage 33 adds no Market Data persistence tables to PostgreSQL (e.g., no quotes, 	rades, candles, order_books tables). High-volume historical and live Market Data storage is deferred to future stages utilizing ClickHouse (Stage 37).
+
 ## OpenBB Integration
 See [OPENBB_INTEGRATION.md](OPENBB_INTEGRATION.md) for details on the Stage 29 OpenBB Framework Provider integration.

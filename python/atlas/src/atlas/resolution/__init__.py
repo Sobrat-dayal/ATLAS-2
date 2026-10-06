@@ -1,4 +1,4 @@
-from .schemas import ResolutionCandidate, EntityResolutionResponse, EntityResolutionRequest
+from .schemas import EntityResolutionRequest, EntityResolutionResponse, ResolutionCandidate
 from .service import EntityResolutionService
 
 __all__ = [

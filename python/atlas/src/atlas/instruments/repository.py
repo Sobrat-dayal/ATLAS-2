@@ -21,6 +21,7 @@ from .models import (
 
 T = TypeVar("T")
 
+
 class InstrumentRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
@@ -36,7 +37,7 @@ class InstrumentRepository:
         return result.scalar_one_or_none()
 
     async def _get_subtype(self, model: Type[T], entity_id: uuid.UUID) -> Optional[T]:
-        stmt = select(model).where(model.entity_id == entity_id) # type: ignore
+        stmt = select(model).where(model.entity_id == entity_id)  # type: ignore
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 

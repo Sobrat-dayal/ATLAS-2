@@ -1,23 +1,26 @@
+from atlas.market_data import MarketDataProviderCapabilities
 from atlas.providers.base import BaseProvider
 from atlas.providers.descriptor import ProviderDescriptor
-from atlas.providers.types import ProviderDomain
 from atlas.providers.openbb.runtime import OpenBBRuntime
-from atlas.market_data import MarketDataProviderCapabilities
+from atlas.providers.types import ProviderDomain
 
 OPENBB_DESCRIPTOR = ProviderDescriptor(
     key="openbb",
     display_name="OpenBB",
     description="an ATLAS integration bridge to the OpenBB data-provider ecosystem",
     adapter_version=1,
-    domains=frozenset([
-        ProviderDomain.MARKET_DATA,
-        ProviderDomain.FUNDAMENTALS,
-        ProviderDomain.ECONOMICS,
-        ProviderDomain.NEWS
-    ]),
+    domains=frozenset(
+        [
+            ProviderDomain.MARKET_DATA,
+            ProviderDomain.FUNDAMENTALS,
+            ProviderDomain.ECONOMICS,
+            ProviderDomain.NEWS,
+        ]
+    ),
     homepage_url="https://openbb.co",
-    documentation_url="https://docs.openbb.co"
+    documentation_url="https://docs.openbb.co",
 )
+
 
 class OpenBBProviderAdapter(BaseProvider):
     """

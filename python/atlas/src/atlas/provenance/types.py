@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ProvenanceSourceKind(str, Enum):
     OFFICIAL = "official"
     REGULATORY = "regulatory"

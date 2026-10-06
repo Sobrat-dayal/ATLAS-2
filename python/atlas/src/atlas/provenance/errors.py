@@ -1,5 +1,6 @@
 class ProvenanceError(Exception):
     """Base exception for provenance errors."""
+
     pass
 
 

@@ -23,6 +23,7 @@ class IdentifierSchemeDefinition(BaseModel):
     scope_entity_types: Optional[List[EntityTypeKey]] = None
     is_system: bool = True
 
+
 IDENTIFIER_SCHEMES_REGISTRY: dict[IdentifierSchemeKey, IdentifierSchemeDefinition] = {
     IdentifierSchemeKey.TICKER: IdentifierSchemeDefinition(
         key=IdentifierSchemeKey.TICKER,

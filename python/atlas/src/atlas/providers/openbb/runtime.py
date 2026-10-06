@@ -1,6 +1,6 @@
-from typing import Any
 import importlib.metadata
 import logging
+from typing import Any
 
 from atlas.providers.openbb.errors import (
     OpenBBRuntimeUnavailableError,
@@ -11,12 +11,13 @@ from atlas.providers.openbb.types import OpenBBCoverageSnapshot
 
 logger = logging.getLogger(__name__)
 
+
 class OpenBBRuntime:
     """
     Facade for the OpenBB Python runtime.
     Isolates the rest of ATLAS from raw OpenBB objects.
     """
-    
+
     SUPPORTED_MAJOR_VERSION = "2"
 
     def __init__(self):
@@ -42,6 +43,7 @@ class OpenBBRuntime:
 
         try:
             from openbb import obb
+
             self._obb = obb
             self._coverage_inspector = OpenBBCoverageInspector(self._obb)
         except ImportError as e:

@@ -21,6 +21,7 @@ PRICE_NUMERIC = Numeric(38, 18)
 RATE_NUMERIC = Numeric(20, 10)
 MULTIPLIER_NUMERIC = Numeric(38, 18)
 
+
 class FinancialInstrument(Base):
     __tablename__ = "financial_instruments"
 
@@ -30,6 +31,7 @@ class FinancialInstrument(Base):
         primary_key=True,
     )
 
+
 class Security(Base):
     __tablename__ = "securities"
 
@@ -38,6 +40,7 @@ class Security(Base):
         ForeignKey("financial_instruments.entity_id", ondelete="RESTRICT"),
         primary_key=True,
     )
+
 
 class Currency(Base):
     __tablename__ = "currencies"
@@ -49,6 +52,7 @@ class Currency(Base):
     )
     currency_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
 
+
 class CryptoAsset(Base):
     __tablename__ = "crypto_assets"
 
@@ -58,6 +62,7 @@ class CryptoAsset(Base):
         primary_key=True,
     )
     asset_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
 
 class Commodity(Base):
     __tablename__ = "commodities"
@@ -69,6 +74,7 @@ class Commodity(Base):
     )
     commodity_category: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     unit_of_measure: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
 
 class MarketIndex(Base):
     __tablename__ = "market_indexes"
@@ -86,6 +92,7 @@ class MarketIndex(Base):
     )
     weighting_method: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
 
+
 class Equity(Base):
     __tablename__ = "equities"
 
@@ -96,6 +103,7 @@ class Equity(Base):
     )
     equity_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     share_class_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+
 
 class ETF(Base):
     __tablename__ = "etfs"
@@ -112,6 +120,7 @@ class ETF(Base):
     )
     replication_method: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     distribution_policy: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
 
 class Bond(Base):
     __tablename__ = "bonds"
@@ -138,6 +147,7 @@ class Bond(Base):
     issue_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     maturity_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
+
 class Option(Base):
     __tablename__ = "options"
     __table_args__ = (
@@ -160,14 +170,15 @@ class Option(Base):
     strike_price: Mapped[Decimal] = mapped_column(PRICE_NUMERIC, nullable=False)
     expiration_at: Mapped[date] = mapped_column(DateTime(timezone=True), nullable=False)
     exercise_style: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
-    contract_multiplier: Mapped[Optional[Decimal]] = mapped_column(MULTIPLIER_NUMERIC, nullable=True)
+    contract_multiplier: Mapped[Optional[Decimal]] = mapped_column(
+        MULTIPLIER_NUMERIC, nullable=True
+    )
     settlement_type: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+
 
 class Future(Base):
     __tablename__ = "futures"
-    __table_args__ = (
-        CheckConstraint("contract_size > 0", name="futures_contract_size_check"),
-    )
+    __table_args__ = (CheckConstraint("contract_size > 0", name="futures_contract_size_check"),)
 
     entity_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -188,6 +199,7 @@ class Future(Base):
         ForeignKey("currencies.entity_id", ondelete="RESTRICT"),
         nullable=True,
     )
+
 
 class Fund(Base):
     __tablename__ = "funds"

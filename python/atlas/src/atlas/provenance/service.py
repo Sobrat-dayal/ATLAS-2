@@ -4,30 +4,30 @@ from typing import List, Optional, Tuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from atlas.aliases.repository import AliasRepository
 from atlas.entities.repository import EntityRepository
 from atlas.identifiers.repository import IdentifierRepository
-from atlas.aliases.repository import AliasRepository
 from atlas.relationships.repository import RelationshipRepository
 
+from .errors import (
+    InvalidEvidenceRoleError,
+    InvalidProvenanceConfidenceError,
+    ProvenanceNotFoundError,
+    ProvenanceSourceConflictError,
+    ProvenanceSourceNotFoundError,
+    ProvenanceTargetNotFoundError,
+)
 from .models import (
-    ProvenanceSource,
-    ProvenanceRecord,
+    AliasProvenanceLink,
     EntityProvenanceLink,
     IdentifierProvenanceLink,
-    AliasProvenanceLink,
+    ProvenanceRecord,
+    ProvenanceSource,
     RelationshipProvenanceLink,
 )
-from .repository import ProvenanceSourceRepository, ProvenanceRepository
-from .types import ProvenanceSourceKind, ProvenanceRecordKind, EvidenceRole
-from .errors import (
-    ProvenanceSourceNotFoundError,
-    ProvenanceSourceConflictError,
-    ProvenanceNotFoundError,
-    ProvenanceTargetNotFoundError,
-    InvalidProvenanceConfidenceError,
-    InvalidEvidenceRoleError,
-)
-from .validation import validate_source_key, validate_url, validate_content_hash
+from .repository import ProvenanceRepository, ProvenanceSourceRepository
+from .types import EvidenceRole, ProvenanceRecordKind, ProvenanceSourceKind
+from .validation import validate_content_hash, validate_source_key, validate_url
 
 
 class ProvenanceService:
@@ -35,16 +35,20 @@ class ProvenanceService:
         self.session = session
         self.source_repo = ProvenanceSourceRepository(session)
         self.prov_repo = ProvenanceRepository(session)
-        
+
         self.entity_repo = EntityRepository(session)
         self.identifier_repo = IdentifierRepository(session)
         self.alias_repo = AliasRepository(session)
         self.relationship_repo = RelationshipRepository(session)
 
-    async def list_sources(self, limit: int = 50, offset: int = 0) -> Tuple[List[ProvenanceSource], int]:
+    async def list_sources(
+        self, limit: int = 50, offset: int = 0
+    ) -> Tuple[List[ProvenanceSource], int]:
         return await self.source_repo.list_sources(limit, offset)
 
-    async def get_provenance_record(self, provenance_id: uuid.UUID) -> Tuple[ProvenanceRecord, ProvenanceSource]:
+    async def get_provenance_record(
+        self, provenance_id: uuid.UUID
+    ) -> Tuple[ProvenanceRecord, ProvenanceSource]:
         record_tuple = await self.prov_repo.get_record_with_source(provenance_id)
         if not record_tuple:
             raise ProvenanceNotFoundError(f"Provenance record {provenance_id} not found")
@@ -56,9 +60,9 @@ class ProvenanceService:
         source_kind: str,
         source_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        is_system: bool = False
+        is_system: bool = False,
     ) -> ProvenanceSource:
-        
+
         try:
             ProvenanceSourceKind(source_kind)
         except ValueError:
@@ -71,7 +75,9 @@ class ProvenanceService:
             existing = await self.source_repo.get_source_by_key(source_key)
             if existing:
                 if existing.source_kind != source_kind or existing.base_url != base_url:
-                    raise ProvenanceSourceConflictError(f"Source with key {source_key} exists but with different metadata")
+                    raise ProvenanceSourceConflictError(
+                        f"Source with key {source_key} exists but with different metadata"
+                    )
                 return existing
 
         new_source = ProvenanceSource(
@@ -79,7 +85,7 @@ class ProvenanceService:
             name=name,
             source_kind=source_kind,
             base_url=base_url,
-            is_system=is_system
+            is_system=is_system,
         )
         return await self.source_repo.create_source(new_source)
 
@@ -96,9 +102,9 @@ class ProvenanceService:
         license_name: Optional[str] = None,
         license_url: Optional[str] = None,
         attribution_text: Optional[str] = None,
-        content_hash_sha256: Optional[str] = None
+        content_hash_sha256: Optional[str] = None,
     ) -> ProvenanceRecord:
-        
+
         try:
             ProvenanceRecordKind(record_kind)
         except ValueError:
@@ -127,7 +133,7 @@ class ProvenanceService:
             license_name=license_name,
             license_url=license_url,
             attribution_text=attribution_text,
-            content_hash_sha256=content_hash_sha256
+            content_hash_sha256=content_hash_sha256,
         )
 
         return await self.prov_repo.create_record(record)
@@ -140,22 +146,24 @@ class ProvenanceService:
 
         if confidence_score is not None:
             if not (0.0 <= confidence_score <= 1.0):
-                raise InvalidProvenanceConfidenceError("Confidence score must be between 0.0 and 1.0")
+                raise InvalidProvenanceConfidenceError(
+                    "Confidence score must be between 0.0 and 1.0"
+                )
 
     async def link_entity_provenance(
         self,
         entity_id: uuid.UUID,
         provenance_id: uuid.UUID,
         evidence_role: str = EvidenceRole.SUPPORTS.value,
-        confidence_score: Optional[float] = None
+        confidence_score: Optional[float] = None,
     ) -> EntityProvenanceLink:
-        
+
         self._validate_link_metadata(evidence_role, confidence_score)
-        
+
         entity = await self.entity_repo.get_entity(entity_id)
         if not entity:
             raise ProvenanceTargetNotFoundError(f"Entity {entity_id} not found")
-            
+
         record = await self.prov_repo.get_record(provenance_id)
         if not record:
             raise ProvenanceNotFoundError(f"Provenance record {provenance_id} not found")
@@ -164,7 +172,7 @@ class ProvenanceService:
             entity_id=entity_id,
             provenance_id=provenance_id,
             evidence_role=evidence_role,
-            confidence_score=confidence_score
+            confidence_score=confidence_score,
         )
         return await self.prov_repo.link_entity(link)
 
@@ -173,15 +181,15 @@ class ProvenanceService:
         identifier_id: uuid.UUID,
         provenance_id: uuid.UUID,
         evidence_role: str = EvidenceRole.SUPPORTS.value,
-        confidence_score: Optional[float] = None
+        confidence_score: Optional[float] = None,
     ) -> IdentifierProvenanceLink:
-        
+
         self._validate_link_metadata(evidence_role, confidence_score)
-        
+
         identifier = await self.identifier_repo.get_identifier(identifier_id)
         if not identifier:
             raise ProvenanceTargetNotFoundError(f"Identifier {identifier_id} not found")
-            
+
         record = await self.prov_repo.get_record(provenance_id)
         if not record:
             raise ProvenanceNotFoundError(f"Provenance record {provenance_id} not found")
@@ -190,7 +198,7 @@ class ProvenanceService:
             identifier_id=identifier_id,
             provenance_id=provenance_id,
             evidence_role=evidence_role,
-            confidence_score=confidence_score
+            confidence_score=confidence_score,
         )
         return await self.prov_repo.link_identifier(link)
 
@@ -199,15 +207,15 @@ class ProvenanceService:
         alias_id: uuid.UUID,
         provenance_id: uuid.UUID,
         evidence_role: str = EvidenceRole.SUPPORTS.value,
-        confidence_score: Optional[float] = None
+        confidence_score: Optional[float] = None,
     ) -> AliasProvenanceLink:
-        
+
         self._validate_link_metadata(evidence_role, confidence_score)
-        
+
         alias = await self.alias_repo.get_alias(alias_id)
         if not alias:
             raise ProvenanceTargetNotFoundError(f"Alias {alias_id} not found")
-            
+
         record = await self.prov_repo.get_record(provenance_id)
         if not record:
             raise ProvenanceNotFoundError(f"Provenance record {provenance_id} not found")
@@ -216,7 +224,7 @@ class ProvenanceService:
             alias_id=alias_id,
             provenance_id=provenance_id,
             evidence_role=evidence_role,
-            confidence_score=confidence_score
+            confidence_score=confidence_score,
         )
         return await self.prov_repo.link_alias(link)
 
@@ -225,15 +233,15 @@ class ProvenanceService:
         relationship_id: uuid.UUID,
         provenance_id: uuid.UUID,
         evidence_role: str = EvidenceRole.SUPPORTS.value,
-        confidence_score: Optional[float] = None
+        confidence_score: Optional[float] = None,
     ) -> RelationshipProvenanceLink:
-        
+
         self._validate_link_metadata(evidence_role, confidence_score)
-        
+
         relationship = await self.relationship_repo.get_relationship(relationship_id)
         if not relationship:
             raise ProvenanceTargetNotFoundError(f"Relationship {relationship_id} not found")
-            
+
         record = await self.prov_repo.get_record(provenance_id)
         if not record:
             raise ProvenanceNotFoundError(f"Provenance record {provenance_id} not found")
@@ -242,7 +250,7 @@ class ProvenanceService:
             relationship_id=relationship_id,
             provenance_id=provenance_id,
             evidence_role=evidence_role,
-            confidence_score=confidence_score
+            confidence_score=confidence_score,
         )
         return await self.prov_repo.link_relationship(link)
 
@@ -251,7 +259,9 @@ class ProvenanceService:
             raise ProvenanceTargetNotFoundError("Entity not found")
         return await self.prov_repo.get_entity_provenance(entity_id, limit, offset)
 
-    async def get_identifier_provenance(self, identifier_id: uuid.UUID, limit: int = 50, offset: int = 0):
+    async def get_identifier_provenance(
+        self, identifier_id: uuid.UUID, limit: int = 50, offset: int = 0
+    ):
         if not await self.identifier_repo.get_identifier(identifier_id):
             raise ProvenanceTargetNotFoundError("Identifier not found")
         return await self.prov_repo.get_identifier_provenance(identifier_id, limit, offset)
@@ -261,7 +271,9 @@ class ProvenanceService:
             raise ProvenanceTargetNotFoundError("Alias not found")
         return await self.prov_repo.get_alias_provenance(alias_id, limit, offset)
 
-    async def get_relationship_provenance(self, relationship_id: uuid.UUID, limit: int = 50, offset: int = 0):
+    async def get_relationship_provenance(
+        self, relationship_id: uuid.UUID, limit: int = 50, offset: int = 0
+    ):
         if not await self.relationship_repo.get_relationship(relationship_id):
             raise ProvenanceTargetNotFoundError("Relationship not found")
         return await self.prov_repo.get_relationship_provenance(relationship_id, limit, offset)

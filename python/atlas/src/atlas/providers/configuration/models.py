@@ -42,10 +42,15 @@ class ProviderCredentialBinding(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     configuration_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("provider_configurations.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("provider_configurations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     credential_key: Mapped[str] = mapped_column(String(128), nullable=False)
-    vault_secret_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, unique=True)
+    vault_secret_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), nullable=False, unique=True
+    )
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -62,5 +67,7 @@ class ProviderCredentialBinding(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("configuration_id", "credential_key", name="uq_provider_credential_config_key"),
+        UniqueConstraint(
+            "configuration_id", "credential_key", name="uq_provider_credential_config_key"
+        ),
     )

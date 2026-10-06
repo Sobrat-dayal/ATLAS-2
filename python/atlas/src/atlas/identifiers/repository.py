@@ -28,7 +28,7 @@ class IdentifierRepository:
         stmt = select(EntityIdentifier).where(EntityIdentifier.entity_id == entity_id)
         if not include_history:
             stmt = stmt.where(EntityIdentifier.is_current == True)
-        
+
         # Determine sorting order (e.g., scheme, scope, value)
         stmt = stmt.order_by(
             EntityIdentifier.scheme_key,
@@ -55,12 +55,12 @@ class IdentifierRepository:
             stmt = stmt.where(EntityIdentifier.scope_entity_id == scope_entity_id)
         else:
             stmt = stmt.where(EntityIdentifier.scope_entity_id.is_(None))
-            
+
         if namespace:
             stmt = stmt.where(EntityIdentifier.namespace == namespace)
         else:
             stmt = stmt.where(EntityIdentifier.namespace.is_(None))
-            
+
         result = await self.session.execute(stmt)
         return result.scalars().first()
 
@@ -82,7 +82,7 @@ class IdentifierRepository:
             stmt = stmt.where(EntityIdentifier.scope_entity_id == scope_entity_id)
         else:
             stmt = stmt.where(EntityIdentifier.scope_entity_id.is_(None))
-            
+
         if namespace:
             stmt = stmt.where(EntityIdentifier.namespace == namespace)
         else:
@@ -109,7 +109,6 @@ class IdentifierRepository:
         )
         if not include_historical:
             stmt = stmt.where(EntityIdentifier.is_current == True)
-        
+
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
-

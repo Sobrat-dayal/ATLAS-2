@@ -1,37 +1,44 @@
-import time
 import logging
+import time
 from typing import Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import ValidationError
 
+from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from atlas.authorization.service import AuthorizationContext
 from atlas.capabilities.context import CapabilityExecutionContext
-from atlas.capabilities.registry import CapabilityRegistry
-from atlas.capabilities.types import CapabilityRef
 from atlas.capabilities.errors import (
+    CapabilityConfirmationRequiredError,
+    CapabilityExecutionFailedError,
+    CapabilityForbiddenError,
     CapabilityInputInvalidError,
     CapabilityOutputInvalidError,
-    CapabilityForbiddenError,
-    CapabilityConfirmationRequiredError,
-    CapabilityExecutionFailedError
 )
-from atlas.authorization.service import AuthorizationContext
+from atlas.capabilities.registry import CapabilityRegistry
+from atlas.capabilities.types import CapabilityRef
 
 logger = logging.getLogger(__name__)
 
+
 class CapabilityGateway:
-    def __init__(self, registry: CapabilityRegistry, authz_context: AuthorizationContext, session: AsyncSession):
+    def __init__(
+        self,
+        registry: CapabilityRegistry,
+        authz_context: AuthorizationContext,
+        session: AsyncSession,
+    ):
         self._registry = registry
         self._authz_context = authz_context
         self._session = session
 
     async def execute(
-        self, 
-        ref: CapabilityRef, 
-        payload: dict[str, Any], 
-        execution_context: CapabilityExecutionContext
+        self,
+        ref: CapabilityRef,
+        payload: dict[str, Any],
+        execution_context: CapabilityExecutionContext,
     ) -> Any:
         start_time = time.monotonic()
-        
+
         logger.info(
             "capability.execution.started",
             extra={
@@ -40,7 +47,7 @@ class CapabilityGateway:
                 "invocation_source": execution_context.invocation_source.value,
                 "request_id": execution_context.request_id,
                 "correlation_id": execution_context.correlation_id,
-            }
+            },
         )
 
         try:
@@ -55,7 +62,7 @@ class CapabilityGateway:
                             "capability_version": ref.version,
                             "request_id": execution_context.request_id,
                             "missing_permission": req_perm,
-                        }
+                        },
                     )
                     raise CapabilityForbiddenError(f"Missing required permission: {req_perm}")
 
@@ -69,14 +76,15 @@ class CapabilityGateway:
 
             factory = self._registry.get_handler_factory(ref.key, ref.version)
             handler = factory(self._session)
-            
+
             try:
                 result = await handler(execution_context, input_model)
             except Exception as e:
                 from atlas.core.exceptions import AtlasError
+
                 if isinstance(e, AtlasError):
                     raise
-                
+
                 logger.error(
                     "capability.execution.failed",
                     exc_info=True,
@@ -84,7 +92,7 @@ class CapabilityGateway:
                         "capability_key": ref.key,
                         "capability_version": ref.version,
                         "request_id": execution_context.request_id,
-                    }
+                    },
                 )
                 raise CapabilityExecutionFailedError() from e
 
@@ -98,8 +106,8 @@ class CapabilityGateway:
                         "capability_key": ref.key,
                         "capability_version": ref.version,
                         "request_id": execution_context.request_id,
-                        "details": e.errors()
-                    }
+                        "details": e.errors(),
+                    },
                 )
                 raise CapabilityOutputInvalidError(details=e.errors())
 
@@ -115,11 +123,11 @@ class CapabilityGateway:
                     "correlation_id": execution_context.correlation_id,
                     "duration_ms": duration_ms,
                     "status": "success",
-                }
+                },
             )
 
             return result
-            
+
         except Exception as e:
             duration_ms = (time.monotonic() - start_time) * 1000
             if not getattr(e, "_logged", False):
@@ -131,8 +139,8 @@ class CapabilityGateway:
                         "request_id": execution_context.request_id,
                         "duration_ms": duration_ms,
                         "status": "failed",
-                        "error_type": type(e).__name__
-                    }
+                        "error_type": type(e).__name__,
+                    },
                 )
                 e._logged = True
             raise

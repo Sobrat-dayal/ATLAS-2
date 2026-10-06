@@ -1,9 +1,8 @@
 import datetime
 import uuid
 from typing import List, Optional
-from pydantic import BaseModel, Field, HttpUrl
 
-from .types import ProvenanceSourceKind, ProvenanceRecordKind, EvidenceRole
+from pydantic import BaseModel
 
 
 class ProvenanceSourceResponse(BaseModel):

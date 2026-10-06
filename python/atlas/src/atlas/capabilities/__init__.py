@@ -1,8 +1,13 @@
-from .registry import CapabilityRegistry
+from .context import CapabilityApplicationContextSnapshot, CapabilityExecutionContext
 from .gateway import CapabilityGateway
-from .types import CapabilityRef, CapabilityInvocationSource, CapabilityExposure, CapabilityPermissionClass
-from .context import CapabilityExecutionContext, CapabilityApplicationContextSnapshot
 from .handlers import register_all_handlers
+from .registry import CapabilityRegistry
+from .types import (
+    CapabilityExposure,
+    CapabilityInvocationSource,
+    CapabilityPermissionClass,
+    CapabilityRef,
+)
 
 # Global Registry instance
 registry = CapabilityRegistry()

@@ -34,13 +34,13 @@ class CompanyService:
         url = url.strip()
         if not url:
             return None
-        
+
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
             raise InvalidCompanyURLError(url)
         if not parsed.netloc:
             raise InvalidCompanyURLError(url)
-        
+
         return url
 
     def _normalize_string(self, value: Optional[str]) -> Optional[str]:
@@ -54,7 +54,7 @@ class CompanyService:
     async def _validate_country(self, country_id: Optional[uuid.UUID]) -> None:
         if not country_id:
             return
-        
+
         # We must get the entity and ensure it is a "country".
         try:
             entity = await self.entity_service.get_entity(country_id)
@@ -99,10 +99,10 @@ class CompanyService:
         """
         if organization_type and organization_type not in OrganizationType:
             raise InvalidOrganizationTypeError(organization_type)
-        
+
         if status and status not in CompanyStatus:
             raise InvalidCompanyStatusError(status)
-        
+
         await self._validate_country(primary_country_entity_id)
 
         validated_url = self._validate_url(website_url)
@@ -112,7 +112,7 @@ class CompanyService:
             canonical_name=canonical_name,
             display_name=display_name,
             description=description,
-            force_entity_id=force_entity_id
+            force_entity_id=force_entity_id,
         )
 
         company = Company(
@@ -147,7 +147,7 @@ class CompanyService:
         Updates Company and base Entity fields.
         Use `None` for UNCHANGED. Pass explicit values to update.
         Note: to unset a nullable field, use a sentinel or pass the empty string/None and handle it appropriately.
-        For Stage 18, we will treat None as UNCHANGED for base entity fields per the signature, 
+        For Stage 18, we will treat None as UNCHANGED for base entity fields per the signature,
         and handle kwargs for company fields explicitly.
         """
         entity, company = await self.get_company(entity_id)
@@ -157,7 +157,7 @@ class CompanyService:
             entity_id=entity_id,
             canonical_name=canonical_name,
             display_name=display_name,
-            description=description
+            description=description,
         )
 
         # Update Company fields

@@ -1,14 +1,17 @@
 from typing import Callable
-from atlas.providers.registry import ProviderRegistry
+
+from atlas.providers.errors import ProviderNotRegisteredError
 from atlas.providers.health.models import ProviderHealthDefinition
 from atlas.providers.health.probe import ProviderHealthProbe
-from atlas.providers.errors import ProviderNotRegisteredError
+from atlas.providers.registry import ProviderRegistry
+
 
 class ProviderHealthRegistry:
     """
     Code-defined registry for Provider health probes.
     Separate from ProviderRegistry. Stores definitions and probe factories.
     """
+
     def __init__(self, provider_registry: ProviderRegistry) -> None:
         self._provider_registry = provider_registry
         self._definitions: dict[str, ProviderHealthDefinition] = {}
@@ -21,10 +24,12 @@ class ProviderHealthRegistry:
         probe_factory: Callable[[], ProviderHealthProbe],
     ) -> None:
         if self._frozen:
-            raise RuntimeError("Cannot register health definition: ProviderHealthRegistry is frozen")
+            raise RuntimeError(
+                "Cannot register health definition: ProviderHealthRegistry is frozen"
+            )
 
         key = definition.provider_key
-        
+
         # Verify provider exists in main registry
         try:
             self._provider_registry.get(key)

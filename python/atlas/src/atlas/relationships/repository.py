@@ -1,11 +1,12 @@
 import uuid
-from typing import List, Optional, Tuple, Any
+from typing import List, Optional, Tuple
 
-from sqlalchemy import select, and_, or_, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import RelationshipType, EntityRelationship
+from .models import EntityRelationship, RelationshipType
+
 
 class RelationshipRepository:
     def __init__(self, session: AsyncSession):
@@ -22,7 +23,9 @@ class RelationshipRepository:
         return list(result.scalars().all())
 
     async def get_relationship(self, relationship_id: uuid.UUID) -> Optional[EntityRelationship]:
-        stmt = select(EntityRelationship).where(EntityRelationship.relationship_id == relationship_id)
+        stmt = select(EntityRelationship).where(
+            EntityRelationship.relationship_id == relationship_id
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -32,19 +35,19 @@ class RelationshipRepository:
         relationship_type_key: Optional[str] = None,
         is_current: Optional[bool] = None,
         limit: int = 100,
-        offset: int = 0
+        offset: int = 0,
     ) -> Tuple[List[EntityRelationship], int]:
-        
+
         conditions = [
             or_(
                 EntityRelationship.source_entity_id == entity_id,
-                EntityRelationship.target_entity_id == entity_id
+                EntityRelationship.target_entity_id == entity_id,
             )
         ]
-        
+
         if relationship_type_key:
             conditions.append(EntityRelationship.relationship_type_key == relationship_type_key)
-            
+
         if is_current is not None:
             conditions.append(EntityRelationship.is_current == is_current)
 

@@ -1,17 +1,16 @@
 import uuid
 from typing import List, Optional, Tuple
 
-from sqlalchemy import select, func, and_
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import (
-    ProvenanceSource,
-    ProvenanceRecord,
+    AliasProvenanceLink,
     EntityProvenanceLink,
     IdentifierProvenanceLink,
-    AliasProvenanceLink,
+    ProvenanceRecord,
+    ProvenanceSource,
     RelationshipProvenanceLink,
 )
 
@@ -30,15 +29,22 @@ class ProvenanceSourceRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def list_sources(self, limit: int = 50, offset: int = 0) -> Tuple[List[ProvenanceSource], int]:
+    async def list_sources(
+        self, limit: int = 50, offset: int = 0
+    ) -> Tuple[List[ProvenanceSource], int]:
         count_stmt = select(func.count(ProvenanceSource.source_id))
         count_result = await self.session.execute(count_stmt)
         total = count_result.scalar_one()
 
-        stmt = select(ProvenanceSource).order_by(ProvenanceSource.name, ProvenanceSource.source_id).limit(limit).offset(offset)
+        stmt = (
+            select(ProvenanceSource)
+            .order_by(ProvenanceSource.name, ProvenanceSource.source_id)
+            .limit(limit)
+            .offset(offset)
+        )
         result = await self.session.execute(stmt)
         items = list(result.scalars().all())
-        
+
         return items, total
 
     async def create_source(self, source: ProvenanceSource) -> ProvenanceSource:
@@ -59,8 +65,10 @@ class ProvenanceRepository:
         stmt = select(ProvenanceRecord).where(ProvenanceRecord.provenance_id == provenance_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
-        
-    async def get_record_with_source(self, provenance_id: uuid.UUID) -> Optional[Tuple[ProvenanceRecord, ProvenanceSource]]:
+
+    async def get_record_with_source(
+        self, provenance_id: uuid.UUID
+    ) -> Optional[Tuple[ProvenanceRecord, ProvenanceSource]]:
         stmt = (
             select(ProvenanceRecord, ProvenanceSource)
             .join(ProvenanceSource, ProvenanceRecord.source_id == ProvenanceSource.source_id)
@@ -77,7 +85,9 @@ class ProvenanceRepository:
         await self.session.flush()
         return record
 
-    async def _get_target_provenance(self, model, target_col, target_id: uuid.UUID, limit: int, offset: int):
+    async def _get_target_provenance(
+        self, model, target_col, target_id: uuid.UUID, limit: int, offset: int
+    ):
         count_stmt = select(func.count(model.provenance_id)).where(target_col == target_id)
         total = (await self.session.execute(count_stmt)).scalar_one()
 
@@ -90,25 +100,45 @@ class ProvenanceRepository:
             .limit(limit)
             .offset(offset)
         )
-        
+
         items = []
         result = await self.session.execute(stmt)
         for link, rec, src in result:
             items.append((link, rec, src))
-            
+
         return items, total
 
     async def get_entity_provenance(self, entity_id: uuid.UUID, limit: int = 50, offset: int = 0):
-        return await self._get_target_provenance(EntityProvenanceLink, EntityProvenanceLink.entity_id, entity_id, limit, offset)
+        return await self._get_target_provenance(
+            EntityProvenanceLink, EntityProvenanceLink.entity_id, entity_id, limit, offset
+        )
 
-    async def get_identifier_provenance(self, identifier_id: uuid.UUID, limit: int = 50, offset: int = 0):
-        return await self._get_target_provenance(IdentifierProvenanceLink, IdentifierProvenanceLink.identifier_id, identifier_id, limit, offset)
+    async def get_identifier_provenance(
+        self, identifier_id: uuid.UUID, limit: int = 50, offset: int = 0
+    ):
+        return await self._get_target_provenance(
+            IdentifierProvenanceLink,
+            IdentifierProvenanceLink.identifier_id,
+            identifier_id,
+            limit,
+            offset,
+        )
 
     async def get_alias_provenance(self, alias_id: uuid.UUID, limit: int = 50, offset: int = 0):
-        return await self._get_target_provenance(AliasProvenanceLink, AliasProvenanceLink.alias_id, alias_id, limit, offset)
+        return await self._get_target_provenance(
+            AliasProvenanceLink, AliasProvenanceLink.alias_id, alias_id, limit, offset
+        )
 
-    async def get_relationship_provenance(self, relationship_id: uuid.UUID, limit: int = 50, offset: int = 0):
-        return await self._get_target_provenance(RelationshipProvenanceLink, RelationshipProvenanceLink.relationship_id, relationship_id, limit, offset)
+    async def get_relationship_provenance(
+        self, relationship_id: uuid.UUID, limit: int = 50, offset: int = 0
+    ):
+        return await self._get_target_provenance(
+            RelationshipProvenanceLink,
+            RelationshipProvenanceLink.relationship_id,
+            relationship_id,
+            limit,
+            offset,
+        )
 
     async def link_entity(self, link: EntityProvenanceLink) -> EntityProvenanceLink:
         self.session.add(link)
@@ -118,7 +148,10 @@ class ProvenanceRepository:
             await self.session.rollback()
             # Idempotent fetch
             stmt = select(EntityProvenanceLink).where(
-                and_(EntityProvenanceLink.entity_id == link.entity_id, EntityProvenanceLink.provenance_id == link.provenance_id)
+                and_(
+                    EntityProvenanceLink.entity_id == link.entity_id,
+                    EntityProvenanceLink.provenance_id == link.provenance_id,
+                )
             )
             return (await self.session.execute(stmt)).scalar_one()
         return link
@@ -130,7 +163,10 @@ class ProvenanceRepository:
         except IntegrityError:
             await self.session.rollback()
             stmt = select(IdentifierProvenanceLink).where(
-                and_(IdentifierProvenanceLink.identifier_id == link.identifier_id, IdentifierProvenanceLink.provenance_id == link.provenance_id)
+                and_(
+                    IdentifierProvenanceLink.identifier_id == link.identifier_id,
+                    IdentifierProvenanceLink.provenance_id == link.provenance_id,
+                )
             )
             return (await self.session.execute(stmt)).scalar_one()
         return link
@@ -142,19 +178,27 @@ class ProvenanceRepository:
         except IntegrityError:
             await self.session.rollback()
             stmt = select(AliasProvenanceLink).where(
-                and_(AliasProvenanceLink.alias_id == link.alias_id, AliasProvenanceLink.provenance_id == link.provenance_id)
+                and_(
+                    AliasProvenanceLink.alias_id == link.alias_id,
+                    AliasProvenanceLink.provenance_id == link.provenance_id,
+                )
             )
             return (await self.session.execute(stmt)).scalar_one()
         return link
 
-    async def link_relationship(self, link: RelationshipProvenanceLink) -> RelationshipProvenanceLink:
+    async def link_relationship(
+        self, link: RelationshipProvenanceLink
+    ) -> RelationshipProvenanceLink:
         self.session.add(link)
         try:
             await self.session.flush()
         except IntegrityError:
             await self.session.rollback()
             stmt = select(RelationshipProvenanceLink).where(
-                and_(RelationshipProvenanceLink.relationship_id == link.relationship_id, RelationshipProvenanceLink.provenance_id == link.provenance_id)
+                and_(
+                    RelationshipProvenanceLink.relationship_id == link.relationship_id,
+                    RelationshipProvenanceLink.provenance_id == link.provenance_id,
+                )
             )
             return (await self.session.execute(stmt)).scalar_one()
         return link

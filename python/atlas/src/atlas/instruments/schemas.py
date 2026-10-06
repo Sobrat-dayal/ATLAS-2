@@ -32,19 +32,23 @@ class BaseInstrumentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class GenericSecurityResponse(BaseInstrumentResponse):
     entity_type: Literal["security"] = "security"
+
 
 class EquityResponse(BaseInstrumentResponse):
     entity_type: Literal["equity"] = "equity"
     equity_kind: Optional[EquityKind] = None
     share_class_name: Optional[str] = None
 
+
 class ETFResponse(BaseInstrumentResponse):
     entity_type: Literal["etf"] = "etf"
     base_currency_entity_id: Optional[uuid.UUID] = None
     replication_method: Optional[ETFReplicationMethod] = None
     distribution_policy: Optional[DistributionPolicy] = None
+
 
 class BondResponse(BaseInstrumentResponse):
     entity_type: Literal["bond"] = "bond"
@@ -56,6 +60,7 @@ class BondResponse(BaseInstrumentResponse):
     issue_date: Optional[date] = None
     maturity_date: Optional[date] = None
 
+
 class OptionResponse(BaseInstrumentResponse):
     entity_type: Literal["option"] = "option"
     underlying_entity_id: uuid.UUID
@@ -66,6 +71,7 @@ class OptionResponse(BaseInstrumentResponse):
     contract_multiplier: Optional[Decimal] = None
     settlement_type: Optional[SettlementType] = None
 
+
 class FutureResponse(BaseInstrumentResponse):
     entity_type: Literal["future"] = "future"
     underlying_entity_id: uuid.UUID
@@ -74,30 +80,36 @@ class FutureResponse(BaseInstrumentResponse):
     settlement_type: Optional[SettlementType] = None
     settlement_currency_entity_id: Optional[uuid.UUID] = None
 
+
 class FundResponse(BaseInstrumentResponse):
     entity_type: Literal["fund"] = "fund"
     fund_kind: Optional[FundKind] = None
     base_currency_entity_id: Optional[uuid.UUID] = None
     distribution_policy: Optional[DistributionPolicy] = None
 
+
 class CryptoAssetResponse(BaseInstrumentResponse):
     entity_type: Literal["crypto"] = "crypto"
     asset_kind: Optional[CryptoAssetKind] = None
 
+
 class CurrencyResponse(BaseInstrumentResponse):
     entity_type: Literal["currency"] = "currency"
     currency_kind: Optional[CurrencyKind] = None
+
 
 class CommodityResponse(BaseInstrumentResponse):
     entity_type: Literal["commodity"] = "commodity"
     commodity_category: Optional[CommodityCategory] = None
     unit_of_measure: Optional[str] = None
 
+
 class MarketIndexResponse(BaseInstrumentResponse):
     entity_type: Literal["index"] = "index"
     index_kind: Optional[MarketIndexKind] = None
     base_currency_entity_id: Optional[uuid.UUID] = None
     weighting_method: Optional[str] = None
+
 
 InstrumentResponse = Annotated[
     Union[
@@ -113,5 +125,5 @@ InstrumentResponse = Annotated[
         MarketIndexResponse,
         GenericSecurityResponse,
     ],
-    Field(discriminator="entity_type")
+    Field(discriminator="entity_type"),
 ]

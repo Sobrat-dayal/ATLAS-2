@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from atlas.capabilities.gateway import CapabilityGateway
 from atlas.providers.types import ProviderDomain
 from atlas.providers.errors import ProviderNotRegisteredError
@@ -161,7 +162,7 @@ async def reset_provider_routing_policy(
     gateway: CapabilityGateway = Depends(get_capability_gateway),
 ) -> dict:
     try:
-        response = await gateway.execute_capability(
+        await gateway.execute_capability(
             capability_key="provider.routing.reset",
             inputs={"domain": domain}
         )

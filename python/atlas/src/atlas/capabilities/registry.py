@@ -1,12 +1,15 @@
-from typing import Callable, Coroutine, Any
+from typing import Any, Callable, Coroutine
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from atlas.capabilities.definition import CapabilityDefinition, TInput, TOutput
-from atlas.capabilities.types import CapabilityExposure
+
 from atlas.capabilities.context import CapabilityExecutionContext
+from atlas.capabilities.definition import CapabilityDefinition, TInput, TOutput
 from atlas.capabilities.errors import CapabilityNotFoundError, CapabilityVersionNotFoundError
+from atlas.capabilities.types import CapabilityExposure
 
 CapabilityHandlerType = Callable[[CapabilityExecutionContext, TInput], Coroutine[Any, Any, TOutput]]
 CapabilityHandlerFactory = Callable[[AsyncSession], CapabilityHandlerType]
+
 
 class CapabilityRegistry:
     def __init__(self):
@@ -17,11 +20,13 @@ class CapabilityRegistry:
     def register(self, definition: CapabilityDefinition, factory: CapabilityHandlerFactory):
         if self._frozen:
             raise RuntimeError("Cannot register capability: registry is frozen")
-            
+
         key_tuple = (definition.key, definition.version)
         if key_tuple in self._definitions:
-            raise ValueError(f"Capability '{definition.key}' version {definition.version} is already registered")
-            
+            raise ValueError(
+                f"Capability '{definition.key}' version {definition.version} is already registered"
+            )
+
         self._definitions[key_tuple] = definition
         self._factories[key_tuple] = factory
 
@@ -43,10 +48,12 @@ class CapabilityRegistry:
                 raise CapabilityVersionNotFoundError(key, version)
             raise CapabilityNotFoundError(key, version)
         return self._factories[key_tuple]
-        
-    def list_capabilities(self, exposure: CapabilityExposure | None = None) -> list[CapabilityDefinition]:
+
+    def list_capabilities(
+        self, exposure: CapabilityExposure | None = None
+    ) -> list[CapabilityDefinition]:
         defs = list(self._definitions.values())
         if exposure:
             defs = [d for d in defs if d.exposure == exposure]
-            
+
         return sorted(defs, key=lambda d: (d.category, d.key, d.version))

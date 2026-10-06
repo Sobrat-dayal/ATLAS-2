@@ -1,29 +1,31 @@
 import asyncio
-import time
 import datetime
-from typing import Any, Optional
+import time
+from typing import Optional
 from uuid import UUID
 
-from atlas.providers.registry import ProviderRegistry
 from atlas.providers.configuration.service import ProviderConfigurationService
-from atlas.providers.health.registry import ProviderHealthRegistry
-from atlas.providers.health.repository import ProviderHealthRepository
-from atlas.providers.health.db_models import ProviderHealthState, ProviderHealthCheck
+from atlas.providers.health.db_models import ProviderHealthCheck, ProviderHealthState
 from atlas.providers.health.models import (
+    ProviderHealthCheckResult,
+    ProviderHealthCheckTrigger,
+    ProviderHealthComponentResult,
     ProviderHealthStatus,
     ProviderHealthTargetType,
-    ProviderHealthCheckTrigger,
-    ProviderHealthCheckResult,
-    ProviderHealthComponentResult,
 )
 from atlas.providers.health.probe import ProviderHealthProbeContext
-from atlas.providers.errors import ProviderNotRegisteredError
+from atlas.providers.health.registry import ProviderHealthRegistry
+from atlas.providers.health.repository import ProviderHealthRepository
+from atlas.providers.registry import ProviderRegistry
+
 
 class ProviderHealthError(Exception):
     pass
 
+
 class ProviderHealthCheckCooldownError(ProviderHealthError):
     pass
+
 
 class ProviderHealthService:
     def __init__(
@@ -47,7 +49,7 @@ class ProviderHealthService:
         request_id: Optional[str] = None,
         correlation_id: Optional[str] = None,
     ) -> ProviderHealthCheckResult:
-        
+
         definition = self.health_registry.get_definition(provider_key)
         if target_type not in definition.supported_targets:
             raise ProviderHealthError(f"Target type {target_type} not supported by {provider_key}")
@@ -60,17 +62,21 @@ class ProviderHealthService:
             if config:
                 configuration_id = config.id
             else:
-                # If they have no config, we might still allow a check, but we need an ID. 
+                # If they have no config, we might still allow a check, but we need an ID.
                 # According to the rules, a missing config means unknown.
                 pass
-            
+
             # Check cooldown
             if trigger == ProviderHealthCheckTrigger.MANUAL and configuration_id:
                 state = await self.health_repository.get_configuration_state(configuration_id)
                 if state and state.checked_at:
-                    elapsed = (datetime.datetime.now(datetime.timezone.utc) - state.checked_at).total_seconds()
-                    if elapsed < 30: # 30 seconds cooldown
-                        raise ProviderHealthCheckCooldownError("Please wait before checking health again")
+                    elapsed = (
+                        datetime.datetime.now(datetime.timezone.utc) - state.checked_at
+                    ).total_seconds()
+                    if elapsed < 30:  # 30 seconds cooldown
+                        raise ProviderHealthCheckCooldownError(
+                            "Please wait before checking health again"
+                        )
 
         factory = self.health_registry.get_probe_factory(provider_key)
         probe = factory()
@@ -78,8 +84,8 @@ class ProviderHealthService:
         context = ProviderHealthProbeContext(
             provider_key=provider_key,
             target_type=target_type,
-            provider=None, # In a real implementation this might be the instantiated provider
-            credential_accessor=None, # Will use config_service in the probe if needed
+            provider=None,  # In a real implementation this might be the instantiated provider
+            credential_accessor=None,  # Will use config_service in the probe if needed
             configuration_id=configuration_id,
             request_id=request_id,
             correlation_id=correlation_id,
@@ -87,10 +93,12 @@ class ProviderHealthService:
 
         start_time = time.monotonic()
         started_at = datetime.datetime.now(datetime.timezone.utc)
-        
+
         try:
             # We enforce timeout here
-            result = await asyncio.wait_for(probe.check(context), timeout=definition.timeout_seconds)
+            result = await asyncio.wait_for(
+                probe.check(context), timeout=definition.timeout_seconds
+            )
         except asyncio.TimeoutError:
             result = ProviderHealthCheckResult(
                 provider_key=provider_key,
@@ -104,12 +112,14 @@ class ProviderHealthService:
                         key="timeout",
                         label="Timeout",
                         status=ProviderHealthStatus.UNHEALTHY,
-                        scope=definition.supported_scopes[0] if definition.supported_scopes else "runtime", # type: ignore
-                        message="Health check timed out"
+                        scope=definition.supported_scopes[0]
+                        if definition.supported_scopes
+                        else "runtime",  # type: ignore
+                        message="Health check timed out",
                     )
-                ]
+                ],
             )
-        except Exception as e:
+        except Exception:
             # Sanitize unexpected execution failures
             result = ProviderHealthCheckResult(
                 provider_key=provider_key,
@@ -123,17 +133,21 @@ class ProviderHealthService:
                         key="execution_failure",
                         label="Execution Failure",
                         status=ProviderHealthStatus.UNHEALTHY,
-                        scope=definition.supported_scopes[0] if definition.supported_scopes else "runtime", # type: ignore
-                        message="The health check encountered an internal execution error."
+                        scope=definition.supported_scopes[0]
+                        if definition.supported_scopes
+                        else "runtime",  # type: ignore
+                        message="The health check encountered an internal execution error.",
                     )
-                ]
+                ],
             )
 
         latency_ms = int((time.monotonic() - start_time) * 1000)
         result.latency_ms = latency_ms
 
         # Determine aggregate status if not already set by exception handling
-        if len(result.components) == 0 and result.status == ProviderHealthStatus.UNKNOWN: # Or not set
+        if (
+            len(result.components) == 0 and result.status == ProviderHealthStatus.UNKNOWN
+        ):  # Or not set
             result.status = ProviderHealthStatus.UNKNOWN
         elif not any(c.status == ProviderHealthStatus.UNHEALTHY for c in result.components):
             if any(c.status == ProviderHealthStatus.DEGRADED for c in result.components):
@@ -145,7 +159,7 @@ class ProviderHealthService:
                 result.status = ProviderHealthStatus.HEALTHY
         else:
             result.status = ProviderHealthStatus.UNHEALTHY
-            
+
         result.coverage = list({c.scope for c in result.components})
 
         # Save history
@@ -180,19 +194,19 @@ class ProviderHealthService:
             latency_ms=result.latency_ms,
             probe_version=result.probe_version,
         )
-        
+
         # We need to fetch existing to update counters properly.
         if target_type == ProviderHealthTargetType.INTEGRATION:
             existing = await self.health_repository.get_integration_state(provider_key)
         else:
-            existing = await self.health_repository.get_configuration_state(configuration_id) # type: ignore
-            
+            existing = await self.health_repository.get_configuration_state(configuration_id)  # type: ignore
+
         if existing:
             state.consecutive_successes = existing.consecutive_successes
             state.consecutive_failures = existing.consecutive_failures
             state.last_success_at = existing.last_success_at
             state.last_failure_at = existing.last_failure_at
-            
+
         if result.status == ProviderHealthStatus.HEALTHY:
             state.consecutive_successes += 1
             state.consecutive_failures = 0
@@ -206,5 +220,5 @@ class ProviderHealthService:
             state.consecutive_successes = 0
 
         await self.health_repository.upsert_state(state)
-        
+
         return result

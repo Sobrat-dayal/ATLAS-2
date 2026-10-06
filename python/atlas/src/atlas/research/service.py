@@ -36,14 +36,12 @@ class ResearchDocumentService:
         language_code: Optional[str] = None,
         abstract_text: Optional[str] = None,
     ) -> ResearchDocumentResponse:
-        
+
         if document_kind is not None:
             try:
                 ResearchDocumentKind(document_kind)
             except ValueError:
-                raise InvalidResearchDocumentKindError(
-                    f"Invalid document_kind: {document_kind}"
-                )
+                raise InvalidResearchDocumentKindError(f"Invalid document_kind: {document_kind}")
 
         language_code = validate_language_code(language_code)
         abstract_text = validate_abstract_text(abstract_text)
@@ -88,9 +86,7 @@ class ResearchDocumentService:
             raise ResearchDocumentNotFoundError(f"Research Document {entity_id} not found.")
 
         if entity.entity_type != EntityTypeKey.RESEARCH_DOCUMENT:
-            raise ResearchDocumentNotFoundError(
-                f"Entity {entity_id} is not a Research Document."
-            )
+            raise ResearchDocumentNotFoundError(f"Entity {entity_id} is not a Research Document.")
 
         doc_tuple = self.repository.get_research_document(entity_id)
         if not doc_tuple:

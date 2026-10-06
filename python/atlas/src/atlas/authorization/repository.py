@@ -15,12 +15,8 @@ class AuthorizationRepository:
         """Get the roles explicitly assigned to a user."""
         if isinstance(user_id, str):
             user_id = uuid.UUID(user_id)
-        
-        stmt = (
-            select(AuthzRole)
-            .join(AuthzUserRole)
-            .where(AuthzUserRole.user_id == user_id)
-        )
+
+        stmt = select(AuthzRole).join(AuthzUserRole).where(AuthzUserRole.user_id == user_id)
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
@@ -33,7 +29,7 @@ class AuthorizationRepository:
         """Get all permissions for a set of role keys."""
         if not role_keys:
             return []
-            
+
         stmt = (
             select(AuthzPermission)
             .join(AuthzRolePermission)
@@ -60,31 +56,32 @@ class AuthorizationRepository:
         return result.scalars().first()
 
     async def grant_role(
-        self, user_id: uuid.UUID | str, role_key: str, assigned_by_user_id: Optional[uuid.UUID | str] = None
+        self,
+        user_id: uuid.UUID | str,
+        role_key: str,
+        assigned_by_user_id: Optional[uuid.UUID | str] = None,
     ) -> bool:
         """Grant a role to a user. Returns True if granted, False if already had it."""
         if isinstance(user_id, str):
             user_id = uuid.UUID(user_id)
         if isinstance(assigned_by_user_id, str):
             assigned_by_user_id = uuid.UUID(assigned_by_user_id)
-            
+
         role = await self.get_role_by_key(role_key)
         if not role:
             return False
-            
+
         stmt = select(AuthzUserRole).where(
             and_(AuthzUserRole.user_id == user_id, AuthzUserRole.role_id == role.id)
         )
         result = await self.session.execute(stmt)
         existing = result.scalars().first()
-        
+
         if existing:
             return False
-            
+
         user_role = AuthzUserRole(
-            user_id=user_id,
-            role_id=role.id,
-            assigned_by_user_id=assigned_by_user_id
+            user_id=user_id, role_id=role.id, assigned_by_user_id=assigned_by_user_id
         )
         self.session.add(user_role)
         return True
@@ -93,11 +90,11 @@ class AuthorizationRepository:
         """Revoke a role from a user. Returns True if revoked, False if didn't have it."""
         if isinstance(user_id, str):
             user_id = uuid.UUID(user_id)
-            
+
         role = await self.get_role_by_key(role_key)
         if not role:
             return False
-            
+
         stmt = delete(AuthzUserRole).where(
             and_(AuthzUserRole.user_id == user_id, AuthzUserRole.role_id == role.id)
         )

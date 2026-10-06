@@ -287,3 +287,105 @@ This document records the major architectural and product decisions established.
 10. No plaintext fallback exists.
 11. Decrypted secrets are not cached in the application layer.
 12. Multi-user isolation is enforced by keeping credential handling within the ATLAS Service layer rather than mutating process-global OpenBB runtime state.
+
+## Stage 33 - Canonical Market Data Models
+1. ATLAS owns canonical Market Data models.
+2. Provider-specific Market Data objects must not leak into domain code.
+3. Canonical Market Data identity uses existing instrument/entity UUIDs.
+4. Ticker is not canonical Market Data identity.
+5. Stage 33 does not create a new symbol-resolution system.
+6. Financial prices use Decimal.
+7. Financial sizes use Decimal.
+8. Financial volumes use Decimal where fractional values may occur.
+9. Binary float is not the canonical financial numeric type.
+10. Non-finite Decimal values are rejected.
+11. Canonical financial numeric values are not globally rounded.
+12. Decimal JSON serialization preserves precision.
+13. All canonical Market Data timestamps are timezone-aware.
+14. All canonical Market Data timestamps are UTC-normalized.
+15. Naive datetime values are rejected.
+16. Timestamp source semantics are represented where implemented.
+17. Market Data timeliness distinguishes real-time, delayed, end-of-day, historical and unknown states.
+18. MarketDataOrigin represents lightweight runtime source metadata.
+19. MarketDataOrigin is not a Stage 24 Provenance Record.
+20. MarketDataOrigin contains no credentials.
+21. Market session metadata is canonicalized.
+22. Trade aggressor side is represented only when known.
+23. Historical price adjustment semantics are explicit.
+24. Provider-default adjustment is not accepted as canonical request semantics.
+25. Bar intervals use ATLAS canonical values.
+26. Provider-specific interval strings remain inside adapters.
+27. Stage 33 does not resample bars.
+28. Quote contains bid/ask state only.
+29. Last trade price is not duplicated inside Quote.
+30. Quote must contain at least bid or ask.
+31. Quote sizes require their corresponding prices.
+32. Crossed quotes remain representable.
+33. Trade contains canonical price, size and timestamp.
+34. Trade size must be positive.
+35. Negative trade price is not globally forbidden.
+36. Trade IDs are source-local metadata, not global identity.
+37. OHLCVBar has explicit interval and UTC time bounds.
+38. OHLCV high/low consistency is validated.
+39. Negative prices are not globally forbidden for OHLCV.
+40. Missing Market Data must not be represented by fabricated zeros.
+41. Technical indicators are not stored in OHLCVBar.
+42. OrderBookLevel uses Decimal price and size.
+43. Canonical bids are sorted highest-to-lowest.
+44. Canonical asks are sorted lowest-to-highest.
+45. Duplicate price levels are rejected after normalization.
+46. Crossed order books remain representable.
+47. MarketSnapshot is a point-in-time aggregate of canonical Market Data fields.
+48. MarketSnapshot does not store redundant change/change-percent fields.
+49. Nested Snapshot Quote/Trade identity must match the Snapshot instrument.
+50. Stage 33 defines MarketDataOperation.
+51. Initial operations are quote, historical_bars, trades, order_book and snapshot.
+52. ProviderDomain.MARKET_DATA does not imply support for all MarketDataOperations.
+53. MarketDataProviderCapabilities declares fine-grained supported operations.
+54. Empty Market Data operation support is valid.
+55. OpenBB does not automatically claim canonical Market Data operations merely because it supports the Market Data domain.
+56. Stage 33 introduces strongly typed Market Data Provider Protocols.
+57. Stage 33 does not create a generic execute(operation, dict) Market Data interface.
+58. Market Data requests contain canonical business parameters only.
+59. Market Data requests contain no Provider key.
+60. Market Data requests contain no fallback configuration.
+61. Market Data requests contain no credentials.
+62. Market Data requests contain no user ID.
+63. Quote requests use canonical instrument IDs.
+64. Quote request batches are bounded.
+65. Duplicate instrument IDs in a request are rejected.
+66. Historical bars requests use explicit interval and adjustment.
+67. Historical requests are bounded by time range and/or limit.
+68. Order Book requests use bounded depth.
+69. Typed responses always carry MarketDataOrigin.
+70. Historical bars responses are chronologically ordered.
+71. Duplicate bars in one canonical response are rejected.
+72. Trades are chronologically ordered.
+73. Stage 33 does not use dict[str, Any] for canonical Market Data payloads.
+74. Stage 33 does not use DataFrame as a canonical API contract.
+75. Stage 33 does not use Polars DataFrame as a canonical API contract.
+76. Stage 33 does not expose OpenBB types in canonical models.
+77. Stage 33 performs no Market Data network request.
+78. Stage 33 introduces no public Market Data REST API.
+79. Stage 33 introduces no application Market Data Capability Gateway operations.
+80. Stage 33 introduces no PostgreSQL Market Data tables.
+81. Stage 33 requires no Alembic migration.
+82. Stage 37 remains responsible for ClickHouse deployment.
+83. Stage 39 remains responsible for historical Market Data ingestion.
+84. Stage 40 remains responsible for Market Data update workers.
+85. Stage 41 remains responsible for live quote ingestion.
+86. Stage 43 remains responsible for frontend WebSocket infrastructure.
+87. Stage 44 remains responsible for Market Data freshness monitoring.
+88. Stage 66 remains responsible for Charts V1.
+89. Stage 69-70 remain responsible for technical indicators.
+90. Stage 76 remains responsible for Watchlists V1.
+91. Stage 94 remains responsible for Screeners V1.
+92. Canonical model validation performs no database queries.
+93. Canonical model validation performs no external network calls.
+94. Entity existence validation belongs outside Pydantic record validation.
+95. Provider selection belongs outside Market Data request models.
+96. Provider routing belongs outside canonical Market Data models.
+97. Provider Health belongs outside canonical Market Data models.
+98. Provider credentials belong outside canonical Market Data models.
+99. Stage 33 creates no fake production Provider.
+100. Stage 34 remains responsible for canonical Fundamental Data models.

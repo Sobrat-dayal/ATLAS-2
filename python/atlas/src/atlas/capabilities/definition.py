@@ -1,10 +1,13 @@
 import re
-from typing import Type, TypeVar, Generic
+from typing import Generic, Type, TypeVar
+
 from pydantic import BaseModel
-from atlas.capabilities.types import CapabilityPermissionClass, CapabilityExposure
+
+from atlas.capabilities.types import CapabilityExposure, CapabilityPermissionClass
 
 TInput = TypeVar("TInput", bound=BaseModel)
 TOutput = TypeVar("TOutput", bound=BaseModel)
+
 
 class CapabilityDefinition(Generic[TInput, TOutput]):
     def __init__(
@@ -25,13 +28,13 @@ class CapabilityDefinition(Generic[TInput, TOutput]):
     ):
         if not re.match(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$", key):
             raise ValueError(f"Invalid capability key format: {key}")
-            
+
         if version < 1:
             raise ValueError(f"Capability version must be >= 1, got {version}")
-            
+
         if permission_class == CapabilityPermissionClass.CRITICAL and not requires_confirmation:
             raise ValueError(f"Capability {key} is CRITICAL but does not require confirmation")
-            
+
         self.key = key
         self.version = version
         self.title = title

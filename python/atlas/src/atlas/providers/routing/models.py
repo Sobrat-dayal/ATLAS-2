@@ -1,16 +1,21 @@
 import enum
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, Field
+
 from atlas.providers.types import ProviderDomain
+
 
 class ProviderRoutingScope(str, enum.Enum):
     USER = "user"
     SYSTEM = "system"
 
+
 class ProviderSelectionMode(str, enum.Enum):
     EXPLICIT = "explicit"
     POLICY = "policy"
+
 
 class ProviderEligibilityReason(str, enum.Enum):
     ELIGIBLE = "eligible"
@@ -21,14 +26,17 @@ class ProviderEligibilityReason(str, enum.Enum):
     REQUIRED_CREDENTIALS_MISSING = "required_credentials_missing"
     HEALTH_UNHEALTHY = "health_unhealthy"
 
+
 class ProviderFailureDisposition(str, enum.Enum):
     FALLBACK_ALLOWED = "fallback_allowed"
     FALLBACK_DENIED = "fallback_denied"
+
 
 class ProviderRoutingCandidate(BaseModel):
     model_config = ConfigDict(frozen=True)
     provider_key: str = Field(...)
     position: int = Field(...)
+
 
 class ProviderRoutingPolicy(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -43,6 +51,7 @@ class ProviderRoutingPolicy(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class ProviderSelectionCandidate(BaseModel):
     model_config = ConfigDict(frozen=True)
     provider_key: str
@@ -52,6 +61,7 @@ class ProviderSelectionCandidate(BaseModel):
     integration_health: str
     configuration_health: str
     health_stale: bool
+
 
 class ProviderSelectionPlan(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -63,6 +73,7 @@ class ProviderSelectionPlan(BaseModel):
     selected_provider_key: Optional[str] = None
     candidates: list[ProviderSelectionCandidate] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
 
 class ProviderFallbackDecision(BaseModel):
     model_config = ConfigDict(frozen=True)

@@ -12,6 +12,7 @@ class OrganizationType(StrEnum):
     COOPERATIVE = "cooperative"
     OTHER = "other"
 
+
 class CompanyStatus(StrEnum):
     ACTIVE = "active"
     INACTIVE = "inactive"

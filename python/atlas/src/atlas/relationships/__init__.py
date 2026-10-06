@@ -1,20 +1,20 @@
-from .models import RelationshipType, EntityRelationship
-from .types import RelationshipCategory, RelationshipDirection
-from .schemas import (
-    RelationshipTypeResponse,
-    EntityRelationshipCreate,
-    EntityRelationshipResponse,
-    EntityRelationshipListResponse,
-)
+from .models import EntityRelationship, RelationshipType
+from .policies import get_policy, register_policy
 from .registry import (
     RelationshipTypeDefinition,
-    get_relationship_type_definition,
     get_all_relationship_type_definitions,
+    get_relationship_type_definition,
     register_relationship_type,
 )
-from .policies import get_policy, register_policy
 from .repository import RelationshipRepository
+from .schemas import (
+    EntityRelationshipCreate,
+    EntityRelationshipListResponse,
+    EntityRelationshipResponse,
+    RelationshipTypeResponse,
+)
 from .service import RelationshipService
+from .types import RelationshipCategory, RelationshipDirection
 
 __all__ = [
     "RelationshipType",

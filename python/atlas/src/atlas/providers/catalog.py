@@ -1,19 +1,21 @@
 from typing import Any
-from atlas.capabilities.registry import CapabilityRegistry
-from atlas.capabilities.definition import CapabilityDefinition
-from atlas.capabilities.types import CapabilityPermissionClass, CapabilityExposure
+
 from atlas.capabilities.context import CapabilityExecutionContext
+from atlas.capabilities.definition import CapabilityDefinition
+from atlas.capabilities.registry import CapabilityRegistry
+from atlas.capabilities.types import CapabilityExposure, CapabilityPermissionClass
 from atlas.providers.registry import ProviderRegistry
 from atlas.providers.types import (
-    ProviderCatalogEntry, 
-    ProviderCatalogResponse, 
-    ProviderDomain,
+    ProviderCatalogEntry,
+    ProviderCatalogResponse,
+    ProviderGetInput,
     ProviderListInput,
-    ProviderGetInput
 )
 
 
-def register_provider_capabilities(cap_registry: CapabilityRegistry, provider_registry: ProviderRegistry) -> None:
+def register_provider_capabilities(
+    cap_registry: CapabilityRegistry, provider_registry: ProviderRegistry
+) -> None:
     """
     Registers the static provider catalog operations as capabilities.
     Does NOT construct providers or access external networks.
@@ -27,10 +29,12 @@ def register_provider_capabilities(cap_registry: CapabilityRegistry, provider_re
             adapter_version=descriptor.adapter_version,
             domains=list(descriptor.domains),
             documentation_url=descriptor.documentation_url,
-            homepage_url=descriptor.homepage_url
+            homepage_url=descriptor.homepage_url,
         )
 
-    async def list_providers_handler(inputs: ProviderListInput, context: CapabilityExecutionContext) -> ProviderCatalogResponse:
+    async def list_providers_handler(
+        inputs: ProviderListInput, context: CapabilityExecutionContext
+    ) -> ProviderCatalogResponse:
         """
         Lists registered provider metadata.
         Input may optionally contain 'domain' to filter.
@@ -39,10 +43,12 @@ def register_provider_capabilities(cap_registry: CapabilityRegistry, provider_re
 
         descriptors = provider_registry.list_providers(domain=domain)
         entries = [_to_catalog_entry(d) for d in descriptors]
-        
+
         return ProviderCatalogResponse(providers=entries)
 
-    async def get_provider_handler(inputs: ProviderGetInput, context: CapabilityExecutionContext) -> ProviderCatalogEntry:
+    async def get_provider_handler(
+        inputs: ProviderGetInput, context: CapabilityExecutionContext
+    ) -> ProviderCatalogEntry:
         """
         Gets a single provider's metadata by key.
         """
@@ -63,9 +69,9 @@ def register_provider_capabilities(cap_registry: CapabilityRegistry, provider_re
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=ProviderListInput,
-            output_model=ProviderCatalogResponse
+            output_model=ProviderCatalogResponse,
         ),
-        lambda _session: list_providers_handler
+        lambda _session: list_providers_handler,
     )
 
     # Register provider.get
@@ -81,7 +87,7 @@ def register_provider_capabilities(cap_registry: CapabilityRegistry, provider_re
             exposure=CapabilityExposure.APPLICATION,
             requires_confirmation=False,
             input_model=ProviderGetInput,
-            output_model=ProviderCatalogEntry
+            output_model=ProviderCatalogEntry,
         ),
-        lambda _session: get_provider_handler
+        lambda _session: get_provider_handler,
     )

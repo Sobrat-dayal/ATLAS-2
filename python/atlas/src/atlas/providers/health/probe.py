@@ -1,10 +1,11 @@
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Optional, Protocol
 from uuid import UUID
 
 from atlas.providers.health.models import (
     ProviderHealthCheckResult,
     ProviderHealthTargetType,
 )
+
 
 class ProviderHealthProbeContext:
     def __init__(
@@ -24,6 +25,7 @@ class ProviderHealthProbeContext:
         self.configuration_id = configuration_id
         self.request_id = request_id
         self.correlation_id = correlation_id
+
 
 class ProviderHealthProbe(Protocol):
     async def check(self, context: ProviderHealthProbeContext) -> ProviderHealthCheckResult:

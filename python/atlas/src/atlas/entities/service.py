@@ -8,9 +8,9 @@ from .errors import (
     UnknownEntityTypeError,
 )
 from .models import Entity, EntityType
+from .name_normalization import normalize_entity_name
 from .registry import get_entity_type_definition
 from .repository import EntityRepository
-from .name_normalization import normalize_entity_name
 
 
 class EntityService:

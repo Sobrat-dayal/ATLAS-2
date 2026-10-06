@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.providers.health.db_models import ProviderHealthCheck, ProviderHealthState
 from atlas.providers.health.models import (
-    ProviderHealthCheckResult,
     ProviderHealthTargetType,
 )
+
 
 class ProviderHealthRepository:
     def __init__(self, session: AsyncSession):
@@ -23,7 +23,9 @@ class ProviderHealthRepository:
         result = await self.session.execute(stmt)
         return result.scalars().first()
 
-    async def get_configuration_state(self, configuration_id: UUID) -> Optional[ProviderHealthState]:
+    async def get_configuration_state(
+        self, configuration_id: UUID
+    ) -> Optional[ProviderHealthState]:
         stmt = select(ProviderHealthState).where(
             ProviderHealthState.configuration_id == configuration_id,
             ProviderHealthState.target_type == ProviderHealthTargetType.CONFIGURATION.value,
@@ -36,7 +38,7 @@ class ProviderHealthRepository:
         if state.target_type == ProviderHealthTargetType.INTEGRATION.value:
             existing = await self.get_integration_state(state.provider_key)
         else:
-            existing = await self.get_configuration_state(state.configuration_id) # type: ignore
+            existing = await self.get_configuration_state(state.configuration_id)  # type: ignore
 
         if existing:
             # Update existing
@@ -68,10 +70,15 @@ class ProviderHealthRepository:
         configuration_id: Optional[UUID] = None,
         limit: int = 25,
     ) -> list[ProviderHealthCheck]:
-        stmt = select(ProviderHealthCheck).where(
-            ProviderHealthCheck.provider_key == provider_key,
-            ProviderHealthCheck.target_type == target_type.value,
-        ).order_by(ProviderHealthCheck.started_at.desc()).limit(limit)
+        stmt = (
+            select(ProviderHealthCheck)
+            .where(
+                ProviderHealthCheck.provider_key == provider_key,
+                ProviderHealthCheck.target_type == target_type.value,
+            )
+            .order_by(ProviderHealthCheck.started_at.desc())
+            .limit(limit)
+        )
 
         if target_type == ProviderHealthTargetType.CONFIGURATION:
             if not configuration_id:

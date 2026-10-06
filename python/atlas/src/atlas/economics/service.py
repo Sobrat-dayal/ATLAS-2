@@ -48,7 +48,7 @@ class EconomicSeriesService:
         seasonal_adjustment: Optional[str] = None,
         scope_geographic_entity_id: Optional[uuid.UUID] = None,
     ) -> EconomicSeriesResponse:
-        
+
         if series_kind is not None:
             try:
                 EconomicSeriesKind(series_kind)
@@ -139,7 +139,7 @@ class EconomicSeriesService:
             )
 
         _, series = series_tuple
-        
+
         return EconomicSeriesResponse.model_validate(
             {
                 **entity.__dict__,

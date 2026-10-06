@@ -1,11 +1,12 @@
-import uuid
-from typing import Any
 from pydantic import BaseModel
+
 from atlas.auth import AuthPrincipal
 from atlas.capabilities.types import CapabilityInvocationSource
 
+
 class CapabilityApplicationContextSnapshot(BaseModel):
     """Snapshot of Stage 26 Global Application Context to be used by capabilities"""
+
     selected_entity_id: str | None = None
     time_range: dict | None = None
     selected_portfolio_id: str | None = None
@@ -17,8 +18,10 @@ class CapabilityApplicationContextSnapshot(BaseModel):
 
     model_config = {"extra": "forbid"}
 
+
 class CapabilityExecutionContext(BaseModel):
     """Context under which a Capability is executed"""
+
     principal: AuthPrincipal
     invocation_source: CapabilityInvocationSource
     request_id: str

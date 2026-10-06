@@ -17,6 +17,7 @@ class EconomicSeriesKind(StrEnum):
     SENTIMENT = "sentiment"
     OTHER = "other"
 
+
 class EconomicFrequency(StrEnum):
     INTRADAY = "intraday"
     DAILY = "daily"
@@ -27,6 +28,7 @@ class EconomicFrequency(StrEnum):
     ANNUAL = "annual"
     IRREGULAR = "irregular"
     OTHER = "other"
+
 
 class EconomicValueRepresentation(StrEnum):
     LEVEL = "level"
@@ -39,6 +41,7 @@ class EconomicValueRepresentation(StrEnum):
     CHANGE = "change"
     GROWTH_RATE = "growth_rate"
     OTHER = "other"
+
 
 class SeasonalAdjustment(StrEnum):
     NOT_ADJUSTED = "not_adjusted"

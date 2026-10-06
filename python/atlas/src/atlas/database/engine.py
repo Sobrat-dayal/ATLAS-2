@@ -50,14 +50,11 @@ def create_engine(
         raise DatabaseConfigurationError("Database URL is required.")
 
     normalized_url = normalize_database_url(url)
-    
+
     # Configure connection arguments
     connect_args = {}
     if application_name:
-        connect_args["server_settings"] = {
-            "application_name": application_name,
-            "timezone": "UTC"
-        }
+        connect_args["server_settings"] = {"application_name": application_name, "timezone": "UTC"}
 
     return create_async_engine(
         normalized_url,

@@ -2,7 +2,7 @@ import datetime
 import uuid
 from typing import Optional
 
-from sqlalchemy import UUID, Boolean, Date, DateTime, ForeignKey, String, Text, func, Index, and_
+from sqlalchemy import UUID, Boolean, Date, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from atlas.database import Base
@@ -32,7 +32,9 @@ class AliasType(Base):
 class EntityAlias(Base):
     __tablename__ = "entity_aliases"
 
-    alias_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    alias_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     entity_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("entities.entity_id", ondelete="CASCADE"), nullable=False, index=True
     )

@@ -144,31 +144,42 @@ class IdentifierService:
 
         entity = await self.entity_repository.get_entity(entity_id)
         if not entity:
-            raise ValueError("Entity not found") # Ideally handled before
+            raise ValueError("Entity not found")  # Ideally handled before
 
         # Subject policy
         if entity.entity_type not in scheme_def.subject_policy:
-            raise IdentifierSubjectTypeInvalidError(f"Entity type {entity.entity_type} not valid for {scheme_key}")
+            raise IdentifierSubjectTypeInvalidError(
+                f"Entity type {entity.entity_type} not valid for {scheme_key}"
+            )
 
         # Scope/Namespace policy
         if scheme_def.scope_policy == IdentifierScopePolicy.GLOBAL:
             if scope_entity_id:
-                raise IdentifierScopeForbiddenError(f"{scheme_key} is global and forbids scope_entity_id")
+                raise IdentifierScopeForbiddenError(
+                    f"{scheme_key} is global and forbids scope_entity_id"
+                )
             if namespace:
-                raise IdentifierNamespaceForbiddenError(f"{scheme_key} is global and forbids namespace")
+                raise IdentifierNamespaceForbiddenError(
+                    f"{scheme_key} is global and forbids namespace"
+                )
 
         elif scheme_def.scope_policy == IdentifierScopePolicy.ENTITY:
             if not scope_entity_id:
                 raise IdentifierScopeRequiredError(f"{scheme_key} requires scope_entity_id")
             if namespace:
                 raise IdentifierNamespaceForbiddenError(f"{scheme_key} forbids namespace")
-            
+
             scope_entity = await self.entity_repository.get_entity(scope_entity_id)
             if not scope_entity:
                 raise ValueError("Scope Entity not found")
-            
-            if scheme_def.scope_entity_types and scope_entity.entity_type not in scheme_def.scope_entity_types:
-                raise IdentifierScopeTypeInvalidError(f"Scope Entity type {scope_entity.entity_type} not allowed for {scheme_key}")
+
+            if (
+                scheme_def.scope_entity_types
+                and scope_entity.entity_type not in scheme_def.scope_entity_types
+            ):
+                raise IdentifierScopeTypeInvalidError(
+                    f"Scope Entity type {scope_entity.entity_type} not allowed for {scheme_key}"
+                )
 
         elif scheme_def.scope_policy == IdentifierScopePolicy.NAMESPACE:
             if not namespace or not namespace.strip():
@@ -186,15 +197,21 @@ class IdentifierService:
             raise InvalidIdentifierValueError(f"Value fails format validation for {scheme_key}")
 
         # Idempotency check: Exact same current assignment for this entity?
-        current_existing = await self.repository.find_current(scheme_key, normalized_value, scope_entity_id, namespace)
+        current_existing = await self.repository.find_current(
+            scheme_key, normalized_value, scope_entity_id, namespace
+        )
         if current_existing:
             if current_existing.entity_id == entity_id:
                 return EntityIdentifierResponse.model_validate(current_existing)
             else:
-                raise IdentifierConflictError(f"Identifier currently assigned to entity {current_existing.entity_id}")
+                raise IdentifierConflictError(
+                    f"Identifier currently assigned to entity {current_existing.entity_id}"
+                )
 
         # History overlap check
-        history = await self.repository.find_overlapping_history(scheme_key, normalized_value, scope_entity_id, namespace, valid_from, None)
+        history = await self.repository.find_overlapping_history(
+            scheme_key, normalized_value, scope_entity_id, namespace, valid_from, None
+        )
         for h in history:
             if h.entity_id != entity_id:
                 # Does h overlap with valid_from..infinity?
@@ -202,10 +219,12 @@ class IdentifierService:
                 h_end = h.valid_to or date.max
                 req_start = valid_from or date.min
                 req_end = date.max
-                
+
                 # Overlap condition
                 if max(h_start, req_start) <= min(h_end, req_end):
-                    raise IdentifierHistoryConflictError("Overlaps with historical assignment to another entity")
+                    raise IdentifierHistoryConflictError(
+                        "Overlaps with historical assignment to another entity"
+                    )
 
         # Create
         assignment = EntityIdentifier(
@@ -223,10 +242,12 @@ class IdentifierService:
         except IntegrityError:
             await self.session.rollback()
             raise IdentifierConflictError("Database uniqueness conflict")
-            
+
         return EntityIdentifierResponse.model_validate(assignment)
 
-    async def retire_identifier(self, identifier_id: uuid.UUID, valid_to: date) -> EntityIdentifierResponse:
+    async def retire_identifier(
+        self, identifier_id: uuid.UUID, valid_to: date
+    ) -> EntityIdentifierResponse:
         stmt = select(EntityIdentifier).where(EntityIdentifier.identifier_id == identifier_id)
         result = await self.session.execute(stmt)
         assignment = result.scalars().first()
@@ -236,7 +257,9 @@ class IdentifierService:
         if not assignment.is_current:
             if assignment.valid_to == valid_to:
                 return EntityIdentifierResponse.model_validate(assignment)
-            raise IdentifierAlreadyRetiredError("Identifier is already retired with different valid_to")
+            raise IdentifierAlreadyRetiredError(
+                "Identifier is already retired with different valid_to"
+            )
 
         if assignment.valid_from and valid_to < assignment.valid_from:
             raise InvalidIdentifierValidityError("valid_to cannot be earlier than valid_from")
@@ -258,7 +281,9 @@ class IdentifierService:
             return None
 
         normalized_value = self._normalize(scheme_def, value)
-        current = await self.repository.find_current(scheme_key, normalized_value, scope_entity_id, namespace)
+        current = await self.repository.find_current(
+            scheme_key, normalized_value, scope_entity_id, namespace
+        )
         if current:
             return current.entity_id
         return None

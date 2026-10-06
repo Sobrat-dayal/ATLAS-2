@@ -17,7 +17,7 @@ class UserPreference(Base):
     schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
-    
+
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

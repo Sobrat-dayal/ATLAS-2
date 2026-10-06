@@ -30,6 +30,7 @@ The backend uses a standard modular FastAPI structure located in `apps/api/src/a
   - *Authentication*: Not yet implemented (Stage 13).
   - *WebSockets*: Not yet implemented. Will likely use `/api/v1/ws` (Stage 43).
   - *Database/Providers*: Deferred to later stages.
+  - *Market Data*: Stage 33 introduces canonical models but no public Market Data REST endpoints yet.
 
 *(Note: Stage 25/26 Global Application Context uses existing endpoints and introduces no new backend endpoints.)*
 

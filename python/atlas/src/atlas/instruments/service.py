@@ -36,7 +36,7 @@ class InstrumentService:
         base_inst = await self.repository.get_instrument(entity_id)
         if not base_inst:
             return None
-        
+
         # In a real system, we'd know the type from the base Entity.
         # Let's get the base entity.
         entity = await self.entity_service.get_entity(entity_id)
@@ -74,7 +74,7 @@ class InstrumentService:
         canonical_name: str,
         display_name: Optional[str] = None,
         description: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Entity:
         """
         Creates a base entity, a FinancialInstrument record, and a Security/Specialization record.
@@ -84,7 +84,7 @@ class InstrumentService:
             entity_type=entity_type,
             canonical_name=canonical_name,
             display_name=display_name,
-            description=description
+            description=description,
         )
 
         # Base financial instrument
@@ -92,7 +92,15 @@ class InstrumentService:
         self.repository.add(fi)
 
         # Is it a security? (equity, etf, bond, option, future, fund)
-        is_security = entity_type in ("security", "equity", "etf", "bond", "option", "future", "fund")
+        is_security = entity_type in (
+            "security",
+            "equity",
+            "etf",
+            "bond",
+            "option",
+            "future",
+            "fund",
+        )
         if is_security:
             sec = Security(entity_id=entity.entity_id)
             self.repository.add(sec)
@@ -102,7 +110,7 @@ class InstrumentService:
             specialized = Equity(
                 entity_id=entity.entity_id,
                 equity_kind=kwargs.get("equity_kind"),
-                share_class_name=kwargs.get("share_class_name")
+                share_class_name=kwargs.get("share_class_name"),
             )
             self.repository.add(specialized)
         elif entity_type == "etf":
@@ -110,7 +118,7 @@ class InstrumentService:
                 entity_id=entity.entity_id,
                 base_currency_entity_id=kwargs.get("base_currency_entity_id"),
                 replication_method=kwargs.get("replication_method"),
-                distribution_policy=kwargs.get("distribution_policy")
+                distribution_policy=kwargs.get("distribution_policy"),
             )
             self.repository.add(specialized)
         elif entity_type == "bond":
@@ -122,7 +130,7 @@ class InstrumentService:
                 coupon_type=kwargs.get("coupon_type"),
                 coupon_frequency=kwargs.get("coupon_frequency"),
                 issue_date=kwargs.get("issue_date"),
-                maturity_date=kwargs.get("maturity_date")
+                maturity_date=kwargs.get("maturity_date"),
             )
             self.repository.add(specialized)
         elif entity_type == "option":
@@ -134,7 +142,7 @@ class InstrumentService:
                 expiration_at=kwargs["expiration_at"],
                 exercise_style=kwargs.get("exercise_style"),
                 contract_multiplier=kwargs.get("contract_multiplier"),
-                settlement_type=kwargs.get("settlement_type")
+                settlement_type=kwargs.get("settlement_type"),
             )
             self.repository.add(specialized)
         elif entity_type == "future":
@@ -144,7 +152,7 @@ class InstrumentService:
                 expiration_at=kwargs.get("expiration_at"),
                 contract_size=kwargs.get("contract_size"),
                 settlement_type=kwargs.get("settlement_type"),
-                settlement_currency_entity_id=kwargs.get("settlement_currency_entity_id")
+                settlement_currency_entity_id=kwargs.get("settlement_currency_entity_id"),
             )
             self.repository.add(specialized)
         elif entity_type == "fund":
@@ -152,26 +160,24 @@ class InstrumentService:
                 entity_id=entity.entity_id,
                 fund_kind=kwargs.get("fund_kind"),
                 base_currency_entity_id=kwargs.get("base_currency_entity_id"),
-                distribution_policy=kwargs.get("distribution_policy")
+                distribution_policy=kwargs.get("distribution_policy"),
             )
             self.repository.add(specialized)
         elif entity_type == "crypto":
             specialized = CryptoAsset(
-                entity_id=entity.entity_id,
-                asset_kind=kwargs.get("asset_kind")
+                entity_id=entity.entity_id, asset_kind=kwargs.get("asset_kind")
             )
             self.repository.add(specialized)
         elif entity_type == "currency":
             specialized = Currency(
-                entity_id=entity.entity_id,
-                currency_kind=kwargs.get("currency_kind")
+                entity_id=entity.entity_id, currency_kind=kwargs.get("currency_kind")
             )
             self.repository.add(specialized)
         elif entity_type == "commodity":
             specialized = Commodity(
                 entity_id=entity.entity_id,
                 commodity_category=kwargs.get("commodity_category"),
-                unit_of_measure=kwargs.get("unit_of_measure")
+                unit_of_measure=kwargs.get("unit_of_measure"),
             )
             self.repository.add(specialized)
         elif entity_type == "index":
@@ -179,7 +185,7 @@ class InstrumentService:
                 entity_id=entity.entity_id,
                 index_kind=kwargs.get("index_kind"),
                 base_currency_entity_id=kwargs.get("base_currency_entity_id"),
-                weighting_method=kwargs.get("weighting_method")
+                weighting_method=kwargs.get("weighting_method"),
             )
             self.repository.add(specialized)
 

@@ -1,6 +1,9 @@
 from typing import Any
+
 from pydantic import BaseModel
-from atlas.capabilities.types import CapabilityPermissionClass, CapabilityExposure
+
+from atlas.capabilities.types import CapabilityExposure, CapabilityPermissionClass
+
 
 class CapabilityCatalogEntry(BaseModel):
     key: str

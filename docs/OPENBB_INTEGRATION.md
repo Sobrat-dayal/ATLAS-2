@@ -111,4 +111,7 @@ OpenBB registered != OpenBB default.
 OpenBB is not implicitly selected for all requests. Stage 32 handles routing.
 
 ## Canonical Data Boundary
-Stage 33 (Market Data), Stage 34 (Fundamentals), Stage 35 (Economics), Stage 36 (News/Research) handle mapping OpenBB responses into strict ATLAS models.
+Stage 33 (Market Data) introduced the canonical models and typed Provider protocols.
+OpenBB now has a canonical ATLAS Market Data boundary available, but because no actual OpenBB data fetchers have been fully implemented yet, its `MarketDataProviderCapabilities.operations` remains empty, and it performs no Stage 33 data calls.
+
+Future stages (Stage 34 for Fundamentals, Stage 35 for Economics, Stage 36 for News/Research) will handle mapping additional OpenBB responses into strict ATLAS models.

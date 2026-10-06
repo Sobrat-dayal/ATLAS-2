@@ -35,7 +35,7 @@ class NewsEventService:
         event_time: Optional[datetime] = None,
         event_status: Optional[str] = None,
     ) -> NewsEventResponse:
-        
+
         if event_kind is not None:
             try:
                 NewsEventKind(event_kind)

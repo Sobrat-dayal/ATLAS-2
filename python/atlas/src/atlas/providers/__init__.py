@@ -1,10 +1,10 @@
-from atlas.providers.types import ProviderDomain, ProviderCatalogEntry, ProviderCatalogResponse
-from atlas.providers.descriptor import ProviderDescriptor
 from atlas.providers.base import BaseProvider
-from atlas.providers.registration import ProviderRegistration, ProviderFactory
+from atlas.providers.bootstrap import build_provider_registry
+from atlas.providers.descriptor import ProviderDescriptor
+from atlas.providers.registration import ProviderFactory, ProviderRegistration
 from atlas.providers.registry import ProviderRegistry
 from atlas.providers.resolver import ProviderResolver
-from atlas.providers.bootstrap import build_provider_registry
+from atlas.providers.types import ProviderCatalogEntry, ProviderCatalogResponse, ProviderDomain
 
 __all__ = [
     "ProviderDomain",

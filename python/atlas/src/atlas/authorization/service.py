@@ -9,7 +9,9 @@ from .types import PermissionCode
 
 
 class AuthorizationContext:
-    def __init__(self, principal: AuthPrincipal, roles: FrozenSet[str], permissions: FrozenSet[str]):
+    def __init__(
+        self, principal: AuthPrincipal, roles: FrozenSet[str], permissions: FrozenSet[str]
+    ):
         self.principal = principal
         self.roles = roles
         self.permissions = permissions
@@ -55,12 +57,18 @@ class AuthorizationService:
         except AuthorizationUnavailableError:
             raise
         except Exception as e:
-            raise AuthorizationUnavailableError(f"Failed to build authorization context: {str(e)}") from e
+            raise AuthorizationUnavailableError(
+                f"Failed to build authorization context: {str(e)}"
+            ) from e
 
-    async def has_permission(self, principal: AuthPrincipal, permission: str | PermissionCode) -> bool:
+    async def has_permission(
+        self, principal: AuthPrincipal, permission: str | PermissionCode
+    ) -> bool:
         context = await self.get_authorization_context(principal)
         return context.has_permission(permission)
 
-    async def require_permission(self, principal: AuthPrincipal, permission: str | PermissionCode) -> None:
+    async def require_permission(
+        self, principal: AuthPrincipal, permission: str | PermissionCode
+    ) -> None:
         if not await self.has_permission(principal, permission):
             raise PermissionDeniedError()

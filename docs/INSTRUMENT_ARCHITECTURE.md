@@ -6,7 +6,7 @@ The Financial Instruments layer is the first major specialization of the Univers
 ## Core Principles
 1. **Instrument is an Entity**: Every financial instrument is an Entity, but not every Entity is a financial instrument.
 2. **Polymorphic Identity**: The Universal Entity system provides identity. The instrument layer provides financial domain attributes.
-3. **No Market Data Here**: Instruments are strictly structural, reference definitions. No price, volume, or temporal market data exists in these tables.
+3. **No Market Data Here**: Instruments are strictly structural, reference definitions. No price, volume, or temporal market data exists in these tables. (Stage 33 explicitly defines Market Data canonical models which reference the `entity_id` rather than a ticker/symbol).
 4. **Precision**: All financial numeric values use `Decimal` with exact precision. No floating point representations are allowed.
 5. **Atomic Creation**: Creating an instrument requires atomic insertion into `entities`, `financial_instruments`, and any specialized tables (e.g., `securities`, `equities`).
 

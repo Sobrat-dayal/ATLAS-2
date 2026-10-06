@@ -16,6 +16,7 @@ class NewsEventKind(StrEnum):
     SECURITY_INCIDENT = "security_incident"
     OTHER = "other"
 
+
 class NewsEventStatus(StrEnum):
     DEVELOPING = "developing"
     CONFIRMED = "confirmed"

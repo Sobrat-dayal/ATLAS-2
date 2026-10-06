@@ -1,7 +1,7 @@
 from atlas.providers.descriptor import ProviderDescriptor
+from atlas.providers.errors import ProviderNotRegisteredError
 from atlas.providers.registration import ProviderRegistration
 from atlas.providers.types import ProviderDomain
-from atlas.providers.errors import ProviderNotRegisteredError
 
 
 class ProviderRegistry:

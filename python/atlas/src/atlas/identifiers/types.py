@@ -9,10 +9,12 @@ class IdentifierCategory(StrEnum):
     RESEARCH = "research"
     PROVIDER = "provider"
 
+
 class IdentifierScopePolicy(StrEnum):
     GLOBAL = "global"
     ENTITY = "entity"
     NAMESPACE = "namespace"
+
 
 class IdentifierNormalizationStrategy(StrEnum):
     UPPERCASE_TRIM = "uppercase_trim"
@@ -23,6 +25,7 @@ class IdentifierNormalizationStrategy(StrEnum):
     ISBN10 = "isbn10"
     ISBN13 = "isbn13"
     PRESERVE_TRIM = "preserve_trim"
+
 
 class IdentifierSchemeKey(StrEnum):
     TICKER = "ticker"

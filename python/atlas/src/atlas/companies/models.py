@@ -26,16 +26,16 @@ class Company(Base):
         UUID(as_uuid=True),
         ForeignKey("countries.entity_id", ondelete="SET NULL"),
         nullable=True,
-        index=True
+        index=True,
     )
 
     __table_args__ = (
         CheckConstraint(
             "organization_type IN ('public_company', 'private_company', 'state_owned', 'subsidiary', 'joint_venture', 'nonprofit', 'partnership', 'cooperative', 'other')",
-            name="chk_companies_organization_type"
+            name="chk_companies_organization_type",
         ),
         CheckConstraint(
             "status IN ('active', 'inactive', 'dissolved', 'acquired', 'bankrupt', 'restructured', 'other')",
-            name="chk_companies_status"
+            name="chk_companies_status",
         ),
     )

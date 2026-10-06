@@ -4,6 +4,7 @@ import React from "react";
 import { SettingsCategory } from "@/config/settings-registry";
 import { SettingsGroup, SettingsRow, SettingsFoundationState } from "../SettingsControls";
 import { Shield, Key, EyeOff, Plug, Database, Activity, Landmark, ArrowLeftRight, Terminal, User, Bell, Network, Bot, Cpu, Cable, CreditCard } from "lucide-react";
+import Link from "next/link";
 
 export function FoundationSettings({ category }: { category: SettingsCategory }) {
   // We can render some mock settings based on the category to show foundation structure
@@ -112,9 +113,14 @@ export function FoundationSettings({ category }: { category: SettingsCategory })
         <h3 className="text-lg font-medium text-atlas-text-primary mb-2">
           {category.label} Configuration
         </h3>
-        <p className="text-atlas-text-muted max-w-md text-sm">
+        <p className="text-atlas-text-muted max-w-md text-sm mb-4">
           This section is a structural foundation. {category.label} infrastructure will be implemented in a future stage.
         </p>
+        {(category.id === "marketData" || category.id === "dataProviders") && (
+          <Link href="/settings/routing" className="text-sm text-atlas-accent hover:underline">
+            Configure Provider Routing & Fallback &rarr;
+          </Link>
+        )}
       </div>
 
       <SettingsGroup>

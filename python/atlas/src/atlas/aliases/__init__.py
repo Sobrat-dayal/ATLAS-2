@@ -9,8 +9,8 @@ from .registry import (
 from .repository import AliasRepository
 from .schemas import (
     AliasTypeResponse,
-    EntityAliasResponse,
     EntityAliasListResponse,
+    EntityAliasResponse,
 )
 from .service import AliasService
 

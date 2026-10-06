@@ -7,6 +7,7 @@ class PermissionRiskClass(StrEnum):
     ACTION = "action"
     CRITICAL = "critical"
 
+
 class PermissionCode(StrEnum):
     ATLAS_ACCESS = "atlas.access"
 

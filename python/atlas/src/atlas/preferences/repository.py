@@ -16,27 +16,24 @@ class UserPreferenceRepository:
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def get_preference(self, user_id: uuid.UUID, preference_key: str) -> Optional[UserPreference]:
+    async def get_preference(
+        self, user_id: uuid.UUID, preference_key: str
+    ) -> Optional[UserPreference]:
         stmt = select(UserPreference).where(
-            UserPreference.user_id == user_id,
-            UserPreference.preference_key == preference_key
+            UserPreference.user_id == user_id, UserPreference.preference_key == preference_key
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def create_preference(
-        self,
-        user_id: uuid.UUID,
-        preference_key: str,
-        schema_version: int,
-        payload: dict[str, Any]
+        self, user_id: uuid.UUID, preference_key: str, schema_version: int, payload: dict[str, Any]
     ) -> UserPreference:
         pref = UserPreference(
             user_id=user_id,
             preference_key=preference_key,
             schema_version=schema_version,
             payload=payload,
-            revision=1
+            revision=1,
         )
         self.session.add(pref)
         return pref
@@ -47,7 +44,7 @@ class UserPreferenceRepository:
         preference_key: str,
         expected_revision: int,
         schema_version: int,
-        payload: dict[str, Any]
+        payload: dict[str, Any],
     ) -> Optional[int]:
         """
         Optimistic update. Returns the new revision if successful, None if conflict or not found.
@@ -58,25 +55,17 @@ class UserPreferenceRepository:
             .where(
                 UserPreference.user_id == user_id,
                 UserPreference.preference_key == preference_key,
-                UserPreference.revision == expected_revision
+                UserPreference.revision == expected_revision,
             )
-            .values(
-                payload=payload,
-                schema_version=schema_version,
-                revision=new_revision
-            )
+            .values(payload=payload, schema_version=schema_version, revision=new_revision)
             .returning(UserPreference.revision)
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def delete_preference(self, user_id: uuid.UUID, preference_key: str) -> bool:
-        stmt = (
-            delete(UserPreference)
-            .where(
-                UserPreference.user_id == user_id,
-                UserPreference.preference_key == preference_key
-            )
+        stmt = delete(UserPreference).where(
+            UserPreference.user_id == user_id, UserPreference.preference_key == preference_key
         )
         result = await self.session.execute(stmt)
         return result.rowcount > 0

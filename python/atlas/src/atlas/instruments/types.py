@@ -7,17 +7,20 @@ class EquityKind(StrEnum):
     DEPOSITARY_RECEIPT = "depositary_receipt"
     OTHER = "other"
 
+
 class ETFReplicationMethod(StrEnum):
     PHYSICAL_FULL = "physical_full"
     PHYSICAL_SAMPLING = "physical_sampling"
     SYNTHETIC = "synthetic"
     OTHER = "other"
 
+
 class DistributionPolicy(StrEnum):
     ACCUMULATING = "accumulating"
     DISTRIBUTING = "distributing"
     MIXED = "mixed"
     OTHER = "other"
+
 
 class BondCouponType(StrEnum):
     FIXED = "fixed"
@@ -26,9 +29,11 @@ class BondCouponType(StrEnum):
     VARIABLE = "variable"
     OTHER = "other"
 
+
 class OptionRight(StrEnum):
     CALL = "call"
     PUT = "put"
+
 
 class ExerciseStyle(StrEnum):
     AMERICAN = "american"
@@ -36,10 +41,12 @@ class ExerciseStyle(StrEnum):
     BERMUDAN = "bermudan"
     OTHER = "other"
 
+
 class SettlementType(StrEnum):
     PHYSICAL = "physical"
     CASH = "cash"
     OTHER = "other"
+
 
 class FundKind(StrEnum):
     MUTUAL_FUND = "mutual_fund"
@@ -48,6 +55,7 @@ class FundKind(StrEnum):
     UNIT_TRUST = "unit_trust"
     OTHER = "other"
 
+
 class CryptoAssetKind(StrEnum):
     COIN = "coin"
     TOKEN = "token"
@@ -55,10 +63,12 @@ class CryptoAssetKind(StrEnum):
     WRAPPED = "wrapped"
     OTHER = "other"
 
+
 class CurrencyKind(StrEnum):
     FIAT = "fiat"
     SUPRANATIONAL = "supranational"
     OTHER = "other"
+
 
 class CommodityCategory(StrEnum):
     ENERGY = "energy"
@@ -67,6 +77,7 @@ class CommodityCategory(StrEnum):
     LIVESTOCK = "livestock"
     SOFT = "soft"
     OTHER = "other"
+
 
 class MarketIndexKind(StrEnum):
     PRICE = "price"

@@ -1,5 +1,7 @@
 from enum import StrEnum
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel
+
 
 class CapabilityPermissionClass(StrEnum):
     READ = "read"
@@ -7,9 +9,11 @@ class CapabilityPermissionClass(StrEnum):
     ACTION = "action"
     CRITICAL = "critical"
 
+
 class CapabilityExposure(StrEnum):
     APPLICATION = "application"
     INTERNAL = "internal"
+
 
 class CapabilityInvocationSource(StrEnum):
     API = "api"
@@ -19,6 +23,7 @@ class CapabilityInvocationSource(StrEnum):
     MCP = "mcp"
     TERMINAL = "terminal"
     WORKFLOW = "workflow"
+
 
 class CapabilityRef(BaseModel):
     key: str

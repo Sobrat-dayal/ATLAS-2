@@ -1,17 +1,24 @@
 import re
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 from atlas.providers.types import ProviderDomain
 
 
 class ProviderDescriptor(BaseModel):
     """Immutable metadata describing a Provider adapter."""
+
     model_config = ConfigDict(frozen=True)
 
-    key: str = Field(..., description="Stable unique identifier for the provider (lowercase snake_case)")
+    key: str = Field(
+        ..., description="Stable unique identifier for the provider (lowercase snake_case)"
+    )
     display_name: str = Field(..., description="Human-readable name")
     description: str = Field(..., description="Brief description of the provider adapter")
     adapter_version: int = Field(..., ge=1, description="Version of the ATLAS adapter contract")
-    domains: frozenset[ProviderDomain] = Field(..., description="Domains supported by this provider")
+    domains: frozenset[ProviderDomain] = Field(
+        ..., description="Domains supported by this provider"
+    )
     documentation_url: str | None = Field(default=None, description="URL for documentation")
     homepage_url: str | None = Field(default=None, description="URL for provider homepage")
 
@@ -19,7 +26,9 @@ class ProviderDescriptor(BaseModel):
     @classmethod
     def validate_key(cls, value: str) -> str:
         if not re.match(r"^[a-z][a-z0-9_]{0,63}$", value):
-            raise ValueError("Provider key must be lowercase snake_case (e.g., 'openbb', 'alpha_vantage')")
+            raise ValueError(
+                "Provider key must be lowercase snake_case (e.g., 'openbb', 'alpha_vantage')"
+            )
         return value
 
     @field_validator("domains")

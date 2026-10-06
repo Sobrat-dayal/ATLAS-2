@@ -1,12 +1,13 @@
-import uuid
-from typing import List, Optional, Sequence
 import datetime
+import uuid
+from typing import Optional, Sequence
 
-from sqlalchemy import delete, select, and_
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import AliasType, EntityAlias
+
 
 class AliasRepository:
     def __init__(self, session: AsyncSession):
@@ -66,7 +67,7 @@ class AliasRepository:
         valid_from: Optional[datetime.date] = None,
         is_current: bool = True,
     ) -> EntityAlias:
-        
+
         if is_current:
             stmt = select(EntityAlias).where(
                 EntityAlias.entity_id == entity_id,
@@ -78,7 +79,7 @@ class AliasRepository:
                 stmt = stmt.where(EntityAlias.language_code == language_code)
             else:
                 stmt = stmt.where(EntityAlias.language_code.is_(None))
-                
+
             result = await self.session.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:

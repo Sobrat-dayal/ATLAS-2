@@ -1,13 +1,15 @@
 import asyncio
 import logging
-from typing import Optional, Callable
+from typing import Callable, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.providers.health.models import ProviderHealthCheckTrigger, ProviderHealthTargetType
-from atlas.providers.health.service import ProviderHealthService
 from atlas.providers.health.registry import ProviderHealthRegistry
+from atlas.providers.health.service import ProviderHealthService
 
 logger = logging.getLogger(__name__)
+
 
 class ProviderHealthMonitor:
     def __init__(
@@ -23,7 +25,7 @@ class ProviderHealthMonitor:
         self.session_factory = session_factory
         self.service_factory = service_factory
         self.enabled = enabled
-        self.interval_seconds = max(60, interval_seconds) # Minimum 60s
+        self.interval_seconds = max(60, interval_seconds)  # Minimum 60s
         self.concurrency = concurrency
         self._task: Optional[asyncio.Task] = None
         self._shutdown_event = asyncio.Event()
@@ -51,16 +53,17 @@ class ProviderHealthMonitor:
     async def _run(self):
         # Startup check after a short delay
         await asyncio.sleep(5)
-        
+
         while not self._shutdown_event.is_set():
             try:
                 definitions = self.health_registry.list_definitions()
                 # Only monitor integration targets that are schedulable
                 schedulable_keys = [
-                    d.provider_key for d in definitions 
+                    d.provider_key
+                    for d in definitions
                     if d.schedulable and ProviderHealthTargetType.INTEGRATION in d.supported_targets
                 ]
-                
+
                 # Bounded concurrency
                 sem = asyncio.Semaphore(self.concurrency)
 
@@ -76,18 +79,20 @@ class ProviderHealthMonitor:
                                     trigger=ProviderHealthCheckTrigger.SCHEDULED,
                                 )
                         except Exception as e:
-                            logger.error(f"ProviderHealthMonitor error checking {provider_key}: {e}", exc_info=True)
+                            logger.error(
+                                f"ProviderHealthMonitor error checking {provider_key}: {e}",
+                                exc_info=True,
+                            )
 
                 tasks = [_check(key) for key in schedulable_keys]
                 if tasks:
                     await asyncio.gather(*tasks, return_exceptions=True)
-                    
+
             except Exception as e:
                 logger.error(f"ProviderHealthMonitor loop error: {e}", exc_info=True)
-                
+
             # Wait for next interval or shutdown
             try:
                 await asyncio.wait_for(self._shutdown_event.wait(), timeout=self.interval_seconds)
             except asyncio.TimeoutError:
-                pass # Normal interval elapsed
-
+                pass  # Normal interval elapsed

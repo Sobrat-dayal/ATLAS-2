@@ -42,6 +42,7 @@ VALID_PREFERENCE_KEYS = {
 
 MAX_PAYLOAD_SIZE_BYTES = 64 * 1024  # 64 KB
 
+
 class UserPreferenceService:
     def __init__(self, repository: UserPreferenceRepository):
         self.repository = repository
@@ -53,7 +54,7 @@ class UserPreferenceService:
     def _validate_payload(self, payload: dict[str, Any]) -> None:
         if not isinstance(payload, dict):
             raise InvalidPreferencePayloadError("Payload must be a JSON object.")
-        
+
         # Check size limits
         try:
             serialized = json.dumps(payload)
@@ -84,7 +85,7 @@ class UserPreferenceService:
         key: str,
         schema_version: int,
         payload: dict[str, Any],
-        expected_revision: Optional[int] = None
+        expected_revision: Optional[int] = None,
     ) -> UserPreference:
         self._validate_key(key)
         self._validate_schema_version(schema_version)
@@ -101,15 +102,15 @@ class UserPreferenceService:
                 if not existing:
                     raise PreferenceNotFoundError(key)
                 raise PreferenceConflictError(key)
-            
+
             # Fetch the updated row to return it
             return await self.repository.get_preference(user_id, key)
-            
+
         # Create
         existing = await self.repository.get_preference(user_id, key)
         if existing:
             raise PreferenceConflictError(key)
-            
+
         return await self.repository.create_preference(user_id, key, schema_version, payload)
 
     async def delete_preference(self, user_id: uuid.UUID, key: str) -> None:
