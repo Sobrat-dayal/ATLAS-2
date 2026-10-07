@@ -435,3 +435,21 @@ This document records the major architectural and product decisions established.
 141. **No Backend Persistence**: Stage 36 models are offline, frozen, Pydantic V2 definitions with no database dependency, network fetches, or FastAPI coupling.
 142. **No Text Ingestion**: Stage 36 models handle metadata, ignoring binary/blob/full-text ingestion pipelines for Research papers.
 143. **Provider Extensibility**: OpenBB adapter extended with `news_capabilities`, `research_capabilities`, and `ProviderDomain.RESEARCH`.
+
+## Stage 37: Deploy ClickHouse
+
+144. **Target Architecture**: ClickHouse is ATLAS's analytical/high-volume datastore. PostgreSQL remains ATLAS's transactional source of truth.
+145. **No Replacements**: ClickHouse does not replace PostgreSQL.
+146. **Infrastructure Only**: Stage 37 deploys infrastructure only, creating no Market Data, Economic, News, or Research business tables, and performing no data ingestion or PostgreSQL mirroring.
+147. **Single Node Deployment**: ClickHouse runs as a single node initially without Keeper, replication, sharding, or distributed tables.
+148. **Pinned Version**: ClickHouse server version is explicitly pinned (e.g. `24.3.2.74`). `latest` tags are forbidden.
+149. **Storage**: Local ClickHouse data uses a persistent volume.
+150. **Application User**: ATLAS uses a dedicated ClickHouse database (`atlas`) and a non-default application database user (`atlas_app`).
+151. **Secret Management**: Passwords are not committed to Git, are not empty, and are excluded from logs and representations. They are backend-only; browsers never connect directly.
+152. **Networking**: Port `8123` binds to loopback locally. Production environments mandate private networking. TLS is fully supported.
+153. **Timezone**: Server and session timezone default to `UTC`.
+154. **Security**: Privileged containers are avoided. Default user is restricted. Settings fail validation if misconfigured.
+155. **Client Configuration**: ClickHouse integration uses `clickhouse-connect`, with lazy, lifecycle-managed clients separate from import-time execution.
+156. **Health Boundary**: Infrastructure health uses a read-only lightweight ping (`SELECT 1`). It is disconnected from Provider Health tables and Provider routing.
+157. **No Arbitrary SQL**: Stage 37 exposes no arbitrary SQL capabilities, no Terminal mode, and no Agent/MCP tools for ClickHouse.
+158. **Migration Foundation**: Stage 37 outlines a separate directory convention for future ClickHouse schemas, keeping Alembic strictly for PostgreSQL.

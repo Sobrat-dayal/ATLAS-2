@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3.2.74
+    container_name: clickhouse
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8123:8123"  # HTTP port bound to localhost
+    environment:
+      - CLICKHOUSE_DB=${ATLAS_CLICKHOUSE_DATABASE:-atlas}
+      - CLICKHOUSE_USER=${ATLAS_CLICKHOUSE_USERNAME:-atlas_app}
+      - CLICKHOUSE_PASSWORD=${ATLAS_CLICKHOUSE_PASSWORD:?ATLAS_CLICKHOUSE_PASSWORD must be set}
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - TZ=UTC
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/users.d/default-restrict.xml:/etc/clickhouse-server/users.d/default-restrict.xml:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_NICE
+      - NET_ADMIN
+      - IPC_LOCK
+
+volumes:
+  clickhouse_data:

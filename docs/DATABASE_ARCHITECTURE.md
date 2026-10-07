@@ -1,6 +1,41 @@
 # ATLAS Database Architecture
 
-This document describes the PostgreSQL database architecture used by ATLAS.
+This document describes the overall database architecture used by ATLAS, consisting of PostgreSQL and ClickHouse.
+
+## Target Architecture
+
+```text
+                       PostgreSQL / Supabase
+                              │
+                              │
+                 transactional / identity data
+                              │
+                              ▼
+                        ATLAS Backend
+                              │
+              ┌───────────────┴────────────────┐
+              │                                │
+              ▼                                ▼
+         PostgreSQL                         ClickHouse
+              │                                │
+              │                                │
+     users / entities /                  high-volume /
+     permissions /                      analytical /
+     configuration /                    time-series data
+     provenance metadata                     │
+                                               │
+                        ┌──────────────────────┼──────────────────────┐
+                        │                      │                      │
+                        ▼                      ▼                      ▼
+                  Market History         Events / Signals       Analytics
+```
+
+## ClickHouse
+ClickHouse provides the infrastructure for analytical scans, high-volume time-series, and event data.
+As of Stage 37, the ClickHouse infrastructure exists, but **no ATLAS business dataset is stored in ClickHouse yet**. ClickHouse **does not replace PostgreSQL**, nor does it mirror user or entity tables. See [CLICKHOUSE_ARCHITECTURE.md](CLICKHOUSE_ARCHITECTURE.md) for details.
+
+## PostgreSQL
+PostgreSQL is the authoritative transactional source of truth for ATLAS.
 
 ## Schema Versioning
 Migrations are managed using Alembic.

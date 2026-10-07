@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.20.0",
     "asyncpg>=0.31.0",
+    "clickhouse-connect>=1.9.0",
     "cryptography>=50.0.2",
     "openbb-core>=2.0.1",
     "pyjwt>=2.15.1",

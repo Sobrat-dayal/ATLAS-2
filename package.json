@@ -7,7 +7,13 @@
     "build:web": "pnpm --filter web build",
     "lint:web": "pnpm --filter web lint",
     "typecheck:web": "pnpm --filter web typecheck",
-    "test:web": "pnpm --filter web test"
+    "test:web": "pnpm --filter web test",
+    "clickhouse-up": "docker compose -f infrastructure/local/docker-compose.yml up -d",
+    "clickhouse-down": "docker compose -f infrastructure/local/docker-compose.yml down",
+    "clickhouse-logs": "docker compose -f infrastructure/local/docker-compose.yml logs -f clickhouse",
+    "clickhouse-health": "docker compose -f infrastructure/local/docker-compose.yml exec clickhouse wget --spider -q http://127.0.0.1:8123/ping",
+    "clickhouse-smoke": "docker compose -f infrastructure/local/docker-compose.yml exec clickhouse clickhouse-client -q \"SELECT 1; SELECT currentDatabase();\"",
+    "clickhouse-reset": "docker compose -f infrastructure/local/docker-compose.yml down -v"
   },
   "engines": {
     "node": ">=20.0.0",
