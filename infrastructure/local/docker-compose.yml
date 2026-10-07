@@ -29,5 +29,29 @@ services:
       - NET_ADMIN
       - IPC_LOCK
 
+  valkey:
+    image: valkey/valkey:8.0.2
+    container_name: atlas-valkey
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"  # Bound to loopback
+    environment:
+      - ATLAS_VALKEY_PASSWORD=${ATLAS_VALKEY_PASSWORD:?ATLAS_VALKEY_PASSWORD must be set}
+    command: >
+      sh -c '
+        echo "user default off nopass" > /etc/valkey/users.acl &&
+        echo "user atlas_app on >$${ATLAS_VALKEY_PASSWORD} ~atlas:* &* +@all -CONFIG -FLUSHALL -FLUSHDB -SHUTDOWN -MODULE -DEBUG -ACL" >> /etc/valkey/users.acl &&
+        exec valkey-server --aclfile /etc/valkey/users.acl
+      '
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli --user atlas_app --pass $${ATLAS_VALKEY_PASSWORD} PING | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 2s
+
 volumes:
   clickhouse_data:
+  valkey_data:

@@ -453,3 +453,14 @@ This document records the major architectural and product decisions established.
 156. **Health Boundary**: Infrastructure health uses a read-only lightweight ping (`SELECT 1`). It is disconnected from Provider Health tables and Provider routing.
 157. **No Arbitrary SQL**: Stage 37 exposes no arbitrary SQL capabilities, no Terminal mode, and no Agent/MCP tools for ClickHouse.
 158. **Migration Foundation**: Stage 37 outlines a separate directory convention for future ClickHouse schemas, keeping Alembic strictly for PostgreSQL.
+
+## Stage 38: Deploy Redis / Valkey
+
+159. **Target Architecture**: Valkey is ATLAS's ephemeral, low-latency, and distributed coordination datastore. PostgreSQL remains the authoritative transactional source of truth.
+160. **Selection**: Valkey is chosen over Redis due to open-source governance and robust backwards compatibility.
+161. **Infrastructure Only**: Stage 38 deploys infrastructure only, creating no production cache, session state, lock, or pub/sub capabilities yet.
+162. **Isolation**: Valkey does not replace ClickHouse or PostgreSQL. It is strictly non-authoritative.
+163. **Namespace & Database**: Keys must be namespaced (`atlas:env:`). Only logical DB 0 is permitted.
+164. **Security**: Passwords are required and passed via environment variables (never in git, `eval`, or logs). Browser clients must never connect directly.
+165. **ACL Restrictions**: The application user is strictly limited, with dangerous commands like `CONFIG`, `FLUSHALL`, and `MODULE` denied.
+166. **No Pickle**: Deserialization of Python `pickle` objects is forbidden due to arbitrary code execution risks.

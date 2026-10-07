@@ -1,6 +1,6 @@
 # ATLAS Database Architecture
 
-This document describes the overall database architecture used by ATLAS, consisting of PostgreSQL and ClickHouse.
+This document describes the overall database architecture used by ATLAS, consisting of PostgreSQL, ClickHouse, and Valkey.
 
 ## Target Architecture
 
@@ -13,22 +13,26 @@ This document describes the overall database architecture used by ATLAS, consist
                               ▼
                         ATLAS Backend
                               │
-              ┌───────────────┴────────────────┐
-              │                                │
-              ▼                                ▼
-         PostgreSQL                         ClickHouse
-              │                                │
-              │                                │
-     users / entities /                  high-volume /
-     permissions /                      analytical /
-     configuration /                    time-series data
-     provenance metadata                     │
-                                               │
-                        ┌──────────────────────┼──────────────────────┐
-                        │                      │                      │
-                        ▼                      ▼                      ▼
-                  Market History         Events / Signals       Analytics
+              ┌───────────────┼────────────────┐
+              │               │                │
+              ▼               ▼                ▼
+         PostgreSQL       ClickHouse         Valkey
+              │               │                │
+              │               │                │
+     users / entities /  high-volume /    ephemeral state /
+     permissions /       analytical /     caching / 
+     configuration /     time-series      coordination
+     provenance               │                │
+                              │                │
+                        ┌─────┴──────┐         │
+                        │            │         │
+                        ▼            ▼         ▼
+                  Market History  Analytics  Live Quote State
 ```
+
+## Valkey
+Valkey provides the infrastructure for low-latency, ephemeral state, and distributed coordination.
+It is non-authoritative. See [REDIS_VALKEY_ARCHITECTURE.md](REDIS_VALKEY_ARCHITECTURE.md) for details.
 
 ## ClickHouse
 ClickHouse provides the infrastructure for analytical scans, high-volume time-series, and event data.

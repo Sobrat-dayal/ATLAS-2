@@ -23,6 +23,11 @@ ATLAS uses a monorepo architecture:
 - **Python**: Use `uv` with python 3.12 (`python/atlas/pyproject.toml`, `apps/api/pyproject.toml`)
 - **Node**: Use `pnpm` workspaces (`pnpm-workspace.yaml`, `package.json`)
 
+## Database Architecture
+- **PostgreSQL**: Authoritative source of truth for entities, relationships, configuration, and capabilities.
+- **ClickHouse**: High-volume, immutable analytical data (Market Data, Event Streams).
+- **Valkey**: Ephemeral low-latency state, caching, and real-time coordination.
+
 ## Run
 To run the full stack locally:
 

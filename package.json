@@ -13,7 +13,13 @@
     "clickhouse-logs": "docker compose -f infrastructure/local/docker-compose.yml logs -f clickhouse",
     "clickhouse-health": "docker compose -f infrastructure/local/docker-compose.yml exec clickhouse wget --spider -q http://127.0.0.1:8123/ping",
     "clickhouse-smoke": "docker compose -f infrastructure/local/docker-compose.yml exec clickhouse clickhouse-client -q \"SELECT 1; SELECT currentDatabase();\"",
-    "clickhouse-reset": "docker compose -f infrastructure/local/docker-compose.yml down -v"
+    "clickhouse-reset": "docker compose -f infrastructure/local/docker-compose.yml down -v",
+    "valkey-up": "docker compose -f infrastructure/local/docker-compose.yml up -d valkey",
+    "valkey-down": "docker compose -f infrastructure/local/docker-compose.yml rm -sf valkey",
+    "valkey-logs": "docker compose -f infrastructure/local/docker-compose.yml logs -f valkey",
+    "valkey-health": "docker compose -f infrastructure/local/docker-compose.yml exec valkey valkey-cli --user atlas_app --pass $ATLAS_VALKEY_PASSWORD PING",
+    "valkey-smoke": "docker compose -f infrastructure/local/docker-compose.yml exec valkey valkey-cli --user atlas_app --pass $ATLAS_VALKEY_PASSWORD SET atlas:test:stage38:smoke ok EX 30",
+    "valkey-reset": "docker compose -f infrastructure/local/docker-compose.yml rm -sfv valkey"
   },
   "engines": {
     "node": ">=20.0.0",
