@@ -427,3 +427,11 @@ This document records the major architectural and product decisions established.
 136. **No Live Requests**: Stage 35 performs no external Economic Data request (OpenBB, FRED, World Bank, OECD, IMF).
 137. **No UI or APIs**: Stage 35 introduces no public Economic Data REST API, executable Economic Capability, Economic Observation persistence table, or UI/Dashboard.
 138. **No Release System**: Stage 35 does not build the Economic Calendar, forecasting models, consensus models, or surprise calculations.
+
+## Stage 36: Canonical News and Research Models
+
+139. **Decoupled Architecture**: Established `atlas.news` and `atlas.research` canonical models (e.g. `NewsArticle`, `ResearchMetadata`) strictly separate from persistent entity models (`NewsEvent`, `ResearchDocument`), but conceptually aligned.
+140. **Shared Pattern**: Reused the `DataOrigin` pattern (`NewsDataOrigin`, `ResearchDataOrigin`) for lightweight runtime extraction provenance.
+141. **No Backend Persistence**: Stage 36 models are offline, frozen, Pydantic V2 definitions with no database dependency, network fetches, or FastAPI coupling.
+142. **No Text Ingestion**: Stage 36 models handle metadata, ignoring binary/blob/full-text ingestion pipelines for Research papers.
+143. **Provider Extensibility**: OpenBB adapter extended with `news_capabilities`, `research_capabilities`, and `ProviderDomain.RESEARCH`.

@@ -15,6 +15,7 @@ OPENBB_DESCRIPTOR = ProviderDescriptor(
             ProviderDomain.FUNDAMENTALS,
             ProviderDomain.ECONOMICS,
             ProviderDomain.NEWS,
+            ProviderDomain.RESEARCH,
         ]
     ),
     homepage_url="https://openbb.co",
@@ -47,6 +48,16 @@ class OpenBBProviderAdapter(BaseProvider):
     def economic_capabilities(self) -> "EconomicProviderCapabilities":
         from atlas.economics import EconomicProviderCapabilities
         return EconomicProviderCapabilities(operations=frozenset())
+
+    @property
+    def news_capabilities(self) -> "NewsProviderCapabilities":
+        from atlas.news import NewsProviderCapabilities
+        return NewsProviderCapabilities(operations=frozenset())
+
+    @property
+    def research_capabilities(self) -> "ResearchProviderCapabilities":
+        from atlas.research import ResearchProviderCapabilities
+        return ResearchProviderCapabilities(operations=frozenset())
 
     @property
     def runtime(self) -> OpenBBRuntime:
