@@ -39,6 +39,11 @@ class OpenBBProviderAdapter(BaseProvider):
         return MarketDataProviderCapabilities(operations=frozenset())
 
     @property
+    def fundamental_capabilities(self) -> "FundamentalProviderCapabilities":
+        from atlas.fundamentals import FundamentalProviderCapabilities
+        return FundamentalProviderCapabilities(operations=frozenset())
+
+    @property
     def runtime(self) -> OpenBBRuntime:
         return self._runtime
 

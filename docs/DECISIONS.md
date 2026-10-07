@@ -389,3 +389,7 @@ This document records the major architectural and product decisions established.
 98. Provider credentials belong outside canonical Market Data models.
 99. Stage 33 creates no fake production Provider.
 100. Stage 34 remains responsible for canonical Fundamental Data models.
+101. Canonical Fundamental Data models do not import database connections or perform network requests.
+102. Canonical Fundamental Data models enforce precise canonical types (CanonicalDecimal) for value accuracy.
+103. Stage 34 creates no calculated metrics or valuation ratios.
+104. Stage 35 remains responsible for Economic models.
