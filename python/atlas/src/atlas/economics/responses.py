@@ -3,8 +3,9 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from atlas.economics.enums import EconomicRevisionPolicy
-from atlas.economics.origin import EconomicDataOrigin
 from atlas.economics.observations import EconomicObservation, LatestEconomicObservationItem
+from atlas.economics.origin import EconomicDataOrigin
+
 
 class EconomicObservationsResponse(BaseModel):
     economic_series_id: uuid.UUID = Field(...)

@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from atlas.economics.enums import EconomicRevisionPolicy
 
+
 class EconomicRevisionSelection(BaseModel):
     policy: EconomicRevisionPolicy = Field(...)
     as_of_date: Optional[datetime.date] = Field(default=None)

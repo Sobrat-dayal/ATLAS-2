@@ -1,7 +1,11 @@
 from typing import Protocol
 
 from atlas.economics.requests import EconomicObservationsRequest, LatestEconomicObservationsRequest
-from atlas.economics.responses import EconomicObservationsResponse, LatestEconomicObservationsResponse
+from atlas.economics.responses import (
+    EconomicObservationsResponse,
+    LatestEconomicObservationsResponse,
+)
+
 
 class EconomicObservationsProvider(Protocol):
     async def get_economic_observations(

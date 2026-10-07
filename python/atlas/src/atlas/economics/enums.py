@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+
 class EconomicObservationAvailability(StrEnum):
     AVAILABLE = "available"
     MISSING = "missing"

@@ -8,6 +8,7 @@ from atlas.economics.enums import EconomicObservationAvailability, EconomicRevis
 from atlas.economics.numeric import CanonicalDecimal
 from atlas.economics.periods import EconomicObservationPeriod
 
+
 class EconomicObservation(BaseModel):
     economic_series_id: uuid.UUID = Field(...)
     period: EconomicObservationPeriod = Field(...)

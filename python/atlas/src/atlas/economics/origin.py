@@ -1,6 +1,8 @@
 import datetime
-from typing import Any, Optional
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 
 class EconomicDataOrigin(BaseModel):
     provider_key: str = Field(...)
