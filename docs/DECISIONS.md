@@ -393,3 +393,37 @@ This document records the major architectural and product decisions established.
 102. Canonical Fundamental Data models enforce precise canonical types (CanonicalDecimal) for value accuracy.
 103. Stage 34 creates no calculated metrics or valuation ratios.
 104. Stage 35 remains responsible for Economic models.
+105. **ATLAS Owns Economic Schema**: ATLAS owns canonical Economic Data models.
+106. **No Provider Leaks**: Provider-specific Economic objects must not leak above Provider adapters.
+107. **Stage 20 Authoritative**: Stage 20 Economic Series remains the canonical series identity/metadata layer.
+108. **No Replacement**: Stage 35 does not replace the Stage 20 Economic Series entity.
+109. **Canonical References**: Economic Observations reference Stage 20 Economic Series UUIDs.
+110. **External IDs**: FRED, World Bank, OECD, IMF codes are not canonical Economic Series identity. They remain Stage 21 identifiers.
+111. **Decimal Precision**: Economic Observation values use Decimal. Binary float is not canonical.
+112. **Finite Values**: Non-finite Decimal values are rejected.
+113. **No Global Rounding**: Stage 35 does not globally round Economic Data.
+114. **Valid Values**: Negative and zero Economic Observation values are valid and representable.
+115. **Missing is Distinct**: Missing data is explicitly distinct from zero. Missing Provider markers are normalized before canonical model construction.
+116. **No Rescaling**: Canonical Economic Data does not automatically rescale percentage values.
+117. **Metadata Semantics**: Stage 20 series metadata defines value semantics (frequency, seasonal adjustment, value representation).
+118. **Reference Date Required**: Economic Observation Period contains a required reference date. Precise period start/end boundaries are optional and never fabricated.
+119. **Boundary Rules**: Period start and end are both present or both absent.
+120. **Availability Status**: Economic Observation Availability explicitly distinguishes available from missing. Available requires value; missing requires no value.
+121. **Revision Status**: Economic Revision Status supports preliminary, revised, final and unknown. Historical observations are not automatically assumed final.
+122. **Revision Policies**: Economic Revision Policy supports latest_available, as_of, and all_vintages semantics.
+123. **As-Of Rules**: As-of policy requires an as-of date. Provider-specific vintage query parameter names do not leak into canonical requests.
+124. **Origin Semantics**: EconomicDataOrigin captures Provider/runtime lineage but does not replace Stage 24 Provenance. Contains no credentials.
+125. **Observation Cleanliness**: EconomicObservation contains no Provider series code, duplicated metadata, or derived metrics (YoY, MoM, surprise).
+126. **Timestamp Meanings**: released_at, retrieved_at, and vintage_date all have distinct meanings and are not substituted for each other. Stage 35 does not invent vintage dates.
+127. **No Analytics**: Stage 35 does not interpolate, forward-fill, resample, rebase, or seasonally adjust data.
+128. **Provider Capabilities**: EconomicDataOperation and EconomicProviderCapabilities declare actually implemented canonical operations and revision policies. Empty capabilities are valid.
+129. **OpenBB Capabilities**: OpenBB does not automatically claim Economic operations merely because it supports the ECONOMICS Provider family.
+130. **Typed Protocols**: Stage 35 introduces typed operation-specific Economic Provider Protocols (no generic execute executor).
+131. **Request Hygiene**: Economic requests use canonical Economic Series UUIDs and do not contain Provider series codes, Provider keys, routing configuration, credentials, or user IDs.
+132. **Bounded Requests**: Economic observation requests are bounded by date range or limit. Latest Economic Observation requests are batch-bounded. Duplicate Series IDs are rejected.
+133. **Response Ordering**: EconomicObservationsResponse is chronological oldest-to-newest. Legitimate vintages are not deduplicated under all_vintages, but exact duplicates are rejected.
+134. **No Fabrication**: Missing latest data is representable as None without fabricating observation periods.
+135. **Offline Models**: Canonical Economic model validation requires no DB, network, identifier resolution, or Provider calls.
+136. **No Live Requests**: Stage 35 performs no external Economic Data request (OpenBB, FRED, World Bank, OECD, IMF).
+137. **No UI or APIs**: Stage 35 introduces no public Economic Data REST API, executable Economic Capability, Economic Observation persistence table, or UI/Dashboard.
+138. **No Release System**: Stage 35 does not build the Economic Calendar, forecasting models, consensus models, or surprise calculations.

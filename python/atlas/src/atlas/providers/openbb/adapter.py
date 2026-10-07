@@ -44,6 +44,11 @@ class OpenBBProviderAdapter(BaseProvider):
         return FundamentalProviderCapabilities(operations=frozenset())
 
     @property
+    def economic_capabilities(self) -> "EconomicProviderCapabilities":
+        from atlas.economics import EconomicProviderCapabilities
+        return EconomicProviderCapabilities(operations=frozenset())
+
+    @property
     def runtime(self) -> OpenBBRuntime:
         return self._runtime
 

@@ -1,0 +1,6773 @@
+<USER_REQUEST>
+You are working on the existing **ATLAS** repository.
+
+Complete **Stage 34 only**:
+
+# Stage 34 - Build Canonical Fundamental Data Models
+
+Stages 11 through 33 established:
+
+```text
+FastAPI backend
+PostgreSQL / Supabase infrastructure
+Authentication
+Authorization
+User Preferences
+
+Universal Entity System
+Security / Instrument Entities
+Company Entities
+Geographic Entities
+Economic / Document Entities
+
+Universal Identifiers
+Entity Resolution
+Relationship Graph
+Provenance
+
+Global Application Context
+
+Capability Registry
+Capability Gateway
+
+Provider Abstraction
+Provider Registry
+Provider Configuration
+Provider Health
+Provider Routing
+Provider Selection
+Provider Fallback Planning
+
+OpenBB Provider Framework
+
+Canonical Market Data Models
+Quote
+Trade
+OHLCV Bar
+Order Book
+Market Snapshot
+Market Data Provider Protocols
+```
+
+ATLAS now needs a canonical language for:
+
+```text
+company financial statements
+
+reported financial facts
+
+fiscal periods
+
+accounting units
+
+reporting currencies
+
+accounting standards
+
+statement revisions / restatements
+
+fundamental Provider operations
+```
+
+Without this layer, different Providers may return incompatible structures such as:
+
+```text
+Provider A
+{
+    "revenue": 60000000000,
+    "netIncome": 18000000000
+}
+
+Provider B
+{
+    "total_revenue": "60000",
+    "net_income": "18000",
+    "scale": "millions"
+}
+
+Provider C
+{
+    "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax":
+        60000000000
+}
+```
+
+ATLAS modules must not depend on any of those Provider-specific formats.
+
+The target architecture is:
+
+```text
+External Fundamental Data Source
+              │
+              ▼
+       Provider Adapter
+              │
+              ▼
+ATLAS Canonical Fundamental Models
+              │
+              ▼
+        Domain Services
+              │
+              ├── Companies
+              ├── Research
+              ├── Screeners
+              ├── Portfolios
+              ├── Risk
+              ├── AI
+              ├── Agents
+              └── Workflows
+```
+
+The central rule is:
+
+# ATLAS owns the canonical Fundamental Data schema.
+
+Provider adapters normalize external data into ATLAS models.
+
+ATLAS does not expose Provider-specific financial-statement objects above the Provider layer.
+
+Another critical rule is:
+
+# Fundamental Data belongs to the canonical Company entity, not primarily to a ticker.
+
+Use the existing Stage 18 Company identity.
+
+Another critical rule is:
+
+# Reported accounting facts and derived financial metrics are different things.
+
+Stage 34 defines canonical reported fundamentals.
+
+Stage 83 will later build:
+
+```text
+ratios
+valuation metrics
+derived analytics
+```
+
+Do not prematurely calculate those during Stage 34.
+
+Another critical rule is:
+
+# Earnings estimates, analyst forecasts and guidance are not Stage 34.
+
+Those belong primarily to Stage 84.
+
+Another critical rule is:
+
+# Ownership, insider activity and institutional holdings are not Stage 34.
+
+Those belong primarily to Stage 85.
+
+Another critical rule is:
+
+# Filing-document workflows are not Stage 34.
+
+Stage 86 will connect Companies to filings/documents in depth.
+
+Stage 34 may include safe source-document references only where the existing entity architecture already supports them.
+
+Another critical rule is:
+
+# Financial values must preserve exact reported precision.
+
+Use `Decimal`.
+
+Do not use binary floating-point for canonical accounting values.
+
+Another critical rule is:
+
+# Canonical financial statement values must use base units.
+
+Do not carry hidden:
+
+```text
+thousands
+
+millions
+
+billions
+```
+
+scaling into canonical values.
+
+Example:
+
+```text
+Provider:
+Revenue = 1250
+Scale = millions
+
+Canonical ATLAS:
+Revenue = Decimal("1250000000")
+Currency = USD
+```
+
+Stage 34 must build:
+
+- canonical Fundamental Data package
+- canonical Company Fundamental identity rules
+- financial statement type model
+- financial period model
+- fiscal period model
+- accounting standard model
+- reporting status / audit status foundation
+- financial unit model
+- currency validation
+- canonical concept-key architecture
+- code-defined Fundamental Concept Registry
+- core canonical Fundamental Concepts
+- statement line-item model
+- Income Statement model
+- Balance Sheet model
+- Cash Flow Statement model
+- standalone Financial Fact model
+- statement/report metadata
+- restatement/revision semantics
+- canonical request models
+- canonical response models
+- Fundamental Data operation taxonomy
+- Fundamental Provider capability metadata
+- strongly typed Fundamental Provider protocols
+- precise Decimal validation
+- fiscal-period validation
+- statement-type / concept validation
+- statement ordering rules
+- OpenBB integration boundary preparation
+- Provenance integration preparation
+- tests
+- documentation
+
+Stage 34 must **not** implement:
+
+- real OpenBB Fundamental Data fetching
+- real Income Statement fetching
+- real Balance Sheet fetching
+- real Cash Flow fetching
+- ratios
+- valuation metrics
+- P/E
+- P/B
+- EV/EBITDA
+- ROE
+- ROA
+- margin calculations
+- growth calculations
+- earnings estimates
+- analyst estimates
+- guidance
+- ownership
+- insider transactions
+- institutional holdings
+- filing download
+- filing parsing
+- SEC ingestion
+- XBRL ingestion pipeline
+- public Fundamentals API
+- Companies financial-statement UI
+- Screeners
+- valuation engine
+- ClickHouse
+- Redis
+- ingestion workers
+- Provider business-operation retry loops
+
+Do not begin Stage 35.
+
+---
+
+# 1. READ ALL PRIOR ARCHITECTURE FIRST
+
+Before modifying code, read:
+
+```text
+README.md
+
+docs/PRODUCT_SPEC.md
+docs/PRODUCT_PRINCIPLES.md
+docs/MODULES.md
+
+docs/REPOSITORY_ARCHITECTURE.md
+docs/API_ARCHITECTURE.md
+docs/DATABASE_ARCHITECTURE.md
+
+docs/ENTITY_ARCHITECTURE.md
+docs/COMPANY_ARCHITECTURE.md
+docs/INSTRUMENT_ARCHITECTURE.md
+docs/ECONOMIC_DOCUMENT_ENTITY_ARCHITECTURE.md
+
+docs/IDENTIFIER_ARCHITECTURE.md
+docs/ENTITY_RESOLUTION_ARCHITECTURE.md
+
+docs/PROVENANCE_ARCHITECTURE.md
+
+docs/CAPABILITY_ARCHITECTURE.md
+
+docs/PROVIDER_ARCHITECTURE.md
+docs/PROVIDER_CONFIGURATION_ARCHITECTURE.md
+docs/PROVIDER_HEALTH_ARCHITECTURE.md
+docs/PROVIDER_ROUTING_ARCHITECTURE.md
+docs/OPENBB_INTEGRATION.md
+
+docs/MARKET_DATA_ARCHITECTURE.md
+
+docs/DECISIONS.md
+```
+
+Inspect:
+
+```text
+apps/api
+
+python/atlas
+
+packages
+
+tests
+
+migrations
+```
+
+---
+
+# 2. AUDIT EXISTING FUNDAMENTAL MODELS
+
+Search the repository for:
+
+```text
+IncomeStatement
+income_statement
+
+BalanceSheet
+balance_sheet
+
+CashFlow
+cash_flow
+cashflow
+
+FinancialStatement
+financial_statement
+
+FinancialFact
+financial_fact
+
+fundamentals
+fundamental
+
+revenue
+net_income
+total_assets
+total_liabilities
+
+EPS
+earnings_per_share
+
+fiscal_year
+fiscal_period
+
+annual
+quarterly
+
+GAAP
+IFRS
+
+XBRL
+```
+
+Document all current implementations before changing anything.
+
+---
+
+# 3. AUDIT PROVIDER-SPECIFIC FUNDAMENTAL OBJECTS
+
+Search for:
+
+```text
+OpenBB
+
+OBBject
+
+SEC
+sec-api
+
+XBRL
+
+yfinance
+
+Polygon
+
+Financial Modeling Prep
+
+Alpha Vantage
+
+DataFrame
+pandas.DataFrame
+polars.DataFrame
+```
+
+inside fundamental/company domain code.
+
+Provider-specific financial-data objects must not become the canonical ATLAS contract.
+
+---
+
+# 4. AUDIT COMPANY IDENTITY
+
+Determine the actual canonical Stage 18 Company ID type.
+
+Possible existing field:
+
+```text
+company_id
+```
+
+or generic:
+
+```text
+entity_id
+```
+
+Reuse it.
+
+Do not create:
+
+```text
+fundamental_company_id
+```
+
+as a new identity namespace.
+
+---
+
+# 5. TICKER IS NOT FUNDAMENTAL IDENTITY
+
+Forbidden as sole canonical identity:
+
+```text
+IncomeStatement {
+    ticker: "NVDA"
+}
+```
+
+Preferred:
+
+```text
+IncomeStatement {
+    company_id: UUID(...)
+}
+```
+
+Ticker resolution remains Stage 21-22 identifier/entity-resolution functionality.
+
+---
+
+# 6. DO NOT ATTACH COMPANY FINANCIALS PRIMARILY TO SECURITY ID
+
+Financial statements generally belong to:
+
+```text
+Company
+```
+
+rather than one specific listed security.
+
+A Company may issue:
+
+- multiple share classes
+- ADRs
+- bonds
+- other securities
+
+Use Company identity as the canonical reporting-entity identity.
+
+---
+
+# 7. PER-SHARE FACTS
+
+Facts such as:
+
+```text
+basic EPS
+diluted EPS
+weighted-average shares
+```
+
+may still belong to Company reporting.
+
+Do not create a separate per-security financial-statement model during Stage 34.
+
+---
+
+# 8. CREATE CANONICAL FUNDAMENTAL PACKAGE
+
+Recommended structure:
+
+```text
+python/atlas/src/atlas/fundamentals/
+├── __init__.py
+├── enums.py
+├── numeric.py
+├── periods.py
+├── units.py
+├── concepts.py
+├── concept_registry.py
+├── origin.py
+├── line_items.py
+├── statements.py
+├── facts.py
+├── requests.py
+├── responses.py
+├── capabilities.py
+├── protocols.py
+├── validation.py
+└── errors.py
+```
+
+Adapt to the actual Stage 2/33 repository structure.
+
+Do not create duplicate package hierarchies.
+
+---
+
+# 9. DOMAIN PACKAGE MUST NOT DEPEND ON FASTAPI
+
+No imports of:
+
+```text
+FastAPI
+APIRouter
+Request
+Response
+HTTPException
+```
+
+inside canonical Fundamental models.
+
+---
+
+# 10. DOMAIN PACKAGE MUST NOT DEPEND ON OPENBB
+
+No direct OpenBB import.
+
+---
+
+# 11. DOMAIN PACKAGE MUST NOT DEPEND ON PANDAS
+
+No canonical response such as:
+
+```text
+pandas.DataFrame
+```
+
+---
+
+# 12. DOMAIN PACKAGE MUST NOT DEPEND ON POLARS
+
+Same rule.
+
+---
+
+# 13. USE PYDANTIC V2
+
+Follow the existing ATLAS model conventions.
+
+Canonical financial records should generally be:
+
+```text
+typed
+validated
+immutable
+serialization-safe
+```
+
+---
+
+# 14. PREFER IMMUTABLE CANONICAL RECORDS
+
+Use:
+
+```text
+frozen=True
+```
+
+or repository-equivalent configuration for:
+
+- statements
+- line items
+- financial facts
+- periods
+- origins
+
+unless a strong existing convention says otherwise.
+
+---
+
+# 15. NUMERIC PRECISION POLICY
+
+Use:
+
+```python
+Decimal
+```
+
+for:
+
+```text
+financial statement values
+
+currency values
+
+share counts
+
+per-share values
+
+reported percentages if represented
+
+reported ratios if ever represented as raw facts
+```
+
+---
+
+# 16. DO NOT USE FLOAT
+
+Forbidden canonical type:
+
+```python
+revenue: float
+```
+
+---
+
+# 17. REJECT NON-FINITE DECIMAL
+
+Reject:
+
+```text
+NaN
+
+Infinity
+
+-Infinity
+```
+
+---
+
+# 18. DO NOT APPLY GLOBAL ROUNDING
+
+Do not round all accounting values to:
+
+```text
+2 decimals
+```
+
+or any global precision.
+
+---
+
+# 19. SOURCE PRECISION
+
+Provider adapters should preserve the meaningful precision of source financial data.
+
+---
+
+# 20. BASE UNIT POLICY
+
+Canonical numeric values must represent:
+
+```text
+actual base units
+```
+
+not hidden display scale.
+
+Example:
+
+```text
+Provider:
+Operating Income = 23,471
+Scale = millions
+
+ATLAS:
+Decimal("23471000000")
+```
+
+---
+
+# 21. NO SCALE FIELD REQUIRED FOR CANONICAL VALUES
+
+Do not make users interpret:
+
+```text
+value = 23471
+scale = 1000000
+```
+
+inside canonical statements.
+
+Normalize before construction.
+
+---
+
+# 22. PROVIDER SOURCE SCALE
+
+If preserving original source scale is useful:
+
+keep it in:
+
+```text
+Provider normalization metadata
+or
+Provenance
+```
+
+not as canonical amount semantics.
+
+---
+
+# 23. DECIMAL JSON SERIALIZATION
+
+Use the same precision-safe contract established in Stage 33.
+
+Canonical Decimal values should serialize as:
+
+```text
+strings
+```
+
+where needed to preserve exactness.
+
+Example:
+
+```json
+{
+  "value": "23471000000"
+}
+```
+
+---
+
+# 24. FLOAT INPUT POLICY
+
+Prefer rejecting binary float input for canonical financial values.
+
+Provider adapters may intentionally convert:
+
+```python
+Decimal(str(provider_float))
+```
+
+when no higher-precision representation is available.
+
+---
+
+# 25. DATE VS DATETIME POLICY
+
+Financial reporting periods primarily use:
+
+```text
+date
+```
+
+not intraday timestamp.
+
+Examples:
+
+```text
+period_start
+
+period_end
+
+filing_date
+```
+
+---
+
+# 26. REPORT TIMESTAMP
+
+When Provider supplies precise filing acceptance/report timestamp:
+
+use:
+
+```text
+timezone-aware datetime
+```
+
+normalized to UTC.
+
+---
+
+# 27. CREATE FINANCIAL STATEMENT TYPE
+
+Create:
+
+```text
+FinancialStatementType
+```
+
+Values:
+
+```text
+income_statement
+
+balance_sheet
+
+cash_flow_statement
+```
+
+Do not add:
+
+```text
+ratios
+
+valuation
+
+earnings_estimates
+```
+
+as statement types.
+
+---
+
+# 28. CREATE FINANCIAL PERIOD NATURE
+
+Create:
+
+```text
+FinancialPeriodNature
+```
+
+Recommended:
+
+```text
+instant
+
+duration
+```
+
+---
+
+# 29. INSTANT
+
+Used for facts measured:
+
+```text
+at a point in time
+```
+
+Typical:
+
+```text
+cash balance
+assets
+liabilities
+equity
+```
+
+---
+
+# 30. DURATION
+
+Used for facts measured:
+
+```text
+over a period
+```
+
+Typical:
+
+```text
+revenue
+expenses
+cash flows
+```
+
+---
+
+# 31. CREATE FISCAL PERIOD ENUM
+
+Create:
+
+```text
+FiscalPeriod
+```
+
+Recommended:
+
+```text
+Q1
+
+Q2
+
+Q3
+
+Q4
+
+H1
+
+H2
+
+9M
+
+FY
+
+OTHER
+```
+
+Use stable lowercase serialized values if preferred:
+
+```text
+q1
+q2
+q3
+q4
+h1
+h2
+nine_months
+fy
+other
+```
+
+Choose one project-consistent serialization.
+
+---
+
+# 32. DO NOT ASSUME CALENDAR YEAR
+
+A Company's:
+
+```text
+fiscal_year
+```
+
+may not match:
+
+```text
+January to December
+```
+
+---
+
+# 33. CREATE REPORTING PERIOD TYPE
+
+Create:
+
+```text
+ReportingPeriodType
+```
+
+Recommended:
+
+```text
+annual
+
+quarterly
+
+semiannual
+
+nine_month
+
+other
+```
+
+---
+
+# 34. DO NOT ADD TTM AS A NORMAL REPORTED PERIOD BY DEFAULT
+
+Trailing twelve months is usually:
+
+```text
+derived
+```
+
+not one statutory statement period.
+
+Stage 34 should not make TTM a first-class reported statement type unless current provider requirements force it.
+
+---
+
+# 35. CREATE FINANCIAL PERIOD
+
+Create:
+
+```text
+FinancialPeriod
+```
+
+Recommended fields:
+
+```text
+nature
+
+period_start
+
+period_end
+
+fiscal_year
+
+fiscal_period
+
+reporting_period_type
+```
+
+---
+
+# 36. PERIOD END
+
+Required.
+
+Use:
+
+```text
+date
+```
+
+---
+
+# 37. DURATION PERIOD RULE
+
+If:
+
+```text
+nature = duration
+```
+
+require:
+
+```text
+period_start IS NOT NULL
+period_start < period_end
+```
+
+---
+
+# 38. INSTANT PERIOD RULE
+
+If:
+
+```text
+nature = instant
+```
+
+require:
+
+```text
+period_start IS NULL
+```
+
+---
+
+# 39. FISCAL YEAR
+
+Optional integer if Provider/reporting source cannot reliably provide it.
+
+If present:
+
+use a conservative range such as:
+
+```text
+1900 to 2200
+```
+
+or project-standard validation.
+
+---
+
+# 40. FISCAL PERIOD AND REPORTING TYPE
+
+Validate obvious contradictions.
+
+Example:
+
+```text
+fiscal_period = FY
+reporting_period_type = quarterly
+```
+
+should normally be rejected.
+
+---
+
+# 41. DO NOT INFER FISCAL PERIOD FROM DATE ALONE
+
+Fiscal calendars differ.
+
+---
+
+# 42. CREATE ACCOUNTING STANDARD
+
+Create:
+
+```text
+AccountingStandard
+```
+
+Recommended values:
+
+```text
+us_gaap
+
+ifrs
+
+other
+
+unknown
+```
+
+---
+
+# 43. DO NOT ASSUME US GAAP
+
+ATLAS is a global system.
+
+---
+
+# 44. OTHER ACCOUNTING STANDARDS
+
+Do not create dozens of national-standard enums before needed.
+
+Use:
+
+```text
+other
+```
+
+plus safe source metadata where necessary.
+
+---
+
+# 45. CREATE AUDIT STATUS
+
+Create:
+
+```text
+AuditStatus
+```
+
+Recommended:
+
+```text
+audited
+
+unaudited
+
+unknown
+```
+
+---
+
+# 46. AUDIT STATUS IS REPORT METADATA
+
+Do not assume:
+
+```text
+annual = audited
+```
+
+without source evidence.
+
+---
+
+# 47. CREATE FUNDAMENTAL DATA ORIGIN
+
+Create:
+
+```text
+FundamentalDataOrigin
+```
+
+---
+
+# 48. RECOMMENDED ORIGIN FIELDS
+
+```text
+provider_key
+
+upstream_source
+
+retrieved_at
+
+source_document_id
+
+source_filing_identifier
+```
+
+Use only fields compatible with existing Entity/Document architecture.
+
+---
+
+# 49. PROVIDER KEY
+
+Reuse Stage 28 Provider key syntax.
+
+---
+
+# 50. UPSTREAM SOURCE
+
+Examples in future may include:
+
+```text
+SEC
+Companies House
+EDGAR
+OpenBB-backed provider
+commercial vendor
+```
+
+Do not fabricate.
+
+---
+
+# 51. RETRIEVED AT
+
+Timezone-aware UTC datetime.
+
+---
+
+# 52. SOURCE DOCUMENT ID
+
+Optional canonical Stage 20 Document entity UUID if one already exists.
+
+---
+
+# 53. DO NOT REQUIRE DOCUMENT ENTITY
+
+Stage 86 handles deep filing/document connections.
+
+Fundamental data must remain representable without a Document entity.
+
+---
+
+# 54. SOURCE FILING IDENTIFIER
+
+Optional bounded source identifier.
+
+Examples:
+
+```text
+accession number
+provider filing key
+```
+
+Do not treat it as global identity.
+
+---
+
+# 55. ORIGIN MUST CONTAIN NO CREDENTIALS
+
+No:
+
+```text
+API key
+token
+secret reference
+account credential
+```
+
+---
+
+# 56. ORIGIN IS NOT FULL PROVENANCE
+
+Stage 24 remains the persistent Provenance system.
+
+---
+
+# 57. FUTURE FLOW
+
+Document:
+
+```text
+FundamentalDataOrigin
+        │
+        ▼
+future ingestion / filing connection
+        │
+        ▼
+Stage 24 Provenance
+```
+
+---
+
+# 58. CREATE FINANCIAL UNIT KIND
+
+Create:
+
+```text
+FinancialUnitKind
+```
+
+Recommended:
+
+```text
+currency
+
+shares
+
+currency_per_share
+
+count
+
+dimensionless
+
+percent
+```
+
+---
+
+# 59. CURRENCY UNIT
+
+Example:
+
+```text
+USD
+
+EUR
+
+INR
+```
+
+---
+
+# 60. SHARES UNIT
+
+Used for:
+
+```text
+weighted average shares
+
+shares outstanding
+```
+
+when such facts are represented.
+
+---
+
+# 61. CURRENCY PER SHARE
+
+Used for:
+
+```text
+basic EPS
+
+diluted EPS
+```
+
+---
+
+# 62. COUNT
+
+Use for non-share discrete counts if later needed.
+
+---
+
+# 63. DIMENSIONLESS
+
+Do not use Stage 34 to calculate ratios.
+
+This unit merely provides a generic representation for reported dimensionless facts if ever needed.
+
+---
+
+# 64. PERCENT
+
+Do not calculate margins during Stage 34.
+
+Percent merely supports raw reported percentage facts if needed.
+
+---
+
+# 65. CREATE FINANCIAL UNIT
+
+Create:
+
+```text
+FinancialUnit
+```
+
+Recommended fields:
+
+```text
+kind
+
+currency_code
+```
+
+---
+
+# 66. CURRENCY CODE VALIDATION
+
+If required:
+
+```text
+exactly 3 uppercase ASCII letters
+```
+
+Example:
+
+```text
+USD
+EUR
+INR
+JPY
+```
+
+---
+
+# 67. DO NOT ADD AN ISO CURRENCY DEPENDENCY JUST FOR VALIDATION
+
+Syntactic validation is sufficient for Stage 34.
+
+---
+
+# 68. CURRENCY RULE
+
+For:
+
+```text
+kind = currency
+```
+
+require:
+
+```text
+currency_code
+```
+
+---
+
+# 69. CURRENCY-PER-SHARE RULE
+
+For:
+
+```text
+kind = currency_per_share
+```
+
+require currency code.
+
+---
+
+# 70. NON-CURRENCY UNIT RULE
+
+For:
+
+```text
+shares
+count
+dimensionless
+percent
+```
+
+currency code should normally be:
+
+```text
+None
+```
+
+---
+
+# 71. NO SCALE IN FINANCIAL UNIT
+
+Canonical values are already normalized to base units.
+
+Do not add:
+
+```text
+thousands
+millions
+billions
+```
+
+as unit kinds.
+
+---
+
+# 72. CREATE FUNDAMENTAL CONCEPT KEY
+
+Canonical line-item identity must not use raw Provider field names.
+
+Create:
+
+```text
+FundamentalConceptKey
+```
+
+as a validated stable canonical string/value object.
+
+---
+
+# 73. CONCEPT KEY FORMAT
+
+Recommended:
+
+```text
+^[a-z][a-z0-9_]{0,127}$
+```
+
+for ATLAS canonical keys.
+
+Examples:
+
+```text
+revenue
+
+gross_profit
+
+operating_income
+
+net_income
+
+total_assets
+
+operating_cash_flow
+```
+
+---
+
+# 74. DO NOT USE SOURCE XBRL TAG AS CANONICAL CONCEPT KEY
+
+Bad canonical key:
+
+```text
+us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax
+```
+
+---
+
+# 75. XBRL TAGS BELONG TO ADAPTER MAPPING
+
+Future mapping:
+
+```text
+source tag
+    ↓
+Provider adapter
+    ↓
+ATLAS canonical concept
+```
+
+---
+
+# 76. CREATE FUNDAMENTAL CONCEPT DEFINITION
+
+Create:
+
+```text
+FundamentalConceptDefinition
+```
+
+Recommended fields:
+
+```text
+key
+
+display_name
+
+statement_types
+
+period_nature
+
+unit_kinds
+
+description
+
+normal_sign
+```
+
+Only include fields that materially help canonical validation.
+
+---
+
+# 77. CONCEPT DEFINITIONS ARE CODE-DEFINED
+
+Do not create a database table for concept definitions.
+
+---
+
+# 78. CREATE FUNDAMENTAL CONCEPT REGISTRY
+
+Create:
+
+```text
+FundamentalConceptRegistry
+```
+
+---
+
+# 79. REGISTRY RESPONSIBILITIES
+
+```text
+explicit registration
+
+duplicate-key rejection
+
+lookup
+
+deterministic listing
+
+statement compatibility
+
+unit compatibility
+
+period-nature compatibility
+
+freeze after bootstrap
+```
+
+---
+
+# 80. DO NOT STORE PROVIDER ALIASES IN CANONICAL REGISTRY
+
+Provider-specific mappings belong under each Provider adapter.
+
+---
+
+# 81. DO NOT AUTO-DISCOVER XBRL TAXONOMY
+
+No dynamic SEC taxonomy crawling.
+
+---
+
+# 82. INITIAL CORE CONCEPTS
+
+Register a focused but useful core set.
+
+Do not attempt to model every accounting taxonomy in Stage 34.
+
+---
+
+# 83. INCOME STATEMENT CORE CONCEPTS
+
+At minimum consider:
+
+```text
+revenue
+
+cost_of_revenue
+
+gross_profit
+
+research_and_development
+
+selling_general_and_administrative
+
+operating_expenses
+
+operating_income
+
+interest_income
+
+interest_expense
+
+other_non_operating_income_expense
+
+income_before_tax
+
+income_tax_expense
+
+net_income
+
+net_income_attributable_to_common
+
+basic_eps
+
+diluted_eps
+
+weighted_average_shares_basic
+
+weighted_average_shares_diluted
+```
+
+Only include concepts whose semantics you can define clearly.
+
+---
+
+# 84. BALANCE SHEET CORE CONCEPTS
+
+At minimum consider:
+
+```text
+cash_and_cash_equivalents
+
+short_term_investments
+
+accounts_receivable
+
+inventory
+
+current_assets
+
+property_plant_equipment_net
+
+goodwill
+
+intangible_assets_net
+
+total_assets
+
+accounts_payable
+
+current_liabilities
+
+short_term_debt
+
+long_term_debt
+
+total_debt
+
+total_liabilities
+
+common_stock
+
+additional_paid_in_capital
+
+retained_earnings
+
+treasury_stock
+
+total_equity
+
+total_liabilities_and_equity
+```
+
+---
+
+# 85. CASH FLOW CORE CONCEPTS
+
+At minimum consider:
+
+```text
+net_income_cash_flow
+
+depreciation_and_amortization
+
+stock_based_compensation
+
+changes_in_working_capital
+
+operating_cash_flow
+
+capital_expenditures
+
+acquisitions
+
+investment_purchases
+
+investment_sales_maturities
+
+investing_cash_flow
+
+debt_issuance
+
+debt_repayment
+
+dividends_paid
+
+share_repurchases
+
+financing_cash_flow
+
+effect_of_fx_on_cash
+
+net_change_in_cash
+
+ending_cash_balance
+```
+
+---
+
+# 86. DO NOT INCLUDE FREE CASH FLOW AS REPORTED CORE FACT BY DEFAULT
+
+Free Cash Flow is generally:
+
+```text
+derived
+```
+
+from:
+
+```text
+operating_cash_flow
+capital_expenditures
+```
+
+Stage 83 or later analytics may calculate it.
+
+---
+
+# 87. DO NOT INCLUDE EBITDA AS A REQUIRED STATEMENT FACT
+
+EBITDA is often:
+
+```text
+derived
+non-GAAP
+provider-specific
+```
+
+Do not force it into the statutory core model during Stage 34.
+
+---
+
+# 88. DO NOT INCLUDE P/E
+
+Stage 83.
+
+---
+
+# 89. DO NOT INCLUDE MARKET CAP
+
+Requires Market Data + shares.
+
+Not Stage 34 canonical reported financial statement.
+
+---
+
+# 90. DO NOT INCLUDE REVENUE GROWTH
+
+Derived.
+
+---
+
+# 91. DO NOT INCLUDE PROFIT MARGIN
+
+Derived.
+
+---
+
+# 92. CONCEPT NORMAL SIGN
+
+If implemented, use metadata such as:
+
+```text
+positive
+
+negative
+
+signed
+```
+
+only as guidance for normalization/documentation.
+
+---
+
+# 93. DO NOT REJECT OPPOSITE-SIGN VALUES PURELY FROM NORMAL SIGN
+
+Financial facts can legitimately reverse.
+
+Examples:
+
+```text
+tax benefit
+
+negative equity
+
+negative operating income
+
+refunds
+```
+
+---
+
+# 94. CANONICAL SIGN SEMANTICS
+
+Document a consistent economic sign convention.
+
+Recommended:
+
+```text
+income / inflow
+→ normally positive
+
+expense / outflow
+→ normally negative
+
+balance-sheet balances
+→ signed as economically reported
+```
+
+---
+
+# 95. PROVIDER ADAPTERS NORMALIZE SIGN
+
+If source reports:
+
+```text
+capital_expenditures = 500
+```
+
+as a positive expenditure magnitude,
+
+canonical adapter may normalize:
+
+```text
+capital_expenditures = -500
+```
+
+according to the chosen ATLAS convention.
+
+---
+
+# 96. DO NOT BUILD SIGN NORMALIZATION ENGINE GENERICALLY
+
+Provider adapters will handle source-specific sign semantics.
+
+Concept metadata only provides canonical expectations.
+
+---
+
+# 97. CREATE STATEMENT LINE ITEM
+
+Create:
+
+```text
+StatementLineItem
+```
+
+Recommended fields:
+
+```text
+concept
+
+value
+
+unit
+```
+
+Potential:
+
+```text
+display_label
+```
+
+only if needed.
+
+---
+
+# 98. CONCEPT
+
+Must exist in:
+
+```text
+FundamentalConceptRegistry
+```
+
+for canonical financial statements.
+
+---
+
+# 99. VALUE
+
+Decimal.
+
+---
+
+# 100. UNIT
+
+Canonical:
+
+```text
+FinancialUnit
+```
+
+---
+
+# 101. LINE ITEM MUST NOT CONTAIN PROVIDER TAG
+
+Do not include:
+
+```text
+xbrl_tag
+
+provider_field
+
+raw_field_name
+```
+
+in canonical line item.
+
+---
+
+# 102. LINE ITEM MUST NOT CONTAIN RAW SOURCE PAYLOAD
+
+Mandatory.
+
+---
+
+# 103. CONCEPT UNIT VALIDATION
+
+If concept definition allows:
+
+```text
+currency
+```
+
+reject:
+
+```text
+shares
+```
+
+for that line item.
+
+---
+
+# 104. CONCEPT STATEMENT VALIDATION
+
+Example:
+
+```text
+revenue
+```
+
+must not appear in:
+
+```text
+Balance Sheet
+```
+
+unless concept definition explicitly allows it.
+
+---
+
+# 105. CONCEPT PERIOD NATURE
+
+Example:
+
+```text
+revenue
+→ duration
+```
+
+and:
+
+```text
+total_assets
+→ instant
+```
+
+---
+
+# 106. CREATE REPORT METADATA
+
+Create:
+
+```text
+FinancialReportMetadata
+```
+
+or equivalent.
+
+Recommended fields:
+
+```text
+accounting_standard
+
+audit_status
+
+filing_date
+
+reported_at
+
+is_restated
+```
+
+Potential:
+
+```text
+restatement_note
+```
+
+Do not store arbitrary text unless useful.
+
+---
+
+# 107. FILING DATE
+
+Optional:
+
+```text
+date
+```
+
+---
+
+# 108. REPORTED AT
+
+Optional timezone-aware UTC datetime.
+
+Use when exact source timestamp exists.
+
+---
+
+# 109. IS RESTATED
+
+Boolean.
+
+Default:
+
+```text
+false
+```
+
+only if false truly means Provider indicates original/non-restated.
+
+If source cannot determine restatement state:
+
+consider:
+
+```text
+bool | None
+```
+
+rather than falsely assuming false.
+
+Preferred:
+
+```text
+is_restated: bool | None
+```
+
+---
+
+# 110. UNKNOWN RESTATEMENT
+
+`None` means:
+
+```text
+source did not provide reliable restatement status
+```
+
+---
+
+# 111. DO NOT CREATE REVISION NUMBER FROM GUESSWORK
+
+If Provider does not provide revision numbering:
+
+do not invent:
+
+```text
+revision = 1
+```
+
+---
+
+# 112. MULTIPLE VERSIONS OF SAME PERIOD
+
+Canonical responses must be capable of carrying multiple statements for the same:
+
+```text
+period_end
+```
+
+when they represent:
+
+```text
+original
+restated
+amended
+```
+
+reports.
+
+---
+
+# 113. DO NOT DEDUP SOLELY BY PERIOD END
+
+Mandatory.
+
+---
+
+# 114. CREATE BASE FINANCIAL STATEMENT
+
+Create:
+
+```text
+BaseFinancialStatement
+```
+
+or equivalent.
+
+Recommended common fields:
+
+```text
+company_id
+
+statement_type
+
+period
+
+metadata
+
+origin
+
+line_items
+```
+
+---
+
+# 115. COMPANY ID
+
+Required canonical Stage 18 Company UUID.
+
+---
+
+# 116. STATEMENT TYPE
+
+Required.
+
+---
+
+# 117. PERIOD
+
+Required:
+
+```text
+FinancialPeriod
+```
+
+---
+
+# 118. METADATA
+
+Required or defaultable:
+
+```text
+FinancialReportMetadata
+```
+
+---
+
+# 119. ORIGIN
+
+Required:
+
+```text
+FundamentalDataOrigin
+```
+
+---
+
+# 120. LINE ITEMS
+
+Prefer immutable:
+
+```text
+tuple[StatementLineItem, ...]
+```
+
+---
+
+# 121. EMPTY STATEMENT
+
+Reject.
+
+A Financial Statement with zero line items is not useful canonical data.
+
+---
+
+# 122. DUPLICATE CONCEPT
+
+For consolidated canonical statements:
+
+reject duplicate canonical concept keys within one statement.
+
+---
+
+# 123. WHY
+
+Stage 34 models:
+
+```text
+consolidated primary statement facts
+```
+
+not segmented XBRL dimensions.
+
+---
+
+# 124. SEGMENTED FACTS
+
+Do not attempt:
+
+```text
+geographic segment revenue
+
+business unit revenue
+
+product segment revenue
+```
+
+inside primary statement line-item duplicates.
+
+Segment reporting can be designed later if product requirements demand it.
+
+---
+
+# 125. DO NOT DROP RAW SOURCE SEGMENTS SILENTLY IN FUTURE ADAPTERS
+
+Future adapters should preserve them through:
+
+```text
+raw-source / Provenance / dedicated segment model
+```
+
+rather than forcing them incorrectly into consolidated statement models.
+
+---
+
+# 126. CREATE INCOME STATEMENT
+
+Create:
+
+```text
+IncomeStatement
+```
+
+---
+
+# 127. INCOME STATEMENT TYPE
+
+Fixed:
+
+```text
+income_statement
+```
+
+---
+
+# 128. INCOME STATEMENT PERIOD NATURE
+
+Require:
+
+```text
+duration
+```
+
+---
+
+# 129. INCOME STATEMENT CONCEPTS
+
+Every line item must support:
+
+```text
+FinancialStatementType.INCOME_STATEMENT
+```
+
+according to the concept registry.
+
+---
+
+# 130. CREATE BALANCE SHEET
+
+Create:
+
+```text
+BalanceSheet
+```
+
+---
+
+# 131. BALANCE SHEET TYPE
+
+Fixed:
+
+```text
+balance_sheet
+```
+
+---
+
+# 132. BALANCE SHEET PERIOD NATURE
+
+Require:
+
+```text
+instant
+```
+
+---
+
+# 133. BALANCE SHEET CONCEPTS
+
+Every line item must support:
+
+```text
+BALANCE_SHEET
+```
+
+---
+
+# 134. CREATE CASH FLOW STATEMENT
+
+Create:
+
+```text
+CashFlowStatement
+```
+
+---
+
+# 135. CASH FLOW TYPE
+
+Fixed:
+
+```text
+cash_flow_statement
+```
+
+---
+
+# 136. CASH FLOW PERIOD NATURE
+
+Require:
+
+```text
+duration
+```
+
+---
+
+# 137. CASH FLOW CONCEPTS
+
+Every line item must support:
+
+```text
+CASH_FLOW_STATEMENT
+```
+
+---
+
+# 138. DO NOT CALCULATE STATEMENT TOTALS
+
+If:
+
+```text
+revenue
+cost_of_revenue
+```
+
+exist but:
+
+```text
+gross_profit
+```
+
+does not:
+
+do not invent it during Stage 34.
+
+---
+
+# 139. DO NOT FILL MISSING LINE ITEMS
+
+Missing means missing.
+
+Do not convert missing values to:
+
+```text
+0
+```
+
+---
+
+# 140. ZERO VS MISSING
+
+Canonical models must preserve this distinction.
+
+---
+
+# 141. DO NOT FORCE ACCOUNTING EQUATIONS TO BALANCE
+
+Do not reject:
+
+```text
+Assets != Liabilities + Equity
+```
+
+because:
+
+- Provider mapping may be incomplete
+- source may use rounding
+- source may contain unusual taxonomy treatment
+- partial statements may exist
+
+Data-quality validation may later flag this.
+
+---
+
+# 142. NO AUTO-CORRECTION
+
+Do not alter Provider-reported canonical values to force accounting equations.
+
+---
+
+# 143. CREATE STANDALONE FINANCIAL FACT
+
+Create:
+
+```text
+FinancialFact
+```
+
+---
+
+# 144. PURPOSE
+
+Represents one canonical reported Company accounting fact independent of a complete Statement object.
+
+Useful later for:
+
+```text
+screening
+fundamental lookup
+fact search
+cross-period analysis
+```
+
+---
+
+# 145. FINANCIAL FACT FIELDS
+
+Recommended:
+
+```text
+company_id
+
+concept
+
+period
+
+value
+
+unit
+
+metadata
+
+origin
+```
+
+---
+
+# 146. CONCEPT REGISTRY VALIDATION
+
+Required.
+
+---
+
+# 147. FACT PERIOD NATURE
+
+Must match concept definition.
+
+---
+
+# 148. FACT UNIT KIND
+
+Must match concept definition.
+
+---
+
+# 149. FINANCIAL FACT IS REPORTED DATA
+
+Do not use `FinancialFact` for:
+
+```text
+calculated PE ratio
+
+calculated ROE
+
+calculated growth rate
+```
+
+unless a future dedicated derived-fact architecture explicitly extends it.
+
+---
+
+# 150. DO NOT CALL DERIVED METRICS FINANCIAL FACTS BY DEFAULT
+
+Keep Stage 34 semantics clean.
+
+---
+
+# 151. CREATE FUNDAMENTAL DATA OPERATION
+
+Create:
+
+```text
+FundamentalDataOperation
+```
+
+Initial values:
+
+```text
+income_statements
+
+balance_sheets
+
+cash_flow_statements
+
+financial_facts
+```
+
+---
+
+# 152. DO NOT ADD RATIOS OPERATION
+
+Stage 83.
+
+---
+
+# 153. DO NOT ADD VALUATION OPERATION
+
+Stage 83.
+
+---
+
+# 154. DO NOT ADD EARNINGS ESTIMATES OPERATION
+
+Stage 84.
+
+---
+
+# 155. DO NOT ADD OWNERSHIP OPERATION
+
+Stage 85.
+
+---
+
+# 156. DO NOT ADD FILINGS SEARCH OPERATION
+
+Stage 86 / document architecture.
+
+---
+
+# 157. PROVIDER DOMAIN VS OPERATION SUPPORT
+
+Stage 28:
+
+```text
+ProviderDomain.FUNDAMENTALS
+```
+
+means:
+
+```text
+Provider belongs to Fundamental Data family
+```
+
+Stage 34:
+
+```text
+FundamentalDataOperation
+```
+
+defines specific canonical operations ATLAS adapter actually supports.
+
+---
+
+# 158. CREATE FUNDAMENTAL PROVIDER CAPABILITIES
+
+Create:
+
+```text
+FundamentalProviderCapabilities
+```
+
+Recommended:
+
+```text
+operations: frozenset[FundamentalDataOperation]
+```
+
+---
+
+# 159. IMMUTABLE
+
+Provider capability metadata must be immutable.
+
+---
+
+# 160. EMPTY OPERATIONS VALID
+
+A Provider may currently declare:
+
+```text
+FUNDAMENTALS
+```
+
+yet implement:
+
+```text
+zero canonical Stage 34 operations
+```
+
+---
+
+# 161. OPENBB
+
+Do not claim OpenBB implements:
+
+```text
+income_statements
+balance_sheets
+cash_flow_statements
+financial_facts
+```
+
+unless actual canonical adapter methods exist.
+
+---
+
+# 162. STAGE 34 EXPECTED OPENBB BEHAVIOR
+
+If no real normalization is built:
+
+```text
+operations = empty set
+```
+
+is correct.
+
+---
+
+# 163. CREATE FUNDAMENTAL PERIOD FILTER
+
+Create a reusable request structure such as:
+
+```text
+FundamentalPeriodFilter
+```
+
+if it materially reduces duplication.
+
+Potential fields:
+
+```text
+reporting_period_types
+
+fiscal_year_start
+
+fiscal_year_end
+
+period_end_start
+
+period_end_end
+
+limit
+```
+
+---
+
+# 164. DO NOT USE PROVIDER-SPECIFIC FREQUENCY VALUES
+
+Canonical filters use ATLAS enums.
+
+---
+
+# 165. CREATE INCOME STATEMENT REQUEST
+
+Create:
+
+```text
+IncomeStatementRequest
+```
+
+---
+
+# 166. FIELDS
+
+Recommended:
+
+```text
+company_id
+
+period_filter
+```
+
+or expanded equivalent.
+
+---
+
+# 167. CREATE BALANCE SHEET REQUEST
+
+Same Company/period semantics.
+
+---
+
+# 168. CREATE CASH FLOW STATEMENT REQUEST
+
+Same Company/period semantics.
+
+---
+
+# 169. CREATE FINANCIAL FACTS REQUEST
+
+Create:
+
+```text
+FinancialFactsRequest
+```
+
+Recommended:
+
+```text
+company_id
+
+concepts
+
+period_filter
+```
+
+---
+
+# 170. CONCEPT FILTER
+
+Use canonical:
+
+```text
+FundamentalConceptKey
+```
+
+only.
+
+---
+
+# 171. DO NOT ACCEPT XBRL TAG FILTER
+
+No:
+
+```text
+us-gaap:Assets
+```
+
+in canonical request.
+
+---
+
+# 172. DO NOT ACCEPT TICKER
+
+Canonical requests use:
+
+```text
+company_id
+```
+
+---
+
+# 173. DO NOT ACCEPT PROVIDER KEY
+
+Provider selection is Stage 32 execution context.
+
+---
+
+# 174. DO NOT ACCEPT FALLBACK SETTINGS
+
+No:
+
+```text
+fallback=true
+```
+
+inside Fundamental request.
+
+---
+
+# 175. DO NOT ACCEPT USER ID
+
+Mandatory.
+
+---
+
+# 176. DO NOT ACCEPT CREDENTIALS
+
+Mandatory.
+
+---
+
+# 177. FISCAL YEAR RANGE VALIDATION
+
+If both provided:
+
+```text
+fiscal_year_start <= fiscal_year_end
+```
+
+---
+
+# 178. PERIOD-END DATE RANGE VALIDATION
+
+If both provided:
+
+```text
+period_end_start <= period_end_end
+```
+
+---
+
+# 179. LIMIT
+
+Set conservative maximum.
+
+Recommended:
+
+```text
+100 reporting periods
+```
+
+per Provider request.
+
+Most real financial-statement requests will use far less.
+
+---
+
+# 180. LIMIT MUST BE POSITIVE
+
+Reject:
+
+```text
+0
+negative
+```
+
+---
+
+# 181. DO NOT ALLOW UNBOUNDED COMPANY FINANCIAL HISTORY
+
+Require:
+
+```text
+limit
+or
+bounded period range
+```
+
+if practical.
+
+---
+
+# 182. CREATE INCOME STATEMENT RESPONSE
+
+Create:
+
+```text
+IncomeStatementResponse
+```
+
+Recommended fields:
+
+```text
+company_id
+
+origin
+
+statements
+```
+
+---
+
+# 183. RESPONSE ORIGIN
+
+Do not duplicate per-statement Origin unnecessarily if all statements come from same Provider call.
+
+However:
+
+if individual statements can come from different upstream filings/sources, preserve statement-level origin.
+
+Choose architecture carefully.
+
+---
+
+# 184. RECOMMENDED RULE
+
+Each Statement keeps:
+
+```text
+origin
+```
+
+because:
+
+- filing source may differ
+- restatements may come from different filing documents
+
+Response may also have:
+
+```text
+provider_origin
+```
+
+only if it adds meaningful batch metadata.
+
+Avoid unnecessary duplication.
+
+---
+
+# 185. CREATE BALANCE SHEET RESPONSE
+
+Typed:
+
+```text
+tuple[BalanceSheet, ...]
+```
+
+---
+
+# 186. CREATE CASH FLOW RESPONSE
+
+Typed:
+
+```text
+tuple[CashFlowStatement, ...]
+```
+
+---
+
+# 187. CREATE FINANCIAL FACTS RESPONSE
+
+Typed:
+
+```text
+tuple[FinancialFact, ...]
+```
+
+---
+
+# 188. NO `list[dict[str, Any]]`
+
+Mandatory.
+
+---
+
+# 189. STATEMENT RESPONSE ORDER
+
+Canonical order:
+
+# latest reporting period first
+
+Recommended:
+
+```text
+period_end descending
+```
+
+and when multiple revisions of the same period exist:
+
+```text
+reported_at descending
+```
+
+where available.
+
+---
+
+# 190. WHY LATEST-FIRST
+
+Fundamental company workflows commonly prioritize:
+
+```text
+latest report
+```
+
+This differs intentionally from Stage 33 chronological Market Data bars.
+
+---
+
+# 191. DOCUMENT ORDERING
+
+Do not leave Provider-specific ordering.
+
+---
+
+# 192. MULTIPLE REVISIONS
+
+Allow multiple statements with same:
+
+```text
+period_end
+```
+
+when metadata indicates distinct versions.
+
+---
+
+# 193. EXACT DUPLICATE RESPONSE ITEMS
+
+Reject exact duplicate canonical statements if practical.
+
+---
+
+# 194. DO NOT DEDUP RESTATEMENTS
+
+Mandatory.
+
+---
+
+# 195. FINANCIAL FACT RESPONSE ORDER
+
+Recommended:
+
+```text
+concept
+then period_end descending
+then reported_at descending
+```
+
+or:
+
+```text
+period_end descending
+then concept
+```
+
+Choose and document one deterministic order.
+
+---
+
+# 196. CREATE OPERATION-SPECIFIC PROVIDER PROTOCOLS
+
+Create strongly typed Protocols such as:
+
+```text
+IncomeStatementFundamentalProvider
+
+BalanceSheetFundamentalProvider
+
+CashFlowFundamentalProvider
+
+FinancialFactsFundamentalProvider
+```
+
+---
+
+# 197. INCOME STATEMENT PROTOCOL
+
+Conceptually:
+
+```python
+async def get_income_statements(
+    request: IncomeStatementRequest
+) -> IncomeStatementResponse:
+    ...
+```
+
+---
+
+# 198. BALANCE SHEET PROTOCOL
+
+```python
+async def get_balance_sheets(
+    request: BalanceSheetRequest
+) -> BalanceSheetResponse:
+    ...
+```
+
+---
+
+# 199. CASH FLOW PROTOCOL
+
+```python
+async def get_cash_flow_statements(
+    request: CashFlowStatementRequest
+) -> CashFlowStatementResponse:
+    ...
+```
+
+---
+
+# 200. FINANCIAL FACTS PROTOCOL
+
+```python
+async def get_financial_facts(
+    request: FinancialFactsRequest
+) -> FinancialFactsResponse:
+    ...
+```
+
+---
+
+# 201. DO NOT CREATE GENERIC FUNDAMENTAL EXECUTOR
+
+Forbidden:
+
+```python
+async def execute_fundamentals(
+    operation: str,
+    payload: dict[str, Any]
+)
+```
+
+---
+
+# 202. DO NOT FORCE EVERY FUNDAMENTAL PROVIDER TO IMPLEMENT EVERYTHING
+
+Use fine-grained typed Protocols.
+
+---
+
+# 203. DO NOT USE NOTIMPLEMENTEDERROR AS NORMAL CONTROL FLOW
+
+If Provider does not support an operation:
+
+future execution should return:
+
+```text
+PROVIDER_OPERATION_UNSUPPORTED
+```
+
+through the Provider architecture.
+
+---
+
+# 204. UPDATE STAGE 28 FUNDAMENTAL PROVIDER FAMILY
+
+If appropriate:
+
+```text
+FundamentalProvider
+```
+
+may expose static:
+
+```text
+fundamental_capabilities
+```
+
+metadata.
+
+Do not make it a huge abstract class with every method required.
+
+---
+
+# 205. CAPABILITY/METHOD CONSISTENCY
+
+Where practical, verify:
+
+```text
+Provider claims INCOME_STATEMENTS
+```
+
+only if it implements the typed protocol.
+
+---
+
+# 206. STATIC TYPE CHECKING
+
+Prefer strong typing over excessive runtime reflection.
+
+---
+
+# 207. NO PROVIDER SELECTION INSIDE FUNDAMENTAL MODELS
+
+Do not import:
+
+```text
+ProviderSelectionService
+```
+
+into canonical Fundamental models.
+
+---
+
+# 208. NO ROUTING POLICY IN REQUESTS
+
+Mandatory.
+
+---
+
+# 209. NO HEALTH STATUS IN FUNDAMENTAL MODELS
+
+Mandatory.
+
+---
+
+# 210. NO PROVIDER CREDENTIAL STATE IN FUNDAMENTAL MODELS
+
+Mandatory.
+
+---
+
+# 211. NO AUTH CONTEXT IN FUNDAMENTAL MODELS
+
+No:
+
+```text
+principal
+JWT
+permission
+request
+```
+
+---
+
+# 212. OPENBB INTEGRATION
+
+Stage 29 OpenBB adapter may be updated only enough to understand:
+
+```text
+FundamentalProviderCapabilities
+```
+
+metadata.
+
+---
+
+# 213. DO NOT CALL OPENBB FUNDAMENTAL COMMANDS
+
+No:
+
+```text
+obb.equity.fundamental.*
+```
+
+or equivalent.
+
+---
+
+# 214. DO NOT ADD STUB FUNDAMENTAL METHODS JUST TO SATISFY INHERITANCE
+
+If OpenBB normalization is not implemented:
+
+leave operation capability set empty.
+
+---
+
+# 215. NO NETWORK CALLS
+
+Stage 34 production code must perform:
+
+```text
+0
+```
+
+Fundamental Data network calls.
+
+---
+
+# 216. NO PUBLIC FUNDAMENTALS API
+
+Do not add:
+
+```text
+GET /api/v1/companies/{id}/financials
+
+GET /api/v1/fundamentals
+
+GET /api/v1/income-statement
+```
+
+during Stage 34.
+
+---
+
+# 217. NO APPLICATION CAPABILITY YET
+
+Do not add executable Stage 27 capabilities such as:
+
+```text
+fundamentals.income_statement.get
+
+fundamentals.balance_sheet.get
+```
+
+unless a real executable Provider-backed implementation already exists.
+
+Expected Stage 34:
+
+# no application-level Fundamental Data capability.
+
+---
+
+# 218. FUNDAMENTALDATAOPERATION IS NOT CAPABILITY GATEWAY
+
+Document this distinction.
+
+---
+
+# 219. NO FRONTEND API CLIENT
+
+Expected:
+
+```text
+none
+```
+
+for Stage 34.
+
+---
+
+# 220. NO COMPANIES UI CHANGES
+
+Companies financial-statement UI comes later.
+
+---
+
+# 221. NO FAKE FUNDAMENTAL DATA IN FRONTEND
+
+Mandatory.
+
+---
+
+# 222. NO DATABASE PERSISTENCE
+
+Stage 34 models are domain contracts.
+
+Expected:
+
+# no Stage 34 Alembic migration.
+
+---
+
+# 223. DO NOT CREATE FINANCIAL STATEMENT TABLES YET
+
+No:
+
+```text
+income_statements
+
+balance_sheets
+
+cash_flow_statements
+
+financial_facts
+```
+
+PostgreSQL tables during Stage 34.
+
+---
+
+# 224. WHY
+
+Stage 34 defines canonical representation.
+
+Actual data ingestion/storage comes later with provider integrations and Company module implementation.
+
+---
+
+# 225. DO NOT STORE PROVIDER FUNDAMENTALS IN COMPANY JSONB
+
+No shortcut such as:
+
+```text
+companies.fundamentals JSONB
+```
+
+---
+
+# 226. NO CLICKHOUSE FUNDAMENTALS TABLES
+
+Stage 37 is ClickHouse infrastructure, but Stage 34 itself adds none.
+
+---
+
+# 227. NO REDIS CACHE
+
+Stage 38.
+
+---
+
+# 228. NO LOCAL FILE CACHE
+
+No JSON/CSV/Parquet fundamental-data cache.
+
+---
+
+# 229. NO XBRL DATABASE
+
+Not Stage 34.
+
+---
+
+# 230. CONCEPT REGISTRY TEST
+
+Test:
+
+```text
+explicit registration
+
+duplicate rejection
+
+lookup
+
+deterministic list
+
+freeze
+```
+
+---
+
+# 231. CONCEPT KEY TEST
+
+Reject invalid:
+
+```text
+Revenue
+
+revenue.total
+
+revenue value
+
+123_revenue
+```
+
+if using strict snake-case canonical keys.
+
+---
+
+# 232. CONCEPT STATEMENT TYPE TEST
+
+Example:
+
+```text
+revenue
+```
+
+allowed in:
+
+```text
+Income Statement
+```
+
+not:
+
+```text
+Balance Sheet
+```
+
+---
+
+# 233. CONCEPT PERIOD NATURE TEST
+
+Example:
+
+```text
+total_assets
+→ instant
+```
+
+---
+
+# 234. CONCEPT UNIT TEST
+
+Example:
+
+```text
+basic_eps
+→ currency_per_share
+```
+
+---
+
+# 235. FINANCIAL UNIT TEST
+
+Test:
+
+```text
+currency + USD
+```
+
+valid.
+
+---
+
+# 236. CURRENCY MISSING TEST
+
+Reject:
+
+```text
+kind=currency
+currency_code=None
+```
+
+---
+
+# 237. INVALID CURRENCY FORMAT TEST
+
+Reject:
+
+```text
+usd
+
+US
+
+USDD
+```
+
+---
+
+# 238. NON-CURRENCY WITH CURRENCY CODE
+
+Reject where inappropriate.
+
+---
+
+# 239. DECIMAL PRECISION TEST
+
+Roundtrip:
+
+```text
+"123456789012345.123456789"
+```
+
+exactly.
+
+---
+
+# 240. SMALL EPS PRECISION TEST
+
+Roundtrip:
+
+```text
+"0.000001"
+```
+
+exactly.
+
+---
+
+# 241. NEGATIVE FINANCIAL VALUE TEST
+
+Allow:
+
+```text
+-1000000
+```
+
+where concept may be economically negative.
+
+---
+
+# 242. ZERO FINANCIAL VALUE TEST
+
+Allow true zero.
+
+---
+
+# 243. NAN TEST
+
+Reject.
+
+---
+
+# 244. INFINITY TEST
+
+Reject.
+
+---
+
+# 245. FLOAT INPUT TEST
+
+Expected canonical behavior:
+
+```text
+reject float
+```
+
+unless project-wide Decimal handling deliberately provides safe conversion.
+
+Document actual result.
+
+---
+
+# 246. FINANCIAL PERIOD INSTANT TEST
+
+Valid:
+
+```text
+nature=instant
+period_start=None
+period_end=2026-09-30
+```
+
+---
+
+# 247. INVALID INSTANT START TEST
+
+Reject:
+
+```text
+instant + period_start
+```
+
+---
+
+# 248. FINANCIAL PERIOD DURATION TEST
+
+Valid:
+
+```text
+start < end
+```
+
+---
+
+# 249. DURATION MISSING START TEST
+
+Reject.
+
+---
+
+# 250. DURATION INVALID RANGE TEST
+
+Reject:
+
+```text
+start >= end
+```
+
+---
+
+# 251. FISCAL YEAR TEST
+
+Validate reasonable bounds.
+
+---
+
+# 252. FISCAL PERIOD CONSISTENCY TEST
+
+Test obvious incompatible combinations.
+
+---
+
+# 253. ACCOUNTING STANDARD TEST
+
+Verify stable values.
+
+---
+
+# 254. AUDIT STATUS TEST
+
+Verify stable values.
+
+---
+
+# 255. ORIGIN TEST
+
+Validate:
+
+```text
+provider_key
+
+retrieved_at
+
+source_document_id
+
+source_filing_identifier
+```
+
+according to actual model.
+
+---
+
+# 256. ORIGIN SECRET TEST
+
+No secret fields.
+
+---
+
+# 257. LINE ITEM TEST
+
+Validate:
+
+```text
+concept
+Decimal value
+unit
+```
+
+---
+
+# 258. UNKNOWN CONCEPT TEST
+
+Canonical StatementLineItem should reject unregistered concept.
+
+---
+
+# 259. WRONG UNIT TEST
+
+Example:
+
+```text
+revenue + shares
+```
+
+reject.
+
+---
+
+# 260. WRONG STATEMENT TEST
+
+Example:
+
+```text
+total_assets
+```
+
+inside:
+
+```text
+IncomeStatement
+```
+
+reject.
+
+---
+
+# 261. INCOME STATEMENT TEST
+
+Validate:
+
+- company ID
+- duration period
+- permitted concepts
+- non-empty items
+- no duplicate concepts
+
+---
+
+# 262. INCOME STATEMENT INSTANT PERIOD TEST
+
+Reject.
+
+---
+
+# 263. BALANCE SHEET TEST
+
+Validate:
+
+```text
+instant period
+```
+
+---
+
+# 264. BALANCE SHEET DURATION TEST
+
+Reject.
+
+---
+
+# 265. CASH FLOW TEST
+
+Validate:
+
+```text
+duration period
+```
+
+---
+
+# 266. CASH FLOW INSTANT TEST
+
+Reject.
+
+---
+
+# 267. DUPLICATE CONCEPT TEST
+
+Reject:
+
+```text
+revenue
+revenue
+```
+
+in one consolidated statement.
+
+---
+
+# 268. EMPTY STATEMENT TEST
+
+Reject.
+
+---
+
+# 269. MISSING LINE ITEM TEST
+
+Verify no automatic zero insertion.
+
+---
+
+# 270. ACCOUNTING EQUATION TEST
+
+Create intentionally incomplete Balance Sheet.
+
+Canonical model should remain valid if structurally valid.
+
+Do not force balancing.
+
+---
+
+# 271. RESTATEMENT UNKNOWN TEST
+
+If:
+
+```text
+is_restated=None
+```
+
+is supported, verify roundtrip.
+
+---
+
+# 272. MULTIPLE PERIOD REVISION TEST
+
+Response may contain:
+
+```text
+same period_end
+
+different reported_at
+```
+
+without deduping them.
+
+---
+
+# 273. FINANCIAL FACT TEST
+
+Validate:
+
+- company ID
+- concept
+- period
+- value
+- unit
+- metadata
+- origin
+
+---
+
+# 274. FINANCIAL FACT PERIOD-NATURE MISMATCH
+
+Reject.
+
+---
+
+# 275. FINANCIAL FACT UNIT MISMATCH
+
+Reject.
+
+---
+
+# 276. REQUEST COMPANY ID TEST
+
+Canonical request requires UUID Company ID.
+
+---
+
+# 277. REQUEST TICKER TEST
+
+No canonical request field named:
+
+```text
+ticker
+symbol
+```
+
+---
+
+# 278. REQUEST PROVIDER TEST
+
+No:
+
+```text
+provider_key
+```
+
+inside Fundamental request model.
+
+---
+
+# 279. REQUEST USER TEST
+
+No:
+
+```text
+user_id
+```
+
+---
+
+# 280. REQUEST CREDENTIAL TEST
+
+No credentials.
+
+---
+
+# 281. FISCAL YEAR FILTER TEST
+
+Validate range.
+
+---
+
+# 282. PERIOD DATE FILTER TEST
+
+Validate range.
+
+---
+
+# 283. LIMIT TEST
+
+Reject:
+
+```text
+0
+negative
+greater than maximum
+```
+
+---
+
+# 284. FINANCIAL FACT CONCEPT FILTER TEST
+
+Reject unknown concept keys.
+
+---
+
+# 285. RESPONSE ORDER TEST
+
+Statements:
+
+```text
+latest period first
+```
+
+---
+
+# 286. MULTIPLE REVISION ORDER TEST
+
+Same period:
+
+```text
+latest reported_at first
+```
+
+where timestamps exist.
+
+---
+
+# 287. RESPONSE DUPLICATE TEST
+
+Reject exact duplicate canonical statement entries where practical.
+
+---
+
+# 288. RESTATEMENT PRESERVATION TEST
+
+Do not reject legitimate same-period revisions.
+
+---
+
+# 289. OPERATION ENUM TEST
+
+Verify stable values:
+
+```text
+income_statements
+
+balance_sheets
+
+cash_flow_statements
+
+financial_facts
+```
+
+---
+
+# 290. FUNDAMENTAL PROVIDER CAPABILITY TEST
+
+Immutable operation set.
+
+---
+
+# 291. EMPTY CAPABILITY TEST
+
+Allowed.
+
+---
+
+# 292. PROTOCOL TEST
+
+Fake Income Statement Provider satisfies typed protocol.
+
+---
+
+# 293. BALANCE SHEET PROTOCOL TEST
+
+Verify.
+
+---
+
+# 294. CASH FLOW PROTOCOL TEST
+
+Verify.
+
+---
+
+# 295. FINANCIAL FACTS PROTOCOL TEST
+
+Verify.
+
+---
+
+# 296. CAPABILITY/METHOD CONSISTENCY TEST
+
+Where runtime validation exists:
+
+Provider claiming operation without method must fail adapter validation.
+
+---
+
+# 297. OPENBB EMPTY OPERATIONS TEST
+
+If no canonical adapter implementation exists:
+
+```text
+OpenBB fundamental operations = empty
+```
+
+---
+
+# 298. OPENBB NO NETWORK TEST
+
+Expected:
+
+```text
+0 external Fundamental Data requests
+```
+
+---
+
+# 299. NO OPENBB TYPE TEST
+
+Canonical package annotations contain no:
+
+```text
+OBBject
+OpenBB
+Fetcher
+```
+
+---
+
+# 300. NO PANDAS TEST
+
+No:
+
+```text
+DataFrame
+```
+
+in public canonical contracts.
+
+---
+
+# 301. NO POLARS TEST
+
+Same.
+
+---
+
+# 302. NO DICT-ANY TEST
+
+Canonical statement/request/response payloads should not use:
+
+```python
+dict[str, Any]
+```
+
+for core financial data.
+
+---
+
+# 303. NO FLOAT ANNOTATION TEST
+
+Search:
+
+```text
+fundamentals/
+```
+
+for financial numeric fields typed as:
+
+```text
+float
+```
+
+Expected:
+
+```text
+none
+```
+
+---
+
+# 304. NO DATABASE CONSTRUCTION TEST
+
+Construct full statements with:
+
+```text
+no database connection
+```
+
+---
+
+# 305. NO NETWORK CONSTRUCTION TEST
+
+Construct models entirely offline.
+
+---
+
+# 306. NO ENTITY REPOSITORY CALL TEST
+
+Pydantic validators must not query Company repository.
+
+---
+
+# 307. NO IDENTIFIER RESOLUTION CALL
+
+Model construction must not resolve ticker/company identifier.
+
+---
+
+# 308. NO PROVIDER REGISTRY LOOKUP REQUIRED FOR FINANCIAL VALUES
+
+Keep model construction pure.
+
+---
+
+# 309. NO REST ROUTE TEST
+
+Verify Stage 34 adds no public Fundamentals endpoints.
+
+---
+
+# 310. NO CAPABILITY GATEWAY OPERATION TEST
+
+Verify no fake executable Fundamental Data capabilities were added.
+
+---
+
+# 311. NO DATABASE MIGRATION TEST
+
+Expected:
+
+```text
+No Stage 34 Alembic migration.
+```
+
+---
+
+# 312. NO FUNDAMENTAL TABLE TEST
+
+Verify no new:
+
+```text
+income_statement
+balance_sheet
+cash_flow
+financial_fact
+```
+
+persistence tables.
+
+---
+
+# 313. NO RATIOS TEST
+
+Search Stage 34 code for:
+
+```text
+pe_ratio
+
+price_to_book
+
+roe
+
+roa
+
+gross_margin
+
+operating_margin
+
+net_margin
+
+debt_to_equity
+
+ev_ebitda
+```
+
+They must not be calculated.
+
+---
+
+# 314. REPORTED EPS IS ALLOWED
+
+Important distinction:
+
+```text
+basic_eps
+diluted_eps
+```
+
+are reported accounting facts.
+
+They may be canonical concepts.
+
+---
+
+# 315. DO NOT CALCULATE EPS
+
+If Provider does not supply it:
+
+do not derive:
+
+```text
+net_income / weighted_average_shares
+```
+
+in Stage 34.
+
+---
+
+# 316. REPORTED SHARES ARE ALLOWED
+
+Examples:
+
+```text
+weighted_average_shares_basic
+
+weighted_average_shares_diluted
+```
+
+are valid reported facts.
+
+---
+
+# 317. DO NOT CALCULATE MARKET CAP
+
+Mandatory.
+
+---
+
+# 318. DO NOT CALCULATE ENTERPRISE VALUE
+
+Mandatory.
+
+---
+
+# 319. NO EARNINGS FORECASTS
+
+Search for:
+
+```text
+estimate
+
+consensus
+
+guidance
+
+forecast
+```
+
+Do not add them to Stage 34 canonical statement architecture.
+
+---
+
+# 320. NO OWNERSHIP MODELS
+
+No:
+
+```text
+institutional_holder
+
+insider_owner
+
+beneficial_owner
+```
+
+---
+
+# 321. NO FILING PARSER
+
+No:
+
+```text
+10-K parser
+
+10-Q parser
+
+20-F parser
+
+XBRL parser
+```
+
+---
+
+# 322. SOURCE DOCUMENT REFERENCE IS OK
+
+A simple optional canonical Document ID is acceptable.
+
+Deep filing handling remains Stage 86.
+
+---
+
+# 323. NO RAW XBRL FACT STORAGE
+
+Do not create:
+
+```text
+RawXbrlFact
+```
+
+as canonical Stage 34 domain model.
+
+---
+
+# 324. PROVIDER ADAPTER MAY LATER MAP RAW XBRL
+
+Architecture:
+
+```text
+Raw XBRL Fact
+      │
+      ▼
+Provider Adapter / Normalizer
+      │
+      ▼
+FundamentalConceptKey
+      │
+      ▼
+StatementLineItem
+```
+
+---
+
+# 325. UNMAPPED SOURCE FACTS
+
+Do not force Provider-specific concepts into canonical statements.
+
+If a source fact cannot be mapped safely:
+
+future adapter should:
+
+```text
+omit from canonical statement
+
+and preserve mapping diagnostics / source provenance
+```
+
+rather than inventing a misleading ATLAS concept.
+
+---
+
+# 326. NO EXTENSION CONCEPT KEYS BY DEFAULT
+
+Do not let Provider adapters silently create:
+
+```text
+provider_x_some_random_field
+```
+
+as canonical concepts.
+
+---
+
+# 327. CONCEPT REGISTRY GROWTH
+
+New ATLAS concepts should be:
+
+```text
+reviewed
+
+documented
+
+code-defined
+
+version-controlled
+```
+
+---
+
+# 328. DOCUMENTATION - CREATE
+
+Create:
+
+```text
+docs/FUNDAMENTAL_DATA_ARCHITECTURE.md
+```
+
+This becomes Stage 34 source of truth.
+
+---
+
+# 329. DOCUMENT CORE ARCHITECTURE
+
+Include:
+
+```text
+Provider-specific Fundamentals
+          │
+          ▼
+      Provider Adapter
+          │
+          ▼
+Canonical Fundamental Models
+          │
+          ▼
+       ATLAS Domain
+```
+
+---
+
+# 330. DOCUMENT COMPANY IDENTITY
+
+Include:
+
+```text
+Company UUID
+=
+canonical reporting entity
+
+Ticker
+=
+identifier / alias
+```
+
+---
+
+# 331. DOCUMENT NUMERIC POLICY
+
+Include:
+
+```text
+financial values
+=
+Decimal
+```
+
+---
+
+# 332. DOCUMENT BASE-UNIT POLICY
+
+Show:
+
+```text
+Provider value:
+25,000
+scale:
+millions
+
+Canonical:
+25,000,000,000
+```
+
+---
+
+# 333. DOCUMENT MISSING VS ZERO
+
+Important.
+
+---
+
+# 334. DOCUMENT FINANCIAL PERIOD
+
+Explain:
+
+```text
+instant
+duration
+```
+
+and field semantics.
+
+---
+
+# 335. DOCUMENT FISCAL PERIOD
+
+Show implemented enum values.
+
+---
+
+# 336. DOCUMENT REPORTING PERIOD TYPE
+
+Show actual values.
+
+---
+
+# 337. DOCUMENT ACCOUNTING STANDARD
+
+Explain:
+
+```text
+US GAAP
+IFRS
+Other
+Unknown
+```
+
+---
+
+# 338. DOCUMENT AUDIT STATUS
+
+Show actual values.
+
+---
+
+# 339. DOCUMENT FINANCIAL UNIT
+
+Show:
+
+```text
+Unit Kind | Currency Required? | Example
+```
+
+---
+
+# 340. DOCUMENT CONCEPT REGISTRY
+
+Explain:
+
+```text
+FundamentalConceptRegistry
+```
+
+and why Provider source fields are not canonical keys.
+
+---
+
+# 341. DOCUMENT CORE CONCEPTS
+
+Create tables grouped by:
+
+```text
+Income Statement
+
+Balance Sheet
+
+Cash Flow Statement
+```
+
+For each show:
+
+```text
+Concept Key
+Display Name
+Period Nature
+Unit Kind
+Normal Sign
+```
+
+if normal sign metadata exists.
+
+---
+
+# 342. DOCUMENT SIGN CONVENTION
+
+Explain exactly how canonical values represent:
+
+```text
+expenses
+
+cash outflows
+
+income
+
+balances
+```
+
+---
+
+# 343. DOCUMENT LINE ITEM
+
+Show:
+
+```text
+Field | Type | Meaning
+```
+
+---
+
+# 344. DOCUMENT FINANCIAL REPORT METADATA
+
+Show fields.
+
+---
+
+# 345. DOCUMENT RESTATEMENT SEMANTICS
+
+Explain:
+
+```text
+original
+restated
+unknown restatement status
+```
+
+according to implemented fields.
+
+---
+
+# 346. DOCUMENT INCOME STATEMENT
+
+Show:
+
+```text
+Field | Type | Required | Meaning
+```
+
+---
+
+# 347. DOCUMENT BALANCE SHEET
+
+Same.
+
+---
+
+# 348. DOCUMENT CASH FLOW STATEMENT
+
+Same.
+
+---
+
+# 349. DOCUMENT FINANCIAL FACT
+
+Same.
+
+---
+
+# 350. DOCUMENT STATEMENT VALIDATION
+
+Explain:
+
+- non-empty
+- no duplicate canonical concepts
+- concept/statement compatibility
+- period-nature compatibility
+- unit compatibility
+- no automatic balancing
+
+---
+
+# 351. DOCUMENT SEGMENT BOUNDARY
+
+Explain Stage 34 statements represent:
+
+```text
+consolidated primary financial statements
+```
+
+not arbitrary segmented XBRL dimensions.
+
+---
+
+# 352. DOCUMENT REQUEST CONTRACTS
+
+Show:
+
+```text
+IncomeStatementRequest
+
+BalanceSheetRequest
+
+CashFlowStatementRequest
+
+FinancialFactsRequest
+```
+
+---
+
+# 353. DOCUMENT RESPONSE CONTRACTS
+
+Show corresponding responses.
+
+---
+
+# 354. DOCUMENT RESPONSE ORDER
+
+Explain latest-first ordering.
+
+---
+
+# 355. DOCUMENT RESTATEMENT PRESERVATION
+
+Explain why same-period revisions are not deduplicated.
+
+---
+
+# 356. DOCUMENT FUNDAMENTAL OPERATIONS
+
+Show:
+
+```text
+Operation | Meaning
+```
+
+for:
+
+```text
+income_statements
+balance_sheets
+cash_flow_statements
+financial_facts
+```
+
+---
+
+# 357. DOCUMENT PROVIDER CAPABILITIES
+
+Explain:
+
+```text
+ProviderDomain.FUNDAMENTALS
+```
+
+vs:
+
+```text
+FundamentalDataOperation support
+```
+
+---
+
+# 358. DOCUMENT PROVIDER PROTOCOLS
+
+Show actual strongly typed method signatures.
+
+---
+
+# 359. DOCUMENT NO GENERIC EXECUTOR
+
+Explicitly reject:
+
+```text
+execute_fundamentals(
+    operation: str,
+    payload: dict
+)
+```
+
+---
+
+# 360. DOCUMENT OPENBB STATUS
+
+State actual Stage 34 OpenBB canonical operation support.
+
+If none:
+
+```text
+OpenBB Fundamental operations implemented: none.
+```
+
+---
+
+# 361. DOCUMENT ORIGIN VS PROVENANCE
+
+Explain:
+
+```text
+FundamentalDataOrigin
+=
+runtime/source context
+
+Stage 24 Provenance
+=
+persistent evidence lineage
+```
+
+---
+
+# 362. DOCUMENT FUTURE STAGE 82
+
+Future architecture:
+
+```text
+Provider Adapter
+      │
+      ▼
+Canonical Fundamental Models
+      │
+      ▼
+Companies Financials
+```
+
+Do not implement.
+
+---
+
+# 363. DOCUMENT FUTURE STAGE 83
+
+Show:
+
+```text
+Canonical Reported Fundamentals
+          │
+          ▼
+Derived Metrics Engine
+          │
+          ├── ratios
+          └── valuation metrics
+```
+
+Do not implement.
+
+---
+
+# 364. UPDATE PROVIDER ARCHITECTURE
+
+Add:
+
+```text
+FundamentalDataOperation
+
+FundamentalProviderCapabilities
+
+typed Fundamental Provider Protocols
+```
+
+---
+
+# 365. UPDATE OPENBB INTEGRATION
+
+Document the new canonical Fundamental boundary.
+
+Confirm no OpenBB fundamental fetch exists yet unless actually implemented.
+
+---
+
+# 366. UPDATE PROVENANCE ARCHITECTURE
+
+Document:
+
+```text
+FundamentalDataOrigin
+```
+
+---
+
+# 367. UPDATE COMPANY ARCHITECTURE
+
+Clarify:
+
+```text
+Fundamental Data references canonical Company ID.
+```
+
+---
+
+# 368. UPDATE API ARCHITECTURE
+
+State:
+
+```text
+Stage 34 introduces no public Fundamental Data REST API.
+```
+
+---
+
+# 369. UPDATE DATABASE ARCHITECTURE
+
+State:
+
+```text
+Stage 34 introduces no Fundamental Data persistence tables.
+```
+
+---
+
+# 370. UPDATE CAPABILITY ARCHITECTURE
+
+Clarify:
+
+```text
+FundamentalDataOperation
+```
+
+is Provider/domain operation metadata.
+
+It is not a Stage 27 Capability Gateway operation.
+
+---
+
+# 371. UPDATE REPOSITORY ARCHITECTURE
+
+Add actual Stage 34 package location.
+
+---
+
+# 372. UPDATE DECISIONS
+
+Append Stage 34 decisions.
+
+At minimum record:
+
+1. ATLAS owns canonical Fundamental Data models.
+2. Provider-specific financial-statement objects must not leak above Provider adapters.
+3. Fundamental reporting identity uses the canonical Company entity.
+4. Ticker is not canonical Fundamental identity.
+5. Security ID is not the primary Company financial-statement identity.
+6. Stage 34 creates no new Company identity namespace.
+7. Financial values use Decimal.
+8. Binary floating-point is not canonical for financial values.
+9. Non-finite financial Decimal values are rejected.
+10. Canonical financial values are not globally rounded.
+11. Canonical financial values are normalized to base units.
+12. Thousands/millions/billions are not hidden canonical scales.
+13. Missing financial values are not represented as zero.
+14. Financial periods distinguish instant and duration facts.
+15. Balance Sheet periods are instant.
+16. Income Statement periods are duration.
+17. Cash Flow Statement periods are duration.
+18. Fiscal calendars are not assumed to equal calendar years.
+19. Stage 34 supports annual, quarterly and other explicitly defined reporting-period types.
+20. Stage 34 does not treat TTM as a normal statutory period by default.
+21. Accounting standard is explicit.
+22. ATLAS does not assume US GAAP globally.
+23. Audit status is source/report metadata.
+24. FundamentalDataOrigin captures runtime source context.
+25. FundamentalDataOrigin contains no credentials.
+26. FundamentalDataOrigin does not replace Stage 24 Provenance.
+27. Financial units distinguish currency, shares, currency-per-share and other supported kinds.
+28. Currency values use uppercase three-letter currency-code syntax.
+29. Canonical values carry no hidden display scale.
+30. Canonical concepts use stable ATLAS concept keys.
+31. Raw Provider field names are not canonical concept keys.
+32. Raw XBRL tags are not canonical concept keys.
+33. Fundamental Concept definitions are code-defined.
+34. Fundamental Concept Registry is explicit and version-controlled.
+35. Provider alias mappings remain inside Provider adapters.
+36. Stage 34 does not dynamically ingest entire XBRL taxonomies.
+37. Stage 34 defines a focused core canonical concept set.
+38. Revenue is a canonical Income Statement concept.
+39. Total Assets is a canonical Balance Sheet concept.
+40. Operating Cash Flow is a canonical Cash Flow concept.
+41. Basic EPS and Diluted EPS may be represented as reported facts.
+42. Stage 34 does not calculate EPS.
+43. Free Cash Flow is not a required reported Stage 34 concept.
+44. EBITDA is not required as a statutory Stage 34 concept.
+45. Ratios are not calculated during Stage 34.
+46. Valuation metrics are not calculated during Stage 34.
+47. Market Capitalization is not a Stage 34 reported financial fact.
+48. Concept definitions may declare normal sign semantics.
+49. Opposite-sign values are not automatically rejected.
+50. Provider adapters are responsible for source-specific sign normalization.
+51. StatementLineItem uses canonical concept, Decimal value and canonical unit.
+52. StatementLineItem contains no Provider-specific tag.
+53. StatementLineItem contains no raw Provider payload.
+54. Concept/unit compatibility is validated.
+55. Concept/statement compatibility is validated.
+56. Concept/period-nature compatibility is validated.
+57. Canonical primary statements represent consolidated Company statements.
+58. Duplicate canonical concepts are rejected within one consolidated statement.
+59. Stage 34 does not model arbitrary segmented XBRL dimensions.
+60. Stage 34 does not fabricate missing statement line items.
+61. Stage 34 does not automatically calculate missing subtotals.
+62. Stage 34 does not force financial statements to balance mathematically.
+63. Stage 34 does not automatically correct source financial values.
+64. IncomeStatement is canonical.
+65. BalanceSheet is canonical.
+66. CashFlowStatement is canonical.
+67. FinancialFact is canonical.
+68. FinancialFact represents reported accounting facts, not arbitrary derived analytics.
+69. Report metadata supports accounting standard.
+70. Report metadata supports audit status.
+71. Report metadata supports filing date where known.
+72. Report metadata supports exact reported timestamp where known.
+73. Restatement state may be unknown.
+74. Stage 34 does not invent revision numbers.
+75. Multiple versions of the same reporting period may coexist.
+76. Same-period restatements are not deduplicated solely by period-end date.
+77. Stage 34 defines FundamentalDataOperation.
+78. Initial operations are income_statements, balance_sheets, cash_flow_statements and financial_facts.
+79. ProviderDomain.FUNDAMENTALS does not imply support for every FundamentalDataOperation.
+80. FundamentalProviderCapabilities declares actual supported canonical operations.
+81. Empty Fundamental operation capability is valid.
+82. OpenBB must not claim canonical Fundamental operations it does not implement.
+83. Stage 34 introduces typed operation-specific Provider Protocols.
+84. Stage 34 does not introduce a generic `execute(operation, dict)` Fundamental interface.
+85. Fundamental requests use canonical Company ID.
+86. Fundamental requests do not accept ticker as canonical identity.
+87. Fundamental requests do not contain Provider key.
+88. Fundamental requests do not contain routing state.
+89. Fundamental requests do not contain credentials.
+90. Fundamental requests do not contain user identity.
+91. Fundamental statement requests are bounded.
+92. Financial Fact requests use canonical concept keys.
+93. Statement responses are deterministically ordered.
+94. Statement responses are latest-period first.
+95. Legitimate restatements are preserved.
+96. Stage 34 performs no external Fundamental Data requests.
+97. Stage 34 introduces no public Fundamental Data REST API.
+98. Stage 34 introduces no executable Fundamental application Capability.
+99. Stage 34 introduces no Fundamental Data persistence table.
+100. Stage 34 requires no Alembic migration.
+101. Stage 34 does not create SEC/XBRL ingestion.
+102. Stage 34 does not create earnings estimates or guidance.
+103. Stage 34 does not create ownership models.
+104. Stage 34 does not create insider transaction models.
+105. Stage 34 does not create institutional-holder models.
+106. Stage 34 does not create ratios.
+107. Stage 34 does not create valuation metrics.
+108. Stage 34 does not calculate growth rates.
+109. Stage 34 does not create a Company financials UI.
+110. Canonical Fundamental model validation performs no database calls.
+111. Canonical Fundamental model validation performs no network calls.
+112. Canonical Fundamental model validation performs no ticker resolution.
+113. Canonical Fundamental model validation performs no Provider selection.
+114. Stage 35 remains responsible for canonical Economic Data models.
+
+---
+
+# 373. NO NEW MAJOR DEPENDENCY EXPECTED
+
+Use existing:
+
+```text
+Python
+
+Pydantic
+
+Decimal
+
+date
+
+datetime
+
+UUID
+
+typing
+```
+
+---
+
+# 374. DO NOT ADD XBRL LIBRARY
+
+No:
+
+```text
+Arelle
+```
+
+or similar for Stage 34.
+
+---
+
+# 375. DO NOT ADD SEC SDK
+
+No SEC client dependency.
+
+---
+
+# 376. DO NOT ADD PANDAS
+
+Not required for canonical contracts.
+
+---
+
+# 377. DO NOT ADD POLARS
+
+Not required.
+
+---
+
+# 378. DO NOT ADD NUMPY
+
+Not required.
+
+---
+
+# 379. DO NOT ADD OPENBB PACKAGES
+
+Stage 29 owns OpenBB dependency management.
+
+---
+
+# 380. DO NOT ADD ACCOUNTING LIBRARY
+
+Canonical models can use standard Python/Pydantic.
+
+---
+
+# 381. IMPLEMENTATION ORDER
+
+Execute Stage 34 in this exact order:
+
+```text
+1. Read Stage 1-33 documentation
+2. Audit existing Fundamental models
+3. Audit existing statement models
+4. Audit Company identity usage
+5. Audit ticker-based financial lookup assumptions
+6. Audit Provider-specific financial objects
+7. Audit OpenBB fundamental code
+8. Audit XBRL/SEC code
+9. Audit DataFrame-based Fundamental contracts
+10. Audit Stage 24 Provenance
+11. Audit Stage 28 FundamentalProvider
+12. Audit Stage 29 OpenBB adapter
+13. Audit Stage 33 Decimal serialization utilities
+14. Reuse Stage 33 precision helpers where appropriate
+15. Freeze Stage 34 boundaries
+16. Create canonical Fundamentals package
+17. Create Decimal financial validation helpers
+18. Create FinancialStatementType
+19. Create FinancialPeriodNature
+20. Create FiscalPeriod
+21. Create ReportingPeriodType
+22. Create AccountingStandard
+23. Create AuditStatus
+24. Create FinancialUnitKind
+25. Create FinancialUnit
+26. Create FinancialPeriod
+27. Create FundamentalDataOrigin
+28. Create FundamentalConceptKey
+29. Create FundamentalConceptDefinition
+30. Create FundamentalConceptRegistry
+31. Register Income Statement core concepts
+32. Register Balance Sheet core concepts
+33. Register Cash Flow core concepts
+34. Freeze concept registry after bootstrap
+35. Define canonical sign semantics
+36. Create StatementLineItem
+37. Add concept existence validation
+38. Add concept/unit validation
+39. Create FinancialReportMetadata
+40. Add restatement semantics
+41. Create BaseFinancialStatement
+42. Add Company identity
+43. Add origin
+44. Add report metadata
+45. Add non-empty line-item validation
+46. Add duplicate-concept validation
+47. Create IncomeStatement
+48. Require duration period
+49. Validate Income Statement concepts
+50. Create BalanceSheet
+51. Require instant period
+52. Validate Balance Sheet concepts
+53. Create CashFlowStatement
+54. Require duration period
+55. Validate Cash Flow concepts
+56. Create FinancialFact
+57. Add concept validation
+58. Add unit validation
+59. Add period-nature validation
+60. Create FundamentalDataOperation
+61. Create FundamentalProviderCapabilities
+62. Create period-filter request model if useful
+63. Create IncomeStatementRequest
+64. Create BalanceSheetRequest
+65. Create CashFlowStatementRequest
+66. Create FinancialFactsRequest
+67. Add Company ID validation
+68. Add fiscal-year filters
+69. Add period-end filters
+70. Add request limit
+71. Reject ticker fields
+72. Reject Provider-selection fields
+73. Create IncomeStatementResponse
+74. Create BalanceSheetResponse
+75. Create CashFlowStatementResponse
+76. Create FinancialFactsResponse
+77. Define deterministic response ordering
+78. Preserve same-period revisions
+79. Create IncomeStatementFundamentalProvider protocol
+80. Create BalanceSheetFundamentalProvider protocol
+81. Create CashFlowFundamentalProvider protocol
+82. Create FinancialFactsFundamentalProvider protocol
+83. Update family-level FundamentalProvider capability metadata
+84. Add capability/method consistency validation where practical
+85. Update OpenBB Fundamental capability metadata
+86. Keep OpenBB operations empty unless real canonical adapter exists
+87. Do not call OpenBB
+88. Add concept registry tests
+89. Add concept key tests
+90. Add unit tests
+91. Add currency validation tests
+92. Add Decimal precision tests
+93. Add float rejection tests
+94. Add NaN/Infinity tests
+95. Add period instant tests
+96. Add period duration tests
+97. Add fiscal-year tests
+98. Add fiscal-period consistency tests
+99. Add AccountingStandard tests
+100. Add AuditStatus tests
+101. Add Origin tests
+102. Add Origin secret-boundary tests
+103. Add StatementLineItem tests
+104. Add unknown-concept tests
+105. Add wrong-unit tests
+106. Add wrong-statement tests
+107. Add Income Statement tests
+108. Add Balance Sheet tests
+109. Add Cash Flow tests
+110. Add duplicate-concept tests
+111. Add empty-statement tests
+112. Add missing-vs-zero tests
+113. Add incomplete-accounting-equation test
+114. Add FinancialFact tests
+115. Add Fact period-nature mismatch tests
+116. Add Fact unit mismatch tests
+117. Add request tests
+118. Add no-ticker request tests
+119. Add no-Provider-key request tests
+120. Add no-user-id request tests
+121. Add limit tests
+122. Add period-filter tests
+123. Add response ordering tests
+124. Add restatement-preservation tests
+125. Add FundamentalDataOperation tests
+126. Add FundamentalProviderCapabilities tests
+127. Add Provider Protocol tests
+128. Add OpenBB empty-operation tests
+129. Add OpenBB no-network tests
+130. Add no-OpenBB-type-leak tests
+131. Add no-Pandas-contract tests
+132. Add no-Polars-contract tests
+133. Add no-dict-any canonical payload tests
+134. Add no-float financial annotation tests
+135. Add no-database-construction tests
+136. Add no-network-construction tests
+137. Verify no ratios were implemented
+138. Verify no valuation metrics were implemented
+139. Verify no estimates/guidance were implemented
+140. Verify no ownership models were implemented
+141. Verify no filing parser was implemented
+142. Verify no Fundamental REST routes exist
+143. Verify no executable Fundamental application Capability exists
+144. Verify no Fundamental persistence table exists
+145. Verify no Stage 34 Alembic migration exists
+146. Run Ruff
+147. Run Python formatter
+148. Run Python typecheck
+149. Run full backend suite
+150. Run Provider regression tests
+151. Run OpenBB regression tests
+152. Run Company entity regression tests
+153. Run Provenance regression tests
+154. Run Market Data Stage 33 regression tests
+155. Create FUNDAMENTAL_DATA_ARCHITECTURE.md
+156. Update PROVIDER_ARCHITECTURE.md
+157. Update OPENBB_INTEGRATION.md
+158. Update PROVENANCE_ARCHITECTURE.md
+159. Update COMPANY_ARCHITECTURE.md
+160. Update API_ARCHITECTURE.md
+161. Update DATABASE_ARCHITECTURE.md
+162. Update CAPABILITY_ARCHITECTURE.md
+163. Update REPOSITORY_ARCHITECTURE.md
+164. Update DECISIONS.md
+165. Perform final Stage 34 boundary review
+```
+
+---
+
+# 382. SECURITY REVIEW
+
+Verify:
+
+- Fundamental models contain no credentials
+- requests contain no credentials
+- responses contain no credentials
+- FundamentalDataOrigin contains no secrets
+- no Vault reference exists
+- no JWT exists
+- no auth token exists
+- no principal object exists
+- no user ID exists
+- no Provider configuration exists
+- no Provider routing policy exists
+- no arbitrary Provider command exists
+- no generic Fundamental executor exists
+- no eval
+- no exec
+- no OpenBB command execution
+- no SEC network request
+- no XBRL network request
+- no external Fundamental Data call
+
+---
+
+# 383. DATA QUALITY REVIEW
+
+Verify canonical models distinguish:
+
+```text
+missing value
+
+actual zero
+```
+
+---
+
+# 384. FINANCIAL SIGN REVIEW
+
+Verify Stage 34:
+
+- documents sign semantics
+- does not blindly force positive values
+- supports negative income
+- supports negative equity
+- supports negative cash flow
+- supports tax benefits
+- supports expense reversals
+
+---
+
+# 385. SCALE REVIEW
+
+Search Stage 34 canonical models for:
+
+```text
+scale
+million
+thousand
+billion
+```
+
+No hidden monetary scaling should be necessary for canonical values.
+
+---
+
+# 386. PRECISION REVIEW
+
+Search canonical package for:
+
+```text
+float
+```
+
+Any occurrence must be justified.
+
+Expected financial value fields:
+
+```text
+Decimal
+```
+
+---
+
+# 387. COMPANY IDENTITY REVIEW
+
+Search canonical models for:
+
+```text
+ticker
+symbol
+```
+
+Preferred:
+
+```text
+none
+```
+
+as canonical identity.
+
+---
+
+# 388. PROVIDER LEAKAGE REVIEW
+
+Search canonical package for:
+
+```text
+openbb
+
+sec
+
+yfinance
+
+polygon
+
+fmp
+
+alpha_vantage
+```
+
+Provider names should not appear in canonical model code except documentation/tests intentionally validating separation.
+
+---
+
+# 389. XBRL LEAKAGE REVIEW
+
+Canonical concepts must not be source taxonomy tags.
+
+---
+
+# 390. DATAFRAME REVIEW
+
+Search public canonical annotations for:
+
+```text
+DataFrame
+```
+
+Expected:
+
+```text
+none
+```
+
+---
+
+# 391. ANY REVIEW
+
+Search core Fundamental model fields for:
+
+```text
+Any
+```
+
+Expected:
+
+```text
+none
+```
+
+unless rigorously justified in internal helper code.
+
+---
+
+# 392. DATABASE REVIEW
+
+Expected new Stage 34 application tables:
+
+```text
+none
+```
+
+---
+
+# 393. MIGRATION REVIEW
+
+Expected:
+
+```text
+No Stage 34 Alembic migration.
+```
+
+---
+
+# 394. NETWORK REVIEW
+
+Expected Stage 34 production Fundamental network calls:
+
+```text
+0
+```
+
+---
+
+# 395. PROVIDER REVIEW
+
+For each Provider declaring:
+
+```text
+ProviderDomain.FUNDAMENTALS
+```
+
+report actual:
+
+```text
+FundamentalProviderCapabilities.operations
+```
+
+Do not infer theoretical support.
+
+---
+
+# 396. OPENBB REVIEW
+
+If OpenBB still has no canonical Fundamental adapter:
+
+report:
+
+```text
+OpenBB Fundamental operations implemented: none.
+```
+
+This is correct.
+
+---
+
+# 397. NO DERIVED ANALYTICS REVIEW
+
+Search implementation for calculations such as:
+
+```text
+revenue_growth
+
+gross_margin
+
+operating_margin
+
+net_margin
+
+current_ratio
+
+quick_ratio
+
+debt_to_equity
+
+return_on_equity
+
+return_on_assets
+
+price_to_earnings
+
+price_to_book
+
+enterprise_value
+
+ev_to_ebitda
+```
+
+Expected Stage 34 implementation:
+
+```text
+none
+```
+
+---
+
+# 398. PERFORMANCE REVIEW
+
+Canonical model validation should involve:
+
+```text
+0 database calls
+
+0 network calls
+
+0 Provider calls
+
+0 symbol-resolution calls
+```
+
+---
+
+# 399. NO AUTOMATIC COMPANY LOOKUP
+
+Model construction must not call:
+
+```text
+CompanyRepository
+```
+
+---
+
+# 400. NO AUTOMATIC ENTITY RESOLUTION
+
+Model construction must not call Stage 22 Entity Resolution.
+
+---
+
+# 401. NO PROVIDER LOOKUP REQUIRED
+
+Canonical fundamental model construction should remain pure and deterministic.
+
+---
+
+# 402. DO NOT IMPLEMENT STAGE 35
+
+Stage 35 is:
+
+# Build Canonical Economic Data Models
+
+Do not implement:
+
+- Economic Series
+- Economic Observation
+- Economic Release
+- Central Bank Rate Decision
+- Economic Calendar Event
+- Economic Provider contracts
+- FRED normalization
+- World Bank normalization
+- macro data APIs
+
+---
+
+# 403. DO NOT IMPLEMENT STAGE 36
+
+No canonical News / Research models.
+
+---
+
+# 404. DO NOT IMPLEMENT STAGE 37
+
+No ClickHouse deployment.
+
+---
+
+# 405. DO NOT IMPLEMENT STAGE 38
+
+No Redis / Valkey deployment.
+
+---
+
+# 406. DO NOT IMPLEMENT STAGE 39
+
+No historical Market Data ingestion.
+
+---
+
+# 407. DO NOT IMPLEMENT STAGE 40
+
+No Market Data update workers.
+
+---
+
+# 408. DO NOT IMPLEMENT STAGE 41
+
+No live quote ingestion.
+
+---
+
+# 409. DO NOT IMPLEMENT STAGE 42
+
+No live event pipeline.
+
+---
+
+# 410. DO NOT IMPLEMENT STAGE 43
+
+No WebSockets.
+
+---
+
+# 411. DO NOT IMPLEMENT STAGE 44
+
+No Market Data freshness monitoring.
+
+---
+
+# 412. DO NOT IMPLEMENT STAGE 81
+
+No Companies V1 implementation.
+
+---
+
+# 413. DO NOT IMPLEMENT STAGE 82
+
+No live Provider integration for statements yet.
+
+---
+
+# 414. DO NOT IMPLEMENT STAGE 83
+
+No ratio or valuation metric calculations.
+
+---
+
+# 415. DO NOT IMPLEMENT STAGE 84
+
+No:
+
+```text
+earnings
+analyst estimates
+guidance
+consensus
+surprise
+```
+
+models beyond any already established Company metadata.
+
+---
+
+# 416. DO NOT IMPLEMENT STAGE 85
+
+No:
+
+```text
+institutional ownership
+insider ownership
+insider trades
+```
+
+---
+
+# 417. DO NOT IMPLEMENT STAGE 86
+
+No filing-document connection system.
+
+---
+
+# 418. DEFINITION OF DONE
+
+Stage 34 is complete only when:
+
+- canonical Fundamental package exists
+- package depends on no Provider SDK
+- package depends on no FastAPI transport code
+- package depends on no Pandas DataFrame
+- package depends on no Polars DataFrame
+- canonical financial reporting identity reuses Stage 18 Company ID
+- ticker is not canonical Fundamental identity
+- security ID is not primary financial-statement identity
+- no duplicate Company identity system exists
+- Decimal is used for financial values
+- binary float is not canonical for accounting values
+- non-finite Decimal values are rejected
+- Decimal precision survives serialization roundtrip
+- canonical values use base units
+- no hidden thousands/millions/billions scale exists
+- missing values are not fabricated as zero
+- FinancialStatementType exists
+- Income Statement type exists
+- Balance Sheet type exists
+- Cash Flow Statement type exists
+- FinancialPeriodNature exists
+- instant exists
+- duration exists
+- FiscalPeriod exists
+- ReportingPeriodType exists
+- fiscal calendars are not assumed to equal calendar years
+- FinancialPeriod exists
+- instant period validation exists
+- duration period validation exists
+- AccountingStandard exists
+- US GAAP exists
+- IFRS exists
+- unknown/other accounting standard exists
+- AuditStatus exists
+- FundamentalDataOrigin exists
+- origin contains Provider key
+- origin contains retrieval time
+- optional source-document linkage is safe
+- origin contains no credentials
+- origin does not replace Stage 24 Provenance
+- FinancialUnitKind exists
+- FinancialUnit exists
+- currency validation exists
+- no hidden scale exists in FinancialUnit
+- FundamentalConceptKey exists
+- canonical concept key validation exists
+- FundamentalConceptDefinition exists
+- FundamentalConceptRegistry exists
+- duplicate concept registration is rejected
+- registry freeze exists
+- Provider aliases are not stored in canonical registry
+- raw XBRL tags are not canonical concept keys
+- focused Income Statement concepts exist
+- focused Balance Sheet concepts exist
+- focused Cash Flow concepts exist
+- Free Cash Flow is not calculated
+- EBITDA is not calculated
+- ratios are not calculated
+- valuation metrics are not calculated
+- StatementLineItem exists
+- StatementLineItem uses canonical concept
+- StatementLineItem uses Decimal
+- StatementLineItem uses FinancialUnit
+- concept/unit compatibility is validated
+- concept/statement compatibility is validated
+- Base Financial Statement exists
+- Company ID is required
+- reporting period is required
+- report metadata exists
+- Statement origin exists
+- statements are non-empty
+- duplicate canonical concepts are rejected
+- IncomeStatement exists
+- IncomeStatement requires duration period
+- BalanceSheet exists
+- BalanceSheet requires instant period
+- CashFlowStatement exists
+- CashFlow requires duration period
+- FinancialFact exists
+- Fact concept is validated
+- Fact unit is validated
+- Fact period nature is validated
+- Stage 34 supports restatement metadata
+- unknown restatement state is representable
+- no fake revision number is invented
+- multiple versions of same period are representable
+- same-period restatements are not deduplicated incorrectly
+- FundamentalDataOperation exists
+- income_statements operation exists
+- balance_sheets operation exists
+- cash_flow_statements operation exists
+- financial_facts operation exists
+- FundamentalProviderCapabilities exists
+- ProviderDomain.FUNDAMENTALS is distinguished from operation support
+- empty Fundamental operation set is allowed
+- OpenBB operation support is reported honestly
+- IncomeStatementRequest exists
+- BalanceSheetRequest exists
+- CashFlowStatementRequest exists
+- FinancialFactsRequest exists
+- canonical requests use Company ID
+- canonical requests do not use ticker identity
+- requests contain no Provider key
+- requests contain no fallback policy
+- requests contain no credentials
+- requests contain no user ID
+- request ranges are bounded
+- request limits are bounded
+- Financial Fact filters use canonical concept keys
+- IncomeStatementResponse exists
+- BalanceSheetResponse exists
+- CashFlowStatementResponse exists
+- FinancialFactsResponse exists
+- Statement responses are deterministic
+- Statement responses are latest-period first
+- legitimate restatements are preserved
+- operation-specific Provider Protocols exist
+- generic `execute(operation, dict)` Fundamental interface does not exist
+- no `dict[str, Any]` canonical financial payload exists
+- no Provider-specific object leaks into canonical models
+- no raw XBRL object leaks into canonical models
+- no DataFrame is canonical
+- no public Fundamental REST API exists
+- no executable Fundamental Capability Gateway operation exists
+- no OpenBB Fundamental Data request is performed
+- no SEC request is performed
+- no XBRL ingestion is implemented
+- no Fundamental PostgreSQL tables exist
+- no Stage 34 Alembic migration exists
+- no ratio engine exists
+- no valuation engine exists
+- no earnings-estimate model exists
+- no guidance model exists
+- no ownership model exists
+- no filing parser exists
+- model validation requires no DB
+- model validation requires no network
+- concept registry tests pass
+- precision tests pass
+- period tests pass
+- unit tests pass
+- statement tests pass
+- Fact tests pass
+- request tests pass
+- response-order tests pass
+- restatement tests pass
+- Provider capability tests pass
+- Provider Protocol tests pass
+- OpenBB boundary tests pass
+- no Provider leakage tests pass
+- no DataFrame contract tests pass
+- no float annotation tests pass
+- no derived-ratio tests pass
+- Ruff passes
+- formatting passes
+- Python typecheck passes
+- full backend suite remains green
+- documentation matches implementation
+
+---
+
+# 419. FINAL RESPONSE FORMAT
+
+When Stage 34 is finished, respond with:
+
+# Stage 34 Complete
+
+## Existing Fundamental Data Audit
+
+Explain:
+
+- Income Statement models found
+- Balance Sheet models found
+- Cash Flow models found
+- Financial Fact models found
+- XBRL-related code found
+- OpenBB Fundamental code found
+- DataFrame contracts found
+- ticker-based Company-financial identity found
+- ratio/valuation prototypes found
+- what was preserved
+- what was refactored
+- what was removed
+- what remains deferred
+
+## Canonical Fundamental Data Architecture
+
+Show:
+
+```text
+Provider-specific Fundamental Data
+            │
+            ▼
+        Provider Adapter
+            │
+            ▼
+ATLAS Canonical Fundamental Models
+            │
+            ▼
+         Domain Services
+```
+
+## Fundamental Package
+
+Show actual package/file layout.
+
+## Canonical Company Identity
+
+Explain actual Company ID type reused from Stage 18.
+
+Explicitly confirm:
+
+```text
+Ticker is not canonical Fundamental identity.
+```
+
+## Numeric Precision Policy
+
+Show:
+
+```text
+Financial Value | Canonical Type
+```
+
+for:
+
+- currency amount
+- share count
+- EPS
+- reported percentages if supported
+- discrete counts
+
+## Base Unit Policy
+
+Give one actual test/example of Provider scaled input converted to canonical base units.
+
+## Float Policy
+
+Explicitly state actual float-input behavior.
+
+## Decimal Serialization
+
+Show one actual serialized example.
+
+## Missing vs Zero
+
+Explain how Stage 34 preserves the distinction.
+
+## Financial Statement Types
+
+Show:
+
+```text
+Type | Meaning
+```
+
+for actual values.
+
+## Financial Period Nature
+
+Show:
+
+```text
+instant
+duration
+```
+
+semantics.
+
+## Financial Period
+
+Show:
+
+```text
+Field | Type | Required | Meaning
+```
+
+## Fiscal Period
+
+Show actual enum values.
+
+## Reporting Period Type
+
+Show actual values.
+
+## Fiscal Calendar Behavior
+
+Explain why ATLAS does not assume calendar-year reporting.
+
+## Accounting Standard
+
+Show actual enum values.
+
+## Audit Status
+
+Show actual values.
+
+## Financial Unit
+
+Show:
+
+```text
+Unit Kind | Currency Code? | Example
+```
+
+## Fundamental Data Origin
+
+Show:
+
+```text
+Field | Type | Purpose
+```
+
+## Origin vs Provenance
+
+Explain:
+
+```text
+FundamentalDataOrigin
+=
+runtime/source metadata
+
+Stage 24 Provenance
+=
+persistent evidence lineage
+```
+
+## Fundamental Concept Architecture
+
+Show:
+
+```text
+Provider source field
+       │
+       ▼
+Provider adapter mapping
+       │
+       ▼
+FundamentalConceptKey
+       │
+       ▼
+Canonical Statement
+```
+
+## Fundamental Concept Registry
+
+Explain:
+
+- explicit registration
+- duplicate rejection
+- validation
+- freeze
+- why Provider aliases are excluded
+
+## Core Income Statement Concepts
+
+Show:
+
+```text
+Concept | Unit | Period Nature | Normal Sign
+```
+
+for actual concepts implemented.
+
+## Core Balance Sheet Concepts
+
+Same.
+
+## Core Cash Flow Concepts
+
+Same.
+
+## Derived Metrics Boundary
+
+Explicitly confirm Stage 34 did not calculate:
+
+```text
+Free Cash Flow
+EBITDA
+ROE
+ROA
+Margins
+Growth Rates
+P/E
+P/B
+EV/EBITDA
+```
+
+unless a value is an explicitly reported canonical fact and that exception is documented.
+
+## Sign Convention
+
+Explain actual canonical sign convention.
+
+## Statement Line Item
+
+Show:
+
+```text
+Field | Type | Meaning
+```
+
+## Financial Report Metadata
+
+Show actual fields.
+
+## Restatement Semantics
+
+Explain:
+
+- original
+- restated
+- unknown restatement state
+- same-period multiple versions
+
+## Income Statement
+
+Show:
+
+```text
+Field | Type | Required | Meaning
+```
+
+Explain period and concept restrictions.
+
+## Balance Sheet
+
+Show the same.
+
+## Cash Flow Statement
+
+Show the same.
+
+## Financial Fact
+
+Show:
+
+```text
+Field | Type | Required | Meaning
+```
+
+Explain why it represents reported facts rather than calculated metrics.
+
+## Consolidated Statement Boundary
+
+Explain why Stage 34 rejects duplicate concepts in one statement and does not yet model arbitrary segment dimensions.
+
+## Accounting Equation Policy
+
+Confirm Stage 34 does not mutate/reject structurally valid partial data solely because accounting equations do not perfectly balance.
+
+## Fundamental Data Operations
+
+Show:
+
+```text
+Operation | Purpose
+```
+
+for:
+
+```text
+income_statements
+balance_sheets
+cash_flow_statements
+financial_facts
+```
+
+## Fundamental Provider Capabilities
+
+Explain:
+
+```text
+ProviderDomain.FUNDAMENTALS
+```
+
+versus:
+
+```text
+FundamentalDataOperation
+```
+
+support.
+
+## Registered Provider Operation Support
+
+Show:
+
+```text
+Provider | Fundamentals Domain? | Canonical Operations Implemented
+```
+
+List only actual Providers.
+
+Do not infer theoretical support.
+
+## OpenBB Fundamental Support
+
+Report actual OpenBB canonical operation support.
+
+If none:
+
+```text
+OpenBB Fundamental operations implemented: none.
+```
+
+## Income Statement Request
+
+Show actual schema.
+
+## Balance Sheet Request
+
+Show actual schema.
+
+## Cash Flow Request
+
+Show actual schema.
+
+## Financial Facts Request
+
+Show actual schema.
+
+## Request Bounds
+
+Explain:
+
+- fiscal year range
+- period-end range
+- maximum result count
+- canonical Company ID
+- canonical concept filters
+
+## Income Statement Response
+
+Show actual schema.
+
+## Balance Sheet Response
+
+Show actual schema.
+
+## Cash Flow Response
+
+Show actual schema.
+
+## Financial Facts Response
+
+Show actual schema.
+
+## Response Ordering
+
+Explain actual ordering.
+
+Expected design:
+
+```text
+latest reporting period first
+```
+
+with revision ordering.
+
+## Restatement Preservation
+
+Explain why same-period statements are not automatically collapsed.
+
+## Fundamental Provider Protocols
+
+List actual typed Protocols.
+
+Show their method signatures.
+
+## No Generic Fundamental Executor
+
+Explicitly confirm Stage 34 did not introduce:
+
+```text
+execute_fundamentals(
+    operation: str,
+    payload: dict[str, Any]
+)
+```
+
+## No DataFrame Contract
+
+Confirm canonical Fundamental contracts do not use:
+
+```text
+pandas.DataFrame
+polars.DataFrame
+```
+
+## XBRL Boundary
+
+Explain:
+
+```text
+Raw XBRL concept
+       │
+       ▼
+Provider mapping
+       │
+       ▼
+ATLAS canonical concept
+```
+
+Confirm Stage 34 does not perform XBRL ingestion.
+
+## OpenBB Boundary
+
+Show:
+
+```text
+OpenBB Fundamental response
+          │
+          ▼
+future OpenBB adapter normalization
+          │
+          ▼
+ATLAS canonical Fundamental model
+```
+
+Report actual Stage 34 OpenBB network requests.
+
+Expected:
+
+```text
+None.
+```
+
+## Provider Routing Boundary
+
+Explain Stage 32 routing remains outside Fundamental request models.
+
+## Credential Boundary
+
+Confirm canonical Fundamental models contain no Provider credentials or secret references.
+
+## Provenance Preparation
+
+Explain how future ingestion/filing integration can connect `FundamentalDataOrigin` to Stage 24 Provenance.
+
+## Database Changes
+
+Expected:
+
+```text
+No Stage 34 database migration was required.
+```
+
+Confirm no financial-statement persistence tables were created.
+
+## Public API Changes
+
+Expected:
+
+```text
+No public Fundamental Data REST endpoints were added.
+```
+
+## Capability Changes
+
+Expected:
+
+```text
+No executable Fundamental application Capabilities were added.
+```
+
+Explain:
+
+```text
+FundamentalDataOperation
+```
+
+is Provider operation metadata, not Stage 27 Capability execution.
+
+## External Network Activity
+
+Expected:
+
+```text
+No Stage 34 production Fundamental Data network calls.
+```
+
+## Serialization Tests
+
+Report actual results for:
+
+- large Decimal
+- small EPS Decimal
+- negative values
+- zero values
+- UUID Company ID
+- dates
+- UTC report timestamp
+- nested statement objects
+- restatement metadata
+
+## Concept Registry Tests
+
+Report:
+
+- registration
+- duplicate rejection
+- invalid key
+- lookup
+- deterministic listing
+- freeze
+- unit compatibility
+- statement compatibility
+- period-nature compatibility
+
+## Statement Tests
+
+Report actual results for:
+
+- valid Income Statement
+- Income Statement instant-period rejection
+- valid Balance Sheet
+- Balance Sheet duration rejection
+- valid Cash Flow
+- Cash Flow instant rejection
+- duplicate-concept rejection
+- empty-statement rejection
+- wrong-concept rejection
+- wrong-unit rejection
+- missing-vs-zero behavior
+- incomplete accounting equation behavior
+- negative financial values
+- multiple same-period revisions
+
+## Financial Fact Tests
+
+Report:
+
+- valid Fact
+- unknown concept
+- wrong period nature
+- wrong unit
+- restatement metadata
+- Decimal precision
+
+## Request Tests
+
+Report:
+
+- Company ID
+- no ticker field
+- no Provider key
+- no user ID
+- no credential field
+- fiscal year range
+- period-end range
+- limit
+- concept filters
+
+## Response Tests
+
+Report:
+
+- latest-first ordering
+- revision ordering
+- exact duplicate handling
+- restatement preservation
+
+## Provider Contract Tests
+
+Report:
+
+- FundamentalDataOperation
+- FundamentalProviderCapabilities
+- capability immutability
+- empty capabilities
+- Income Statement Provider Protocol
+- Balance Sheet Provider Protocol
+- Cash Flow Provider Protocol
+- Financial Facts Provider Protocol
+- capability/method consistency where implemented
+
+## OpenBB Tests
+
+Report:
+
+- Fundamentals domain declaration
+- canonical operations actually implemented
+- no Fundamental network request
+- no OpenBB type leakage
+
+## Boundary Tests
+
+Report:
+
+- no Pandas public contract
+- no Polars public contract
+- no Provider-specific canonical type
+- no `dict[str, Any]` core payload
+- no ticker canonical identity
+- no float financial annotation
+- no database call during model construction
+- no network call during model construction
+- no ratios
+- no valuation metrics
+- no estimates/guidance
+- no ownership models
+- no filing parser
+- no public Fundamental route
+- no Fundamental persistence table
+- no Stage 34 migration
+
+## Ruff
+
+Report actual result.
+
+## Formatting
+
+Report actual result.
+
+## Python Typecheck
+
+Report actual result.
+
+## Full Backend Suite
+
+Report actual result.
+
+Do not claim unrun tests passed.
+
+## Performance Review
+
+Report:
+
+```text
+Database calls during model construction
+Network calls during model construction
+Provider lookups during model construction
+Identifier-resolution calls during model construction
+```
+
+Expected:
+
+```text
+0
+0
+0
+0
+```
+
+Do not claim unless verified.
+
+## Security Review
+
+Confirm:
+
+- no credentials
+- no secret references
+- no JWT
+- no principal/user object
+- no Provider routing state
+- no arbitrary Provider execution
+- no OpenBB execution
+- no SEC execution
+- no eval
+- no exec
+
+## Data Quality Review
+
+Confirm:
+
+- missing values are distinct from zero
+- negative financial values remain representable
+- fiscal calendar is explicit
+- period nature is explicit
+- units are explicit
+- currency is explicit
+- values use base units
+- precision is preserved
+- restatements can coexist
+
+## Files Created
+
+List significant files.
+
+## Files Modified
+
+List significant modified files.
+
+## Dependencies Added
+
+List every dependency and why.
+
+Expected:
+
+```text
+None
+```
+
+if existing infrastructure was sufficient.
+
+## Known Issues
+
+List genuine Stage 34 issues only.
+
+## Deferred
+
+Explicitly confirm Stage 34 did not implement:
+
+- Stage 35 canonical Economic Data models
+- Economic Series
+- Economic Observations
+- Economic Releases
+- Central Bank decisions
+- Stage 36 News / Research canonical models
+- real OpenBB Fundamental requests
+- OpenBB Income Statement adapter
+- OpenBB Balance Sheet adapter
+- OpenBB Cash Flow adapter
+- OpenBB Financial Fact adapter
+- SEC ingestion
+- EDGAR ingestion
+- XBRL parsing
+- XBRL taxonomy ingestion
+- public Fundamental REST API
+- executable Fundamental application Capabilities
+- Company financials frontend
+- Company ratios
+- valuation metrics
+- P/E
+- P/B
+- EV/EBITDA
+- ROE
+- ROA
+- margins
+- growth metrics
+- Free Cash Flow calculation
+- EBITDA calculation
+- earnings estimates
+- consensus
+- earnings guidance
+- earnings surprise
+- ownership data
+- institutional holdings
+- insider activity
+- filing/document workflow
+- ClickHouse
+- Redis / Valkey
+- Fundamental ingestion workers
+- Provider retry loops
+- AI Fundamental tools
+- Agent Fundamental tools
+- MCP Fundamental tools
+- Terminal Fundamental commands
+- Workflow Fundamental nodes
+
+## Ready for Stage 35
+
+State whether the canonical Company identity rules, financial precision model, Financial Period model, Financial Unit model, canonical Concept Registry, Income Statement, Balance Sheet, Cash Flow Statement, Financial Fact model, request/response contracts and typed Fundamental Provider Protocols are stable enough to begin:
+
+# Stage 35 - Build Canonical Economic Data Models
+
+Do not begin Stage 35.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-06T14:44:16+05:30.
+
+The user's current state is as follows:
+Other open documents:
+- e:\proooo\Atlas\docs\DECISIONS.md (LANGUAGE_MARKDOWN)
+- e:\proooo\Atlas\docs\AGENTS_PRODUCT_SPEC.md (LANGUAGE_MARKDOWN)
+- e:\proooo\Atlas\docs\UX_ARCHITECTURE.md (LANGUAGE_MARKDOWN)
+- e:\proooo\Atlas\apps\web\src\design-system\components\Panel.tsx (LANGUAGE_TSX)
+- e:\proooo\Atlas\apps\web\src\components\shell\AgentDock.tsx (LANGUAGE_TSX)
+Browser State:
+  Page 006AA4BDACB50DB8ADF6FA6EC1F6701D () - 
+    Viewport: 0x0, Page Height: 0
+</ADDITIONAL_METADATA>

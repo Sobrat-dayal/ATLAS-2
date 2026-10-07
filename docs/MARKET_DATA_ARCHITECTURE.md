@@ -1,9 +1,8 @@
 # Market Data Architecture
 
-## Overview
-ATLAS owns the canonical Market Data schema. Market Data encompasses financial metrics, observations, and points-in-time pricing derived from external data sources (Providers). This architecture enforces a strict boundary between Provider-specific objects and the canonical representation required by internal ATLAS domain services.
+## High-Level Architecture
+ATLAS owns the canonical Market Data schema. Providers adapt themselves to ATLAS, not the other way around.
 
-The flow is strictly unidirectional for normalization:
 ```text
 Provider-specific response
         │
@@ -17,74 +16,237 @@ ATLAS Canonical Market Data
 Domain Services
 ```
 
-## Identity
-- **Canonical identity**: All canonical Market Data models reference an instrument or entity UUID, leveraging the Stage 17 entity/instrument architecture.
-- **Ticker**: A ticker/symbol is treated as an identifier or alias, NOT the canonical identity. Provider adapters must resolve symbols to UUIDs prior to or during integration.
+## Canonical Instrument Identity
+Canonical identity is the instrument UUID, reused from the Stage 16-22 Entity Architecture.
+**Ticker is not canonical identity.** Tickers/symbols are identifiers managed by the identifier resolution system.
 
-## Numeric Policy
-- **prices, sizes, volumes, VWAP**: Use financially precise `Decimal` representations. 
-- **No binary floats**: Floating point errors are unacceptable in canonical financial data. Binary float inputs are rejected unless explicitly and safely converted (e.g., via adapter normalization).
-- **Serialization**: `Decimal` fields serialize as strings (e.g., `"185.2000"`) in JSON responses to avoid browser/client precision loss. 
+## Financial Numeric Policy
+All prices, sizes, volumes, VWAP, etc., use `Decimal`.
+Float is explicitly rejected for financial numeric values because binary floating point is not exact.
 
-## Timestamps
-- All canonical Market Data timestamps are **timezone-aware** and **UTC-normalized**. Naive datetime objects are rejected.
+| Value Type | Python Type |
+|---|---|
+| price | `CanonicalDecimal` |
+| size | `NonNegativeCanonicalDecimal` (or `PositiveCanonicalDecimal`) |
+| volume | `NonNegativeCanonicalDecimal` |
+| VWAP | `CanonicalDecimal` |
+| order count | `int` |
+| trade count | `int` |
 
-## Origin & Provenance
-- `MarketDataOrigin` is lightweight runtime source metadata attached to canonical responses. It captures `provider_key`, `retrieved_at`, and `timeliness`.
-- `Provenance` (Stage 24) remains the authoritative persistent lineage system. Future ingestion (Stage 39) will convert `MarketDataOrigin` into persistent `Provenance` records.
+Float input is rejected unless an explicitly documented safe conversion exists in the Provider Adapter.
+For JSON serialization, `Decimal` objects are serialized as strings preserving exact precision (e.g., `{"bid_price": "185.2000"}`).
 
-## Enums
-- **MarketSession**: Defines market sessions (e.g., `pre_market`, `regular`, `post_market`, `continuous`, `unknown`).
-- **BarInterval**: Standardized interval representations (e.g., `1m`, `5m`, `1d`, `1w`). 
-- **PriceAdjustment**: Specifies price adjustment modes (`raw`, `split_adjusted`, `total_return`).
+## Timestamp Policy
+All canonical market data timestamps are timezone-aware and normalized to UTC.
+Naive datetimes are rejected by Pydantic validation.
+Timestamps are serialized as ISO8601 with a `Z` suffix.
+If a timestamp source needs semantics, it uses `MarketDataTimestampSource` (e.g., `exchange`, `provider`, `retrieval`, `derived`).
 
-## Core Models
+## Market Data Timeliness
 
-### Quote
-Represents the bid and ask state of an instrument.
-- Must contain at least a bid or an ask.
-- Sizes require corresponding prices.
-- Crossed quotes are structurally allowed to preserve real-world observations.
-- Last executed price is NOT duplicated inside a Quote.
+| Value | Meaning |
+|---|---|
+| `real_time` | Source indicates data is live/real-time. |
+| `delayed` | Source explicitly delays data. |
+| `end_of_day` | Official end-of-day dataset. |
+| `historical` | Historical retrieval dataset. |
+| `unknown` | ATLAS cannot reliably determine timeliness. |
 
-### Trade
-Represents a financial transaction.
-- Requires `instrument_id`, `price` (Decimal), and `size` (Decimal > 0).
-- Negative prices are allowed depending on market structure, but negative sizes are rejected.
+## Market Data Origin
+Lightweight runtime lineage metadata for Market Data responses.
 
-### OHLCVBar
-Represents a time-bound interval of trading activity.
-- Requires explicit `start_time` and `end_time` bounds.
-- Validates the internal high/low consistency (`high >= open, low <= open`, etc.).
-- Missing data is never fabricated as `0`. 
+| Field | Type | Purpose |
+|---|---|---|
+| `provider_key` | `str` | ATLAS Provider that fulfilled request |
+| `upstream_source` | `str` | Human/machine-readable source (e.g., FRED, Polygon) |
+| `retrieved_at` | `CanonicalDatetime` | UTC time when ATLAS received data |
+| `timeliness` | `MarketDataTimeliness` | Timeliness indication |
+| `delay_seconds` | `int` | Explicit delay in seconds (if delayed) |
+| `source_timestamp` | `CanonicalDatetime` | Original data timestamp (if known) |
+
+**Origin vs Provenance**: `MarketDataOrigin` is runtime lineage metadata. It is NOT the persistent source/evidence lineage handled by Stage 24 `Provenance`. Future Stage 39 ingestion may convert `MarketDataOrigin` into persisted Provenance.
+
+## Market Session
+
+| Session | Meaning |
+|---|---|
+| `pre_market` | Before regular hours. |
+| `regular` | Regular trading hours. |
+| `post_market` | After regular hours. |
+| `overnight` | Overnight session. |
+| `continuous` | 24-hour continuous (e.g., crypto, FX). |
+| `unknown` | Cannot be determined. |
+
+## Trade Side
+
+| Side | Meaning |
+|---|---|
+| `buy` | Buyer was the aggressor side. |
+| `sell` | Seller was the aggressor side. |
+| `unknown` | Aggressor side unknown. |
+
+## Price Adjustment
+
+| Value | Meaning |
+|---|---|
+| `raw` | No corporate-action adjustment. |
+| `split_adjusted` | Prices adjusted for splits. |
+| `total_return` | Adjusted for splits and dividends. |
+
+## Bar Interval
+
+| Canonical Value | Meaning |
+|---|---|
+| `1s`, `5s`, `15s`, `30s` | Seconds |
+| `1m`, `5m`, `15m`, `30m` | Minutes |
+| `1h`, `2h`, `4h` | Hours |
+| `1d`, `1w`, `1mo` | Days, Weeks, Months |
+
+## Canonical Models
+
+### Quote Model
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `instrument_id` | `UUID` | Yes | Canonical instrument ID |
+| `as_of` | `CanonicalDatetime` | Yes | UTC timestamp of quote |
+| `timestamp_source` | `MarketDataTimestampSource` | No | Source of timestamp |
+| `venue_id` | `UUID` | No | Exchange/venue canonical ID |
+| `session` | `MarketSession` | No | Trading session |
+| `bid_price` | `CanonicalDecimal` | No | Highest buyer price |
+| `bid_size` | `NonNegativeCanonicalDecimal` | No | Quantity available at bid |
+| `ask_price` | `CanonicalDecimal` | No | Lowest seller price |
+| `ask_size` | `NonNegativeCanonicalDecimal` | No | Quantity available at ask |
+
+**Rules**:
+- Must have at least bid or ask.
+- If a size is present, its corresponding price must be present.
+- Crossed quotes (`bid_price >= ask_price`) are explicitly allowed as they reflect real fragmented market behavior.
+- Last trade is NOT inside Quote to maintain clean semantics.
+
+### Trade Model
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `instrument_id` | `UUID` | Yes | Canonical instrument ID |
+| `timestamp` | `CanonicalDatetime` | Yes | UTC timestamp |
+| `timestamp_source` | `MarketDataTimestampSource` | No | Timestamp origin |
+| `venue_id` | `UUID` | No | Exchange/venue canonical ID |
+| `session` | `MarketSession` | No | Trading session |
+| `price` | `CanonicalDecimal` | Yes | Executed price (can be negative) |
+| `size` | `PositiveCanonicalDecimal` | Yes | Executed quantity (> 0) |
+| `trade_id` | `str` | No | Provider trade ID (<= 128) |
+| `sequence` | `int` | No | Monotonically increasing sequence |
+| `side` | `TradeSide` | No | Aggressor side |
+
+### OHLCV Bar Model
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `instrument_id` | `UUID` | Yes | Canonical instrument ID |
+| `interval` | `BarInterval` | Yes | Time interval |
+| `start_time` | `CanonicalDatetime` | Yes | UTC start time |
+| `end_time` | `CanonicalDatetime` | Yes | UTC end time |
+| `venue_id` | `UUID` | No | Exchange/venue canonical ID |
+| `session` | `MarketSession` | No | Trading session |
+| `open` | `CanonicalDecimal` | Yes | Open price (can be negative) |
+| `high` | `CanonicalDecimal` | Yes | Highest price |
+| `low` | `CanonicalDecimal` | Yes | Lowest price |
+| `close` | `CanonicalDecimal` | Yes | Closing price |
+| `volume` | `NonNegativeCanonicalDecimal`| No | Traded volume |
+| `vwap` | `CanonicalDecimal` | No | Volume-weighted average price |
+| `trade_count` | `int` | No | Number of trades |
+| `is_final` | `bool` | Yes | Source guarantee of finality |
+
+**Rules**:
+- `start_time < end_time`
+- Envelope bounds: `high >= open/low/close` and `low <= open/high/close`.
 
 ### Order Book Models
-- **OrderBookLevel**: Decimal price and size.
-- **OrderBookSnapshot**: Point-in-time order book structure. Bids are sorted descending (highest price first), and asks are sorted ascending (lowest price first). Duplicate price levels are rejected.
 
-### Market Snapshot
-A point-in-time aggregate summary of Market Data fields, often containing nested `Quote` and `Trade` models.
-- Rejects completely empty snapshots.
-- Nested Quotes/Trades must match the Snapshot's `instrument_id`.
-- Derived change/change-percent metrics are not stored inside the canonical snapshot.
+**OrderBookLevel**:
+- `price: CanonicalDecimal`
+- `size: NonNegativeCanonicalDecimal`
+- `order_count: int` (optional)
 
-## Request & Response Contracts
-Canonical requests (e.g., `QuoteRequest`, `HistoricalBarsRequest`) do NOT include execution context like Provider routing fallbacks, credentials, or user context.
-- **Batch Safety**: Requests accept bounded batches to avoid overwhelming downstream services.
-- **History Limits**: Historical requests enforce time boundaries and maximum record limits.
-- **Typed Responses**: All canonical responses return strongly-typed objects containing a `MarketDataOrigin`. Unstructured `dict[str, Any]` is forbidden.
+**OrderBookSnapshot**:
+- `instrument_id: UUID`
+- `as_of: CanonicalDatetime`
+- `timestamp_source: MarketDataTimestampSource`
+- `venue_id: UUID`
+- `bids: tuple[OrderBookLevel, ...]`
+- `asks: tuple[OrderBookLevel, ...]`
 
-## Operations and Capabilities
-- Market Data support is fine-grained. Declaring `ProviderDomain.MARKET_DATA` does NOT automatically imply support for all Market Data operations.
-- Operations are defined by `MarketDataOperation` (e.g., `quote`, `historical_bars`, `trades`, `order_book`, `snapshot`).
-- Capabilities are declared statically via `MarketDataProviderCapabilities`.
+**Rules**:
+- Bids must be sorted strictly descending by price.
+- Asks must be sorted strictly ascending by price.
+- Duplicate prices per side are rejected.
+- Crossed books are representable.
+
+### Market Snapshot Model
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `instrument_id` | `UUID` | Yes | Canonical instrument ID |
+| `as_of` | `CanonicalDatetime` | Yes | UTC timestamp |
+| `venue_id` | `UUID` | No | Exchange/venue canonical ID |
+| `session` | `MarketSession` | No | Trading session |
+| `quote` | `Quote` | No | Current/latest quote |
+| `last_trade` | `Trade` | No | Last executed trade |
+| `session_open` | `CanonicalDecimal` | No | Session open price |
+| `session_high` | `CanonicalDecimal` | No | Session high price |
+| `session_low` | `CanonicalDecimal` | No | Session low price |
+| `previous_close`| `CanonicalDecimal` | No | Previous session close |
+| `session_volume`| `NonNegativeCanonicalDecimal`| No | Session volume |
+| `vwap` | `CanonicalDecimal` | No | Volume-weighted average price |
+
+**Rules**:
+- Must not be entirely empty.
+- Nested Quotes/Trades must match the Snapshot `instrument_id`.
+- Change/percent-change fields are deliberately excluded as derived data.
+
+## Market Data Operations
+
+| Operation | Purpose |
+|---|---|
+| `quote` | Retrieve live or recent canonical quotes. |
+| `historical_bars` | Retrieve historical OHLCV data. |
+| `trades` | Retrieve historical executed trades. |
+| `order_book` | Retrieve market depth snapshot. |
+| `snapshot` | Retrieve a point-in-time point market summary. |
+
+**Provider Capabilities**:
+A Provider claiming `ProviderDomain.MARKET_DATA` domain does not imply it supports all specific `MarketDataOperation` values. Its `MarketDataProviderCapabilities` object dictates explicit supported canonical operations.
+
+## Request/Response Contracts
+
+**QuoteRequest**: `instrument_ids: tuple[UUID, ...]` (1-100 max, no duplicates).
+**QuoteResponse**: Contains `origin`, `quotes: tuple[Quote]`, and `unavailable_instrument_ids`.
+
+**HistoricalBarsRequest**: `instrument_id`, `interval`, `start`, `end`, `adjustment`, `limit` (max 10k). Bound requirements apply.
+**HistoricalBarsResponse**: Contains `origin`, `bars: tuple[OHLCVBar]` ordered chronologically.
+
+**TradesRequest**: `instrument_id`, `start`, `end`, `limit` (max 10k). Bound requirements apply.
+**TradesResponse**: Contains `origin`, `trades: tuple[Trade]` ordered chronologically.
+
+**OrderBookRequest**: `instrument_id`, `depth` (1-100 max).
+**OrderBookResponse**: Contains `origin`, `book: OrderBookSnapshot`.
+
+**MarketSnapshotRequest**: `instrument_ids: tuple[UUID, ...]` (1-100 max).
+**MarketSnapshotResponse**: Contains `origin`, `snapshots`, `unavailable_instrument_ids`.
+
+*All responses contain a required `MarketDataOrigin` metadata field.*
 
 ## Provider Protocols
-Adapters must implement strongly-typed Protocols corresponding to their capabilities (e.g., `QuoteMarketDataProvider`, `HistoricalBarsMarketDataProvider`). 
-There is NO generic `execute(operation, payload)` dictionary-based execution entrypoint.
+Stage 33 implements specific Provider Protocols instead of a single massive interface:
+- `QuoteMarketDataProvider`
+- `HistoricalBarsMarketDataProvider`
+- `TradesMarketDataProvider`
+- `OrderBookMarketDataProvider`
+- `SnapshotMarketDataProvider`
 
-## Excluded Scope
-Stage 33 focuses exclusively on the internal domain models and contracts.
-- **No REST API endpoints** or application capability gateway registrations exist for Market Data yet.
-- **No Persistence**: Market Data is NOT stored in PostgreSQL. Future stages will utilize ClickHouse for high-volume storage.
-- **No OpenBB Execution**: While OpenBB supports the Market Data domain conceptually, no actual external network calls are performed in Stage 33.
+## OpenBB Status
+OpenBB is registered for the Market Data domain, but no Stage 33 canonical Market Data operation is executed yet.
+OpenBB `MarketDataProviderCapabilities.operations` is explicitly empty.
+
+## Boundary Principles
+- **No Generic Executor**: `execute(operation: str, payload: dict)` is forbidden.
+- **No Pandas/Polars**: `DataFrame` is NOT used as a canonical API contract.
+- **Provider Leakage**: Provider credentials, routing states, and keys do NOT leak into canonical requests.
+- **No Fake API**: Stage 33 creates NO PostgreSQL tables, NO Market Data REST API endpoints, NO database queries during model validation, and performs NO Market Data network requests.
