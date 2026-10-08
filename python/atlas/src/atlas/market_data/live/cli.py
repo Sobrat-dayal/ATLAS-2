@@ -47,6 +47,30 @@ async def run_worker():
             health_manager=health_manager
         )
         
+        from atlas.market_data.live.store import LiveQuoteStateStore
+        from atlas.market_data.freshness import (
+            MarketDataFreshnessSettings,
+            MarketDataFreshnessStateStore,
+            MarketDataFreshnessPolicyResolver,
+            MarketDataFreshnessMonitor,
+        )
+        
+        quote_store = LiveQuoteStateStore(redis_client)
+        
+        freshness_settings = MarketDataFreshnessSettings()
+        freshness_state_store = MarketDataFreshnessStateStore(redis_client)
+        # Using a dummy config service since we don't have Stage 30 fully wired here yet
+        # or we could try to wire it if needed, but a None is acceptable for resolver
+        freshness_policy_resolver = MarketDataFreshnessPolicyResolver(global_settings=freshness_settings, provider_config_service=None)
+        
+        freshness_monitor = MarketDataFreshnessMonitor(
+            settings=freshness_settings,
+            state_store=freshness_state_store,
+            quote_store=quote_store,
+            policy_resolver=freshness_policy_resolver,
+            pipeline=pipeline,
+        )
+
         manager = LiveQuoteSourceManager(
             settings=settings,
             provider_resolver=resolver,
@@ -56,7 +80,8 @@ async def run_worker():
         worker = LiveQuoteWorker(
             db_session=session,
             source_manager=manager,
-            settings=settings
+            settings=settings,
+            freshness_monitor=freshness_monitor
         )
         
         await worker.start()

@@ -68,6 +68,7 @@ class QuoteSnapshotMessage(BaseServerMessage):
     type: Literal["market.quote.snapshot"] = "market.quote.snapshot"
     series: QuoteSubscriptionKey
     snapshot: Optional[Dict[str, Any]]
+    freshness: Optional[Dict[str, Any]] = None
     barrier_cursor: str
 
 class LiveEventMessageOut(BaseServerMessage):

@@ -76,6 +76,30 @@ async def lifespan(app: FastAPI):
     ws_settings = RealtimeWebSocketSettings()
     pipeline_settings = LiveEventPipelineSettings()
     gateway = RealtimeGateway(redis_client, ws_settings, pipeline_settings)
+    
+    from atlas.market_data.live.store import LiveQuoteStateStore
+    from atlas.market_data.freshness import (
+        MarketDataFreshnessSettings,
+        MarketDataFreshnessStateStore,
+        MarketDataFreshnessPolicyResolver,
+        MarketDataFreshnessQueryService
+    )
+    
+    freshness_settings = MarketDataFreshnessSettings()
+    freshness_state_store = MarketDataFreshnessStateStore(redis_client)
+    # Mocking config service as we haven't integrated the full provider setup everywhere
+    freshness_policy_resolver = MarketDataFreshnessPolicyResolver(freshness_settings, None)
+    
+    quote_store = LiveQuoteStateStore(redis_client)
+    
+    freshness_query_service = MarketDataFreshnessQueryService(
+        state_store=freshness_state_store,
+        quote_store=quote_store,
+        policy_resolver=freshness_policy_resolver
+    )
+    
+    gateway.freshness_query_service = freshness_query_service
+    
     app.state.realtime_gateway = gateway
     await gateway.start()
 

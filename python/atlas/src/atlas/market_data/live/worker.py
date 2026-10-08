@@ -1,8 +1,11 @@
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Set
+from typing import Dict, Set, Optional, TYPE_CHECKING
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from atlas.market_data.freshness.monitor import MarketDataFreshnessMonitor
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,10 +28,12 @@ class LiveQuoteWorker:
         db_session: AsyncSession,
         source_manager: LiveQuoteSourceManager,
         settings: LiveQuoteWorkerSettings,
+        freshness_monitor: Optional["MarketDataFreshnessMonitor"] = None,
     ):
         self._db_session = db_session
         self._source_manager = source_manager
         self._settings = settings
+        self._freshness_monitor = freshness_monitor
         
         self._running = False
         self._worker_task: asyncio.Task | None = None
@@ -36,6 +41,8 @@ class LiveQuoteWorker:
     async def start(self):
         self._running = True
         self._worker_task = asyncio.create_task(self._run_loop())
+        if self._freshness_monitor:
+            await self._freshness_monitor.start()
 
     async def stop(self):
         self._running = False
@@ -45,6 +52,8 @@ class LiveQuoteWorker:
                 await self._worker_task
             except asyncio.CancelledError:
                 pass
+        if self._freshness_monitor:
+            await self._freshness_monitor.stop()
         await self._source_manager.shutdown()
         # Release leases on shutdown
         await self._release_leases()
@@ -134,6 +143,17 @@ class LiveQuoteWorker:
         for existing_provider in list(self._source_manager._provider_targets.keys()):
             if existing_provider not in all_providers:
                 await self._source_manager.reconcile_targets(existing_provider, set())
+
+        if self._freshness_monitor:
+            # We need to pass the actual full rows to the monitor
+            # active_targets has provider_id and instrument_entity_id, but the monitor needs the full ORM object
+            # Let's fetch them
+            full_targets_stmt = select(MarketDataLiveQuoteTarget).where(
+                MarketDataLiveQuoteTarget.lease_owner == self._settings.worker_id,
+                MarketDataLiveQuoteTarget.is_enabled == True
+            )
+            full_targets = (await self._db_session.execute(full_targets_stmt)).scalars().all()
+            self._freshness_monitor.set_active_targets(list(full_targets))
 
     async def _release_leases(self):
         """

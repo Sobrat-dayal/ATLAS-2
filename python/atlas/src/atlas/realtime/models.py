@@ -22,6 +22,16 @@ class MarketQuoteUpdatedPayload(BaseModel):
     source_timestamp: datetime
 
 
+class MarketDataFreshnessUpdatedPayload(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"allow_inf_nan": False})
+    series_key: Dict[str, Any]
+    provider_key: str
+    status: str
+    reason: str
+    effective_age_seconds: int
+    previous_status: Optional[str] = None
+
+
 class LiveEventEnvelope(BaseModel):
     """
     The typed, immutable envelope for Live Events published to the Redis Stream.

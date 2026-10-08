@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Index
+from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Index, Integer
 from sqlalchemy.dialects.postgresql import UUID
 
 from atlas.database import Base
@@ -20,6 +20,12 @@ class MarketDataLiveQuoteTarget(Base):
     variant = Column(String(255), nullable=True)
     
     is_enabled = Column(Boolean, nullable=False, default=True)
+    
+    # Freshness policy overrides
+    freshness_fresh_until_seconds = Column(Integer, nullable=True)
+    freshness_stale_after_seconds = Column(Integer, nullable=True)
+    freshness_age_basis = Column(String(50), nullable=True)
+    freshness_source_timestamp_fallback = Column(String(50), nullable=True)
     
     # Lease management for concurrent workers
     lease_owner = Column(String(255), nullable=True)

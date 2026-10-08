@@ -44,6 +44,8 @@ class RealtimeGateway:
         
         self.quote_store = LiveQuoteStateStore(redis)
         self.quote_service = LiveQuoteService(self.quote_store)
+        
+        self.freshness_query_service = None
 
     async def start(self):
         self.dispatcher.start()
@@ -178,9 +180,17 @@ class RealtimeGateway:
         for series in accepted:
             quote_record = await self.quote_service.get_latest_quote(series.instrument_entity_id)
             snapshot = quote_record.model_dump(mode="json") if quote_record else None
+            
+            freshness_state = None
+            if self.freshness_query_service:
+                fresh_state_obj = await self.freshness_query_service.get_freshness(series, fallback_evaluation=True)
+                if fresh_state_obj:
+                    freshness_state = fresh_state_obj.model_dump(mode="json")
+            
             snap_msg = QuoteSnapshotMessage(
                 series=series,
                 snapshot=snapshot,
+                freshness=freshness_state,
                 barrier_cursor=barrier
             )
             conn.outbound.enqueue_control(snap_msg)
@@ -203,9 +213,17 @@ class RealtimeGateway:
                 for series in list(conn.subscriptions):
                     quote_record = await self.quote_service.get_latest_quote(series.instrument_entity_id)
                     snapshot = quote_record.model_dump(mode="json") if quote_record else None
+                    
+                    freshness_state = None
+                    if self.freshness_query_service:
+                        fresh_state_obj = await self.freshness_query_service.get_freshness(series, fallback_evaluation=True)
+                        if fresh_state_obj:
+                            freshness_state = fresh_state_obj.model_dump(mode="json")
+                            
                     snap_msg = QuoteSnapshotMessage(
                         series=series,
                         snapshot=snapshot,
+                        freshness=freshness_state,
                         barrier_cursor=barrier
                     )
                     conn.outbound.enqueue_control(snap_msg)
