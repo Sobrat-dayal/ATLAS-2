@@ -7,7 +7,8 @@ from atlas_api.config import get_settings as get_api_settings
 from atlas.database import async_session_maker
 from atlas.market_data.live.manager import LiveQuoteSourceManager
 from atlas.market_data.live.settings import LiveQuoteWorkerSettings
-from atlas.market_data.live.store import LiveQuoteStateStore
+from atlas.realtime.pipeline import LiveEventPipeline
+from atlas.realtime.settings import LiveEventPipelineSettings
 from atlas.market_data.live.worker import LiveQuoteWorker
 from atlas.providers.routing.resolver import ProviderResolver
 from atlas.providers.configuration.repository import ProviderConfigurationRepository
@@ -29,8 +30,9 @@ async def run_worker():
     redis_url = getattr(api_settings, "redis_url", "redis://localhost:6379/0")
     redis_client = Redis.from_url(redis_url, decode_responses=False)
     
-    # Store
-    store = LiveQuoteStateStore(redis_client)
+    # Pipeline
+    pipeline_settings = LiveEventPipelineSettings(enabled=True)
+    pipeline = LiveEventPipeline(redis_client, pipeline_settings)
 
     # Database
     async with async_session_maker() as session:
@@ -48,7 +50,7 @@ async def run_worker():
         manager = LiveQuoteSourceManager(
             settings=settings,
             provider_resolver=resolver,
-            store=store
+            pipeline=pipeline
         )
         
         worker = LiveQuoteWorker(

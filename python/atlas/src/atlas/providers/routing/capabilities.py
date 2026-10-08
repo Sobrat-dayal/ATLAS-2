@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 
-from atlas.capabilities.registry import CapabilityRef, CapabilityRegistry
+from atlas.capabilities.registry import CapabilityRegistry
 from atlas.capabilities.types import CapabilityExposure, CapabilityPermissionClass
+from atlas.capabilities.definition import CapabilityDefinition
 from atlas.providers.health.registry import ProviderHealthRegistry
 from atlas.providers.registry import ProviderRegistry
 from atlas.providers.routing.models import ProviderRoutingPolicy, ProviderSelectionPlan
@@ -79,32 +80,28 @@ def register_provider_routing_capabilities(
             routing_service, provider_registry, config_service, health_service
         )
 
-    @registry.register(
-        CapabilityRef(
+        registry.register(CapabilityDefinition(
             key="provider.routing.list",
-            version="1.0.0",
+            version=1,
             name="List Provider Routing Policies",
             permission_class=CapabilityPermissionClass.READ,
-            exposure=CapabilityExposure.PUBLIC,
+            exposure=CapabilityExposure.APPLICATION,
             required_permissions=["atlas.access"],
-        )
-    )
+        ), list_policies)
     async def list_policies(inputs, context):
         principal_id = context.principal.principal_id
         routing_service = _get_routing_service(context)
         policies = await routing_service.list_user_policies(principal_id)
         return ProviderRoutingListOutput(policies=policies)
 
-    @registry.register(
-        CapabilityRef(
+        registry.register(CapabilityDefinition(
             key="provider.routing.get",
-            version="1.0.0",
+            version=1,
             name="Get Provider Routing Policy",
             permission_class=CapabilityPermissionClass.READ,
-            exposure=CapabilityExposure.PUBLIC,
+            exposure=CapabilityExposure.APPLICATION,
             required_permissions=["atlas.access"],
-        )
-    )
+        ), get_policy)
     async def get_policy(inputs: ProviderRoutingGetInput, context):
         principal_id = context.principal.principal_id
         routing_service = _get_routing_service(context)
@@ -124,16 +121,14 @@ def register_provider_routing_capabilities(
             )
         return ProviderRoutingGetOutput(policy=policy)
 
-    @registry.register(
-        CapabilityRef(
+        registry.register(CapabilityDefinition(
             key="provider.routing.update",
-            version="1.0.0",
+            version=1,
             name="Update Provider Routing Policy",
             permission_class=CapabilityPermissionClass.WRITE,
-            exposure=CapabilityExposure.PUBLIC,
+            exposure=CapabilityExposure.APPLICATION,
             required_permissions=["atlas.access"],
-        )
-    )
+        ), update_policy)
     async def update_policy(inputs: ProviderRoutingUpdateInput, context):
         principal_id = context.principal.principal_id
         routing_service = _get_routing_service(context)
@@ -146,32 +141,28 @@ def register_provider_routing_capabilities(
         )
         return ProviderRoutingUpdateOutput(policy=policy)
 
-    @registry.register(
-        CapabilityRef(
+        registry.register(CapabilityDefinition(
             key="provider.routing.reset",
-            version="1.0.0",
+            version=1,
             name="Reset Provider Routing Policy",
             permission_class=CapabilityPermissionClass.WRITE,
-            exposure=CapabilityExposure.PUBLIC,
+            exposure=CapabilityExposure.APPLICATION,
             required_permissions=["atlas.access"],
-        )
-    )
+        ), reset_policy)
     async def reset_policy(inputs: ProviderRoutingResetInput, context):
         principal_id = context.principal.principal_id
         routing_service = _get_routing_service(context)
         await routing_service.reset_user_policy(principal_id, inputs.domain)
         return {}
 
-    @registry.register(
-        CapabilityRef(
+        registry.register(CapabilityDefinition(
             key="provider.routing.plan",
-            version="1.0.0",
+            version=1,
             name="Preview Provider Routing Plan",
             permission_class=CapabilityPermissionClass.READ,
-            exposure=CapabilityExposure.PUBLIC,
+            exposure=CapabilityExposure.APPLICATION,
             required_permissions=["atlas.access"],
-        )
-    )
+        ), get_plan)
     async def get_plan(inputs: ProviderRoutingPlanInput, context):
         principal_id = context.principal.principal_id
         selection_service = _get_selection_service(context)

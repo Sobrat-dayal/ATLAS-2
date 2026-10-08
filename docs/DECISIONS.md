@@ -476,3 +476,48 @@ This document records the major architectural and product decisions established.
 173. **Range Planning**: The `RangePlanner` uses the PostgreSQL run metadata to identify previously fetched data limits and avoid redundant external calls.
 174. **No Scheduler**: Stage 39 is manually or internally triggerable via CLI or synchronous APIs. It is not an autonomous cron job.
 175. **No Valkey**: Stage 39 introduces no dependencies on Redis/Valkey for market data ingestion state.
+
+## Stage 42: Build Initial Live Event Pipeline
+
+176. Stage 42 builds ATLAS's initial backend live-event transport.
+177. Stage 42 live events are transport events, not Stage 135 Universal Events.
+178. Stage 42 initially publishes only \market.quote.updated\.
+179. Stage 42 does not build news/economic/intelligence event models.
+180. Stage 42 integrates with Stage 41 routed latest Quote state.
+181. Stage 42 events are emitted only when routed Quote state accepts a newer Quote.
+182. Provider-specific cache updates alone do not necessarily emit a live event.
+183. Older routed Quote candidates do not emit events.
+184. Identical duplicate Quotes do not emit new events by default.
+185. Newer fallback Provider Quotes may emit events.
+186. Fallback Provider origin remains preserved.
+187. Stage 42 reuses Stage 41 Quote ordering semantics.
+188. Stage 42 does not create a second Quote ordering algorithm.
+189. Routed-state transition and event append are atomic.
+190. Independent routed SET followed by XADD is forbidden.
+191. Stage 42 reuses Stage 41's Lua or WATCH/MULTI/EXEC concurrency strategy where possible.
+192. User-controlled Lua is forbidden.
+193. Stage 42 event transport uses Redis-compatible Streams.
+194. Stage 42 does not use Redis Pub/Sub.
+195. Stage 42 does not use Redis consumer groups.
+196. Stage 42 uses cursor-based XREAD.
+197. Stage 42 does not use Kafka, Redpanda, RabbitMQ, or NATS.
+198. Stage 42 does not deploy a new broker service or event daemon.
+199. Stage 42 uses the Stage 38 Redis / Valkey instance and client.
+200. Stage 42 live event Stream is non-authoritative and may be trimmed or lost.
+201. Stream loss does not destroy authoritative ATLAS state.
+202. Stage 42 does not archive events in ClickHouse or PostgreSQL.
+203. Stage 42 creates a schema-versioned event envelope with UUIDs.
+204. Event ID is distinct from Redis Stream ID.
+205. \emitted_at\ is ATLAS transport time, not Provider market time.
+206. Event payload preserves true Provider origin without credentials or user IDs.
+207. Generic \dict[str, Any]\ is not the canonical event payload.
+208. JSON is the initial safe transport encoding.
+209. Decimal values do not become binary floats. NaN and Infinity are rejected.
+210. Event payload size is bounded; oversized events are rejected.
+211. Stage 42 uses one initial Market live-event Stream with the Stage 38 environment key prefix.
+212. Stream retention is bounded by maximum entry count with approximate MAXLEN.
+213. Stage 42 uses explicit Redis Stream cursors parsed numerically.
+214. Stage 42 provides bounded event reads and bounded blocking reads without exposing infinite BLOCK 0.
+215. Stage 42 provides at-least-once-friendly replay semantics.
+216. Stage 42 supports future snapshot-plus-cursor synchronization for Stage 43.
+217. Stage 42 adds only the Redis Stream ACL permissions actually required (XADD, XREAD, XINFO).

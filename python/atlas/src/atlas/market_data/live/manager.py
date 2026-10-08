@@ -5,7 +5,7 @@ from typing import Dict, List, Set, Any
 from uuid import UUID
 
 from atlas.market_data.live.settings import LiveQuoteWorkerSettings
-from atlas.market_data.live.store import LiveQuoteStateStore
+from atlas.realtime.pipeline import LiveEventPipeline
 from atlas.market_data.requests import LiveQuoteSubscriptionRequest
 from atlas.providers.routing.resolver import ProviderResolver
 from atlas.market_data.enums import MarketDataOperation
@@ -24,11 +24,11 @@ class LiveQuoteSourceManager:
         self,
         settings: LiveQuoteWorkerSettings,
         provider_resolver: ProviderResolver,
-        store: LiveQuoteStateStore,
+        pipeline: "LiveEventPipeline",
     ):
         self.settings = settings
         self.provider_resolver = provider_resolver
-        self.store = store
+        self.pipeline = pipeline
         
         # State: provider_id -> task
         self._provider_tasks: Dict[str, List[asyncio.Task]] = {}
@@ -101,7 +101,7 @@ class LiveQuoteSourceManager:
                 logger.info(f"Starting stream for {provider_id} with {len(instrument_ids)} targets")
                 async for quote in provider.stream_live_quotes(request):
                     received_at = datetime.now(timezone.utc)
-                    await self.store.put_if_newer(quote, received_at)
+                    await self.pipeline.commit_quote_update(quote, received_at)
                     
             except asyncio.CancelledError:
                 logger.info(f"Stream task for {provider_id} cancelled.")
