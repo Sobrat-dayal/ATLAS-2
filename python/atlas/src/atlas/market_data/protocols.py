@@ -63,3 +63,19 @@ class SnapshotMarketDataProvider(Protocol):
     async def get_market_snapshots(
         self, request: MarketSnapshotRequest
     ) -> MarketSnapshotResponse: ...
+
+
+from typing import AsyncIterator
+from atlas.market_data.requests import LiveQuoteSubscriptionRequest
+from atlas.market_data.quote import Quote
+
+
+@runtime_checkable
+class LiveQuoteStreamProvider(Protocol):
+    """
+    Protocol for providers that support the LIVE_QUOTE_STREAM operation.
+    """
+
+    async def stream_live_quotes(
+        self, request: LiveQuoteSubscriptionRequest
+    ) -> AsyncIterator[Quote]: ...

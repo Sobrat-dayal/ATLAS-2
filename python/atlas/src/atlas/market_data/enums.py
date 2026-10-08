@@ -89,3 +89,4 @@ class MarketDataOperation(str, Enum):
     TRADES = "trades"
     ORDER_BOOK = "order_book"
     SNAPSHOT = "snapshot"
+    LIVE_QUOTE_STREAM = "live_quote_stream"

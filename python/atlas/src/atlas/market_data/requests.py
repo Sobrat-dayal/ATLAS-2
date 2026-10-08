@@ -131,3 +131,19 @@ class MarketSnapshotRequest(BaseModel):
         if len(set(self.instrument_ids)) != len(self.instrument_ids):
             raise ValueError("Duplicate instrument IDs are not allowed in MarketSnapshotRequest.")
         return self
+
+
+class LiveQuoteSubscriptionRequest(BaseModel):
+    """
+    Request to subscribe to a live stream of quotes.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    instrument_ids: tuple[UUID, ...] = Field(
+        ...,
+        min_length=1,
+        max_length=10_000,
+        description="The canonical instrument UUIDs to subscribe to.",
+    )
+

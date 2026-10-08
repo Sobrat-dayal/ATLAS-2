@@ -17,6 +17,7 @@ dependencies = [
 [project.scripts]
 atlas-cli = "atlas.cli:main"
 atlas-updates = "atlas.market_data.updates.cli:cli"
+atlas-live-quotes = "atlas.market_data.live.cli:main"
 
 [build-system]
 requires = ["hatchling"]
