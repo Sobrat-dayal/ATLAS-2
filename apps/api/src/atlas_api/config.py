@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     supabase_anon_key: str = ""
     supabase_jwt_secret: str = ""
 
+    # Redis Settings
+    redis_url: str = "redis://127.0.0.1:6379"
+
     model_config = SettingsConfigDict(
         env_prefix="ATLAS_",
         env_file=".env",

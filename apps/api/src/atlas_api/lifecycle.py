@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     from atlas.providers.health.service import ProviderHealthService
     from atlas.providers.health.repository import ProviderHealthRepository
     from atlas.providers.configuration.service import ProviderConfigurationService
-    from atlas.providers.configuration.secrets import SupabaseVaultSecretStore
+    from atlas.providers.configuration.vault import SupabaseVaultSecretStore
 
     provider_registry = build_provider_registry()
     health_registry = build_provider_health_registry(provider_registry)
@@ -63,13 +63,35 @@ async def lifespan(app: FastAPI):
     app.state.health_monitor = monitor
     monitor.start()
 
+    from redis.asyncio import Redis
+    
+    redis_client = Redis.from_url(settings.redis_url, decode_responses=False)
+    app.state.redis = redis_client
+    
+    # Stage 43: Websocket Gateway
+    from atlas.realtime.websocket.gateway import RealtimeGateway
+    from atlas.realtime.websocket.settings import RealtimeWebSocketSettings
+    from atlas.realtime.settings import LiveEventPipelineSettings
+    
+    ws_settings = RealtimeWebSocketSettings()
+    pipeline_settings = LiveEventPipelineSettings()
+    gateway = RealtimeGateway(redis_client, ws_settings, pipeline_settings)
+    app.state.realtime_gateway = gateway
+    await gateway.start()
+
     yield
 
     logger.info("Shutting down ATLAS API foundation...")
     app.state.ready = False
 
+    if hasattr(app.state, "redis"):
+        await app.state.redis.close()
+
     if hasattr(app.state, "health_monitor"):
         await app.state.health_monitor.stop()
+        
+    if hasattr(app.state, "realtime_gateway"):
+        await app.state.realtime_gateway.stop()
 
     # Dispose database engine
     await db_manager.dispose()
