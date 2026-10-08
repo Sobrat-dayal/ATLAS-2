@@ -8,7 +8,7 @@ from atlas.capabilities.context import CapabilityExecutionContext
 from atlas.capabilities.definition import CapabilityDefinition
 from atlas.capabilities.registry import CapabilityRegistry
 from atlas.capabilities.types import CapabilityExposure, CapabilityPermissionClass
-from atlas.providers.configuration.secrets import SupabaseVaultSecretStore
+from atlas.providers.configuration.vault import SupabaseVaultSecretStore
 from atlas.providers.configuration.service import ProviderConfigurationService
 from atlas.providers.health.models import (
     ProviderHealthCheckResult,

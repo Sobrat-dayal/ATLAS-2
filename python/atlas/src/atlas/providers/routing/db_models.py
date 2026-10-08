@@ -15,7 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from atlas.providers.models import Base
+from atlas.database import Base
 from atlas.providers.routing.models import ProviderRoutingScope
 
 

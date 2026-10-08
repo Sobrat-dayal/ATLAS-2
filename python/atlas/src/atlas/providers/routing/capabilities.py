@@ -1,11 +1,7 @@
 from pydantic import BaseModel
 
-from atlas.capabilities import (
-    CapabilityExposure,
-    CapabilityPermissionClass,
-    CapabilityRef,
-    CapabilityRegistry,
-)
+from atlas.capabilities.registry import CapabilityRef, CapabilityRegistry
+from atlas.capabilities.types import CapabilityExposure, CapabilityPermissionClass
 from atlas.providers.health.registry import ProviderHealthRegistry
 from atlas.providers.registry import ProviderRegistry
 from atlas.providers.routing.models import ProviderRoutingPolicy, ProviderSelectionPlan
@@ -62,7 +58,7 @@ def register_provider_routing_capabilities(
 
     def _get_selection_service(context):
         routing_service = _get_routing_service(context)
-        from atlas.providers.configuration.secrets import SupabaseVaultSecretStore
+        from atlas.providers.configuration.vault import SupabaseVaultSecretStore
         from atlas.providers.configuration.service import ProviderConfigurationService
 
         config_service = ProviderConfigurationService(

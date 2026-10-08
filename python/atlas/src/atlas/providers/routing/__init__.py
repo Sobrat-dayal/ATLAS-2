@@ -1,4 +1,3 @@
-from atlas.providers.routing.capabilities import register_provider_routing_capabilities
 from atlas.providers.routing.fallback import ProviderFallbackPlanner
 from atlas.providers.routing.models import (
     ProviderEligibilityReason,
@@ -31,5 +30,4 @@ __all__ = [
     "ProviderSelectionService",
     "ProviderFallbackPlanner",
     "RoutedProviderResolver",
-    "register_provider_routing_capabilities",
 ]

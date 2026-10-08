@@ -309,6 +309,7 @@ def register_all_handlers(registry: CapabilityRegistry):
     # --- providers ---
     # Register provider capabilities (list, get)
     provider_registry = build_provider_registry()
+    health_registry = build_provider_health_registry(provider_registry)
     register_provider_capabilities(registry, provider_registry)
 
     # Providers Stage 32
@@ -322,7 +323,7 @@ def register_all_handlers(registry: CapabilityRegistry):
 
     def selection_service_factory(session):
         routing_service = routing_service_factory(session)
-        from atlas.providers.configuration.secrets import SupabaseVaultSecretStore
+        from atlas.providers.configuration.vault import SupabaseVaultSecretStore
 
         config_service = ProviderConfigurationService(session, SupabaseVaultSecretStore(session))
 

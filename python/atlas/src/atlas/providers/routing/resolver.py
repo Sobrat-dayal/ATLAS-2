@@ -1,18 +1,18 @@
-from atlas.providers.models import BaseProvider
-from atlas.providers.resolver import ConfiguredProviderResolver
+from atlas.providers.base import BaseProvider
+from atlas.providers.resolver import ProviderResolver
 from atlas.providers.routing.models import ProviderSelectionPlan
 
 
 class RoutedProviderResolver:
-    def __init__(self, configured_resolver: ConfiguredProviderResolver):
-        self.configured_resolver = configured_resolver
+    def __init__(self, resolver: ProviderResolver):
+        self.resolver = resolver
 
     async def resolve_plan(
-        self, plan: ProviderSelectionPlan, owner_principal_id: str
+        self, plan: ProviderSelectionPlan
     ) -> BaseProvider:
         if not plan.selected_provider_key:
             raise Exception("PROVIDER_ROUTING_NO_ELIGIBLE_PROVIDER")
 
-        return await self.configured_resolver.resolve(
-            plan.selected_provider_key, owner_principal_id
+        return await self.resolver.resolve(
+            plan.selected_provider_key, plan.domain
         )
