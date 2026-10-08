@@ -15,12 +15,15 @@ ATLAS uses a monorepo structure to centrally manage the web frontend, Python bac
 - `python/atlas/`: The core Python modular monolith, split into domain subpackages.
   - `python/atlas/src/atlas/entities`: Universal entity domain (Stage 16).
   - `python/atlas/src/atlas/market_data`: Canonical Market Data models and protocols (Stage 33).
+  - `python/atlas/src/atlas/infrastructure/clickhouse`: Backend ClickHouse package.
+  - `python/atlas/src/atlas/infrastructure/valkey`: Backend Valkey package.
 - `workers/`: Placeholder for future background workers (e.g., market-worker, ai-worker).
 - `agents/`: Built-in agent manifests, templates, and downloadable agent packages.
 - `workflows/`: Portable visual-workflow definitions and templates.
 - `mcp/`: Future Model Context Protocol (MCP) servers and config templates.
 - `notebooks/`: Quantitative experiments and research prototypes.
 - `infrastructure/`: Local development, Docker, and deployment configurations.
+  - `infrastructure/clickhouse`: Local ClickHouse configuration.
 - `scripts/`: Repository-level automation utilities.
 - `tests/`: Cross-domain Python unit, integration, and e2e tests.
 - `docs/`: Product specification and repository architecture documentation.

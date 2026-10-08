@@ -13,3 +13,6 @@ Stage 33 introduces `MarketDataOrigin` attached to canonical Market Data respons
 
 ## OpenBB Integration
 See [OPENBB_INTEGRATION.md](OPENBB_INTEGRATION.md) for details on the Stage 29 OpenBB Framework Provider integration.
+
+## ClickHouse
+PostgreSQL remains the Stage 24 Provenance metadata store. Stage 37 does not move Provenance to ClickHouse.

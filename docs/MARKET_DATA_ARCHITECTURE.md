@@ -250,3 +250,27 @@ OpenBB `MarketDataProviderCapabilities.operations` is explicitly empty.
 - **No Pandas/Polars**: `DataFrame` is NOT used as a canonical API contract.
 - **Provider Leakage**: Provider credentials, routing states, and keys do NOT leak into canonical requests.
 - **No Fake API**: Stage 33 creates NO PostgreSQL tables, NO Market Data REST API endpoints, NO database queries during model validation, and performs NO Market Data network requests.
+
+## ClickHouse Ingestion (Stage 39)
+Stage 39 implements the `HistoricalMarketDataIngestionService` to persist canonical historical market data.
+
+```text
+MarketData Provider
+       │
+       ▼
+Canonical Market Data Model (`HistoricalBarsResponse`)
+       │
+       ▼
+HistoricalMarketDataIngestionService + Storage Mapper
+       │
+       ▼
+ClickHouse `historical_market_bars_versions`
+```
+
+**Ingestion Principles**:
+1. **Idempotency**: ClickHouse uses `ReplacingMergeTree` with deterministic content hashing to allow safe re-ingestion of the same historical range.
+2. **Metadata**: Every run is logged in PostgreSQL `historical_market_data_ingestion_runs` table for auditing and range planning.
+3. **No Resampling**: The ingestion service strictly persists the provided interval; it does not fabricate or resample data.
+
+## Valkey
+Stage 38 introduces no Market Data caching or state in Valkey.

@@ -40,3 +40,6 @@ The `atlas.research` domain package establishes canonical contracts for interact
 - `ResearchDataOrigin`: Provenance for the research metadata extraction.
 - `ResearchProviderCapabilities`: Capability reporting for Research functionality.
 - `ResearchProvider`: The Python Protocol that must be implemented by Research providers.
+
+## ClickHouse
+Stage 37 does not persist News/Research data.

@@ -1,0 +1,27 @@
+CREATE TABLE IF NOT EXISTS historical_market_bars_versions (
+    instrument_entity_id UUID,
+    interval_code LowCardinality(String),
+    adjustment_code LowCardinality(String),
+    session_code LowCardinality(Nullable(String)),
+    venue_id Nullable(UUID),
+    bar_start DateTime64(6, 'UTC'),
+    bar_end DateTime64(6, 'UTC'),
+    open Decimal(38, 18),
+    high Decimal(38, 18),
+    low Decimal(38, 18),
+    close Decimal(38, 18),
+    volume Nullable(Decimal(38, 18)),
+    vwap Nullable(Decimal(38, 18)),
+    trade_count Nullable(UInt64),
+    is_final UInt8,
+    provider_key LowCardinality(String),
+    upstream_source LowCardinality(Nullable(String)),
+    source_retrieved_at DateTime64(6, 'UTC'),
+    timeliness_code LowCardinality(String),
+    delay_seconds Nullable(UInt32),
+    source_timestamp Nullable(DateTime64(6, 'UTC')),
+    ingested_at DateTime64(6, 'UTC'),
+    ingestion_run_id UUID,
+    content_hash FixedString(64)
+) ENGINE = ReplacingMergeTree(ingested_at)
+ORDER BY (instrument_entity_id, interval_code, adjustment_code, bar_start, provider_key);

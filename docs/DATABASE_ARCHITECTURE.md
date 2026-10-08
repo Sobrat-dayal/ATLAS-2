@@ -36,7 +36,7 @@ It is non-authoritative. See [REDIS_VALKEY_ARCHITECTURE.md](REDIS_VALKEY_ARCHITE
 
 ## ClickHouse
 ClickHouse provides the infrastructure for analytical scans, high-volume time-series, and event data.
-As of Stage 37, the ClickHouse infrastructure exists, but **no ATLAS business dataset is stored in ClickHouse yet**. ClickHouse **does not replace PostgreSQL**, nor does it mirror user or entity tables. See [CLICKHOUSE_ARCHITECTURE.md](CLICKHOUSE_ARCHITECTURE.md) for details.
+As of Stage 39, ClickHouse persists canonical historical market data (OHLCV bars) ingested via the `HistoricalMarketDataIngestionService`. ClickHouse **does not replace PostgreSQL**, nor does it mirror user or entity tables. See [CLICKHOUSE_ARCHITECTURE.md](CLICKHOUSE_ARCHITECTURE.md) and [HISTORICAL_MARKET_DATA_INGESTION.md](HISTORICAL_MARKET_DATA_INGESTION.md) for details.
 
 ## PostgreSQL
 PostgreSQL is the authoritative transactional source of truth for ATLAS.

@@ -16,3 +16,6 @@ Simply declaring support for the Market Data domain does NOT imply support for a
 
 ## OpenBB Integration
 See [OPENBB_INTEGRATION.md](OPENBB_INTEGRATION.md) for details on the Stage 29 OpenBB Framework Provider integration.
+
+## Valkey
+Stage 38 introduces no Provider state or caching in Valkey.

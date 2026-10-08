@@ -61,3 +61,6 @@ To supply fundamental data, providers must implement `@runtime_checkable` protoc
 - `FinancialFactsFundamentalProvider`
 
 The Gateway verifies provider capabilities at runtime using `FundamentalProviderCapabilities` to properly route client requests to capable integrations.
+
+## ClickHouse
+Stage 37 does not choose or create Fundamental ClickHouse schemas.

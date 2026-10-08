@@ -210,6 +210,7 @@ Stage 35 did not introduce a generic `execute_economic(operation, payload)` exec
 - **Economic Calendar Boundary**: `released_at` metadata != Economic Calendar. Stage 92 deferred.
 - **Transformation Boundary**: No interpolation, forward fill, resampling, seasonal adjustment, index rebasing, currency conversion.
 - **Forecast/Consensus Boundary**: No forecast, consensus, surprise implemented.
+- **ClickHouse Boundary**: Stage 37 does not persist Economic Observations.
 
 ## Future Stages
 - **Stage 89**: Economics V1 (UI)

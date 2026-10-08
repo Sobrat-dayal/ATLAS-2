@@ -456,11 +456,23 @@ This document records the major architectural and product decisions established.
 
 ## Stage 38: Deploy Redis / Valkey
 
-159. **Target Architecture**: Valkey is ATLAS's ephemeral, low-latency, and distributed coordination datastore. PostgreSQL remains the authoritative transactional source of truth.
-160. **Selection**: Valkey is chosen over Redis due to open-source governance and robust backwards compatibility.
-161. **Infrastructure Only**: Stage 38 deploys infrastructure only, creating no production cache, session state, lock, or pub/sub capabilities yet.
-162. **Isolation**: Valkey does not replace ClickHouse or PostgreSQL. It is strictly non-authoritative.
-163. **Namespace & Database**: Keys must be namespaced (`atlas:env:`). Only logical DB 0 is permitted.
-164. **Security**: Passwords are required and passed via environment variables (never in git, `eval`, or logs). Browser clients must never connect directly.
-165. **ACL Restrictions**: The application user is strictly limited, with dangerous commands like `CONFIG`, `FLUSHALL`, and `MODULE` denied.
-166. **No Pickle**: Deserialization of Python `pickle` objects is forbidden due to arbitrary code execution risks.
+159. **Target Architecture**: ATLAS uses one Redis-compatible infrastructure server (`valkey` preferred, `redis` acceptable) for ALL ephemeral state across the monorepo to avoid sprawling cache silos.
+160. **PostgreSQL Authoritative**: PostgreSQL remains the authoritative transactional source of truth (Stage 11). Redis / Valkey is strictly non-authoritative.
+161. **ClickHouse Analytical**: ClickHouse remains the analytical/high-volume datastore (Stage 37).
+162. **Infrastructure Only**: Stage 38 deploys infrastructure only. It creates no production cache, session state, lock, or pub/sub capabilities yet.
+163. **Namespace**: All Redis / Valkey keys must be namespaced using a defined prefix (e.g., `atlas:dev:`).
+164. **Logical Database**: ATLAS restricts application usage to a single logical database (DB 0).
+165. **No Pickle**: `pickle` deserialization is strictly forbidden due to arbitrary code execution risks.
+166. **ACL Required**: The Redis / Valkey application user MUST have an explicit ACL.
+167. **Security Disabled**: Security-sensitive and dangerous commands (CONFIG, FLUSHALL, MODULE, SHUTDOWN, DEBUG) MUST be explicitly disabled.
+
+## Stage 39: Build Historical Market Data Ingestion
+
+168. **Architecture Validation**: Stage 39 strictly implements the architecture designed in Stage 33 Market Data. Canonical representations are used for storage.
+169. **Provider Isolation**: Provider-specific response objects NEVER hit ClickHouse. The path is Provider -> Canonical Model -> Storage Mapper -> ClickHouse.
+170. **Versioning & Idempotency**: ClickHouse uses `ReplacingMergeTree` for canonical Historical Bars to ensure idempotency and logically deduplicate identical fetches.
+171. **No Resampling**: The ingestion service strictly persists the interval fetched; it does not fabricate, interpolate, or resample Market Data.
+172. **Operational Metadata**: PostgreSQL stores metadata about each historical data ingestion run (`historical_market_data_ingestion_runs`) to track execution, bars ingested, and provider routing details.
+173. **Range Planning**: The `RangePlanner` uses the PostgreSQL run metadata to identify previously fetched data limits and avoid redundant external calls.
+174. **No Scheduler**: Stage 39 is manually or internally triggerable via CLI or synchronous APIs. It is not an autonomous cron job.
+175. **No Valkey**: Stage 39 introduces no dependencies on Redis/Valkey for market data ingestion state.

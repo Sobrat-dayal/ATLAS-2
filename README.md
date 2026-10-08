@@ -38,6 +38,10 @@ pnpm run dev:web
 # Terminal B (Backend):
 cd apps/api
 uv run uvicorn atlas_api.main:app --reload
+
+# Terminal C (Infrastructure):
+pnpm clickhouse-up
+pnpm valkey-up
 ```
 The full product specification is located in the `docs/` directory. Check the [Documentation Index](docs/README.md) for more details.
 
