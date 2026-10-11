@@ -185,3 +185,23 @@ In Stage 47, the Command Palette was augmented with structured command parsing:
   - User must press `Enter` or click the preview card to execute.
   - Executes bound command ID with typed arguments (e.g. `entityId`), updating global selected entity and navigating router.
 
+---
+
+## 9. Stage 48 Integration: Natural-Language Command Interpretation
+
+In Stage 48, the Command Palette integrates bounded natural-language command interpretation:
+- **Zero Keystroke Model Calls**: Typing in the search bar performs fast local Stage 46 matching and Stage 47 syntax detection. It never triggers the model automatically.
+- **"Interpret as ATLAS command" Option**: For non-empty unstructured input, a dedicated action row (`Sparkles` icon) appears at the bottom of the palette results list.
+- **Explicit Trigger**: The user must explicitly press Enter on or click "Interpret as ATLAS command".
+- **Visual Progress**: A compact, non-intrusive spinner displays while the single-turn backend call `POST /api/v1/commands/interpret` is running.
+- **Preview & Confirmation (No Autoexecution)**:
+  - `READY`: Displays a preview card showing the destination module, resolved entity details, and an explicit action button ("Open" / "Run command"). User executes via Enter or click.
+  - `AMBIGUOUS`: Renders the clarification question or entity candidate selector.
+  - `NOT_COMMAND`: Informs the user that the query is an informational question rather than an actionable command.
+  - `UNSUPPORTED`: Displays server-owned refusal banner for unpermitted actions (e.g. trading, agents, shell).
+  - `INTERPRETER_UNAVAILABLE`: Displays graceful degradation notice indicating structured commands remain functional.
+- **Stale Response Protection & Reset**:
+  - An `input_fingerprint` ensures an in-flight interpretation for query A is discarded if the query text changed to query B.
+  - Closing the palette aborts active requests and clears all interpretation state.
+
+

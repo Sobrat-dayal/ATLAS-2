@@ -72,3 +72,12 @@ Commands processed through `POST /api/v1/commands/parse` undergo dual authorizat
 1. **API Access**: The principal must possess the `atlas.access` permission.
 2. **Module Access**: During semantic binding, bound commands requiring access to a specific module (e.g. `navigation.charts.entity` requires `atlas.charts`) check the caller's permissions. If the user lacks the permission, the parser returns status `INVALID` with error code `COMMAND_FORBIDDEN` without exposing internal implementation details.
 
+## Natural-Language Command Interpretation Authorization (Stage 48)
+
+Natural-language command interpretation through `POST /api/v1/commands/interpret` enforces strict authorization boundaries:
+1. **API Access**: The caller must be authenticated and possess `atlas.access`. Unauthenticated requests receive HTTP 401; callers lacking `atlas.access` receive HTTP 403.
+2. **Module Access via Stage 47**: After the model interprets user intent and compiles it into canonical Stage 47 syntax, Stage 47 semantic binding validates module view permissions (e.g. `module.charts.view`). If the caller lacks permission, Stage 47 returns `COMMAND_FORBIDDEN` / `INVALID`.
+3. **Model Cannot Authorize**: The language model has zero authority over permissions and cannot grant, elevate, or bypass access rights.
+4. **Execution Recheck**: Because permissions can change between preview and execution, Stage 46 Command Executor and Next.js route guards recheck permissions at execution time.
+
+

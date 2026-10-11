@@ -891,3 +891,129 @@ This document records the major architectural and product decisions established.
 129. Stage 47 adds no Redis business state.
 130. Stage 48 remains the next stage.
 
+---
+
+## Stage 48 Decisions
+
+1. Stage 48 builds natural-language command interpretation.
+2. Stage 48 does not build the full AI Assistant.
+3. Stage 48 is single-turn.
+4. Stage 48 stores no chat history.
+5. Stage 48 stores no command interpretation history.
+6. Stage 48 uses Stage 47 as the deterministic command authority.
+7. Natural-language model output is not executable by itself.
+8. The model does not produce authoritative Entity IDs.
+9. The model does not produce authoritative routes.
+10. The model does not produce authoritative permissions.
+11. The model does not directly execute Command IDs.
+12. The model emits only a narrow structured intent enum.
+13. Stage 48 compiles intent into Stage 47 syntax.
+14. Compiled commands must successfully pass Stage 47 parsing/binding.
+15. Stage 22 remains Entity identity authority.
+16. Stage 14 remains authorization authority.
+17. Stage 46 remains execution boundary.
+18. Stage 48 does not bypass Stage 47.
+19. Stage 48 does not bypass Stage 46.
+20. Stage 48 does not bypass route guards.
+21. Stage 48 does not infer Entity UUIDs from model knowledge.
+22. Stage 48 does not infer tickers from Company names.
+23. Stage 48 does not automatically convert Company to Security.
+24. Stage 48 does not automatically convert Security to Company.
+25. Stage 48 does not traverse issuer relationships implicitly.
+26. Stage 48 does not fuzzy-correct Entity targets.
+27. Stage 45 remains fuzzy Entity discovery.
+28. Natural-language interpretation is conservative.
+29. Informational questions return NOT_COMMAND.
+30. Unsupported actions return UNSUPPORTED.
+31. Ambiguous requests do not execute.
+32. Stage 48 executes at most one command per interpretation.
+33. Stage 48 does not implement command chaining.
+34. Stage 48 does not implement multi-step planning.
+35. Stage 48 does not implement autonomous planning.
+36. Stage 48 does not implement tools.
+37. Stage 48 gives the model zero tools.
+38. Stage 48 does not use web search.
+39. Stage 48 does not use OpenBB.
+40. Stage 48 does not call Market Data Providers.
+41. Stage 48 does not use RAG.
+42. Stage 48 does not use embeddings.
+43. Stage 48 does not use pgvector.
+44. Stage 48 does not use Qdrant.
+45. Stage 48 does not use Agent infrastructure.
+46. Stage 48 does not use Workflow infrastructure.
+47. Stage 48 does not use Terminal infrastructure.
+48. Stage 48 does not execute Python.
+49. Stage 48 does not execute shell commands.
+50. Stage 48 does not execute JavaScript.
+51. Stage 48 does not navigate arbitrary URLs.
+52. Stage 48 does not perform trading actions.
+53. Stage 48 does not execute BUY.
+54. Stage 48 does not execute SELL.
+55. Stage 48 does not call brokers.
+56. Stage 48 does not optimize portfolios.
+57. Stage 48 does not calculate portfolio risk.
+58. Stage 48 does not run Agents.
+59. Stage 48 does not run Workflows.
+60. Stage 48 does not send external messages.
+61. Model API credentials remain server-side.
+62. Browser never calls the interpretation model directly.
+63. Model endpoint is server-configured.
+64. User cannot provide model endpoint URL.
+65. User cannot provide model credentials.
+66. Interpretation model calls are bounded.
+67. Input length is bounded.
+68. Output size is bounded.
+69. One interpretation normally makes at most one model call.
+70. Stage 48 does not use a model self-repair loop.
+71. Stage 48 does not use a reasoning loop.
+72. Stage 48 does not use unbounded retries.
+73. Tool calling is disabled.
+74. Model structured output is strictly validated.
+75. Unknown model intent values are rejected.
+76. Unknown module values are rejected.
+77. Extra output fields are rejected.
+78. Invalid model JSON fails closed.
+79. Raw model output is not sent to frontend.
+80. Raw model prompt is not sent to frontend.
+81. Raw user text is not logged at INFO.
+82. Raw model output is not logged at INFO.
+83. Model API keys are never logged.
+84. No prompt archive is created.
+85. No model response archive is created.
+86. No interpretation database table is created.
+87. No interpretation Redis history is created.
+88. Stage 48 adds no PostgreSQL migration.
+89. Stage 48 adds no ClickHouse schema.
+90. Stage 48 adds no Redis business state.
+91. Stage 48 creates no interpretation cache by default.
+92. Stage 46 local command matching remains model-free.
+93. Stage 47 slash commands remain model-free.
+94. Stage 47 shorthand remains model-free.
+95. The model is called only after explicit natural-language interpretation request.
+96. Opening Command Palette does not call the model.
+97. Typing does not automatically call the model.
+98. Stage 48 does not make one model request per keystroke.
+99. READY interpretation still requires explicit user execution.
+100. Model response never autoexecutes.
+101. Stale interpretation results cannot execute after text changes.
+102. Natural-language interpretation failure does not break local Command Palette commands.
+103. Natural-language interpretation failure does not break structured commands.
+104. Entity ambiguity remains resolved through deterministic Stage 47 flow.
+105. The model does not rank ambiguous Entity candidates.
+106. The model does not choose an Exchange for the user.
+107. Stage 48 does not store Recent Commands.
+108. Stage 48 does not create Favorite Commands.
+109. Stage 48 does not create personalized command ranking.
+110. Stage 48 does not create command usage history.
+111. Stage 48 introduces only minimal command-specific model infrastructure.
+112. Stage 48 does not build a general model marketplace.
+113. Stage 48 does not build multi-model routing.
+114. Stage 48 does not build model fallback chains.
+115. Stage 48 does not build AI memory.
+116. Stage 48 does not build AI tool orchestration.
+117. Stage 48 does not build AI streaming.
+118. Stage 48 does not build AI RAG.
+119. Stage 124 remains responsible for ATLAS AI Assistant V1.
+120. Stage 49 remains the next stage.
+
+

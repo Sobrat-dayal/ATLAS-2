@@ -338,3 +338,15 @@ Normal queries (e.g. `markets`, `apple`, `show me nvidia chart`) return `false` 
   - `token_count`
   - `duration_ms`
 - **Zero Command History:** Command strings are not stored in PostgreSQL, Redis, ClickHouse, or client `localStorage`.
+
+---
+
+## 13. Stage 48 Natural-Language Compilation Layer
+
+Stage 48 introduces Natural-Language Command Interpretation without altering Stage 47's deterministic authority:
+- Unstructured instructions (e.g. `"show me NVDA's chart"`) are mapped by the Stage 48 interpreter into strict intermediate intents (`OPEN_ENTITY_IN_MODULE`, `NAVIGATE_MODULE`, etc.).
+- `NaturalLanguageIntentCompiler` translates valid intents into canonical Stage 47 command strings (e.g. `/charts "NVDA"`).
+- **Stage 48 strictly feeds the compiled command into the Stage 47 Parser and Semantic Binder**.
+- It does **not** bypass Stage 47, does not invent custom routing or execution mechanisms, and does not bypass Stage 22 Entity Resolution.
+- Stage 47 remains the single deterministic source of truth for command grammar, validation, entity binding, and execution readiness.
+

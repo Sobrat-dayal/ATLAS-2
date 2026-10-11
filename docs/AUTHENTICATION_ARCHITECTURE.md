@@ -1,0 +1,23 @@
+# ATLAS Authentication Architecture
+
+## 1. Overview
+The ATLAS platform uses Supabase Authentication (Stage 13) for user identity and session management. All protected API requests include a bearer JWT in the HTTP `Authorization` header.
+
+The FastAPI backend validates the JWT using `get_current_user` in `apps/api/src/atlas_api/auth/dependencies.py`, producing an authenticated `AuthPrincipal` containing:
+- `sub`: The canonical user UUID.
+- `email`: The verified email address.
+- `aud`: Audience claim (`authenticated`).
+- `role`: Supabase role claim.
+
+---
+
+## 2. Authenticated Model-Backed Command Interpretation (Stage 48)
+
+Stage 48 integrates single-turn natural-language command interpretation through `POST /api/v1/commands/interpret`:
+
+### Security & Privacy Protections
+1. **Mandatory Authentication**: The endpoint requires a valid session bearer token. Unauthenticated requests are rejected immediately with HTTP 401.
+2. **Zero Client Credentials**: The browser never receives model API keys or provider secrets. Model credentials are strictly server-side environment secrets.
+3. **Identity Privacy**: The user's `sub`, `email`, profile information, portfolio data, watchlist contents, and authentication tokens are **never** included in the prompt payload sent to the language model.
+4. **Data Isolation**: The language model receives only the user's plain text command string wrapped in a strictly delimited JSON object alongside allowed static module metadata.
+5. **No Persistent Session**: Interpretation requests are entirely stateless. No server-side or provider-side interpretation sessions, conversation histories, or threads are established.

@@ -143,3 +143,14 @@ When a user selects an entity from Global Search:
 | **Action on Selection** | Updates selected entity; preserves current route | Updates selected entity AND navigates to target module |
 | **Resolution Engine** | PostgreSQL GIN trigram queries | Stage 22 `EntityResolutionService` exact match |
 
+---
+
+## 8. Global Search vs. Stage 48 Natural-Language Command Interpretation
+
+In Stage 48, natural-language command interpretation translates instructions like `"show TSMC on the map"` into Stage 47 syntax:
+- **No Fuzzy Matching in Stage 48**: The language model only extracts target text as provided in user input (e.g. `"TSMC"`). It does not perform fuzzy lookup or alias correction.
+- **Stage 47 Binding**: The extracted target text is passed to Stage 47 and resolved strictly through Stage 22 exact resolution.
+- **Typo Rejection**: A typo like `"show NVIDA chart"` does not fall back to Global Search fuzzy matching. It returns `TARGET_NOT_FOUND`.
+- **Discovery Role**: Global Search remains the dedicated interactive tool for fuzzy exploration and discovering entities when the exact spelling or ticker is unknown.
+
+

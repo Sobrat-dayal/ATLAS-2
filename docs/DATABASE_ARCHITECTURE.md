@@ -91,3 +91,12 @@ Stage 47 introduces **no database schema changes**:
 - 0 Redis/Valkey business keys added.
 - Command parsing is strictly read-only and command specs are statically code-defined. No command history or parser sessions are persisted.
 
+## Natural-Language Command Interpretation (Stage 48)
+Stage 48 introduces **no database schema changes**:
+- 0 PostgreSQL tables or Alembic migrations added.
+- 0 ClickHouse tables or metrics tables added.
+- 0 Redis/Valkey keys added.
+- Read-only queries to PostgreSQL occur solely through Stage 22 `EntityResolutionService` during Stage 47 entity target resolution.
+- Natural-language commands, prompts, and model responses are strictly ephemeral; 0 command history or chat transcripts are persisted.
+
+

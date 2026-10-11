@@ -75,6 +75,24 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Backend: `pytest apps/api/tests/commands/test_command_parsing.py`
   - Frontend: `npx.cmd tsx apps/web/tests/commands-parser.test.ts`
 
+## Natural-Language Command Interpretation (Stage 48)
+- **Natural Phrasing**: Single-turn interpretation translating human instructions into deterministic Stage 47 syntax:
+  - `"take me to markets"` -> `/markets`
+  - `"show me NVDA's chart"` -> `/charts "NVDA"`
+  - `"open NVIDIA Corporation in companies"` -> `/companies "NVIDIA Corporation"`
+  - `"open settings"` -> `/settings`
+- **Safety Boundary**: The model may interpret intent, but it may **never** directly execute anything. 0 tools provided, 0 direct command IDs from model, 0 autonomous agents, no multi-step planner, no conversation memory, no DB writes.
+- **Developer Configuration**:
+  - `ATLAS_NL_COMMAND_ENABLED=true`: Enable natural-language interpretation.
+  - `ATLAS_NL_COMMAND_MOCK_MODE=true`: Enable deterministic offline mock model client for tests & local dev.
+  - `ATLAS_NL_COMMAND_MODEL_BASE_URL`: Server-side endpoint URL (default `https://api.openai.com/v1`).
+  - `ATLAS_NL_COMMAND_MODEL_NAME`: Configured model identifier (default `gpt-4o-mini`).
+  - `ATLAS_NL_COMMAND_MODEL_API_KEY`: Server-side model credential (never exposed to frontend).
+  - `ATLAS_NL_COMMAND_TIMEOUT_SECONDS=10.0`: Model request timeout.
+- **Testing**:
+  - Backend: `pytest apps/api/tests/commands/test_natural_language_interpretation.py`
+  - Frontend: `npx.cmd tsx --test apps/web/tests/commands-interpreter.test.ts`
+
 ## The 20 Modules
 1. Home
 2. Markets
@@ -96,4 +114,5 @@ The full product specification is located in the `docs/` directory. Check the [D
 18. Saved
 19. Workspaces
 20. Agents
+
 

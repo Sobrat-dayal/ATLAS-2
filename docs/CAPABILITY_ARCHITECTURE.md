@@ -20,3 +20,11 @@ Stage 47 command parsing is system infrastructure rather than a user business Ca
 - It does **not** register a generic `commands.execute` capability.
 - It is **not** exposed as an AI tool, Agent tool, or MCP tool.
 
+## Natural-Language Command Interpretation (Stage 48)
+Stage 48 natural-language command interpretation is an interpretation aid, NOT an executable Capability:
+- It does **not** register a generic executable Capability.
+- It cannot invoke Capabilities, Agents, or Workflows.
+- The interpretation model receives **0 tools** (zero Capability tools, zero Provider tools, zero database tools).
+- Execution remains strictly bound to deterministic Stage 46 local commands and Stage 47 validated commands upon explicit user confirmation.
+
+

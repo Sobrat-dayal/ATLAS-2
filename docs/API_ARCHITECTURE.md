@@ -52,3 +52,13 @@ Stage 38 introduces no public Valkey caching or state API.
 - **Behavior**: Lexes, parses, binds, resolves entity targets via Stage 22, and checks module permissions.
 - **Database/Storage**: 0 PostgreSQL writes, 0 Redis calls, 0 ClickHouse queries, 0 provider calls, 0 LLM calls. No command history stored.
 
+## Natural-Language Command Interpretation API (Stage 48)
+- **Endpoint**: `POST /api/v1/commands/interpret`
+- **Method**: `POST` (protects natural-language queries from appearing in access URLs or logs)
+- **Nature**: Single-turn, bounded, side-effect free, read-only
+- **Auth**: Requires valid session token (Stage 13) + `atlas.access` permission (Stage 14)
+- **Behavior**: Validates user text, invokes configured model once for structured intent classification, compiles allowed intent into Stage 47 syntax, reparses and binds via Stage 47, resolves entities via Stage 22, and returns structured preview.
+- **Execution**: The endpoint **never** executes commands. Execution remains an explicit user action via the Stage 46 frontend executor.
+- **Database/Storage**: 0 PostgreSQL writes, 0 Redis calls, 0 ClickHouse queries, 0 market data provider calls, 0 chat/interpretation history saved. Raw natural-language input is never logged at INFO.
+
+
