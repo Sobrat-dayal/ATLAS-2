@@ -23,8 +23,8 @@ class GlobalSearchEntityResult(BaseModel):
 
 class GlobalSearchResponse(BaseModel):
     results: List[GlobalSearchEntityResult]
-    
-    
+
+
 class GlobalSearchRequest(BaseModel):
     query: str
     entity_types: Optional[List[EntityTypeKey]] = None

@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class GlobalSearchMatchKind(str, Enum):
     EXACT_IDENTIFIER = "EXACT_IDENTIFIER"
     EXACT_CANONICAL_NAME = "EXACT_CANONICAL_NAME"

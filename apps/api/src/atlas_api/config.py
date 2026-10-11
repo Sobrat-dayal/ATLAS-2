@@ -1,7 +1,8 @@
 from enum import Enum
 from functools import lru_cache
-from typing import List
+from typing import Any, List
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,7 +26,18 @@ class Settings(BaseSettings):
     api_port: int = 8000
     api_prefix: str = "/api/v1"
 
-    cors_origins: List[str] = ["http://127.0.0.1:3000", "http://localhost:3000"]
+    cors_origins: Any = ["http://127.0.0.1:3000", "http://localhost:3000"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> List[str]:
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                import json
+                return json.loads(v)
+            return [x.strip() for x in v.split(",") if x.strip()]
+        return list(v) if v else []
 
     app_name: str = "ATLAS API"
     app_version: str = "0.1.0"

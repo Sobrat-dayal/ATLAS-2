@@ -68,11 +68,34 @@ from .relationships import (
 # Resolution
 from .resolution import EntityResolutionRequest, EntityResolutionResponse, entity_resolve_factory
 
+# Search
+from atlas.search.models import GlobalSearchRequest, GlobalSearchResponse
+from .search import search_entities_factory
+
 
 def register_all_handlers(registry: CapabilityRegistry):
+    # --- search ---
+    registry.register(
+        CapabilityDefinition(
+            key="search.entities",
+            version=1,
+            title="Search Entities",
+            description="Deterministically search entities by name, alias, and identifier",
+            category="Search",
+            permission_class=CapabilityPermissionClass.READ,
+            required_permissions=["atlas.access"],
+            exposure=CapabilityExposure.APPLICATION,
+            requires_confirmation=False,
+            input_model=GlobalSearchRequest,
+            output_model=GlobalSearchResponse,
+        ),
+        search_entities_factory,
+    )
+
     # --- entities ---
     registry.register(
         CapabilityDefinition(
+
             key="entity.get",
             version=1,
             title="Get Entity",

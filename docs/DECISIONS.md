@@ -521,3 +521,239 @@ This document records the major architectural and product decisions established.
 215. Stage 42 provides at-least-once-friendly replay semantics.
 216. Stage 42 supports future snapshot-plus-cursor synchronization for Stage 43.
 217. Stage 42 adds only the Redis Stream ACL permissions actually required (XADD, XREAD, XINFO).
+
+## Stage 45 Decisions - Global Search
+
+1. Stage 45 builds Global Search for ATLAS.
+2. Stage 45 searches ATLAS Universal Entity metadata only.
+3. Stage 45 does not search the public web.
+4. Stage 45 does not call OpenBB.
+5. Stage 45 does not call Provider APIs.
+6. Stage 45 does not query ClickHouse.
+7. Stage 45 does not use Redis as a search engine or cache.
+8. Stage 45 does not deploy Elasticsearch.
+9. Stage 45 does not deploy OpenSearch.
+10. Stage 45 does not deploy Meilisearch.
+11. Stage 45 does not deploy Typesense.
+12. Stage 45 does not deploy Algolia.
+13. Stage 45 does not use embeddings.
+14. Stage 45 does not use pgvector search.
+15. Stage 45 does not use LLM reranking.
+16. PostgreSQL is the initial Global Search engine.
+17. `pg_trgm` is used for fuzzy name/alias search.
+18. Stage 45 searches canonical names.
+19. Stage 45 searches display names.
+20. Stage 45 searches current aliases.
+21. Stage 45 searches current supported identifiers.
+22. Entity UUID (`entity_id`) remains canonical Search identity.
+23. Ticker is not canonical Search identity.
+24. Company name is not canonical Search identity.
+25. Provider ID is not canonical Search identity.
+26. Searching a ticker returns Security/Instrument identity.
+27. Search does not automatically convert Security into issuer Company.
+28. Searching a Company name returns the Company Entity.
+29. Ambiguous tickers return multiple Securities.
+30. Identifier scope is preserved where relevant.
+31. Stage 45 reuses Stage 22 Entity text normalization.
+32. Stage 45 reuses Stage 21 identifier normalization.
+33. Stage 45 does not create a second normalization system.
+34. Stage 45 preserves meaningful punctuation.
+35. Stage 45 supports exact matching.
+36. Stage 45 supports prefix matching.
+37. Stage 45 supports fuzzy matching for names/aliases.
+38. Stage 45 does not fuzzy-match identifiers.
+39. Very short queries (<3 chars) do not use trigram fuzzy matching.
+40. One-character queries remain bounded and support valid short tickers.
+41. SQL LIKE wildcards are escaped.
+42. Search SQL is parameterized.
+43. Stage 45 does not expose raw SQL controls.
+44. Stage 45 does not expose user-defined sort expressions.
+45. Stage 45 result count is bounded (default 20, max 50).
+46. Stage 45 search query length is bounded (max 256 characters).
+47. Stage 45 does not create unbounded pagination.
+48. Stage 45 returns ranked candidate Entities.
+49. Stage 22 Resolution remains separate from Global Search.
+50. Global Search does not replace EntityResolutionService.
+51. Search result ranking is deterministic.
+52. Search ranking does not use fake confidence percentages.
+53. Trigram similarity is an internal ranking signal, not confidence.
+54. One Entity appears once using its best match.
+55. Current aliases/identifiers are searched by default.
+56. Historical aliases/identifiers are excluded by default.
+57. Stage 45 does not personalize ranking.
+58. Stage 45 does not boost Portfolio holdings.
+59. Stage 45 does not boost Watchlist membership.
+60. Stage 45 does not boost search popularity.
+61. Stage 45 does not rank by market cap.
+62. Stage 45 does not rank by volume.
+63. Stage 45 does not rank using an LLM.
+64. Search result payloads remain lightweight.
+65. Search does not fetch all identifiers.
+66. Search does not fetch all aliases.
+67. Search does not fetch Relationships.
+68. Search does not fetch Provenance.
+69. Stage 45 does not search research-paper full text.
+70. Stage 45 does not search PDF content.
+71. Stage 45 does not search News article bodies.
+72. Stage 45 does not search financial statement rows.
+73. Stage 45 does not traverse Relationship Graph.
+74. Stage 45 does not implement semantic search.
+75. Stage 45 does not implement advanced query syntax.
+76. Stage 45 does not implement Boolean search.
+77. Stage 45 does not implement regex search.
+78. Stage 45 does not implement wildcard query language.
+79. Stage 45 does not implement module navigation search.
+80. Stage 46 remains responsible for Command Palette.
+81. Stage 47 remains responsible for command parsing.
+82. Stage 48 remains responsible for natural-language command interpretation.
+83. Search route requires authentication.
+84. Search route requires `atlas.access`.
+85. Global Search stores no search history by default.
+86. Global Search stores no recent searches by default.
+87. Global Search does not store raw queries in Redis.
+88. Global Search does not store raw queries in PostgreSQL.
+89. Raw search queries are not logged at INFO.
+90. Search queries are treated as potentially private text.
+91. Search UI uses the existing top-bar search location.
+92. Stage 45 does not create a second global search surface.
+93. Search UI is dense and consistent with ATLAS.
+94. Search UI does not add fake metrics.
+95. Search UI does not add AI decoration.
+96. Search UI uses debounced requests (200ms).
+97. Search UI cancels/ignores stale requests via AbortController.
+98. Old HTTP responses cannot replace newer query results.
+99. Search results are keyboard accessible.
+100. Search uses combobox/listbox accessibility semantics.
+101. Search result selection updates Stage 25 Selected Entity context.
+102. Search selection stores only Entity UUID as global authoritative selection.
+103. Search selection does not automatically navigate.
+104. Search query is not put into Stage 26 Global Application Context.
+105. Search query is not persisted in localStorage.
+106. Search results are not persisted in localStorage.
+107. Stage 45 does not create recent-search UI.
+108. Stage 45 does not create user search preferences.
+109. Stage 45 does not expose Provider external IDs by default.
+110. Stage 45 does not generate backend HTML highlights.
+111. Search highlighting uses safe text rendering.
+112. `dangerouslySetInnerHTML` is not required.
+113. Search uses existing database pool.
+114. Stage 45 does not deploy a Search microservice.
+115. Stage 45 does not deploy a background Search indexing worker.
+116. Stage 45 does not deploy Kafka/Redpanda indexing.
+117. Stage 45 does not create CDC indexing.
+118. Stage 45 does not create a denormalized Search table by default.
+119. Stage 45 adds only required PostgreSQL indexes/extensions.
+120. Stage 46 remains the next stage.
+
+## Stage 46 Decisions - Command Palette
+
+1. Stage 46 builds the ATLAS Command Palette.
+2. Stage 46 does not build the ATLAS command parser (Stage 47).
+3. Stage 46 does not build natural-language command interpretation (Stage 48).
+4. Stage 45 remains responsible for Entity Search.
+5. Stage 46 commands are explicitly registered.
+6. Stage 46 does not dynamically generate commands from arbitrary user text.
+7. Stage 46 uses stable machine-readable command IDs.
+8. Command IDs are not user command syntax.
+9. Stage 46 initially focuses on safe frontend navigation and shell actions.
+10. The exact 20 ATLAS module routes receive navigation commands.
+11. Global Settings remains outside the 20 numbered modules.
+12. Command Palette may open Global Search via "Search Entities" command.
+13. Entity Search results are not converted into Command definitions.
+14. Stage 46 does not create Entity-specific commands.
+15. Stage 46 does not create trade commands.
+16. Stage 46 does not create portfolio-analysis commands.
+17. Stage 46 does not create Agent execution commands.
+18. Stage 46 does not create Workflow commands.
+19. Stage 46 does not create Terminal commands.
+20. Stage 46 does not call Providers.
+21. Stage 46 does not call OpenBB.
+22. Stage 46 does not call the public web.
+23. Stage 46 does not call an LLM (0 LLM calls).
+24. Stage 46 does not use embeddings.
+25. Stage 46 does not use vector search.
+26. Stage 46 command filtering is local to the browser.
+27. Stage 46 requires no PostgreSQL Search.
+28. Stage 46 requires no Redis Search.
+29. Stage 46 requires no ClickHouse.
+30. Stage 46 uses a central typed Command Registry.
+31. Command definitions are version-controlled application code.
+32. Stage 46 does not create a Command database table.
+33. Stage 46 does not create a Redis Command Registry.
+34. Stage 46 does not load commands from a remote server.
+35. Stage 46 does not allow user-created command code.
+36. Stage 46 does not install plugin commands.
+37. Stage 46 does not allow Agent-created commands.
+38. Stage 46 command IDs must be unique.
+39. Stage 46 commands use existing module metadata from Stage 4.
+40. Stage 46 does not duplicate module route metadata.
+41. Command availability is context-aware but fast and side-effect-free.
+42. Command availability does not call databases.
+43. Command availability does not call Providers.
+44. Stage 46 respects existing module authorization.
+45. Forbidden modules are hidden and not exposed through the palette.
+46. Palette execution does not bypass route guards.
+47. Command execution delegates to existing ATLAS actions.
+48. The Command Executor does not become a second business-logic layer.
+49. Stage 46 does not use eval.
+50. Stage 46 does not use exec.
+51. Stage 46 does not dynamically import code from user query.
+52. Stage 46 does not execute shell commands.
+53. Stage 46 does not navigate to arbitrary user-entered URLs.
+54. Stage 46 command filtering is deterministic.
+55. Stage 46 does not use AI ranking.
+56. Stage 46 does not use personalized ranking.
+57. Stage 46 does not record command usage history.
+58. Stage 46 does not implement Recent Commands.
+59. Stage 46 does not implement Favorite Commands.
+60. Stage 46 does not show fake confidence percentages.
+61. Stage 46 uses labels, aliases, keywords and descriptions for filtering.
+62. Stage 46 aliases are palette metadata, not Stage 47 syntax.
+63. Stage 46 does not implement Bloomberg shorthand.
+64. Stage 46 does not parse slash commands.
+65. Stage 46 does not parse `NVDA CHART`.
+66. Stage 46 does not parse `PORT RISK`.
+67. Stage 46 does not interpret natural language.
+68. Matching a text query to a registered command is not command parsing.
+69. User must explicitly select/execute a command.
+70. Stage 46 does not auto-run the best result.
+71. Cmd/Ctrl+K is the primary global shortcut.
+72. Shortcut handling respects text-editing contexts.
+73. Stage 46 uses the persistent authenticated AppShell.
+74. Stage 46 does not create a second unrelated global search shell.
+75. Global Search remains usable after Stage 46.
+76. Command Palette state is ephemeral frontend state.
+77. Palette query is not placed in Global Application Context.
+78. Palette query is not stored in localStorage.
+79. Palette query is not stored in the URL.
+80. Palette query is not persisted in PostgreSQL.
+81. Palette query is not persisted in Redis.
+82. Raw palette query is not logged at INFO.
+83. Stage 46 does not create command-history analytics.
+84. Palette is keyboard accessible.
+85. Palette restores focus after closing where practical.
+86. Palette uses existing ATLAS design tokens.
+87. Palette does not use purple gradients.
+88. Palette does not use emoji UI icons.
+89. Palette does not use heavy animation.
+90. Palette does not use fake AI decoration.
+91. Navigation uses internal router behavior (`router.push`).
+92. Navigation does not force full-page reload.
+93. Navigation does not clear Selected Entity.
+94. `Clear Selected Entity` delegates to Stage 25 context.
+95. `Search Entities` delegates to Stage 45 Global Search.
+96. Stage 46 does not create a second Entity Search implementation.
+97. Stage 46 requires no new backend API.
+98. Stage 46 requires no PostgreSQL migration.
+99. Stage 46 requires no Redis schema/business state.
+100. Stage 46 requires no ClickHouse change.
+101. Stage 46 adds 0 new npm packages.
+102. Existing design system primitives are reused.
+103. Stage 46 does not require `cmdk`.
+104. Stage 46 does not create backend command Capabilities for simple frontend navigation.
+105. Stage 46 does not modify Market Data systems.
+106. Stage 46 does not modify Provider systems.
+107. Stage 46 does not modify realtime Quote transport.
+108. Stage 46 does not modify freshness monitoring.
+109. Stage 47 remains responsible for ATLAS command parsing.
+110. Stage 48 remains responsible for natural-language command interpretation.

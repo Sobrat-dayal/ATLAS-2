@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 
+
 class GlobalSearchSettings(BaseSettings):
     default_limit: int = 20
     max_limit: int = 50

@@ -45,6 +45,20 @@ pnpm valkey-up
 ```
 The full product specification is located in the `docs/` directory. Check the [Documentation Index](docs/README.md) for more details.
 
+## Global Search (Stage 45)
+- Open via center search bar in AppShell TopBar.
+- Backed by PostgreSQL indexed search (`entities`, `entity_aliases`, `entity_identifiers`).
+- Searches canonical entities with deterministic exact, prefix, and trigram fuzzy matching.
+- Selecting an entity updates global selected entity context without auto-navigating.
+- Run tests: `pytest apps/api/tests/search/test_global_search.py`
+
+## Command Palette (Stage 46)
+- **Shortcut**: `Cmd + K` (macOS) / `Ctrl + K` (Windows/Linux) or click the shortcut badge in the TopBar.
+- **Commands**: Discover and execute explicitly registered navigation commands across all 20 modules, global settings, section settings, search entity handoff, and entity selection clearance.
+- **Execution**: 100% frontend-local deterministic filtering with 0 backend queries, 0 Provider calls, and 0 LLM calls.
+- **Adding a Command**: Register in `apps/web/src/lib/commands/registry.ts` with a unique ID, human-readable label, category, optional keywords/aliases, and typed `execute` handler.
+- **Run tests**: `npx.cmd tsx --test apps/web/tests/commands.test.ts`
+
 ## The 20 Modules
 1. Home
 2. Markets
@@ -66,3 +80,4 @@ The full product specification is located in the `docs/` directory. Check the [D
 18. Saved
 19. Workspaces
 20. Agents
+

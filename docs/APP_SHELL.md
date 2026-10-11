@@ -44,8 +44,7 @@ The App Shell mounts the `GlobalApplicationContextProvider` which maintains the 
 - **Agent Dock**: Currently contains empty state placeholders. Will handle AI chat and autonomous agent flows.
 - **ATLAS AI / Top Bar Hooks**: UI entry points exist but have no backend integration yet.
 - **Bottom Panel**: Clicking taskbar items toggles a placeholder bottom panel area. To be populated in subsequent stages.
-- **Market Ticker**: Uses demo array placeholder. To be connected to a live context/data store later.
-- **Command Menu**: Global search has `Cmd/Ctrl+K` capture logic, ready to connect to a command palette framework.
+- **Command Palette (Stage 46)**: Global keyboard shortcut `Cmd/Ctrl+K` opens the Command Palette overlay for discoverable module navigation and shell commands. Global Entity Search (Stage 45) remains active in the center TopBar.
 
 ## Dimensions (Tokens)
 - Sidebar: 160px expanded, 56px collapsed

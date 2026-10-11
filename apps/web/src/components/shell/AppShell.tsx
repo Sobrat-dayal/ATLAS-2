@@ -9,9 +9,12 @@ import { AgentDock } from "./AgentDock";
 import { BottomTaskbar } from "./BottomTaskbar";
 import { MarketTickerBar } from "./MarketTickerBar";
 import { SectionSettingsDrawer } from "@/components/settings/SectionSettingsDrawer";
+import { CommandPalette } from "@/components/command-palette";
+import { useCommandPaletteShortcut } from "@/hooks/commands";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { moduleFullscreen } = useShellState();
+  useCommandPaletteShortcut();
 
   if (moduleFullscreen) {
     return (
@@ -20,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <MainWorkspace>
           {children}
         </MainWorkspace>
+        <CommandPalette />
       </div>
     );
   }
@@ -47,6 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       
       {/* Overlays */}
       <SectionSettingsDrawer />
+      <CommandPalette />
     </div>
   );
 }
