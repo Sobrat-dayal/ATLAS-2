@@ -99,4 +99,20 @@ Stage 48 introduces **no database schema changes**:
 - Read-only queries to PostgreSQL occur solely through Stage 22 `EntityResolutionService` during Stage 47 entity target resolution.
 - Natural-language commands, prompts, and model responses are strictly ephemeral; 0 command history or chat transcripts are persisted.
 
+## Persistent Notifications (Stage 49)
+Stage 49 introduces the durable, user-scoped `notifications` table in PostgreSQL:
+- **Table**: `notifications`
+- **Primary Key**: `notification_id UUID`
+- **Recipient Ownership**: `recipient_user_id UUID NOT NULL` (references Supabase `auth.users.id`).
+- **Entity Target**: `action_entity_id UUID NULL` (FK → `entities.entity_id ON DELETE SET NULL`).
+- **Indexes**:
+  - `ix_notifications_recipient_pagination` on `(recipient_user_id, created_at DESC, notification_id DESC)`
+  - `ix_notifications_recipient_unread` on `(recipient_user_id, created_at DESC)` WHERE `read_at IS NULL AND archived_at IS NULL`
+  - `uq_notifications_recipient_producer_dedupe` on `(recipient_user_id, producer_key, dedupe_key)` WHERE `dedupe_key IS NOT NULL`
+  - `ix_notifications_recipient_archived` on `(recipient_user_id, archived_at DESC)` WHERE `archived_at IS NOT NULL`
+- **Check Constraints**: `ck_notifications_category`, `ck_notifications_severity`, `ck_notifications_action_kind`, `ck_notifications_action_consistency`.
+- **Authoritative Source of Truth**: PostgreSQL is the exclusive persistent authority. 0 Redis keys, 0 ClickHouse tables.
+- **Migration**: `7e8f9012abcd_stage49_notifications.py`.
+
+
 

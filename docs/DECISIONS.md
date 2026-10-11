@@ -1016,4 +1016,130 @@ This document records the major architectural and product decisions established.
 119. Stage 124 remains responsible for ATLAS AI Assistant V1.
 120. Stage 49 remains the next stage.
 
+---
+
+## Stage 49 - Build Persistent Notification Center
+
+1. Stage 49 builds the Persistent Notification Center.
+2. PostgreSQL is the durable Notification source of truth.
+3. Notifications are user-scoped.
+4. Every Notification belongs to one authenticated recipient.
+5. Public Notification APIs never accept recipient user ID as ownership authority.
+6. Notification IDs are UUIDs.
+7. Notification content is plain text.
+8. Stage 49 does not support executable HTML Notification bodies.
+9. Stage 49 does not require Markdown rendering.
+10. Notification title length is bounded (160 characters).
+11. Notification message length is bounded (2000 characters).
+12. Notifications have typed category metadata (`general`, `system`, `security`, `data`, `market`, `research`, `account`).
+13. Notifications have typed severity metadata (`info`, `success`, `warning`, `error`).
+14. Stage 49 does not create fake urgency/confidence scores.
+15. Notifications record a producer key (`[a-z][a-z0-9._-]{0,127}`).
+16. Notification producer key is not user-editable.
+17. Notifications may include an optional producer dedupe key.
+18. Dedupe uniqueness is scoped to recipient + producer + dedupe key.
+19. Dedupe retries do not create duplicate rows.
+20. Dedupe payload conflicts fail safely (`NotificationDedupeConflictError`).
+21. Notification content is append-oriented after creation.
+22. User state is represented through read/archive timestamps.
+23. UNREAD means `read_at IS NULL AND archived_at IS NULL`.
+24. READ means `read_at IS NOT NULL AND archived_at IS NULL`.
+25. ARCHIVED means `archived_at IS NOT NULL`.
+26. Archiving an unread Notification marks it read (`read_at = now, archived_at = now`).
+27. Stage 49 does not hard-delete Notifications through user API.
+28. Stage 49 does not implement archive restoration.
+29. Stage 49 does not implement retention cleanup.
+30. Stage 49 does not implement Notification expiration.
+31. Notification actions are optional.
+32. Notification actions may navigate only to safe internal ATLAS routes.
+33. Stage 49 does not allow external Notification URLs.
+34. Stage 49 does not allow `javascript:` Notification actions.
+35. Stage 49 does not allow Notification actions to execute commands.
+36. Stage 49 does not allow Notification actions to execute trades.
+37. Stage 49 does not allow Notification actions to execute Agents.
+38. Stage 49 does not allow Notification actions to execute Workflows.
+39. ENTITY_ROUTE may select an existing Entity and navigate internally.
+40. Notification Entity IDs must reference real Universal Entities.
+41. Entity/module authorization remains enforced when following Notification actions.
+42. Stage 49 introduces a `NotificationService`.
+43. Stage 49 introduces a `NotificationRepository`.
+44. `NotificationService` can be called by future backend subsystems.
+45. Notification creation is not exposed as a normal public user API.
+46. Stage 49 does not create an admin broadcast API.
+47. Stage 49 does not create bulk Notification fanout.
+48. Stage 49 APIs require authentication.
+49. Stage 49 APIs require `atlas.access`.
+50. Notification list/mutations are recipient-scoped.
+51. Cross-user Notification IDs do not reveal another user's data (return HTTP 404).
+52. Notification list uses deterministic keyset pagination.
+53. Notification list is bounded (default 25, max 100).
+54. Unread count has a dedicated lightweight endpoint.
+55. Mark-read is idempotent.
+56. Mark-unread is supported for non-archived Notifications.
+57. Mark-all-read affects only the current authenticated user's non-archived unread rows.
+58. Archive is idempotent.
+59. Stage 49 adds a top-bar Notification Center.
+60. Stage 49 reuses the existing AppShell.
+61. Stage 49 does not create a separate Notifications page by default.
+62. Stage 49 displays a real unread badge.
+63. Stage 49 does not display fake Notification counts.
+64. Stage 49 uses existing ATLAS design-system icons (`lucide-react`).
+65. Stage 49 does not use emoji UI icons.
+66. Stage 49 does not use pill-heavy styling.
+67. Notification unread state is not communicated by color alone.
+68. Notification rows are keyboard accessible.
+69. Notification message content is rendered as text.
+70. Stage 49 does not require `dangerouslySetInnerHTML`.
+71. Notification list is paginated.
+72. Stage 49 does not load the entire Notification history at once.
+73. Frontend Notification state uses dedicated context/hook data layer.
+74. Notification content is not persisted to `localStorage`.
+75. Notification content is not persisted to `sessionStorage`.
+76. Notification query caches are cleared when authenticated principal changes.
+77. Stage 49 uses bounded unread-count polling (30 seconds).
+78. Stage 49 does not poll the full Notification list continuously while closed.
+79. Notification Center refetches when opened.
+80. Unread count refetches on window focus.
+81. Stage 49 does not create a Notification WebSocket protocol.
+82. Stage 49 does not modify the Stage 42 Market Event Stream.
+83. Stage 49 does not use Redis Pub/Sub.
+84. Stage 49 does not create a Redis Notification Stream.
+85. Stage 49 does not require Redis for Notification persistence.
+86. Stage 49 adds no ClickHouse Notification storage.
+87. Stage 49 does not create browser push notifications.
+88. Stage 49 does not request browser Notification API permission.
+89. Stage 49 does not send email.
+90. Stage 49 does not send SMS.
+91. Stage 49 does not send Telegram messages.
+92. Stage 49 does not send WhatsApp messages.
+93. Stage 49 does not send mobile push.
+94. Stage 49 does not play Notification sounds.
+95. Stage 49 does not toast every Notification.
+96. Stage 49 does not create user Notification-preference settings.
+97. Stage 49 does not create quiet hours.
+98. Stage 49 does not create a Do Not Disturb system.
+99. Stage 49 does not build Market alert rules.
+100. Stage 49 does not build Watchlist alerts.
+101. Stage 49 does not build Portfolio alerts.
+102. Stage 49 does not build Risk alerts.
+103. Stage 49 does not build Economic release alerts.
+104. Stage 49 does not build News alerts.
+105. Stage 49 does not build Agent alerts.
+106. Stage 49 does not build Workflow alerts.
+107. Stage 49 does not build approval actions.
+108. Stage 49 does not cause Stage 44 stale Quotes to create Notifications.
+109. Stage 49 Notification Center may legitimately be empty until a producer exists.
+110. Stage 49 uses optimistic frontend mutations where safe.
+111. Optimistic failures roll back.
+112. Unread count never becomes negative in client state.
+113. Stage 49 does not recursively create Notifications about Notification failures.
+114. Notification API responses do not expose dedupe keys.
+115. Notification API responses do not expose recipient user IDs unnecessarily.
+116. Stage 49 does not expose arbitrary producer internals in the UI.
+117. Notification messages are treated as potentially sensitive.
+118. Notification titles/messages are not INFO-logged by default.
+119. Notification responses use private authenticated cache semantics (`Cache-Control: private, no-store`).
+120. Stage 50 remains responsible for the Bottom Taskbar Shell.
+
+
 

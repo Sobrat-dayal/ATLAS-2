@@ -1,5 +1,6 @@
 import { ShellProvider } from "@/hooks/shell/useShellState";
 import { AppShell } from "@/components/shell";
+import { NotificationsProvider } from "@/lib/notifications/useNotifications";
 
 /**
  * Atlas route group layout — wraps all authenticated app pages in the AppShell.
@@ -11,8 +12,10 @@ export default function AtlasGroupLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ShellProvider>
-      <AppShell>{children}</AppShell>
-    </ShellProvider>
+    <NotificationsProvider>
+      <ShellProvider>
+        <AppShell>{children}</AppShell>
+      </ShellProvider>
+    </NotificationsProvider>
   );
 }

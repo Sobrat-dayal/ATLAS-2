@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Bot, User } from "lucide-react";
+import { Bot, User } from "lucide-react";
 import { GlobalSearch } from "./GlobalSearch";
 import { useEffect, useState } from "react";
 import { useShellState } from "@/hooks/shell/useShellState";
@@ -8,6 +8,7 @@ import { DevAppearanceSwitcher } from "./DevAppearanceSwitcher";
 import { BackgroundQuickControl } from "./BackgroundQuickControl";
 import { SelectedEntityControl } from "./SelectedEntityControl";
 import { GlobalTimeRangeControl } from "./GlobalTimeRangeControl";
+import { NotificationCenter, NotificationTrigger } from "@/components/notifications";
 
 export function TopBar() {
   const [utcTime, setUtcTime] = useState("");
@@ -48,11 +49,11 @@ export function TopBar() {
           <span className="hidden sm:inline">ATLAS AI</span>
         </button>
 
-        {/* Notifications Hook */}
-        <button className="relative rounded-sm p-1.5 text-atlas-text-secondary hover:bg-atlas-surface-hover hover:text-atlas-text-primary transition-colors">
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-atlas-accent"></span>
-        </button>
+        {/* Persistent Notification Center */}
+        <div className="relative">
+          <NotificationTrigger />
+          <NotificationCenter />
+        </div>
 
         {/* Agent Dock Hook (Mobile/Alternative) */}
         {!agentDockOpen && (

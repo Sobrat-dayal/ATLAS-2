@@ -45,6 +45,7 @@ The App Shell mounts the `GlobalApplicationContextProvider` which maintains the 
 - **ATLAS AI / Top Bar Hooks**: UI entry points exist but have no backend integration yet.
 - **Bottom Panel**: Clicking taskbar items toggles a placeholder bottom panel area. To be populated in subsequent stages.
 - **Command Palette (Stage 46)**: Global keyboard shortcut `Cmd/Ctrl+K` opens the Command Palette overlay for discoverable module navigation and shell commands. Global Entity Search (Stage 45) remains active in the center TopBar.
+- **Notification Center (Stage 49)**: Persistent TopBar bell trigger with unread badge displaying real server unread count (hidden at 0, 99+ at >= 100). Opens an accessible slide-over/popover Notification Center with All/Unread filter tabs, keyset pagination, and optimistic read/archive controls. Operates over PostgreSQL via bounded 30s unread polling without WebSocket or Redis coupling.
 
 ## Dimensions (Tokens)
 - Sidebar: 160px expanded, 56px collapsed

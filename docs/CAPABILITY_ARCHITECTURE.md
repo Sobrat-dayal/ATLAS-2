@@ -27,4 +27,11 @@ Stage 48 natural-language command interpretation is an interpretation aid, NOT a
 - The interpretation model receives **0 tools** (zero Capability tools, zero Provider tools, zero database tools).
 - Execution remains strictly bound to deterministic Stage 46 local commands and Stage 47 validated commands upon explicit user confirmation.
 
+## Persistent Notifications (Stage 49)
+Stage 49 notification operations and center interactions are application APIs rather than general business Capabilities:
+- Notification user mutations (`mark_read`, `mark_unread`, `mark_all_read`, `archive`) are personal application state interactions, not business capabilities.
+- Notifications cannot execute Capabilities, trade operations, or approval actions.
+- Future backend ATLAS subsystems and producers call `NotificationService.create_notification(...)` directly within their domain workflows or transactions, rather than routing through the public API.
+
+
 

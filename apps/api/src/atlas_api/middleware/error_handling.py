@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from atlas.authorization.errors import AuthorizationError
+from atlas.core.exceptions import AtlasError as CoreAtlasError
 from ..exceptions import AtlasError
 from ..logging import request_id_var
 from ..schemas.errors import AtlasErrorEnvelope, AtlasErrorModel
@@ -15,8 +16,9 @@ logger = logging.getLogger(__name__)
 
 def setup_exception_handlers(app: FastAPI):
     @app.exception_handler(AtlasError)
+    @app.exception_handler(CoreAtlasError)
     @app.exception_handler(AuthorizationError)
-    async def atlas_error_handler(request: Request, exc: AtlasError | AuthorizationError):
+    async def atlas_error_handler(request: Request, exc: AtlasError | CoreAtlasError | AuthorizationError):
         req_id = getattr(request.state, "request_id", request_id_var.get())
         logger.warning(f"{type(exc).__name__}: {exc.code} - {exc.message}")
 

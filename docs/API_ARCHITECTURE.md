@@ -58,6 +58,23 @@ Stage 38 introduces no public Valkey caching or state API.
 - **Nature**: Single-turn, bounded, side-effect free, read-only
 - **Auth**: Requires valid session token (Stage 13) + `atlas.access` permission (Stage 14)
 - **Behavior**: Validates user text, invokes configured model once for structured intent classification, compiles allowed intent into Stage 47 syntax, reparses and binds via Stage 47, resolves entities via Stage 22, and returns structured preview.
+
+## Persistent Notifications API (Stage 49)
+Stage 49 introduces authenticated, user-scoped endpoints for the persistent Notification Center:
+- **`GET /api/v1/notifications`**: Keyset-paginated notification listing (`filter=all|unread|archived`, `limit=1..100`, `cursor`). Ordered by `created_at DESC, notification_id DESC`.
+- **`GET /api/v1/notifications/unread-count`**: Lightweight unread count endpoint for AppShell badge polling.
+- **`POST /api/v1/notifications/{id}/read`**: Idempotently marks notification as read.
+- **`POST /api/v1/notifications/{id}/unread`**: Marks notification as unread (rejects if archived).
+- **`POST /api/v1/notifications/read-all`**: Marks all active unread notifications as read.
+- **`POST /api/v1/notifications/{id}/archive`**: Archives notification (simultaneously marks read if unread).
+- **Security & Privacy**:
+  - Requires authenticated session + `atlas.access`.
+  - Recipient derived exclusively from authentication (`principal.user_id`).
+  - No public create endpoint, no hard delete endpoint.
+  - Cross-user mutations return HTTP 404 (no existence leakage).
+  - All responses set `Cache-Control: private, no-store`.
+  - Raw notification titles and messages are excluded from INFO logging.
+
 - **Execution**: The endpoint **never** executes commands. Execution remains an explicit user action via the Stage 46 frontend executor.
 - **Database/Storage**: 0 PostgreSQL writes, 0 Redis calls, 0 ClickHouse queries, 0 market data provider calls, 0 chat/interpretation history saved. Raw natural-language input is never logged at INFO.
 

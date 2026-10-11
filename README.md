@@ -93,6 +93,44 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Backend: `pytest apps/api/tests/commands/test_natural_language_interpretation.py`
   - Frontend: `npx.cmd tsx --test apps/web/tests/commands-interpreter.test.ts`
 
+## Persistent Notification Center (Stage 49)
+- **Architecture**: Secure, durable user-scoped notifications backed by PostgreSQL (`notifications` table).
+- **Update Strategy**: 30-second bounded unread-count polling while page is visible, focus refetch, center-open refetch. 0 WebSocket transport, 0 Redis keys, 0 ClickHouse tables.
+- **TopBar Trigger**: Bell icon with real unread count badge (hidden at 0, 99+ at >= 100).
+- **Notification Center**: Slide-over panel with All/Unread filter tabs, Mark all as read, and deterministic keyset pagination.
+- **Database Migration**:
+  ```bash
+  cd apps/api
+  uv run alembic upgrade head
+  ```
+- **Internal Service Creation**:
+  ```python
+  from atlas.notifications import CreateNotification, NotificationCategory, NotificationSeverity, NotificationService
+
+  service = NotificationService(db_session)
+  notif = await service.create_notification(
+      CreateNotification(
+          recipient_user_id=user_uuid,
+          category=NotificationCategory.SYSTEM,
+          severity=NotificationSeverity.INFO,
+          title="System Maintenance",
+          message="Scheduled upgrade completed successfully.",
+          producer_key="system.ops",
+      )
+  )
+  ```
+- **APIs**:
+  - `GET /api/v1/notifications` — Keyset-paginated list of owned notifications
+  - `GET /api/v1/notifications/unread-count` — Lightweight unread count
+  - `POST /api/v1/notifications/{id}/read` — Idempotent mark read
+  - `POST /api/v1/notifications/{id}/unread` — Mark unread (rejects archived)
+  - `POST /api/v1/notifications/read-all` — Mark all visible unread notifications as read
+  - `POST /api/v1/notifications/{id}/archive` — Archive notification (implies read)
+- **Testing**:
+  - Backend: `pytest apps/api/tests/notifications -v`
+  - Frontend: `npx.cmd tsx --test apps/web/tests/notifications.test.ts`
+
+
 ## The 20 Modules
 1. Home
 2. Markets

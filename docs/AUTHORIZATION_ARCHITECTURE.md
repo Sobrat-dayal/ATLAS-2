@@ -80,4 +80,12 @@ Natural-language command interpretation through `POST /api/v1/commands/interpret
 3. **Model Cannot Authorize**: The language model has zero authority over permissions and cannot grant, elevate, or bypass access rights.
 4. **Execution Recheck**: Because permissions can change between preview and execution, Stage 46 Command Executor and Next.js route guards recheck permissions at execution time.
 
+## Persistent Notifications Authorization (Stage 49)
+
+Stage 49 notification operations enforce two-tier authorization:
+1. **API Access Permission**: All Notification Center endpoints (`GET /notifications`, `GET /notifications/unread-count`, `POST /{id}/read`, `POST /{id}/unread`, `POST /read-all`, `POST /{id}/archive`) enforce `RequirePermission(PermissionCode.ATLAS_ACCESS)`.
+2. **Recipient Ownership Boundary**: In addition to RBAC permissions, every notification query and mutation enforces row-level ownership strictly matching `recipient_user_id == principal.user_id`. Attempting to access or mutate another user's notification returns HTTP 404 (preventing horizontal privilege escalation or enumeration).
+3. **Action Target Authorization**: Notification click-through navigation only issues Next.js client-side route transitions. The destination module and entity context remain guarded by the respective Stage 14 module authorization guards and Stage 25 entity permissions. Notification existence never grants module access.
+
+
 

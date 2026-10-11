@@ -151,3 +151,14 @@ The Valkey health service relies entirely on a safe, read-only `PING` operation 
 - **Stage 42**: Live Event Pipeline (may leverage Valkey Pub/Sub or Streams).
 - **Stage 43**: WebSockets (may use Valkey for fanout).
 - **Future Agents/Workflows**: Execution state, distributed locking, and queues.
+
+## Persistent Notifications (Stage 49)
+
+Stage 49 introduces **0** new Redis/Valkey business-state requirements:
+- 0 notification Redis lists or sets.
+- 0 notification unread counters in Redis.
+- 0 notification Pub/Sub channels.
+- 0 notification Redis Streams.
+- 0 notification caches in Valkey.
+- Notifications are durable, user-scoped records authoritative in PostgreSQL. Stage 49 explicitly avoids coupling notifications to Valkey.
+

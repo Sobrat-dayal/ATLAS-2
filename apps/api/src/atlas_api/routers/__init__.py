@@ -19,6 +19,7 @@ from .providers import router as providers_router
 from .realtime import router as realtime_router
 from .search import router as search_router
 from .commands import router as commands_router
+from .notifications import router as notifications_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -40,3 +41,4 @@ api_router.include_router(providers_router, prefix="")
 api_router.include_router(realtime_router, prefix="")
 api_router.include_router(search_router, prefix="")
 api_router.include_router(commands_router, prefix="")
+api_router.include_router(notifications_router, prefix="")

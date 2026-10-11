@@ -92,3 +92,33 @@ python/atlas/src/atlas/commands/natural_language/
 ├── compiler.py           # NaturalLanguageIntentCompiler (escaped Stage 47 syntax generator)
 └── interpreter.py        # NaturalLanguageCommandInterpreter (single-turn pipeline)
 ```
+
+## Persistent Notifications Architecture (Stage 49)
+
+Stage 49 establishes the persistent notification infrastructure:
+
+### Backend Domain Package
+```text
+python/atlas/src/atlas/notifications/
+├── __init__.py           # Package exports & public API
+├── enums.py              # NotificationCategory, Severity, ActionKind, ListFilter
+├── errors.py             # NotificationError hierarchy (NotFound, Archived, DedupeConflict, ActionError, CursorError)
+├── models.py             # NotificationModel (SQLAlchemy model with indexes and check constraints)
+├── repository.py         # NotificationRepository (keyset pagination, cursor encode/decode, atomic mutations)
+├── schemas.py            # CreateNotification, NotificationResponse, List/Count responses, route allowlist
+└── service.py            # NotificationService (canonical creation, dedupe idempotency, action validation)
+```
+
+### API Routing Layer
+- `apps/api/src/atlas_api/routers/notifications.py`: Public FastAPI endpoints for listing, unread count, read, unread, read-all, and archive.
+- `apps/api/migrations/versions/7e8f9012abcd_stage49_notifications.py`: Alembic migration for the `notifications` table, indexes, and constraints.
+
+### Frontend Components & State
+- `apps/web/src/lib/notifications/types.ts`: TypeScript interfaces for notifications.
+- `apps/web/src/lib/notifications/constants.ts`: Allowed internal routes set and relative time formatter.
+- `apps/web/src/lib/notifications/client.ts`: Typed fetch API client for `/api/v1/notifications/*`.
+- `apps/web/src/lib/notifications/useNotifications.tsx`: React Context, Hook, 30s unread count polling, and optimistic mutations.
+- `apps/web/src/components/notifications/NotificationTrigger.tsx`: TopBar bell trigger with unread badge (hidden at 0, 99+ at >= 100).
+- `apps/web/src/components/notifications/NotificationCenter.tsx`: Accessible slide-over/popover panel with tabs, mark all read, and keyset pagination.
+- `apps/web/src/components/notifications/NotificationRow.tsx`: Plain text notification row with severity badge, relative time, action navigation, and row controls.
+
