@@ -222,3 +222,12 @@ Stage 49 establishes persistent notification infrastructure only. The following 
 - User notification preferences / quiet hours / Do Not Disturb
 - Full standalone `/notifications` page or history export
 - Global Search integration for notifications
+
+---
+
+## 12. Notification Center vs. Stage 50 Bottom Taskbar Alerts
+
+It is critical to distinguish between Notifications and Alerts:
+- **Notifications (Stage 49)**: Durable, delivered messages presented to the authenticated user in the TopBar Notification Center. Backed by PostgreSQL (`notifications` table).
+- **Alerts (Stage 50 Bottom Taskbar)**: Future operational monitoring workspace for configuring condition rules and inspecting threshold triggers (price, risk, watchlist).
+- The Stage 50 Bottom Taskbar includes a reserved `Alerts` panel shell. Opening or interacting with the Alerts panel does not duplicate, modify, or query Notification Center data.

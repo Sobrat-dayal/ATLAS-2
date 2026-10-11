@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { SettingsGroup, SettingsRow } from '../SettingsControls';
 import { Network } from 'lucide-react';

@@ -114,5 +114,8 @@ Stage 49 introduces the durable, user-scoped `notifications` table in PostgreSQL
 - **Authoritative Source of Truth**: PostgreSQL is the exclusive persistent authority. 0 Redis keys, 0 ClickHouse tables.
 - **Migration**: `7e8f9012abcd_stage49_notifications.py`.
 
+## Bottom Taskbar (Stage 50)
+- **No Database Changes**: Stage 50 introduces 0 new PostgreSQL tables, 0 Alembic migrations, 0 ClickHouse changes, and 0 Redis keys. Bottom workspace panel definitions are version-controlled static frontend code.
+
 
 

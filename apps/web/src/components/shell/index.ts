@@ -6,3 +6,4 @@ export * from "./MarketTickerBar";
 export * from "./MainWorkspace";
 export * from "./AgentDock";
 export * from "./BottomTaskbar";
+export { BottomPanelHost } from "@/components/bottom-taskbar";

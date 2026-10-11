@@ -122,3 +122,37 @@ python/atlas/src/atlas/notifications/
 - `apps/web/src/components/notifications/NotificationCenter.tsx`: Accessible slide-over/popover panel with tabs, mark all read, and keyset pagination.
 - `apps/web/src/components/notifications/NotificationRow.tsx`: Plain text notification row with severity badge, relative time, action navigation, and row controls.
 
+## Bottom Taskbar Architecture (Stage 50)
+
+Stage 50 establishes the persistent bottom taskbar and expandable bottom workspace panel:
+
+### Frontend Components & State
+```text
+apps/web/src/
+├── lib/bottom-taskbar/
+│   ├── types.ts              # BottomPanelId, BottomPanelDefinition, Controller, State
+│   ├── registry.ts           # PANEL_DEFINITIONS static registry & runtime validator
+│   ├── layout.ts             # Height clamping helpers (min 160, max 45% viewport)
+│   └── index.ts              # Package barrel
+├── hooks/bottom-taskbar/
+│   ├── useBottomPanel.ts     # Hook providing typed BottomPanelController
+│   └── index.ts              # Package barrel
+└── components/bottom-taskbar/
+    ├── BottomTaskbar.tsx             # Persistent bottom bar with primary & trailing items
+    ├── BottomTaskbarItem.tsx         # Accessible taskbar button with active state & tooltips
+    ├── BottomTaskbarOverflowMenu.tsx # Responsive overflow menu on narrow viewports
+    ├── BottomPanelHost.tsx           # Workspace panel container with error isolation
+    ├── BottomPanelHeader.tsx         # Panel title, description, and close controls
+    ├── BottomPanelResizeHandle.tsx   # Pointer-capturing and keyboard resize handle
+    ├── ReservedPanelState.tsx        # Factual, grounded placeholder component
+    └── panels/                       # Canonical 7 panel shell implementations
+        ├── TasksPanel.tsx
+        ├── AgentsPanel.tsx
+        ├── JobsPanel.tsx
+        ├── AlertsPanel.tsx
+        ├── DownloadsPanel.tsx
+        ├── SystemHealthPanel.tsx
+        ├── TerminalPanel.tsx
+        └── index.ts
+```
+

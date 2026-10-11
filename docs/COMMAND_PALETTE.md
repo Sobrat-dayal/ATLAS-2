@@ -204,4 +204,12 @@ In Stage 48, the Command Palette integrates bounded natural-language command int
   - An `input_fingerprint` ensures an in-flight interpretation for query A is discarded if the query text changed to query B.
   - Closing the palette aborts active requests and clears all interpretation state.
 
+---
+
+## 10. Stage 50 Integration: Bottom Taskbar Boundaries
+
+- **No Command Palette Execution from Taskbar**: The Stage 50 Bottom Taskbar and workspace panels are local shell layout components. Taskbar panel toggling does not emit Command Palette commands or parse command text.
+- **Shortcut Preservation**: Opening, resizing, or switching bottom panels preserves global shortcuts (`Cmd/Ctrl+K`).
+- **Overlay Precedence**: When the Command Palette is opened while a bottom panel is expanded, the Command Palette renders with higher z-index priority. Pressing `Escape` while the Command Palette is open dismisses the palette first, without prematurely closing the bottom workspace panel.
+
 

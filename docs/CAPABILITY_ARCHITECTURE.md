@@ -33,5 +33,10 @@ Stage 49 notification operations and center interactions are application APIs ra
 - Notifications cannot execute Capabilities, trade operations, or approval actions.
 - Future backend ATLAS subsystems and producers call `NotificationService.create_notification(...)` directly within their domain workflows or transactions, rather than routing through the public API.
 
+## Bottom Taskbar (Stage 50)
+Stage 50 taskbar and workspace panel UI interactions are local application-shell operations, not backend Capabilities:
+- Taskbar panel toggling, resizing, and switching are local presentation state transitions.
+- Future panels (Tasks, Agents, Jobs) will connect to authoritative domain capabilities in their respective roadmap stages.
+
 
 

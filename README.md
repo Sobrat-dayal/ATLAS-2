@@ -130,6 +130,16 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Backend: `pytest apps/api/tests/notifications -v`
   - Frontend: `npx.cmd tsx --test apps/web/tests/notifications.test.ts`
 
+## Persistent Bottom Taskbar & Workspace Panel (Stage 50)
+- **Placement**: Permanently pinned at the bottom edge of the authenticated AppShell across all 20 modules.
+- **Interactions**:
+  - Click any taskbar item (`Tasks`, `Agents`, `Jobs`, `Alerts`, `Downloads`, `System Health`, `Terminal`) to open or switch panels.
+  - Click the active item again to toggle/close the panel.
+  - Click `X` in the panel header or press `Escape` to close.
+- **Resizing**: Drag the top resize handle upward or downward (default 280px, clamped between 160px and 45% of viewport height). Double-click the handle to reset to 280px. Keyboard resizing supported via `ArrowUp` / `ArrowDown`.
+- **Future Panel Extension**: Statically registered in `PANEL_DEFINITIONS` within `apps/web/src/lib/bottom-taskbar/registry.ts`. Future roadmap stages (Stage 54, Stage 122, Stage 146+) can connect domain components directly to this shell.
+- **Testing**:
+  - Run tests: `npx.cmd tsx --test apps/web/tests/bottom-taskbar.test.ts`
 
 ## The 20 Modules
 1. Home

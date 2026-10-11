@@ -1141,5 +1141,144 @@ This document records the major architectural and product decisions established.
 119. Notification responses use private authenticated cache semantics (`Cache-Control: private, no-store`).
 120. Stage 50 remains responsible for the Bottom Taskbar Shell.
 
+## Stage 50: Build Persistent Bottom Taskbar Shell
+
+1. Stage 50 builds the persistent Bottom Taskbar Shell.
+2. The taskbar is part of the authenticated AppShell.
+3. The taskbar is not the 21st ATLAS module.
+4. The canonical 20-module navigation remains unchanged.
+5. The taskbar persists across client-side module navigation.
+6. Stage 50 uses the existing shell/layout architecture.
+7. Stage 50 does not introduce another AppShell.
+8. Stage 50 does not introduce another state-management framework.
+9. Stage 50 uses a typed panel registry.
+10. Panel IDs are stable.
+11. Panel registration is static/version-controlled.
+12. Stage 50 does not support runtime-installed panels.
+13. Stage 50 does not support plugin-installed panels.
+14. Stage 50 does not support Agent-installed panels.
+15. Stage 50 supports one active bottom panel at a time.
+16. The taskbar remains visible while the panel is closed.
+17. Clicking an inactive item opens that panel.
+18. Clicking another item switches content.
+19. Clicking the active item may close the panel.
+20. Bottom panel state is frontend presentation state.
+21. Bottom panel state does not contain domain records.
+22. Bottom panel state is independent of selectedEntityId.
+23. Stage 50 reuses Stage 6 layout persistence when available.
+24. Stage 50 does not introduce duplicate localStorage persistence.
+25. Stage 50 introduces no new database schema.
+26. Stage 50 introduces no new backend service.
+27. Stage 50 introduces no new Redis business keys.
+28. Stage 50 introduces no ClickHouse changes.
+29. Stage 50 does not modify the Market Event pipeline.
+30. Stage 50 does not modify the Market WebSocket protocol.
+31. Stage 50 does not create a new message broker.
+32. Stage 50 does not create a frontend event bus.
+33. Stage 50 uses ATLAS design tokens.
+34. Stage 50 does not use purple gradients.
+35. Stage 50 does not use emoji icons.
+36. Stage 50 does not use fake metrics.
+37. Stage 50 does not use fake task records.
+38. Stage 50 does not use fake Agent records.
+39. Stage 50 does not use fake Job records.
+40. Stage 50 does not use fake Alerts.
+41. Stage 50 does not use fake Downloads.
+42. Stage 50 does not invent System Health values.
+43. Unknown is distinct from zero.
+44. Reserved is distinct from loading.
+45. Loading is distinct from empty.
+46. Error is distinct from empty.
+47. Tasks panel is initially an integration shell.
+48. Stage 50 does not create a Task engine.
+49. Stage 50 does not create a Task database.
+50. Stage 50 does not create approvals.
+51. Agents panel is initially an integration shell.
+52. Agents panel is distinct from the persistent right Agent Dock.
+53. Stage 50 does not create Agent runtime services.
+54. Stage 50 does not execute Agents.
+55. Jobs panel is initially an integration shell.
+56. Stage 50 does not create a Job queue.
+57. Stage 50 does not create a Job scheduler.
+58. Stage 50 does not create Job cancellation/retry execution.
+59. Alerts panel is initially an integration shell.
+60. Alerts are distinct from Stage 49 Notifications.
+61. Stage 50 does not duplicate Notification Center.
+62. Stage 50 does not create Alert rules.
+63. Stage 50 does not create Price alerts.
+64. Stage 50 does not create Portfolio alerts.
+65. Downloads panel is initially an integration shell.
+66. Stage 50 does not create a Download backend.
+67. Stage 50 does not intercept browser downloads.
+68. System Health panel may reuse existing real read-only health information.
+69. System Health must not fabricate healthy state.
+70. Stage 50 does not build new infrastructure health monitoring.
+71. Terminal is visually distinguished at the trailing edge.
+72. Stage 50 Terminal is a launcher/reserved panel only.
+73. Stage 50 does not build a Terminal command input.
+74. Stage 50 does not install xterm.js.
+75. Stage 50 does not execute shell commands.
+76. Stage 50 does not execute Python.
+77. Stage 50 does not execute SQL.
+78. Stage 50 does not create Terminal sessions.
+79. Stage 122 remains responsible for Terminal Shell.
+80. Stage 123 remains responsible for sandboxed Terminal execution.
+81. Panel height is bounded.
+82. Panel height respects viewport constraints.
+83. Stage 50 reuses existing resize infrastructure.
+84. Stage 50 does not create another docking layout engine.
+85. Panel resizing does not make backend requests.
+86. Panel resizing does not reconnect WebSockets.
+87. Main workspace adapts to open panel height.
+88. Main workspace remains scrollable.
+89. Bottom panel remains independently scrollable.
+90. Taskbar remains responsive.
+91. Narrow screens retain access to all items.
+92. Overflow menus are keyboard accessible.
+93. Taskbar controls use accessible buttons.
+94. Active state is not communicated by color alone.
+95. Resize controls are keyboard accessible where supported.
+96. Escape handling respects active overlays.
+97. Stage 50 does not hijack Command Palette keyboard shortcuts.
+98. Stage 50 does not assign a working Terminal shortcut.
+99. Stage 50 does not require Ctrl+J.
+100. Notification Center remains in the top bar.
+101. Global Search remains in the top bar.
+102. Command Palette remains functional.
+103. Stage 47 structured parsing remains functional.
+104. Stage 48 natural-language interpretation remains functional.
+105. Stage 25 Selected Entity context remains authoritative.
+106. Taskbar panel switching does not mutate selected Entity.
+107. AppShell routing does not remount the taskbar.
+108. Stage 43 Market WebSocket is unaffected by taskbar interaction.
+109. Auth principal changes isolate/reset taskbar-related user state.
+110. No sensitive domain records are persisted by the taskbar.
+111. Stage 50 does not create browser push notifications.
+112. Stage 50 does not send email.
+113. Stage 50 does not send Telegram messages.
+114. Stage 50 does not send WhatsApp messages.
+115. Stage 50 does not implement Trading actions.
+116. Stage 50 does not implement Portfolio actions.
+117. Stage 50 does not implement Workflow execution.
+118. Stage 50 does not create MCP tools.
+119. Stage 50 does not create Agent tools.
+120. Stage 50 does not add command execution Capabilities.
+121. Stage 50 does not create a public API.
+122. Stage 50 does not create an Alembic migration.
+123. Stage 50 does not create background workers.
+124. Stage 50 does not create scheduler infrastructure.
+125. Stage 50 does not create a full Workspace docking framework.
+126. Stage 50 does not allow panels to detach.
+127. Stage 50 does not allow panel drag reordering.
+128. Stage 50 does not create per-user pinned panels.
+129. Stage 50 does not create taskbar usage history.
+130. Stage 50 does not create taskbar analytics storage.
+131. Stage 50 follows existing Next.js client/server boundaries.
+132. Stage 50 must not introduce hydration errors.
+133. Stage 50 must clean up resize listeners.
+134. Stage 50 must avoid AppShell-wide unnecessary rerenders.
+135. Stage 50 must be extendable by later domain stages.
+136. Stage 51 remains responsible for Home V1.
+
 
 

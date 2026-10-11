@@ -43,7 +43,7 @@ The App Shell mounts the `GlobalApplicationContextProvider` which maintains the 
 ## Future Extension Points
 - **Agent Dock**: Currently contains empty state placeholders. Will handle AI chat and autonomous agent flows.
 - **ATLAS AI / Top Bar Hooks**: UI entry points exist but have no backend integration yet.
-- **Bottom Panel**: Clicking taskbar items toggles a placeholder bottom panel area. To be populated in subsequent stages.
+- **Bottom Panel (Stage 50)**: Persistent Bottom Taskbar and expandable Bottom Workspace Panel (`BottomPanelHost`). Hosts 7 canonical typed panels (`tasks`, `agents`, `jobs`, `alerts`, `downloads`, `system-health`, `terminal`). Supports pointer/keyboard drag resizing (default 280px, min 160px, max 45% of viewport), double-click reset, responsive overflow menu on narrow screens, and factual reserved states. Adapts the central workspace height dynamically without covering module content.
 - **Command Palette (Stage 46)**: Global keyboard shortcut `Cmd/Ctrl+K` opens the Command Palette overlay for discoverable module navigation and shell commands. Global Entity Search (Stage 45) remains active in the center TopBar.
 - **Notification Center (Stage 49)**: Persistent TopBar bell trigger with unread badge displaying real server unread count (hidden at 0, 99+ at >= 100). Opens an accessible slide-over/popover Notification Center with All/Unread filter tabs, keyset pagination, and optimistic read/archive controls. Operates over PostgreSQL via bounded 30s unread polling without WebSocket or Redis coupling.
 
@@ -52,4 +52,5 @@ The App Shell mounts the `GlobalApplicationContextProvider` which maintains the 
 - TopBar: 44px
 - Ticker: 28px
 - Taskbar: 32px
+- Bottom Panel: 280px default (resizable from 160px to 45% viewport height)
 - Agent Dock: 320px default, resizable to max 600px

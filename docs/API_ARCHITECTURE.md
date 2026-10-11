@@ -78,4 +78,9 @@ Stage 49 introduces authenticated, user-scoped endpoints for the persistent Noti
 - **Execution**: The endpoint **never** executes commands. Execution remains an explicit user action via the Stage 46 frontend executor.
 - **Database/Storage**: 0 PostgreSQL writes, 0 Redis calls, 0 ClickHouse queries, 0 market data provider calls, 0 chat/interpretation history saved. Raw natural-language input is never logged at INFO.
 
+## Stage 50 — Bottom Taskbar Shell
+
+- **No New API Endpoints**: Stage 50 builds the frontend persistent taskbar and workspace panel shell. It adds 0 new FastAPI endpoints.
+- **Data Policy**: Inactive placeholder panels make 0 backend requests on panel toggles or switches.
+
 
