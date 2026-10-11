@@ -163,3 +163,25 @@ Matching is executed 100% locally on the client without network requests or exte
   - `Escape` closes the palette and restores previous DOM focus
 - **Zero auto-run**:
   - Typing a command never runs it automatically; explicit selection via Enter or mouse click is required.
+
+---
+
+## 8. Stage 47 Integration: Structured Command Language & Preview
+
+In Stage 47, the Command Palette was augmented with structured command parsing:
+- **Detection (`looksLikeAtlasStructuredCommand`)**:
+  - Inputs starting with `/` (e.g. `/markets`, `/charts NVDA`).
+  - Inputs with shorthand keywords (e.g. `NVDA CHART`, `MAP TSMC`, `OPTIONS NVDA`, `NVDA FA`, `PORT RISK`).
+- **Debounced Backend Parsing**:
+  - Queries `POST /api/v1/commands/parse` with a 150ms debounce.
+  - AbortController cancels pending requests when input changes to prevent stale responses.
+- **Command Preview Card**:
+  - Shows `READY` preview with destination module and resolved target (display name, ticker/exchange).
+  - Shows `INCOMPLETE` with target requirement prompt.
+  - Shows `AMBIGUOUS` with candidate picker list.
+  - Shows `INVALID` with concise error message.
+  - Shows `UNAVAILABLE` with deferred feature notice (e.g. `NVDA FA`).
+- **Explicit Execution**:
+  - User must press `Enter` or click the preview card to execute.
+  - Executes bound command ID with typed arguments (e.g. `entityId`), updating global selected entity and navigating router.
+

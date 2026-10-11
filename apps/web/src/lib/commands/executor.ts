@@ -24,7 +24,8 @@ export class CommandExecutionError extends Error {
 export async function executeCommand(
   command: CommandDefinition,
   context: CommandContext,
-  helpers: CommandExecutionHelpers
+  helpers: CommandExecutionHelpers,
+  args?: Record<string, unknown>
 ): Promise<boolean> {
   // Check availability
   if (command.availability) {
@@ -35,7 +36,7 @@ export async function executeCommand(
   }
 
   try {
-    await Promise.resolve(command.execute(context, helpers));
+    await Promise.resolve(command.execute(context, helpers, args));
     // Execution succeeded: close palette by default unless helper explicitly handled it
     helpers.closePalette();
     return true;

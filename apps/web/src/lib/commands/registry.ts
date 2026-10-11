@@ -203,10 +203,49 @@ function validateCommandRegistry(commands: CommandDefinition[]): void {
 }
 
 /**
- * Initial static command definitions for Stage 46.
+ * Generates the Stage 47 entity-context navigation commands.
+ * These commands update the active selected entity and route to the target module.
+ */
+function createEntityNavigationCommands(): CommandDefinition[] {
+  const entityModules = [
+    { id: "charts", label: "Open in Charts", route: "/charts" },
+    { id: "news", label: "Open in News", route: "/news" },
+    { id: "research", label: "Open in Research", route: "/research" },
+    { id: "maps", label: "Open in Maps", route: "/maps" },
+    { id: "options", label: "Open in Options", route: "/options" },
+    { id: "companies", label: "Open in Companies", route: "/companies" },
+    { id: "markets", label: "Open in Markets", route: "/markets" },
+    { id: "intelligence", label: "Open in Intelligence", route: "/intelligence" },
+  ] as const;
+
+  return entityModules.map((m) => ({
+    id: `navigation.${m.id}.entity`,
+    label: m.label,
+    description: `Select entity and navigate to ${m.id} workspace.`,
+    category: "selection",
+    keywords: [m.id, "open", "entity", "navigate"],
+    availability: (context: CommandContext) => {
+      if (context.canViewModule && !context.canViewModule(m.id)) {
+        return "hidden";
+      }
+      return "available";
+    },
+    execute: (_context, helpers, args) => {
+      const entityId = args?.entityId;
+      if (typeof entityId === "string" && entityId) {
+        helpers.selectEntity?.(entityId);
+      }
+      helpers.navigate(m.route);
+    },
+  }));
+}
+
+/**
+ * Initial static command definitions for Stage 46 & Stage 47.
  */
 const initialCommands: CommandDefinition[] = [
   ...createNavigationCommands(),
+  ...createEntityNavigationCommands(),
   ...createShellCommands(),
 ];
 

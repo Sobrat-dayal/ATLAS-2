@@ -757,3 +757,137 @@ This document records the major architectural and product decisions established.
 108. Stage 46 does not modify freshness monitoring.
 109. Stage 47 remains responsible for ATLAS command parsing.
 110. Stage 48 remains responsible for natural-language command interpretation.
+
+## Stage 47 — Build ATLAS Command Parsing
+
+1. Stage 47 builds ATLAS structured command parsing.
+2. Stage 47 does not build natural-language interpretation.
+3. Stage 48 remains responsible for natural-language commands.
+4. ATLAS Command Language v1 is explicitly versioned (`command_language_version = 1`).
+5. Stage 47 parsing is deterministic.
+6. Stage 47 performs no LLM calls.
+7. Stage 47 performs no embeddings.
+8. Stage 47 performs no vector search.
+9. Stage 47 performs no machine-learning intent classification.
+10. Command processing is separated into lexing, parsing, binding, resolution and validation.
+11. Lexer is side-effect free.
+12. Syntactic parser is side-effect free.
+13. Parser does not execute commands.
+14. Parse API is read-only despite using POST.
+15. Stage 47 reuses Stage 22 Entity Resolution.
+16. Stage 47 does not create another Entity resolver.
+17. Command target resolution is exact/deterministic.
+18. Stage 47 does not fuzzy-correct target entities.
+19. Global Search remains the fuzzy discovery mechanism.
+20. Ticker resolves Security/Financial Instrument identity.
+21. Ticker does not silently become Company.
+22. Company-requiring commands reject Security targets unless explicitly supported later.
+23. Ambiguous ticker targets are not guessed.
+24. Ambiguous targets return bounded candidate summaries.
+25. Historical identifiers/aliases are excluded by default.
+26. Provider external IDs are excluded from normal commands.
+27. Stage 47 supports slash command syntax.
+28. Stage 47 supports curated Bloomberg-style shorthand.
+29. Module names and aliases are explicit.
+30. Action aliases are explicit.
+31. Alias resolution is exact, not fuzzy.
+32. Stage 47 supports quoted targets.
+33. Stage 47 does not implement shell quoting semantics beyond its own limited grammar.
+34. Stage 47 supports bounded long-form parameters.
+35. Unknown parameters are rejected.
+36. Duplicate parameters are rejected by default.
+37. Stage 47 does not implement shell pipes.
+38. Stage 47 does not implement redirection.
+39. Stage 47 does not implement command chaining.
+40. Stage 47 does not implement subshells.
+41. Stage 47 does not implement environment expansion.
+42. Stage 47 does not implement filesystem globbing.
+43. Stage 47 does not execute shell commands.
+44. Stage 47 does not use eval.
+45. Stage 47 does not use exec.
+46. Stage 47 does not dynamically import from user input.
+47. Stage 47 does not generate SQL from command text.
+48. Command input length is bounded (512 chars).
+49. Token count is bounded (32 tokens).
+50. Token length is bounded (256 chars).
+51. Parameter count is bounded (16 parameters).
+52. Stage 47 recognizes the canonical 20 modules.
+53. Settings remains outside the 20 modules.
+54. Stage 47 may map `/settings` to the existing Global Settings command.
+55. Stage 47 may map `/search` to Stage 45 Global Search.
+56. Stage 47 may map `/clear entity` to Stage 25 Selected Entity clearing.
+57. Stage 47 entity-context commands use explicit typed Command IDs.
+58. Stage 47 extends Stage 46 executor rather than creating a second executor.
+59. Command execution uses typed arguments.
+60. Raw command text is never executed.
+61. AST is never directly executed.
+62. User must explicitly execute READY parsed command.
+63. Structured command text does not autoexecute.
+64. Stage 47 may explicitly perform select-Entity + navigation.
+65. Search selection continues to select Entity without navigation.
+66. Command execution respects module authorization.
+67. Command execution does not bypass route guards.
+68. Forbidden module commands do not become READY.
+69. `/markets` can map to Stage 46 Markets navigation.
+70. `/charts NVDA` can map to selected Entity + Charts navigation.
+71. `NVDA CHART` is recognized as deterministic shorthand.
+72. `NVDA NEWS` is recognized as deterministic shorthand.
+73. `NVDA RESEARCH` is recognized as deterministic shorthand.
+74. `MAP TSMC` is recognized as deterministic shorthand.
+75. `OPTIONS NVDA` may be recognized as deterministic shorthand.
+76. Shorthand does not imply backend module functionality beyond navigation/context.
+77. Stage 47 does not build Charts.
+78. Stage 47 does not build News.
+79. Stage 47 does not build Research.
+80. Stage 47 does not build Maps.
+81. Stage 47 does not build Options chains.
+82. `NVDA FA` may be recognized as reserved/unavailable.
+83. `PORT RISK` may be recognized as reserved/unavailable.
+84. Stage 47 does not fake Fundamental Analysis.
+85. Stage 47 does not fake Portfolio Risk.
+86. Stage 47 does not implement BUY commands.
+87. Stage 47 does not implement SELL commands.
+88. Stage 47 does not call a broker.
+89. Stage 47 does not create Trading actions.
+90. Stage 47 uses stable machine-readable parse statuses.
+91. READY means executable after validation.
+92. AMBIGUOUS never autoexecutes.
+93. INVALID never autoexecutes.
+94. UNAVAILABLE never autoexecutes.
+95. Stage 47 returns stable parser error codes.
+96. Stage 47 parse endpoint requires authentication.
+97. Stage 47 parse endpoint requires `atlas.access`.
+98. Stage 47 parsing writes no PostgreSQL data.
+99. Stage 47 parsing writes no Redis data.
+100. Stage 47 parsing queries no ClickHouse.
+101. Stage 47 parsing calls no Provider.
+102. Stage 47 parsing calls no OpenBB.
+103. Stage 47 parsing calls no external web service.
+104. Stage 47 stores no command history.
+105. Stage 47 stores no recent commands.
+106. Stage 47 does not persist raw command text.
+107. Raw command text is not logged at INFO.
+108. Stage 46 local command matching remains available.
+109. Stage 47 parser is not called for every arbitrary palette query.
+110. Explicit slash syntax triggers structured parsing.
+111. Recognized shorthand signatures may trigger structured parsing.
+112. Natural-language text does not trigger Stage 48 behavior.
+113. Parsed commands appear as preview before execution.
+114. User must explicitly activate command preview.
+115. Backend Command IDs must match frontend executor Command IDs.
+116. Unknown backend Command IDs are rejected by frontend.
+117. Typed command arguments are runtime-validated.
+118. Stage 47 does not create a command database table.
+119. Stage 47 does not create a Redis command registry.
+120. Stage 47 does not create a command execution history table.
+121. Stage 47 does not create a server-side parse session.
+122. Stage 47 does not create a generic backend execute endpoint by default.
+123. Stage 47 does not expose parser as an AI tool.
+124. Stage 47 does not expose parser as an Agent tool.
+125. Stage 47 does not expose parser as an MCP tool.
+126. Stage 47 does not integrate with Terminal.
+127. Stage 47 adds no PostgreSQL migration.
+128. Stage 47 adds no ClickHouse schema.
+129. Stage 47 adds no Redis business state.
+130. Stage 48 remains the next stage.
+

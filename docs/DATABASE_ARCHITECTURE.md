@@ -83,3 +83,11 @@ Stage 33 adds no Market Data persistence tables to PostgreSQL (e.g., no quotes, 
 
 ## OpenBB Integration
 See [OPENBB_INTEGRATION.md](OPENBB_INTEGRATION.md) for details on the Stage 29 OpenBB Framework Provider integration.
+
+## Command Parsing (Stage 47)
+Stage 47 introduces **no database schema changes**:
+- 0 PostgreSQL tables or migrations added.
+- 0 ClickHouse tables added.
+- 0 Redis/Valkey business keys added.
+- Command parsing is strictly read-only and command specs are statically code-defined. No command history or parser sessions are persisted.
+

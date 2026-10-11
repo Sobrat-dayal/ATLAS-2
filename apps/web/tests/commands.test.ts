@@ -2,7 +2,6 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  COMMAND_REGISTRY,
   getAllCommands,
   getCommandById,
 } from "../src/lib/commands/registry";

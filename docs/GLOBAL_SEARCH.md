@@ -130,3 +130,16 @@ When a user selects an entity from Global Search:
 1. Calls Stage 25 `selectEntity(entity_id, source="global_search")`.
 2. Closes the search dropdown and clears the search input.
 3. Does **not** automatically navigate or change routes. The user remains on the current workspace module.
+
+---
+
+## 7. Global Search vs. Stage 47 Command Target Resolution
+
+| Dimension | Stage 45 Global Search | Stage 47 Command Target Resolution |
+|---|---|---|
+| **Purpose** | Fuzzy human entity discovery | Exact deterministic target binding |
+| **Fuzzy Matching** | Yes (Trigram similarity >= 0.35 on names/aliases) | **No** (Strictly exact identifier/alias/canonical match) |
+| **Spelling Errors** | Tolerates spelling mistakes (e.g. `Appel` -> `Apple Inc.`) | Returns `TARGET_NOT_FOUND` (no auto-correction) |
+| **Action on Selection** | Updates selected entity; preserves current route | Updates selected entity AND navigates to target module |
+| **Resolution Engine** | PostgreSQL GIN trigram queries | Stage 22 `EntityResolutionService` exact match |
+

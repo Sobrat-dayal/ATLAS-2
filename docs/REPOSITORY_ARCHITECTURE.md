@@ -14,6 +14,7 @@ ATLAS uses a monorepo structure to centrally manage the web frontend, Python bac
 - `packages/`: Shared frontend packages (`ui`, `config`, `types`, `schemas`).
 - `python/atlas/`: The core Python modular monolith, split into domain subpackages.
   - `python/atlas/src/atlas/entities`: Universal entity domain (Stage 16).
+  - `python/atlas/src/atlas/commands`: ATLAS Command Language v1 lexer, parser, binder, resolver, and models (Stage 47).
   - `python/atlas/src/atlas/market_data`: Canonical Market Data models and protocols (Stage 33).
   - `python/atlas/src/atlas/infrastructure/clickhouse`: Backend ClickHouse package.
   - `python/atlas/src/atlas/infrastructure/valkey`: Backend Valkey package.

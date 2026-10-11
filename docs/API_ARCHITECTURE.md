@@ -43,3 +43,12 @@ Stage 37 introduces no public ClickHouse API.
 
 ## Valkey
 Stage 38 introduces no public Valkey caching or state API.
+
+## Command Parsing API (Stage 47)
+- **Endpoint**: `POST /api/v1/commands/parse`
+- **Method**: `POST` (protects query payloads from appearing in URLs/logs)
+- **Nature**: Deterministic, side-effect free, read-only
+- **Auth**: Requires valid session token + `atlas.access` permission
+- **Behavior**: Lexes, parses, binds, resolves entity targets via Stage 22, and checks module permissions.
+- **Database/Storage**: 0 PostgreSQL writes, 0 Redis calls, 0 ClickHouse queries, 0 provider calls, 0 LLM calls. No command history stored.
+

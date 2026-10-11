@@ -59,6 +59,22 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Adding a Command**: Register in `apps/web/src/lib/commands/registry.ts` with a unique ID, human-readable label, category, optional keywords/aliases, and typed `execute` handler.
 - **Run tests**: `npx.cmd tsx --test apps/web/tests/commands.test.ts`
 
+## Command Parsing (Stage 47)
+- **Syntax**: ATLAS Command Language v1 supports structured slash syntax and Bloomberg-style shorthand:
+  - `/markets` — Module navigation
+  - `/charts NVDA` or `/charts open NVDA` — Select NVDA security and navigate to Charts
+  - `NVDA CHART` — Shorthand to select NVDA and navigate to Charts
+  - `NVDA NEWS` — Shorthand to select NVDA and navigate to News
+  - `MAP TSMC` — Shorthand to select TSMC entity and navigate to Maps
+  - `OPTIONS NVDA` — Shorthand to select NVDA and navigate to Options
+  - `NVDA FA` — Reserved recognized shorthand (unavailable in current stage)
+  - `PORT RISK` — Reserved recognized shorthand (unavailable in current stage)
+- **Deterministic Pipeline**: Pure Lexer -> Parser -> AST -> Binder -> Stage 22 Entity Resolver -> Authorization -> Command Preview.
+- **Strict Boundaries**: 0 LLM calls, 0 vector search, 0 embeddings, 0 shell execution, 0 DB writes.
+- **Testing**:
+  - Backend: `pytest apps/api/tests/commands/test_command_parsing.py`
+  - Frontend: `npx.cmd tsx apps/web/tests/commands-parser.test.ts`
+
 ## The 20 Modules
 1. Home
 2. Markets

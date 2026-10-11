@@ -65,3 +65,10 @@ A command-line tool exists in `apps/api/src/atlas_api/cli.py` to manage user rol
 ```bash
 uv run python apps/api/src/atlas_api/cli.py grant-role --user-id <UUID> --role admin
 ```
+
+## Command Parsing Authorization (Stage 47)
+
+Commands processed through `POST /api/v1/commands/parse` undergo dual authorization checks:
+1. **API Access**: The principal must possess the `atlas.access` permission.
+2. **Module Access**: During semantic binding, bound commands requiring access to a specific module (e.g. `navigation.charts.entity` requires `atlas.charts`) check the caller's permissions. If the user lacks the permission, the parser returns status `INVALID` with error code `COMMAND_FORBIDDEN` without exposing internal implementation details.
+
