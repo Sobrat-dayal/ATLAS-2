@@ -197,6 +197,33 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Frontend: `npx tsx --test apps/web/tests/home-tasks-approvals.test.ts`
 - **Documentation**: See `docs/HOME_TASKS_APPROVALS.md`
 
+## Home Intelligence Feed Placeholder (Stage 55)
+- **Placement**: Integrated into the secondary column of the ATLAS Home operational dashboard (`/home`, Module 1) directly below Tasks & Approvals.
+- **Core Purpose & Presentation Foundation**:
+  - Compact, professional intelligence feed presentation foundation establishing a truthful reserved state and extension point for future stages.
+  - Truthful, non-misleading service state: explicitly presented as **"Reserved" / "Not Connected"** ("Intelligence feed not connected: Verified intelligence updates will appear here when the ATLAS Intelligence service becomes available.").
+  - Clear semantic distinction between states: **Reserved** (service not yet implemented/connected), **Loading** (real backend request in flight), **Ready** (authenticated service connected), **Empty** (connected service returned 0 items), **Unavailable** (service temporarily unreachable), and **Error** (real request failed).
+  - Unknown counts are represented honestly: zero fake counters (no "0 threats", "0 events", "0 risks").
+  - Accessible, permission-aware navigation to the canonical Intelligence workspace at `/intelligence` (`ATLAS_MODULES.intelligence.route`) respecting Stage 14 route authorization and preserving Stage 25 Selected Entity Context.
+  - Minimal presentation-only TypeScript contract (`IntelligenceFeedViewState`, `IntelligenceFeedViewItem`) without premature Universal Event domain schema definitions.
+- **Roadmap Integration**:
+  - Real intelligence events and services will be supplied by future roadmap stages:
+    - Stage 135: Universal Event model
+    - Stage 136: Event–Entity Graph
+    - Stage 137: Exposure Analysis
+    - Stage 138: Intelligence Service V1 & Read API
+    - Stage 139: Intelligence Scoring & methodology
+    - Stage 140: God's Eye Intelligence
+- **Strict Data Integrity & Boundary Guarantees**:
+  - **Zero Fabricated Content**: Zero invented geopolitical events, financial crises, cyber incidents, supply-chain disruptions, or market-moving headlines.
+  - **Zero Fabricated Scores**: Zero fake confidence scores ("97%"), risk percentages, sentiment classifications ("Bullish"), or severity levels.
+  - **Zero Fabricated Provenance**: Zero fake source citations ("Reuters") or fabricated source counts.
+  - **Zero Backend Changes**: Zero new FastAPI endpoints, zero PostgreSQL migrations, zero ClickHouse tables, zero Redis keys/streams, zero WebSockets.
+  - **Zero AI/Agent Execution**: Zero LLM calls, zero autonomous research workers, zero OSINT scraping, and zero background jobs.
+- **Testing**:
+  - Run component & contract tests: `npx tsx --tsconfig apps/web/tsconfig.json --test apps/web/tests/home-intelligence-feed.test.ts`
+- **Documentation**: See `docs/HOME_INTELLIGENCE_FEED.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

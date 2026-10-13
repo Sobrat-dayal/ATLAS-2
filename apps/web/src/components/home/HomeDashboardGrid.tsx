@@ -5,8 +5,7 @@ import { HomeQuickLaunch } from "./HomeQuickLaunch";
 import { HomeMarketSummary } from "./HomeMarketSummary";
 import { HomePersonalizedActivity } from "./HomePersonalizedActivity";
 import { HomeTasksApprovals } from "./HomeTasksApprovals";
-import { HomeWidgetSurface } from "./HomeWidgetSurface";
-import { HomeReservedState } from "./HomeReservedState";
+import { HomeIntelligenceFeed } from "./HomeIntelligenceFeed";
 
 export function HomeDashboardGrid() {
   return (
@@ -31,18 +30,8 @@ export function HomeDashboardGrid() {
         {/* 5. Stage 54 Real Home Tasks & Approvals Widget */}
         <HomeTasksApprovals />
 
-        {/* 6. Reserved Stage 55 Intelligence Feed Framework Slot */}
-        <HomeWidgetSurface
-          id="home-intelligence-feed-reserved"
-          title="Intelligence Feed"
-          subtitle="Stage 55 Framework Slot"
-        >
-          <HomeReservedState
-            stage={55}
-            featureName="Intelligence Feed"
-            description="Prioritized signals, cross-domain anomalies, and narrative tracking."
-          />
-        </HomeWidgetSurface>
+        {/* 6. Stage 55 Home Intelligence Feed Placeholder Widget */}
+        <HomeIntelligenceFeed />
       </div>
     </div>
   );

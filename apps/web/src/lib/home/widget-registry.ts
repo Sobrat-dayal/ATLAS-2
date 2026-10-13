@@ -63,13 +63,13 @@ export const HOME_WIDGET_DEFINITIONS: readonly HomeWidgetDefinition[] = Object.f
   {
     id: "home-intelligence-feed",
     title: "Intelligence Feed",
-    subtitle: "Signals & Anomalies",
-    description: "Prioritized intelligence signals, cross-domain anomalies, and narrative tracking.",
+    subtitle: "Research Signals & Connected Intelligence",
+    description: "Research signals, events and connected intelligence presentation foundation.",
     targetStage: 55,
     status: "reserved",
     defaultState: "reserved",
-    placement: "full",
-    minimumWidth: 320,
+    placement: "secondary",
+    minimumWidth: 300,
   },
   {
     id: "home-portfolio-summary",

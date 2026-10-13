@@ -22,13 +22,13 @@ HomePage
    │
    ├── HomeHeader
    │      │
-   │      └── HomeQuickActions
-   │             ├── Search Entities   (invokes Stage 45 Global Search focus)
-   │             ├── Commands          (invokes Stage 46 Command Palette)
-   │             ├── AI Assistant      (navigates to canonical /ai)
-   │             ├── Markets           (navigates to canonical /markets)
-   │             ├── Research          (navigates to canonical /research)
-   │             └── Maps              (navigates to canonical /maps)
+   └── HomeQuickActions
+          ├── Search Entities   (invokes Stage 45 Global Search focus)
+          ├── Commands          (invokes Stage 46 Command Palette)
+          ├── AI Assistant      (navigates to canonical /ai)
+          ├── Markets           (navigates to canonical /markets)
+          ├── Research          (navigates to canonical /research)
+          └── Maps              (navigates to canonical /maps)
    │
    └── HomeDashboardGrid
           │
@@ -53,8 +53,9 @@ HomePage
                  │      ├── Personal Tasks (Human-managed work items)
                  │      └── Approval Inbox (Human decision audit queue)
                  │
-                 └── HomeWidgetSurface [Intelligence Feed]
-                        └── HomeReservedState (Stage 55 Framework Slot)
+                 └── HomeIntelligenceFeed (Stage 55 Intelligence Feed Foundation)
+                        ├── IntelligenceFeedHeader (Title, Status, Open Intelligence Action)
+                        └── IntelligenceFeedReservedState (Reserved state presentation)
 ```
 
 ---
@@ -83,8 +84,8 @@ Stage 51 strictly establishes layout integration contracts and widget slots with
 |---|---|---|---|
 | **Home Market Summary** | Stage 52 | Implemented (Stage 52) | Integrated data-driven overview (see `HOME_MARKET_SUMMARY.md`). |
 | **Personalized Activity** | Stage 53 | Implemented (Stage 53) | Real user-scoped recent activity history (see `HOME_PERSONALIZED_ACTIVITY.md`). |
-| **Tasks & Approvals** | Stage 54 | Reserved Slot | No approval buttons, task queues, or mock job execution states. |
-| **Intelligence Feed** | Stage 55 | Reserved Slot | No simulated geopolitical alerts, LLM intelligence, or sample signals. |
+| **Tasks & Approvals** | Stage 54 | Implemented (Stage 54) | User-managed tasks and trusted human approval inbox (see `HOME_TASKS_APPROVALS.md`). |
+| **Intelligence Feed** | Stage 55 | Presentation Foundation (Stage 55) | Reserved feed foundation with canonical navigation (see `HOME_INTELLIGENCE_FEED.md`). |
 | **Macroeconomics Preview** | Stage 89 | Planned | Reserved in static registry; no mock calendars rendered. |
 | **News Preview** | Stage 99 | Planned | Reserved in static registry; no simulated news headlines. |
 | **Portfolio Summary** | Stage 110 | Planned | Reserved in static registry; no fabricated valuations or balances. |

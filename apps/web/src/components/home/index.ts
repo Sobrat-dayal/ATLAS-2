@@ -19,3 +19,7 @@ export * from "./TaskEditorDialog";
 export * from "./PendingApprovalList";
 export * from "./PendingApprovalRow";
 export * from "./ApprovalReviewDialog";
+export * from "./HomeIntelligenceFeed";
+export * from "./IntelligenceFeedHeader";
+export * from "./IntelligenceFeedReservedState";
+export * from "./IntelligenceFeedItemCard";
