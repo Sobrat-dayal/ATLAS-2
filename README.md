@@ -224,6 +224,33 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Run component & contract tests: `npx tsx --tsconfig apps/web/tsconfig.json --test apps/web/tests/home-intelligence-feed.test.ts`
 - **Documentation**: See `docs/HOME_INTELLIGENCE_FEED.md`
 
+## Markets Overview V1 (Stage 56)
+- **Placement**: Mounted on the canonical route `/markets` (`ATLAS_MODULES.markets.route`), Module 2 of the 20 canonical ATLAS modules.
+- **Core Terminal Architecture**:
+  - Professional, data-dense financial market intelligence workspace inspired by Bloomberg Terminal and OpenBB.
+  - Header with quick navigation to `/charts`, `/screeners`, `/watchlists`, and Search (Stage 45) scoping.
+  - Scoped Coverage Summary metrics (`configured_instruments`, `available_quotes`, `unavailable_quotes`) with truthful data scopes.
+  - Accessible Market Group tabs (`All`, `Benchmarks`, `Equities`, `ETFs`, `FX`, `Crypto`, `Commodities`, `Bonds`) with live count badges.
+  - Top Featured Instruments grid (7 canonical benchmark instruments) with Stage 25 `selectEntity` integration.
+  - High-density tabular overview with sortable columns, tabular figures, signed change treatments, freshness indicators, and cursor pagination.
+- **Curated Multi-Asset Catalog**:
+  - Bounded universe of 29 canonical financial instruments across 7 asset classes configured via deterministic UUID5 identifiers (`ATLAS_INSTRUMENT_NAMESPACE`).
+  - Strict separation of benchmark indices and tracking ETFs (e.g., S&P 500 Index `^GSPC` points vs. SPDR S&P 500 ETF `SPY` dollars).
+- **Read-Only Backend & Financial Data Integrity**:
+  - `GET /api/v1/markets/overview`: Authenticated read endpoint enforcing `atlas.access` authorization and financial-data entitlements.
+  - Zero side-effects: 0 database writes, 0 Redis writes, 0 ClickHouse writes, 0 background jobs, 0 direct provider fetches on page load.
+  - Reuses Stage 52 shared financial read logic (`ReferenceCloseResolver`, `calculate_market_changes`, Decimal precision, zero-denominator safety).
+  - Reuses Stage 44 freshness and delay classification; independent connection vs. observation freshness indicators.
+- **Realtime Updates & Snapshot Consistency**:
+  - Reuses Stage 43 WebSocket infrastructure, listening to Stage 42 `atlas:market.quote.updated` events.
+  - Safe coalesced refetching with snapshot race protection (`lastAcceptedGeneratedAtRef`), focus refetch, and reconnect recovery.
+- **Strict No Fake Data Policy**:
+  - Missing quotes are truthfully displayed as unavailable (`—`, `no_quote`); zero synthetic stock prices, zero fake market caps, zero fake volumes.
+- **Testing**:
+  - Backend: `uv run pytest tests/markets/test_markets_overview.py -v` (inside `apps/api`)
+  - Frontend: `npx tsx --tsconfig apps/web/tsconfig.json --test apps/web/tests/markets-overview.test.ts`
+- **Documentation**: See `docs/MARKETS_OVERVIEW_V1.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

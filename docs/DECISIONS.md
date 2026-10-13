@@ -1947,6 +1947,140 @@ This document records the major architectural and product decisions established.
 149. Stage 55 must report unimplemented future functionality accurately.
 150. Stage 56 is the next canonical implementation stage.
 
+## Stage 56: Markets Overview V1
+1. Stage 56 builds Markets Overview V1.
+2. The route remains `/markets`.
+3. Markets remains canonical module 2.
+4. Markets reuses the authenticated AppShell.
+5. Markets does not create another sidebar.
+6. Markets does not create another top bar.
+7. Markets does not create another Agent Dock.
+8. Markets does not create another Bottom Taskbar.
+9. Markets uses the existing ATLAS design system.
+10. Markets uses canonical Financial Instrument UUIDs.
+11. Ticker remains identifier/display metadata.
+12. Ambiguous tickers are not guessed.
+13. Index and ETF identities remain distinct.
+14. No proxy is mislabeled as its benchmark.
+15. The overview uses a bounded configured instrument universe.
+16. The overview does not claim comprehensive global coverage.
+17. Stage 52 shared market read logic is reused.
+18. Stage 33 canonical Quote semantics remain authoritative.
+19. Stage 41 latest Quote state is reused.
+20. Stage 39 historical data is reused for qualified references.
+21. Stage 44 remains freshness authority.
+22. Stage 43 remains WebSocket infrastructure authority.
+23. Stage 42 remains Market Event transport authority.
+24. Markets does not create a second Quote model.
+25. Markets does not create a new Entity resolver.
+26. Markets does not create a second Provider router.
+27. Markets does not create a new Redis Quote cache.
+28. Markets does not create new Provider ingestion workers.
+29. Markets does not create live targets on page load.
+30. Markets does not trigger backfills on page load.
+31. Markets does not fetch Providers directly on page load.
+32. Backend financial calculations preserve Decimal precision.
+33. Currency and instrument units are respected.
+34. Last price is not silently replaced by midpoint.
+35. Missing price is not zero.
+36. Missing change is not zero change.
+37. Change requires qualified reference data.
+38. Previous close is not blindly yesterday's calendar bar.
+39. Adjustment compatibility is enforced.
+40. Unit/currency compatibility is enforced.
+41. Zero denominators are handled safely.
+42. Stale observations remain labeled stale.
+43. Delayed observations remain labeled delayed.
+44. Source and receive timestamps are distinct.
+45. Redis TTL is not freshness.
+46. WebSocket connectivity is not freshness.
+47. No unverified market-open labels are shown.
+48. No fake global market health metrics are shown.
+49. Markets Overview API is authenticated.
+50. API respects financial-data entitlements.
+51. API is read-only.
+52. API responses are bounded.
+53. API supports validated grouping.
+54. API uses deterministic pagination where needed.
+55. API exposes the universe's actual scope.
+56. Coverage counts are scoped accurately.
+57. Markets uses batch retrieval.
+58. Markets avoids unbounded ClickHouse scans.
+59. Markets avoids N+1 metadata queries.
+60. Markets preserves safe Provider provenance.
+61. No Provider secrets reach frontend.
+62. Markets initial state comes from an HTTP snapshot.
+63. Realtime updates reuse Stage 43.
+64. No second global WebSocket is created.
+65. No new realtime event type is introduced.
+66. Older snapshots cannot overwrite newer state incorrectly.
+67. Duplicate events are handled.
+68. Reconnect triggers safe reconciliation.
+69. Realtime refetches are bounded.
+70. Markets uses a professional dense table.
+71. Markets uses a compact featured instrument region.
+72. Featured entries are genuinely configured.
+73. Market groups use canonical classifications.
+74. Missing groups are not populated with fake data.
+75. Stage 57 remains responsible for dedicated Equities.
+76. Stage 58 remains responsible for ETFs/Funds.
+77. Stage 59 remains responsible for FX.
+78. Stage 60 remains responsible for Cryptocurrency.
+79. Stage 61 remains responsible for Bonds.
+80. Stage 62 remains responsible for Futures/Commodities.
+81. Stage 63 remains responsible for Market Movers.
+82. Stage 64 remains responsible for Heatmaps.
+83. Stage 65 remains responsible for Cross-Asset Analytics.
+84. Stage 66 remains responsible for Charts V1.
+85. Stage 56 does not build a charting engine.
+86. Stage 56 does not build technical indicators.
+87. Stage 56 does not create Watchlists.
+88. Stage 56 does not create Screeners.
+89. Stage 56 does not create price alerts.
+90. Stage 56 does not create Portfolio analytics.
+91. Stage 56 does not create Risk analytics.
+92. Stage 56 does not create AI market commentary.
+93. Stage 56 does not run Agents.
+94. Stage 56 does not execute Workflows.
+95. Stage 56 does not place trades.
+96. Stage 56 does not connect brokers.
+97. Stage 56 does not produce intelligence events.
+98. Stage 56 does not create Notifications from Quote updates.
+99. Stage 56 does not expand Personalized Activity collection.
+100. Stage 56 uses canonical internal navigation.
+101. Stage 25 remains selected-Entity authority.
+102. Markets does not automatically select its first instrument.
+103. Market-data errors do not crash AppShell.
+104. Markets supports honest partial data.
+105. Markets supports empty configurations.
+106. Markets supports unavailable prices.
+107. Markets supports unknown freshness.
+108. Markets supports backend error and retry states.
+109. Markets uses accessible table semantics.
+110. Markets supports keyboard navigation.
+111. Markets supports reduced motion.
+112. Markets supports desktop, tablet and mobile.
+113. Markets supports Agent Dock open.
+114. Markets supports Bottom Taskbar open.
+115. Markets does not add heavy chart or map libraries.
+116. Markets does not add unnecessary state-management libraries.
+117. Markets does not persist private Quotes to localStorage.
+118. Markets avoids cross-user cache leakage.
+119. Markets does not use fake production data.
+120. Markets does not use purple gradients.
+121. Markets does not use emoji icons.
+122. Markets does not use fake performance rankings.
+123. Markets does not use fake chart sparklines.
+124. Markets does not use fake market-cap statistics.
+125. Markets does not use fake volume.
+126. Markets does not use fake source labels.
+127. Markets does not use fake quote timestamps.
+128. Markets must pass financial-data integrity tests.
+129. Markets must pass authorization tests.
+130. Markets must pass relevant previous-stage regressions.
+131. Markets documentation must match implementation.
+132. Stage 57 is the next canonical implementation stage.
+
 
 
 

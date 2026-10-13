@@ -1,5 +1,5 @@
 import { ATLAS_MODULES } from "@/config/atlas-modules";
-import { ModuleFoundation } from "@/components/modules/ModuleFoundation";
+import { MarketsOverviewPage } from "@/components/markets";
 import { Metadata } from "next";
 
 export function generateMetadata(): Metadata {
@@ -9,5 +9,6 @@ export function generateMetadata(): Metadata {
 }
 
 export default function MarketsPage() {
-  return <ModuleFoundation module={ATLAS_MODULES.markets} />;
+  return <MarketsOverviewPage />;
 }
+
