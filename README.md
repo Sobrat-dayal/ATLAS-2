@@ -141,6 +141,21 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Testing**:
   - Run tests: `npx.cmd tsx --test apps/web/tests/bottom-taskbar.test.ts`
 
+## Home Market Summary (Stage 52)
+- **Placement**: Integrated into the primary column of the ATLAS Home operational dashboard (`/home`, Module 1).
+- **Core Functionality**:
+  - Truthful, real-time observation cards for server-owned curated benchmark instruments (S&P 500, NASDAQ 100, Dow Jones, SPY ETF, EUR/USD, USD/JPY, Bitcoin, Brent Crude).
+  - Traded prices derived strictly from canonical quote state (Stage 41) with full Decimal precision preserved.
+  - Performance changes calculated only when a verified completed prior session reference close exists from ClickHouse (Stage 39). Zero guessing of trading calendars or missing references.
+  - Data freshness, delivery delay, and provenance classification powered directly by the Stage 44 canonical freshness engine.
+  - Snapshot race protection and live quote invalidation integration (`atlas:market.quote.updated`).
+  - One-click navigation to `/markets` with Stage 25 Universal Selected Entity context activation.
+- **Strict Data Guarantee**: Zero synthetic stock prices, zero mock percentage returns, zero provider calls on page load, and zero database writes.
+- **Testing**:
+  - Backend: `uv run --directory apps/api pytest tests/home/test_market_summary.py`
+  - Frontend: `npx tsx --tsconfig apps/web/tsconfig.json --test apps/web/tests/home-market-summary.test.ts`
+- **Documentation**: See `docs/HOME_MARKET_SUMMARY.md`
+
 ## The 20 Modules
 1. Home
 2. Markets
@@ -162,5 +177,6 @@ The full product specification is located in the `docs/` directory. Check the [D
 18. Saved
 19. Workspaces
 20. Agents
+
 
 

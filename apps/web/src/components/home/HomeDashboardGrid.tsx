@@ -1,8 +1,8 @@
 "use client";
 
-import { LineChart } from "lucide-react";
 import { HomeCurrentContext } from "./HomeCurrentContext";
 import { HomeQuickLaunch } from "./HomeQuickLaunch";
+import { HomeMarketSummary } from "./HomeMarketSummary";
 import { HomeWidgetSurface } from "./HomeWidgetSurface";
 import { HomeReservedState } from "./HomeReservedState";
 
@@ -14,19 +14,8 @@ export function HomeDashboardGrid() {
         {/* 1. Universal Entity Focus Context */}
         <HomeCurrentContext />
 
-        {/* 2. Stage 52 Market Summary Reserved Integration Slot */}
-        <HomeWidgetSurface
-          id="home-market-summary"
-          title="Market Overview"
-          subtitle="Stage 52 Roadmap Slot"
-        >
-          <HomeReservedState
-            stage={52}
-            featureName="Home Market Summary"
-            description="Canonical multi-asset index monitoring, price changes, session indicators, and market breadth will be connected in Stage 52."
-            icon={<LineChart className="h-4 w-4" aria-hidden="true" />}
-          />
-        </HomeWidgetSurface>
+        {/* 2. Stage 52 Real Home Market Summary Widget */}
+        <HomeMarketSummary />
       </div>
 
       {/* Right / Secondary Column (5 cols on lg) */}

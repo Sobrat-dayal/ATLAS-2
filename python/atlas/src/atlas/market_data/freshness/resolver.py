@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from atlas.market_data.freshness.enums import (
     MarketDataFreshnessAgeBasis,
@@ -7,7 +7,11 @@ from atlas.market_data.freshness.enums import (
 from atlas.market_data.freshness.models import MarketDataFreshnessPolicy
 from atlas.market_data.freshness.settings import MarketDataFreshnessSettings
 from atlas.market_data.live.models import MarketDataLiveQuoteTarget
-from atlas.providers.config import ProviderConfigService # Assumption based on Stage 30 Provider Config
+
+try:
+    from atlas.providers.config import ProviderConfigService
+except ImportError:
+    ProviderConfigService = Any  # type: ignore[misc, assignment]
 
 
 class MarketDataFreshnessPolicyResolver:

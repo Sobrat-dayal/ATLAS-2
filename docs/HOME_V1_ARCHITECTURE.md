@@ -76,7 +76,7 @@ Stage 51 strictly establishes layout integration contracts and widget slots with
 
 | Future Home Feature | Roadmap Stage | Stage 51 Status | Boundary Policy |
 |---|---|---|---|
-| **Home Market Summary** | Stage 52 | Reserved Slot | No price indices, heatmaps, or movers rendered in Stage 51. |
+| **Home Market Summary** | Stage 52 | Implemented (Stage 52) | Integrated data-driven overview (see `HOME_MARKET_SUMMARY.md`). |
 | **Personalized Activity** | Stage 53 | Reserved Slot | No localStorage tracking, recent entity logs, or history querying. |
 | **Tasks & Approvals** | Stage 54 | Reserved Slot | No approval buttons, task queues, or mock job execution states. |
 | **Intelligence Feed** | Stage 55 | Reserved Slot | No simulated geopolitical alerts, LLM intelligence, or sample signals. |

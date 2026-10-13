@@ -71,3 +71,11 @@ The worker is designed to be run as a standalone process:
 ```bash
 uv run atlas-live-quotes
 ```
+
+## Stage 52 Home Market Summary Consumption
+
+Stage 52 reuses `LiveQuoteService` as its primary latest-quote read interface:
+- **Read-Only**: `HomeMarketSummaryService` queries `get_latest_quotes(configured_ids)` without side-effects.
+- **No Target Creation on Load**: Opening Home **never** inserts rows into `market_data_live_quote_targets`.
+- **No Streaming Side-Effects**: Home **never** initiates live provider streams directly. Upstream workers remain the sole managers of provider ingestion.
+

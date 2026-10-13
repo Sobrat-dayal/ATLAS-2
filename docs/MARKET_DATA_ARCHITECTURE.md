@@ -274,3 +274,12 @@ ClickHouse `historical_market_bars_versions`
 
 ## Valkey
 Stage 38 introduces no Market Data caching or state in Valkey.
+
+## Home Market Summary Integration (Stage 52)
+Stage 52 establishes the read-only Home Market Summary (`HomeMarketSummaryService` and `GET /api/v1/home/market-summary`):
+- **Latest State**: Queries Stage 41 `LiveQuoteService` (Valkey ephemeral latest quote cache).
+- **Historical Reference**: Queries Stage 39 ClickHouse historical daily bars (`interval = '1d'`) for validated prior completed sessions.
+- **Freshness**: Reuses Stage 44 canonical freshness engine.
+- **Read-Only**: Zero writes to PostgreSQL, Valkey, or ClickHouse. Zero direct provider calls on Home load.
+- See [HOME_MARKET_SUMMARY.md](HOME_MARKET_SUMMARY.md) for full architectural documentation.
+

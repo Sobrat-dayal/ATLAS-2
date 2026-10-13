@@ -87,5 +87,13 @@ Stage 49 notification operations enforce two-tier authorization:
 2. **Recipient Ownership Boundary**: In addition to RBAC permissions, every notification query and mutation enforces row-level ownership strictly matching `recipient_user_id == principal.user_id`. Attempting to access or mutate another user's notification returns HTTP 404 (preventing horizontal privilege escalation or enumeration).
 3. **Action Target Authorization**: Notification click-through navigation only issues Next.js client-side route transitions. The destination module and entity context remain guarded by the respective Stage 14 module authorization guards and Stage 25 entity permissions. Notification existence never grants module access.
 
+## Home Market Summary Authorization (Stage 52)
+
+Stage 52 market summary operations enforce strict read access controls:
+1. **API Access Permission**: `GET /api/v1/home/market-summary` enforces `RequirePermission(PermissionCode.ATLAS_ACCESS)`. Unauthenticated requests receive HTTP 401; unauthorized principals receive HTTP 403 `PERMISSION_DENIED`.
+2. **Curated Server-Side Universe**: The summary only serves server-owned curated benchmark instruments, preventing arbitrary client-supplied provider ticker fanouts or unauthorized data access.
+3. **Navigation Authorization**: Clicking an instrument card routes to `/markets` with selected entity UUID context. Access to the `/markets` module continues to be independently enforced by Stage 14 module route guards (`canViewModule("markets")`).
+
+
 
 

@@ -83,4 +83,20 @@ Stage 49 introduces authenticated, user-scoped endpoints for the persistent Noti
 - **No New API Endpoints**: Stage 50 builds the frontend persistent taskbar and workspace panel shell. It adds 0 new FastAPI endpoints.
 - **Data Policy**: Inactive placeholder panels make 0 backend requests on panel toggles or switches.
 
+## Home Market Summary API (Stage 52)
+- **Endpoint**: `GET /api/v1/home/market-summary`
+- **Method**: `GET`
+- **Nature**: Deterministic, side-effect free, read-only
+- **Auth**: Requires valid session token (Stage 13) + `atlas.access` permission (Stage 14)
+- **Cache Header**: `Cache-Control: private, no-store`
+- **Behavior**: Retrieves curated benchmark market observations. Reads latest ephemeral quote state from Valkey/Redis (Stage 41), validates prior completed-session reference closes from ClickHouse (Stage 39), and evaluates freshness (Stage 44).
+- **Guarantees**:
+  - PostgreSQL writes: 0
+  - Redis writes: 0
+  - ClickHouse writes: 0
+  - Provider HTTP/stream calls on load: 0
+  - Ingestion jobs triggered: 0
+  - Preserves Decimal precision (serialized as strings). Never returns fabricated prices.
+
+
 

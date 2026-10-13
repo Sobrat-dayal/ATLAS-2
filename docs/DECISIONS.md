@@ -1403,6 +1403,140 @@ This document records the major architectural and product decisions established.
 119. Stage 50 Bottom Taskbar remains globally mounted.
 120. Stage 52 is the next canonical implementation stage.
 
+## Stage 52 Decisions — Build Home Market Summary: Real-Time Market Overview and Financial Data Integration
+
+1. Stage 52 builds the Home Market Summary.
+2. Stage 52 reuses Stage 51 Home.
+3. Stage 52 does not build the full Markets module.
+4. Stage 52 does not modify canonical module ordering.
+5. Stage 52 uses canonical Financial Instrument UUID identity.
+6. Ticker remains display/identifier metadata.
+7. Stage 52 does not create a new Entity resolver.
+8. Stage 52 does not create a new Quote domain model.
+9. Stage 52 uses existing latest Quote state.
+10. Stage 52 does not call Providers on Home load.
+11. Stage 52 does not create live targets on Home load.
+12. Stage 52 does not trigger historical ingestion.
+13. Stage 52 does not create a new Provider stream.
+14. Stage 52 does not create a second Redis quote cache.
+15. Stage 52 uses bounded curated instrument definitions.
+16. Configured instruments must resolve to real canonical Entities.
+17. Stage 52 does not commit invented Entity UUIDs.
+18. Unresolved identifiers are not guessed.
+19. Index and ETF identity remain distinct.
+20. ETF proxy values are not labeled as index values.
+21. Stage 52 does not fabricate index levels.
+22. Latest price comes from defined canonical Quote semantics.
+23. Stage 52 does not silently substitute bid/ask midpoint as last trade.
+24. Stage 52 preserves Decimal precision.
+25. Stage 52 does not perform authoritative financial calculations in JavaScript.
+26. Monetary values retain correct currency.
+27. Index values retain correct units.
+28. FX values retain quote direction.
+29. Crypto values retain source/venue context where applicable.
+30. Commodity values retain supported contract/unit metadata.
+31. Absolute change requires a valid reference.
+32. Percentage change requires a valid nonzero reference where meaningful.
+33. Previous close must come from qualified canonical data.
+34. Previous close is not automatically yesterday's bar.
+35. Current incomplete-session bars cannot be used as prior completed-session close.
+36. Exchange holidays/weekends cannot be ignored.
+37. Stage 52 does not build a trading-calendar engine.
+38. Incompatible quote/reference adjustment bases are not compared.
+39. Incompatible units/currencies are not compared.
+40. Incompatible series/provider semantics are not silently mixed.
+41. Missing reference close results in unavailable change.
+42. Missing change does not invalidate an otherwise valid latest price.
+43. Missing price is not rendered as zero.
+44. Missing percentage is not rendered as 0%.
+45. Stage 52 uses Stage 44 freshness.
+46. Stage 52 does not introduce another freshness model.
+47. Redis TTL is not considered freshness.
+48. A recently received delayed quote is not automatically realtime.
+49. Source timestamp and received timestamp remain distinct.
+50. Market-open labels require valid session authority.
+51. Stage 52 does not guess exchange open/closed state.
+52. Stale Quote values are labeled appropriately.
+53. Stage 52 exposes safe Provider provenance.
+54. Provider credentials remain server-side.
+55. Raw Redis keys are not exposed to browser.
+56. Stage 52 creates a bounded authenticated read-only API.
+57. The default API is `GET /api/v1/home/market-summary`.
+58. The API does not accept unrestricted user-supplied Provider symbols.
+59. The API uses bounded configured instrument count.
+60. The API uses batched queries where practical.
+61. The API does not produce market-data writes.
+62. The API does not enqueue ingestion jobs.
+63. The API does not create notifications.
+64. The API does not create alerts.
+65. The API does not execute trades.
+66. The API respects authentication.
+67. The API respects authorization/entitlements.
+68. Stage 52 does not create a new Quote ingestion service.
+69. Stage 52 does not create a new Redis client pool.
+70. Stage 52 does not create a new ClickHouse client pool.
+71. Stage 52 does not create a new market-data Provider.
+72. Stage 52 reuses Stage 43 WebSockets when suitable.
+73. Stage 52 does not create a second global WebSocket.
+74. Stage 52 does not create a new WebSocket protocol.
+75. Stage 52 does not create new Redis Streams.
+76. Stage 52 does not create Kafka topics.
+77. Stage 52 does not create a generic event bus.
+78. Stage 52 handles snapshot/live-event ordering.
+79. Older snapshots must not overwrite newer accepted Quote state.
+80. Stage 52 handles WebSocket reconnects safely.
+81. WebSocket connection state is not freshness authority.
+82. Stage 52 avoids unnecessary realtime rerenders.
+83. Stage 52 uses existing frontend query infrastructure.
+84. Stage 52 does not create a new QueryClient.
+85. Stage 52 does not persist prices to localStorage.
+86. Stage 52 does not persist prices to IndexedDB.
+87. Stage 52 Home UI supports missing data.
+88. Stage 52 Home UI supports partial data.
+89. Stage 52 Home UI supports stale data.
+90. Stage 52 Home UI supports delayed data.
+91. Stage 52 Home UI supports unknown freshness.
+92. Stage 52 Home UI supports errors and retry.
+93. Stage 52 Home remains usable if Market Summary fails.
+94. Stage 52 uses existing ATLAS design tokens.
+95. Stage 52 does not use purple gradients.
+96. Stage 52 does not use emoji UI icons.
+97. Stage 52 does not display fake quotes.
+98. Stage 52 does not display fake percentages.
+99. Stage 52 does not display fake market health.
+100. Stage 52 does not display fake sparklines.
+101. Stage 52 does not build Market Movers.
+102. Stage 52 does not build Market Heatmaps.
+103. Stage 52 does not build Cross-Asset Analytics.
+104. Stage 52 does not build a Chart engine.
+105. Stage 52 does not build technical indicators.
+106. Stage 52 does not build financial recommendations.
+107. Stage 52 does not build sentiment scoring.
+108. Stage 52 does not build Watchlists.
+109. Stage 52 does not build alert rules.
+110. Stage 52 does not build Portfolio summaries.
+111. Stage 52 does not build Risk summaries.
+112. Stage 52 does not build Economic Calendar.
+113. Stage 52 does not build News feeds.
+114. Stage 52 does not build Research feeds.
+115. Stage 52 does not build Agent activity.
+116. Stage 52 does not invoke AI models.
+117. Stage 52 does not invoke MCP tools.
+118. Stage 52 does not execute Agents or Workflows.
+119. Stage 52 does not modify Stage 49 Notification Center.
+120. Stage 52 does not modify Stage 50 Bottom Taskbar.
+121. Stage 52 preserves Stage 25 Entity selection semantics.
+122. Card navigation uses canonical Entity UUID.
+123. Card navigation uses canonical internal routes.
+124. Card navigation cannot execute trades.
+125. Stage 52 does not introduce per-user instrument personalization.
+126. Stage 53 remains responsible for Home Personalized Activity.
+127. Stage 54 remains responsible for Home Tasks/Approvals.
+128. Stage 55 remains responsible for Home Intelligence Feed.
+129. Stage 56 remains responsible for full Markets Overview.
+130. Stage 52 must be supported by actual tests and documentation.
+
+
 
 
 
