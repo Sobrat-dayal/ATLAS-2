@@ -1689,6 +1689,112 @@ This document records the major architectural and product decisions established.
 149. Stage 53 does not build Tasks and Approvals.
 150. Stage 54 remains the next canonical stage.
 
+## Stage 54 Decisions - Home Tasks and Approvals
+
+1. Stage 54 builds Home Tasks and Approvals.
+2. Personal Tasks and Approval Requests are separate domains.
+3. Stage 54 does not build an autonomous execution engine.
+4. Stage 54 does not implement a generic workflow engine.
+5. Stage 54 does not implement a task scheduler.
+6. Stage 54 does not implement Agent orchestration.
+7. Stage 54 does not implement Trading execution.
+8. PostgreSQL is the authoritative store.
+9. Stage 54 reuses canonical user identity.
+10. Stage 54 reuses canonical Entity identity.
+11. Stage 54 reuses canonical module metadata.
+12. Stage 54 uses existing authorization.
+13. Personal Tasks are owned by one authenticated user.
+14. Public clients cannot choose arbitrary task owners.
+15. Task IDs are UUIDs.
+16. Task titles and descriptions are plain text.
+17. Task statuses are typed (OPEN, COMPLETED, CANCELLED).
+18. Task transitions are validated.
+19. Task completion is explicit.
+20. Task reopening is explicit.
+21. Task cancellation is explicit.
+22. Task due dates do not trigger automatic actions.
+23. Overdue is derived, not a competing persisted status.
+24. Task context is optional.
+25. Task Entity context uses UUID identity.
+26. Task module context uses canonical module IDs.
+27. Task navigation cannot execute commands.
+28. Task creation supports safe idempotency.
+29. Task mutations use concurrency safeguards (optimistic versioning).
+30. Task API queries are owner-scoped.
+31. Task API responses are bounded.
+32. Task lists use deterministic keyset pagination.
+33. No fake tasks are created.
+34. No automatic task producers are added.
+35. Market Data ingestion jobs are not Personal Tasks.
+36. Approval Requests originate only from trusted backend subsystems.
+37. Ordinary users cannot create trusted approval requests.
+38. Approval producer identity is server-validated.
+39. Approval action types are allowlisted.
+40. Approval requests bind to immutable proposals.
+41. Approval requests preserve proposal identity/digest.
+42. Approval summaries exclude secrets.
+43. Approval requests have finite expiration.
+44. Approval requests are assigned to an authorized human.
+45. Approval request IDs are UUIDs.
+46. Approval decisions are explicit.
+47. Approval decisions are user-scoped.
+48. Approval decisions are race-safe.
+49. Approval decisions are idempotent.
+50. Approval decisions have immutable audit records.
+51. Expiration eligibility is checked with server/database time.
+52. Expired requests cannot be approved.
+53. Rejected requests cannot be subsequently approved.
+54. Approved requests cannot be subsequently rejected.
+55. Cancelled requests cannot be decided.
+56. Only one final decision is permitted.
+57. Approval requests are not general authorization grants.
+58. Approval does not bypass Stage 14.
+59. Approval does not execute the proposed action.
+60. Approval does not place trades.
+61. Approval does not start Agents.
+62. Approval does not run Workflows.
+63. Approval does not execute shell commands.
+64. Approval does not execute structured ATLAS commands.
+65. Approval does not send external messages.
+66. Approval does not invoke arbitrary callbacks.
+67. Approval does not dispatch WebSocket execution events.
+68. No automatic approve-all feature exists.
+69. No AI-based approval decision exists.
+70. No timeout auto-approval exists.
+71. No implicit admin override exists.
+72. Approval decisions are not reusable standing permissions.
+73. Future execution must revalidate proposal, approval and current authorization.
+74. Stage 54 does not implement approval consumption/execution.
+75. Stage 47/48 confirmations remain unchanged.
+76. Stage 54 does not migrate ephemeral command confirmations automatically.
+77. No fictional production approval requests are seeded.
+78. An empty Approval Inbox is valid.
+79. Home uses the Stage 51 widget framework.
+80. Stage 52 Market Summary remains intact.
+81. Stage 53 Personalized Activity remains intact.
+82. Stage 50 Bottom Tasks panel may reuse Stage 54 task services.
+83. Stage 49 Notification Center remains separate.
+84. Stage 54 adds no new Redis Streams.
+85. Stage 54 adds no Redis Pub/Sub.
+86. Stage 54 adds no ClickHouse schema.
+87. Stage 54 adds no new WebSocket protocol.
+88. Stage 54 adds no new Provider connections.
+89. Stage 54 adds no new broker integration.
+90. Stage 54 adds no new background Agent workers.
+91. Stage 54 adds no generic callback engine.
+92. Stage 54 adds no dynamic code execution.
+93. Stage 54 does not track user behavioral history.
+94. Stage 54 does not add Activity event types.
+95. Stage 54 task/approval text is treated as private.
+96. Stage 54 does not persist private content to localStorage.
+97. Stage 54 user caches clear on principal changes.
+98. Stage 54 supports responsive layouts.
+99. Stage 54 supports keyboard and screen-reader access.
+100. Stage 54 reports only verified functional capability.
+101. Stage 55 is responsible for Home Intelligence Feed.
+102. Stage 54 stops before Stage 55.
+
+
 
 
 

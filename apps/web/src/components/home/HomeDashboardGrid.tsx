@@ -4,6 +4,7 @@ import { HomeCurrentContext } from "./HomeCurrentContext";
 import { HomeQuickLaunch } from "./HomeQuickLaunch";
 import { HomeMarketSummary } from "./HomeMarketSummary";
 import { HomePersonalizedActivity } from "./HomePersonalizedActivity";
+import { HomeTasksApprovals } from "./HomeTasksApprovals";
 import { HomeWidgetSurface } from "./HomeWidgetSurface";
 import { HomeReservedState } from "./HomeReservedState";
 
@@ -27,24 +28,20 @@ export function HomeDashboardGrid() {
         {/* 4. Quick Launch Canonical Modules */}
         <HomeQuickLaunch />
 
-        {/* 5. Future Operations & Intelligence Framework Slot (Stages 54 - 55) */}
+        {/* 5. Stage 54 Real Home Tasks & Approvals Widget */}
+        <HomeTasksApprovals />
+
+        {/* 6. Reserved Stage 55 Intelligence Feed Framework Slot */}
         <HomeWidgetSurface
-          id="home-operations-framework"
-          title="Operations & Intelligence"
-          subtitle="Stages 54–55 Framework Slot"
+          id="home-intelligence-feed-reserved"
+          title="Intelligence Feed"
+          subtitle="Stage 55 Framework Slot"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <HomeReservedState
-              stage={54}
-              featureName="Tasks & Approvals"
-              description="Pending workflow tasks and action queues."
-            />
-            <HomeReservedState
-              stage={55}
-              featureName="Intelligence Feed"
-              description="Prioritized signals, anomalies, and narrative alerts."
-            />
-          </div>
+          <HomeReservedState
+            stage={55}
+            featureName="Intelligence Feed"
+            description="Prioritized signals, cross-domain anomalies, and narrative tracking."
+          />
         </HomeWidgetSurface>
       </div>
     </div>

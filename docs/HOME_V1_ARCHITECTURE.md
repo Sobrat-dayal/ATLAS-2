@@ -39,8 +39,9 @@ HomePage
           │      │      ├── Empty State (No selection + Search Entities launcher)
           │      │      └── Ready State (Display name, entity type, UUID, context links)
           │      │
-          │      └── HomeWidgetSurface [Market Overview]
-          │             └── HomeReservedState (Stage 52 Roadmap Slot)
+          │      ├── HomeMarketSummary (Stage 52 Market Overview)
+          │      │
+          │      └── HomePersonalizedActivity (Stage 53 Personalized Activity)
           │
           └── Column 2 (Secondary / 5 cols)
                  ├── HomeQuickLaunch (Canonical Workspaces)
@@ -48,8 +49,12 @@ HomePage
                  │      ├── Expandable All Workspaces (20 canonical modules)
                  │      └── Permission Boundary (Locked disabled states)
                  │
-                 └── HomeWidgetSurface [Operations & Intelligence]
-                        └── HomeReservedState (Stages 53–54 Framework Slots)
+                 ├── HomeTasksApprovals (Stage 54 Tasks & Approvals)
+                 │      ├── Personal Tasks (Human-managed work items)
+                 │      └── Approval Inbox (Human decision audit queue)
+                 │
+                 └── HomeWidgetSurface [Intelligence Feed]
+                        └── HomeReservedState (Stage 55 Framework Slot)
 ```
 
 ---

@@ -52,12 +52,12 @@ export const HOME_WIDGET_DEFINITIONS: readonly HomeWidgetDefinition[] = Object.f
   {
     id: "home-tasks-approvals",
     title: "Tasks & Approvals",
-    subtitle: "Workflow Action Queue",
-    description: "Pending workflow tasks, execution approvals, and background job actions.",
+    subtitle: "Personal Tasks & Human Approvals",
+    description: "User-managed personal tasks and trusted human approval inbox.",
     targetStage: 54,
-    status: "reserved",
-    defaultState: "reserved",
-    placement: "tertiary",
+    status: "implemented",
+    defaultState: "available",
+    placement: "secondary",
     minimumWidth: 300,
   },
   {

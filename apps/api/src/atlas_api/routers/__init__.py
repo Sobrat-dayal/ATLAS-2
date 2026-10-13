@@ -1,27 +1,29 @@
+from atlas.activity.router import router as activity_router
+from atlas.approvals.router import router as approvals_router
+from atlas.home.market_summary.router import router as home_router
+from atlas.identifiers.router import router as identifiers_router
+from atlas.tasks.router import router as tasks_router
 from fastapi import APIRouter
 
 from ..auth.router import router as auth_router
 from ..authorization.router import router as authz_router
 from ..entities.router import router as entity_router
 from ..preferences.router import router as pref_router
-from atlas.identifiers.router import router as identifiers_router
+from .aliases import router as aliases_router
+from .commands import router as commands_router
 from .companies import router as companies_router
 from .economics import router as economics_router
 from .geography import router as geography_router
 from .health import router as health_router
 from .news import router as news_router
-from .research import router as research_router
-from .aliases import router as aliases_router
-from .resolution import router as resolution_router
-from .relationships import router as relationships_router
+from .notifications import router as notifications_router
 from .provenance import router as provenance_router
 from .providers import router as providers_router
 from .realtime import router as realtime_router
+from .relationships import router as relationships_router
+from .research import router as research_router
+from .resolution import router as resolution_router
 from .search import router as search_router
-from .commands import router as commands_router
-from .notifications import router as notifications_router
-from atlas.home.market_summary.router import router as home_router
-from atlas.activity.router import router as activity_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -46,3 +48,5 @@ api_router.include_router(commands_router, prefix="")
 api_router.include_router(notifications_router, prefix="")
 api_router.include_router(home_router, prefix="")
 api_router.include_router(activity_router, prefix="")
+api_router.include_router(tasks_router, prefix="")
+api_router.include_router(approvals_router, prefix="")

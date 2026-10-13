@@ -180,6 +180,23 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Frontend: `npx tsx --tsconfig apps/web/tsconfig.json --test apps/web/tests/home-personalized-activity.test.ts`
 - **Documentation**: See `docs/HOME_PERSONALIZED_ACTIVITY.md`
 
+## Home Tasks and Approvals (Stage 54)
+- **Placement**: Integrated into the secondary column of the ATLAS Home operational dashboard (`/home`, Module 1) alongside Quick Launch, and powering the Stage 50 Bottom Taskbar Tasks panel.
+- **Core Functionality**:
+  - **Domain A — Personal Tasks**: User-managed manual work items (`user_tasks` table in PostgreSQL). Support for task creation, editing, completion, reopening, and cancellation with optimistic concurrency control (`version`). Optional UTC deadlines with derived `is_overdue` and `is_due_soon` presentation flags. Optional canonical module context and Universal Entity UUID context with safe "Open Context" navigation.
+  - **Domain B — Human Approval Inbox**: Trusted backend decision queue (`approval_requests` and `approval_decisions` tables in PostgreSQL). Internal-only request creation with strict allowlists for producer keys and action kinds, binding to an opaque proposal reference and SHA-256 proposal digest. Finite request lifetime (default 24h, max 7d) with server-time expiration enforcement. Explicit `APPROVE` or `REJECT` decision recording into an immutable audit trail with row-level concurrency protection (`SELECT ... FOR UPDATE`).
+  - **Bottom Taskbar Integration**: Upgrades the reserved Stage 50 Tasks panel to a live personal task management surface consuming the shared `usePersonalTasks` hook.
+- **Strict Security & Scope Guarantees**:
+  - **APPROVAL IS NOT EXECUTION**: Recording an approval decision stores human intent in PostgreSQL only. It **never** triggers broker orders, shell execution, agent runs, workflow runs, or external webhooks.
+  - **Zero Public Approval Creation**: Public users cannot create approval requests. No public `POST /api/v1/approvals` creation endpoint exists.
+  - **Zero Fake Approvals**: In production, 0 unintegrated producers are simulated. The pending approvals inbox truthfully displays 0 pending requests and an honest empty state.
+  - **Zero Autonomous Execution**: Tasks and due dates do not trigger background jobs, push notifications, or scheduled execution.
+  - **Zero LocalStorage Persistence**: Private task descriptions and approval details are never cached in browser localStorage or IndexedDB.
+- **Testing**:
+  - Backend: `uv run pytest tests/home/test_tasks_approvals.py -v` (inside `apps/api`)
+  - Frontend: `npx tsx --test apps/web/tests/home-tasks-approvals.test.ts`
+- **Documentation**: See `docs/HOME_TASKS_APPROVALS.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

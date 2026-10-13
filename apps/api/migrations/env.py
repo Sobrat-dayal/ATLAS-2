@@ -37,6 +37,8 @@ import atlas.market_data.models  # noqa: F401
 import atlas.market_data.updates.models  # noqa: F401
 import atlas.market_data.live.models  # noqa: F401
 import atlas.activity.models  # noqa: F401
+import atlas.tasks.models  # noqa: F401
+import atlas.approvals.models  # noqa: F401
 from atlas.database import Base, normalize_database_url
 
 from atlas_api.config import get_settings
