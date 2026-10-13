@@ -1280,5 +1280,129 @@ This document records the major architectural and product decisions established.
 135. Stage 50 must be extendable by later domain stages.
 136. Stage 51 remains responsible for Home V1.
 
+## Stage 51 Decisions — Build HOME V1: The ATLAS Operational Command Center
+
+1. Stage 51 builds ATLAS Home V1.
+2. Home is the default operational dashboard, not a marketing landing page.
+3. Home remains the first canonical module.
+4. Home route is `/home`.
+5. Stage 51 does not introduce `/dashboard`.
+6. The twenty-module sidebar remains unchanged.
+7. Home uses the existing authenticated AppShell.
+8. Home does not create another top bar.
+9. Home does not create another sidebar.
+10. Home does not create another Agent Dock.
+11. Home does not create another Bottom Taskbar.
+12. Home does not create another Notification Center.
+13. Home does not create another Global Search implementation.
+14. Home does not create another Command Palette.
+15. Home uses the ATLAS design system.
+16. Home honors existing appearance settings.
+17. Home honors existing background/watermark settings.
+18. Home supports responsive layouts.
+19. Home works with Agent Dock open.
+20. Home works with Bottom Taskbar panel open.
+21. Home prioritizes useful first-screen actions.
+22. Home includes a compact operational heading.
+23. Home includes working Quick Actions.
+24. Quick Actions delegate to existing shell controls.
+25. Home includes a Selected Entity context view.
+26. Selected Entity identity remains UUID-based.
+27. Stage 25 remains the selection authority.
+28. Home does not maintain a second selected Entity store.
+29. Home reuses canonical Entity fetching.
+30. Home does not duplicate Entity API clients.
+31. Home does not automatically convert Company into Security.
+32. Home does not automatically convert Security into Company.
+33. Home does not automatically traverse issuer relationships.
+34. Home module navigation does not clear selectedEntityId.
+35. Home includes Quick Launch.
+36. Quick Launch uses Stage 4 route metadata.
+37. Quick Launch respects existing authorization.
+38. Quick Launch does not bypass route guards.
+39. Quick Launch does not promise unfinished module functionality.
+40. Home creates a reusable dashboard widget/layout foundation.
+41. Stage 51 does not build a widget marketplace.
+42. Stage 51 does not build remote widgets.
+43. Stage 51 does not build plugin widgets.
+44. Stage 51 does not build Agent-generated widgets.
+45. Stage 51 does not build arbitrary executable widgets.
+46. Stage 51 does not build drag-and-drop widget customization.
+47. Stage 51 does not build persistent custom dashboard layouts.
+48. Stage 51 does not create Home layout database tables.
+49. Stage 51 does not create a Home content-management system.
+50. Stage 51 does not create Home user preferences.
+51. Home widget data states distinguish reserved, loading, empty, error and unavailable.
+52. Reserved features are not represented as permanently loading.
+53. Home contains no fake stock prices.
+54. Home contains no fake market performance.
+55. Home contains no fake portfolio value.
+56. Home contains no fake Agent execution.
+57. Home contains no fake task approvals.
+58. Home contains no fake intelligence feed.
+59. Home contains no fake news headlines.
+60. Home contains no fake research papers.
+61. Home contains no fake map incidents.
+62. Home contains no fake operational health percentages.
+63. Stage 52 owns Home Market Summary.
+64. Stage 53 owns Home Personalized Activity.
+65. Stage 54 owns Home Tasks/Approvals.
+66. Stage 55 owns Home Intelligence Feed Placeholder.
+67. Stage 51 does not implement Home Market Summary.
+68. Stage 51 does not implement recent activity.
+69. Stage 51 does not implement task feeds.
+70. Stage 51 does not implement approval actions.
+71. Stage 51 does not implement intelligence scoring.
+72. Stage 51 does not implement Home live market data.
+73. Stage 51 does not implement portfolio calculations.
+74. Stage 51 does not implement map visualizations.
+75. Stage 51 does not implement Agent activity feeds.
+76. Stage 51 does not perform AI summarization.
+77. Stage 51 does not call an LLM on page load.
+78. Stage 51 does not use model-generated Home content.
+79. Stage 51 does not create Search history.
+80. Stage 51 does not create recent-Entity history.
+81. Stage 51 does not create user activity tracking.
+82. Stage 51 does not create recommendation ranking.
+83. Stage 51 does not create new backend services.
+84. Stage 51 does not create new public APIs.
+85. Stage 51 does not create PostgreSQL tables.
+86. Stage 51 does not create ClickHouse tables.
+87. Stage 51 does not create Redis business state.
+88. Stage 51 does not introduce new WebSocket topics.
+89. Stage 51 does not modify Stage 42 Market Event transport.
+90. Stage 51 does not introduce background workers.
+91. Stage 51 does not introduce a scheduler.
+92. Stage 51 does not introduce a new state-management library.
+93. Stage 51 does not introduce a separate dashboard grid dependency by default.
+94. Home uses existing routing and authentication.
+95. Home does not force full-page reloads.
+96. Home does not remount the authenticated AppShell unnecessarily.
+97. Home does not reconnect the Market Data WebSocket unnecessarily.
+98. Home remains usable if selected-Entity query fails.
+99. Home renders safe empty states for absent context.
+100. Home renders safe error states for failed requests.
+101. Home does not expose internal Provider credentials.
+102. Home does not expose authentication tokens.
+103. Home does not bypass authorization.
+104. Home does not allow arbitrary external URL navigation through Quick Launch.
+105. Home does not execute arbitrary code.
+106. Home does not require `dangerouslySetInnerHTML`.
+107. Home does not execute shell commands.
+108. Home does not execute trades.
+109. Home does not run Agents.
+110. Home does not run Workflows.
+111. Home does not expose MCP tools.
+112. Home respects authenticated-user cache isolation.
+113. Home supports keyboard navigation.
+114. Home supports screen-reader semantics.
+115. Home supports reduced-motion preferences.
+116. Home remains readable under custom backgrounds.
+117. Home does not add unnecessary heavy JavaScript dependencies.
+118. Home is extendable by later Home stages.
+119. Stage 50 Bottom Taskbar remains globally mounted.
+120. Stage 52 is the next canonical implementation stage.
+
+
 
 
