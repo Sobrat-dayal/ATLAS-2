@@ -15,6 +15,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useSelectedEntity } from "@/hooks/entity";
+import { useActivityRecorder } from "@/hooks/home/useActivityRecorder";
 import { searchEntities, GlobalSearchEntityResult } from "@/lib/search";
 import { useCommandPalette, usePlatformShortcut } from "@/hooks/commands";
 
@@ -32,6 +33,7 @@ export function GlobalSearch() {
   const listboxId = useId();
 
   const { selectEntity } = useSelectedEntity();
+  const { recordEntitySelected } = useActivityRecorder();
   const { searchFocusTrigger, openCommandPalette } = useCommandPalette();
   const { shortcutLabel } = usePlatformShortcut();
 
@@ -114,6 +116,7 @@ export function GlobalSearch() {
 
   const handleSelect = (entityId: string) => {
     selectEntity(entityId);
+    recordEntitySelected(entityId);
     setIsOpen(false);
     setQuery("");
     setResults([]);

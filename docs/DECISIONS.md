@@ -1536,6 +1536,160 @@ This document records the major architectural and product decisions established.
 129. Stage 56 remains responsible for full Markets Overview.
 130. Stage 52 must be supported by actual tests and documentation.
 
+## Stage 53 Decisions — Home Personalized Activity
+
+1. Stage 53 builds Home Personalized Activity.
+2. Activity exists to support workspace continuity.
+3. Stage 53 does not build a clickstream analytics platform.
+4. Stage 53 does not build user surveillance.
+5. Stage 53 does not build an audit-log system.
+6. Stage 53 does not build task history.
+7. Stage 53 does not build Agent history.
+8. Stage 53 does not build Notification history.
+9. Activity history is user-scoped.
+10. PostgreSQL is the durable activity source of truth.
+11. Stage 53 reuses Stage 13 user identity.
+12. Stage 53 reuses Stage 14 authorization.
+13. Stage 53 reuses Stage 15 preferences for consent.
+14. Recording is disabled by default.
+15. Existing users are not silently opted in.
+16. Activity collection requires explicit opt-in.
+17. Consent applies prospectively.
+18. No historical activity is fabricated.
+19. No unrecorded behavior is backfilled.
+20. Disabled collection produces no new events.
+21. Backend rechecks consent on every write.
+22. Frontend avoids requests while disabled.
+23. Disabling clears Stage 53 history under the chosen policy.
+24. Consent disable and clearing are transactionally coordinated.
+25. Users can clear recorded activity.
+26. Clear History does not delete unrelated data.
+27. Stage 53 supports MODULE_OPENED events.
+28. Stage 53 supports ENTITY_SELECTED events.
+29. No generic arbitrary event payloads exist.
+30. Event type is strictly validated.
+31. Activity event ID is a UUID.
+32. Client event UUID supports idempotency.
+33. Repeated event delivery does not create duplicate rows.
+34. Conflicting idempotency payloads fail safely.
+35. User ownership comes from authentication.
+36. Client-provided user IDs are rejected.
+37. Module IDs come from Stage 4.
+38. Canonical module labels are not accepted from client as authority.
+39. Entity references use Stage 16 UUIDs.
+40. Ticker does not become activity identity.
+41. Stage 53 does not use fuzzy Entity resolution.
+42. Stage 53 does not convert Company to Security.
+43. Stage 53 does not convert Security to Company.
+44. Stage 53 does not infer issuer relationships.
+45. Stage 53 does not store raw Search queries.
+46. Stage 53 does not store Natural-Language commands.
+47. Stage 53 does not store structured command text.
+48. Stage 53 does not record every keystroke.
+49. Stage 53 does not record mouse movements.
+50. Stage 53 does not record scroll activity.
+51. Stage 53 does not record passive component mounts.
+52. Stage 53 does not treat route hydration as navigation.
+53. Stage 53 does not automatically log browser refresh.
+54. Stage 53 does not log background prefetches.
+55. Stage 53 records supported explicit user actions.
+56. Stage 53 does not claim complete browsing-history coverage.
+57. Stage 53 events are convenience records, not audit proof.
+58. Stage 53 does not use activity as security authority.
+59. Stage 53 does not use activity as trading authority.
+60. Stage 53 does not infer investment intent.
+61. Stage 53 does not infer personal characteristics.
+62. Stage 53 does not perform behavioral scoring.
+63. Stage 53 does not call AI models.
+64. Stage 53 does not generate embeddings.
+65. Stage 53 does not implement RAG.
+66. Stage 53 does not implement AI recommendations.
+67. Stage 53 does not implement productivity scoring.
+68. Stage 53 does not generate behavioral predictions.
+69. Stage 53 does not build activity-based marketing.
+70. Stage 53 does not send activity to external analytics SDKs.
+71. Stage 53 does not store IP addresses in activity rows.
+72. Stage 53 does not store User-Agent strings in activity rows.
+73. Stage 53 does not fingerprint devices.
+74. Stage 53 does not infer user geolocation.
+75. Stage 53 does not store arbitrary metadata blobs.
+76. Activity timestamps are server-authoritative.
+77. Activity uses deterministic chronological ordering.
+78. Activity has bounded per-user storage.
+79. Activity has a documented retention period.
+80. Expired records are excluded from reads.
+81. Physical cleanup is implemented and its scheduling is disclosed.
+82. Stage 53 does not create a new cleanup daemon by default.
+83. Stage 53 does not create a Redis Activity Stream.
+84. Stage 53 does not create Redis Pub/Sub.
+85. Stage 53 does not create a new message broker.
+86. Stage 53 does not create a ClickHouse activity warehouse.
+87. Stage 53 does not create a new frontend event bus.
+88. Stage 53 uses a narrow activity recorder.
+89. Activity logging is best-effort.
+90. Activity logging does not block navigation.
+91. Activity logging does not block Entity selection.
+92. Failed activity writes do not create an offline backlog.
+93. Failed activity writes do not create recursive notifications.
+94. Stage 53 does not retry recording indefinitely.
+95. Stage 53 does not produce events from market quote updates.
+96. Stage 53 does not produce events from background WebSocket activity.
+97. Stage 53 does not produce events from AI interpretation alone.
+98. Stage 53 does not record failed commands as successful actions.
+99. Stage 53 does not record denied module navigation as successful opening.
+100. Stage 53 reuses existing navigation handlers.
+101. Stage 53 reuses existing Entity-selection handlers.
+102. Stage 53 does not duplicate the module registry.
+103. Stage 53 does not duplicate selected Entity state.
+104. Stage 25 remains selection authority.
+105. Activity read permissions are reevaluated.
+106. Activity resume permissions are reevaluated.
+107. Past activity does not grant present access.
+108. Activity items use current authorized display metadata.
+109. Deleted/inaccessible Entities are handled safely.
+110. Activity may resume internal modules.
+111. Activity may select a canonical Entity.
+112. Activity cannot execute trades.
+113. Activity cannot execute Agents.
+114. Activity cannot execute Workflows.
+115. Activity cannot execute shell commands.
+116. Activity cannot open arbitrary external URLs.
+117. Stage 53 uses authenticated APIs.
+118. Stage 53 enforces `atlas.access`.
+119. Stage 53 list queries are user-scoped.
+120. Stage 53 clear operations are user-scoped.
+121. Stage 53 supports keyset pagination.
+122. Stage 53 enforces page-size bounds.
+123. Stage 53 uses frontend query cache isolation.
+124. Activity is not persisted in browser localStorage.
+125. Activity is not persisted in browser IndexedDB.
+126. Activity responses are not publicly cacheable.
+127. Stage 53 does not add excessive activity polling.
+128. Stage 53 does not create activity WebSockets.
+129. Stage 53 does not modify Stage 42 Market Event transport.
+130. Stage 53 does not modify Stage 43 WebSockets.
+131. Stage 53 does not modify Stage 41 Quote state.
+132. Stage 53 does not modify Stage 49 Notification Center.
+133. Stage 53 does not modify Stage 50 Bottom Taskbar architecture.
+134. Stage 53 integrates through Stage 51 Home widgets.
+135. Stage 53 preserves Stage 52 Market Summary.
+136. Stage 53 uses ATLAS design tokens.
+137. Stage 53 does not use fake activity.
+138. Stage 53 does not use emoji UI icons.
+139. Stage 53 does not use purple gradients.
+140. Stage 53 does not build a separate activity application.
+141. Stage 53 does not build a full activity search page.
+142. Stage 53 does not create an organization activity dashboard.
+143. Stage 53 does not create public activity profiles.
+144. Stage 53 does not create activity sharing.
+145. Stage 53 does not build a recommendation engine.
+146. Stage 53 does not build Watchlists.
+147. Stage 53 does not build Saved Objects.
+148. Stage 53 does not build Workspaces V1.
+149. Stage 53 does not build Tasks and Approvals.
+150. Stage 54 remains the next canonical stage.
+
+
 
 
 

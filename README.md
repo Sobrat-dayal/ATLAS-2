@@ -156,6 +156,30 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Frontend: `npx tsx --tsconfig apps/web/tsconfig.json --test apps/web/tests/home-market-summary.test.ts`
 - **Documentation**: See `docs/HOME_MARKET_SUMMARY.md`
 
+## Home Personalized Activity (Stage 53)
+- **Placement**: Integrated into the primary column of the ATLAS Home operational dashboard (`/home`, Module 1) directly below Market Summary.
+- **Core Functionality**:
+  - Workspace continuity helping authenticated users resume recently opened modules and selected canonical entities.
+  - Strict privacy-first design: user activity recording is **disabled by default** (`home.activity_history_enabled = false`). Explicit user opt-in required.
+  - User-scoped PostgreSQL storage with server-authoritative UTC timestamps (`occurred_at`, `created_at`).
+  - Idempotency guaranteed via `(user_id, client_event_id)` uniqueness.
+  - Capture limited strictly to explicit user actions: `MODULE_OPENED` (canonical module ID) and `ENTITY_SELECTED` (canonical entity UUID).
+  - Keyset pagination (`occurred_at DESC, activity_id DESC`), default page size 10, max 50.
+  - Safe resume navigation: reopening canonical module route and selecting canonical entity via Stage 25 `selectEntity(uuid)` with permission rechecks.
+  - Atomically coordinated disable-and-clear: disabling consent purges all user Stage 53 activity rows immediately.
+  - User-initiated Clear History with confirmation dialog.
+  - Bounded retention: 90-day retention query cutoff, per-user cap (max 1,000 events), and operator maintenance cleanup routine (`run_activity_retention_cleanup`).
+- **Strict Privacy & Scope Guarantees**:
+  - Zero surveillance, zero clickstream tracking, zero keystroke/mouse/scroll tracking, zero passive route/render logging.
+  - Zero raw search query or command text storage.
+  - Zero AI/LLM profiling, embeddings, RAG, or behavioral scoring.
+  - Zero Redis streams, ClickHouse activity warehouse, or message brokers.
+  - Zero third-party analytics SDKs, device fingerprinting, or IP logging.
+- **Testing**:
+  - Backend: `uv run --directory apps/api pytest tests/home/test_user_activity.py`
+  - Frontend: `npx tsx --tsconfig apps/web/tsconfig.json --test apps/web/tests/home-personalized-activity.test.ts`
+- **Documentation**: See `docs/HOME_PERSONALIZED_ACTIVITY.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

@@ -4,12 +4,14 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, ArrowRight, Lock } from "lucide-react";
 import { useAuthorization } from "@/hooks/authorization";
+import { useActivityRecorder } from "@/hooks/home/useActivityRecorder";
 import { getCuratedQuickLaunchItems, getAllQuickLaunchItems } from "@/lib/home/quick-launch";
 import { HomeWidgetSurface } from "./HomeWidgetSurface";
 
 export function HomeQuickLaunch() {
   const [showAllModules, setShowAllModules] = useState(false);
   const { canViewModule } = useAuthorization();
+  const { recordModuleOpened } = useActivityRecorder();
 
   const curatedItems = getCuratedQuickLaunchItems();
   const allItems = getAllQuickLaunchItems();
@@ -69,6 +71,7 @@ export function HomeQuickLaunch() {
             <Link
               key={item.id}
               href={item.route}
+              onClick={() => recordModuleOpened(item.id)}
               className="group flex items-start gap-2.5 p-2.5 rounded border border-atlas-border-default bg-atlas-surface-2/40 hover:bg-atlas-surface-2 hover:border-atlas-border-strong transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-atlas-accent"
               aria-label={`Open ${item.label} workspace`}
             >

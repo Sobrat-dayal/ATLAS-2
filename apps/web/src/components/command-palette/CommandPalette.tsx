@@ -21,8 +21,9 @@ import {
   CheckCircle2,
   Sparkles,
 } from "lucide-react";
-import { getActiveAtlasModule } from "@/config/atlas-modules";
+import { getActiveAtlasModule, ATLAS_MODULES } from "@/config/atlas-modules";
 import { useSelectedEntity } from "@/hooks/entity";
+import { useActivityRecorder } from "@/hooks/home/useActivityRecorder";
 import { useSectionSettingsDrawer } from "@/hooks/settings/useSectionSettings";
 import { useShellState } from "@/hooks/shell/useShellState";
 import { useAuthorization } from "@/hooks/authorization";
@@ -83,6 +84,7 @@ export function CommandPalette() {
   // Route & permission authorization
   const { canViewModule, hasPermission } = useAuthorization();
   const activeModule = getActiveAtlasModule(pathname);
+  const { recordModuleOpened, recordEntitySelected } = useActivityRecorder();
 
   // Build command context
   const context: CommandContext = useMemo(
@@ -101,10 +103,15 @@ export function CommandPalette() {
     () => ({
       navigate: (route: string) => {
         closeCommandPalette();
+        const modKey = route.replace(/^\//, "");
+        if (modKey in ATLAS_MODULES) {
+          recordModuleOpened(modKey);
+        }
         router.push(route);
       },
       selectEntity: (entityId: string) => {
         selectEntity(entityId);
+        recordEntitySelected(entityId);
       },
       clearSelectedEntity: () => {
         clearSelectedEntity();
@@ -141,6 +148,8 @@ export function CommandPalette() {
       setSidebarCollapsed,
       agentDockOpen,
       setAgentDockOpen,
+      recordModuleOpened,
+      recordEntitySelected,
     ]
   );
 

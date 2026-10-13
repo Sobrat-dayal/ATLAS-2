@@ -43,16 +43,21 @@ describe("Stage 51 - Home Widget Registry Tests", () => {
     assert.deepEqual(actualIds, expectedIds);
   });
 
-  it("should define implemented widgets including Stage 52 Home Market Summary", () => {
+  it("should define implemented widgets including Stage 52 Market Summary and Stage 53 Activity", () => {
     const implemented = getImplementedWidgetDefinitions();
-    assert.equal(implemented.length, 3);
+    assert.equal(implemented.length, 4);
     const implementedIds = implemented.map((w) => w.id);
-    assert.deepEqual(implementedIds, ["current-context", "quick-launch", "home-market-summary"]);
+    assert.deepEqual(implementedIds, [
+      "current-context",
+      "quick-launch",
+      "home-market-summary",
+      "home-personalized-activity",
+    ]);
   });
 
-  it("should define reserved widgets for Stages 53, 54, 55", () => {
+  it("should define reserved widgets for Stages 54 and 55", () => {
     const reserved = getReservedWidgetDefinitions();
-    assert.equal(reserved.length, 3);
+    assert.equal(reserved.length, 2);
 
     const stage52 = getWidgetDefinition("home-market-summary");
     assert.ok(stage52);
@@ -62,7 +67,7 @@ describe("Stage 51 - Home Widget Registry Tests", () => {
     const stage53 = getWidgetDefinition("home-personalized-activity");
     assert.ok(stage53);
     assert.equal(stage53?.targetStage, 53);
-    assert.equal(stage53?.status, "reserved");
+    assert.equal(stage53?.status, "implemented");
 
     const stage54 = getWidgetDefinition("home-tasks-approvals");
     assert.ok(stage54);

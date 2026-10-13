@@ -9,3 +9,6 @@ export * from "./HomeDashboardGrid";
 export * from "./HomeMarketSummary";
 export * from "./MarketSummaryInstrumentCard";
 export * from "./MarketSummaryEmptyState";
+export * from "./HomePersonalizedActivity";
+export * from "./HomeActivityRow";
+export * from "./HomeActivityClearDialog";

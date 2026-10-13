@@ -4,6 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDownRight, ArrowUpRight, ExternalLink } from "lucide-react";
 import { useSelectedEntity } from "@/hooks/entity";
+import { useActivityRecorder } from "@/hooks/home/useActivityRecorder";
 import {
   HomeMarketSummaryItem,
 } from "@/lib/home/market-summary-types";
@@ -23,6 +24,7 @@ interface MarketSummaryInstrumentCardProps {
 export function MarketSummaryInstrumentCard({ item }: MarketSummaryInstrumentCardProps) {
   const router = useRouter();
   const { selectEntity } = useSelectedEntity();
+  const { recordEntitySelected, recordModuleOpened } = useActivityRecorder();
 
   const handleOpenInstrument = (e: React.MouseEvent | React.KeyboardEvent) => {
     // Only proceed on click or Enter/Space keys
@@ -34,7 +36,11 @@ export function MarketSummaryInstrumentCard({ item }: MarketSummaryInstrumentCar
     // 1. Set global selected Entity context
     selectEntity(item.instrument_entity_id);
 
-    // 2. Navigate internally to canonical Markets workspace
+    // 2. Record explicit user activity
+    recordEntitySelected(item.instrument_entity_id);
+    recordModuleOpened("markets");
+
+    // 3. Navigate internally to canonical Markets workspace
     router.push("/markets");
   };
 

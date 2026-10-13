@@ -21,6 +21,7 @@ from .search import router as search_router
 from .commands import router as commands_router
 from .notifications import router as notifications_router
 from atlas.home.market_summary.router import router as home_router
+from atlas.activity.router import router as activity_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -44,3 +45,4 @@ api_router.include_router(search_router, prefix="")
 api_router.include_router(commands_router, prefix="")
 api_router.include_router(notifications_router, prefix="")
 api_router.include_router(home_router, prefix="")
+api_router.include_router(activity_router, prefix="")

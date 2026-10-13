@@ -6,11 +6,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Settings, HelpCircle } from "lucide-react";
 import { useAuthorization } from "@/hooks/authorization";
+import { useActivityRecorder } from "@/hooks/home/useActivityRecorder";
 
 export function Sidebar() {
   const { sidebarCollapsed, setSidebarCollapsed } = useShellState();
   const pathname = usePathname();
   const { canViewModule, isLoading } = useAuthorization();
+  const { recordModuleOpened } = useActivityRecorder();
   
   // Resolve active module safely
   const activeModule = getActiveAtlasModule(pathname);
@@ -46,6 +48,7 @@ export function Sidebar() {
             <Link
               key={module.id}
               href={module.route}
+              onClick={() => recordModuleOpened(module.id)}
               title={sidebarCollapsed ? `${module.label}\n${module.description}` : undefined}
               aria-current={isActive ? "page" : undefined}
               className={`flex items-center px-3 py-1.5 mx-1 mb-0.5 rounded-sm text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-atlas-accent ${

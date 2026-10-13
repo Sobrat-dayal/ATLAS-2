@@ -18,6 +18,7 @@ VALID_PREFERENCE_KEYS = {
     "global.general",
     "global.appearance",
     "global.accessibility",
+    "home.activity_history_enabled",
     "section.home",
     "section.markets",
     "section.charts",

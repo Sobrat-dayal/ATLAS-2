@@ -98,5 +98,19 @@ Stage 49 introduces authenticated, user-scoped endpoints for the persistent Noti
   - Ingestion jobs triggered: 0
   - Preserves Decimal precision (serialized as strings). Never returns fabricated prices.
 
+## Home Personalized Activity API (Stage 53)
+Stage 53 introduces privacy-first, user-controlled activity recording and continuity endpoints under `/api/v1/home/activity`:
+- **`GET /api/v1/home/activity`**: Keyset-paginated activity listing (`limit=1..50`, `cursor`). Ordered by `occurred_at DESC, activity_id DESC`. Returns `UserActivityListResponse`.
+- **`POST /api/v1/home/activity/events`**: Records an explicit user interaction (`MODULE_OPENED` or `ENTITY_SELECTED`). Requires valid `client_event_id` UUID for idempotency. Returns HTTP 409 if activity history is disabled by user preference.
+- **`PUT /api/v1/home/activity/consent`**: Sets authoritative opt-in preference (`home.activity_history_enabled`). When set to `false`, atomically disables recording and purges all previously recorded user activity records.
+- **`DELETE /api/v1/home/activity`**: User-scoped erasure of all Stage 53 activity records while preserving current consent preference.
+- **Security & Privacy**:
+  - Requires authenticated session + `atlas.access`.
+  - User identity derived strictly from authentication (`principal.user_id`); client-supplied owner IDs are forbidden.
+  - All responses set `Cache-Control: private, no-store`.
+  - Zero storage of raw search queries, commands, URLs, IPs, user agents, or metadata blobs.
+  - Zero Redis streams, ClickHouse ingestion, or LLM calls.
+
+
 
 

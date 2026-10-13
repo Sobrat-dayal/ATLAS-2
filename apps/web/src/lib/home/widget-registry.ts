@@ -44,9 +44,9 @@ export const HOME_WIDGET_DEFINITIONS: readonly HomeWidgetDefinition[] = Object.f
     subtitle: "User History & Recent Entities",
     description: "Personalized entity view history, recent module visits, and user workflows.",
     targetStage: 53,
-    status: "reserved",
-    defaultState: "reserved",
-    placement: "tertiary",
+    status: "implemented",
+    defaultState: "available",
+    placement: "secondary",
     minimumWidth: 300,
   },
   {
