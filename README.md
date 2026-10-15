@@ -312,6 +312,31 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Regressions: Stage 56, 57, and 58 pass cleanly without regressions (47 web tests, 84 backend tests).
 - **Documentation**: See `docs/FX_MARKETS_V1.md`
 
+## Cryptocurrency Markets V1 (Stage 60)
+- **Status**: Implemented (`/markets/crypto`)
+- **Capabilities**:
+  - Global cryptocurrency asset discovery, exchange-aware spot markets, digital asset intelligence, and professional market terminal.
+  - Strict asset identity distinctions: Native currencies vs contract tokens, network identities, token standards, wrapped assets, and bridged tokens.
+  - Base asset and quote asset semantics strictly enforced (`BASE/QUOTE` = units of quote per 1 unit of base).
+  - Quote asset classification: Fiat currency vs cryptocurrency/stablecoin (never treating stablecoins as ISO USD or hardcoding 1:1 parity).
+  - Exchange/venue-aware market isolation: Venue identity (Coinbase, Binance, Kraken, Bitstamp) preserved without cross-venue quote contamination or arbitrary multi-exchange volume aggregation.
+  - Spot vs derivative boundaries: Strict exclusion of perpetual futures, dated futures, options, margin/leverage, and order-book ladders.
+  - Authoritative quote metrics: Last trade, separate bid and ask, Decimal absolute spread, midpoint, basis points, and crossed market (`CROSSED_INVALID`) detection.
+  - Rolling 24-hour change and volume with verified windows and explicit units (distinguishing base volume from quote volume).
+  - Stage 44 freshness tracking and delay status (`REALTIME`, `DELAYED`, `STALE`, `UNKNOWN`, `OFFLINE`).
+  - Read-only authenticated architecture: 0 writes, 0 background worker jobs, 0 upstream provider fanout on read.
+  - High-density Bloomberg/OpenBB-inspired terminal workspace: Coverage Summary, Search & Filters, Spot Markets Directory Table, and Selected Market Inspector.
+- **Endpoints**:
+  - `GET /api/v1/markets/crypto`: Paginated crypto spot market directory with quotes, spreads, 24h change, and volume.
+  - `GET /api/v1/markets/crypto/assets`: Supported canonical digital asset entities and classifications.
+  - `GET /api/v1/markets/crypto/filters`: Authoritative filter options and counts.
+  - `GET /api/v1/markets/crypto/{instrument_entity_id}`: Deep spot market overview with asset identity, venue variant, and source provenance.
+- **Testing**:
+  - Backend: `pytest apps/api/tests/markets/test_markets_crypto.py` (18 test cases, 100% pass)
+  - Frontend: `npx tsx --test apps/web/tests/markets-crypto.test.ts` (11 test cases, 100% pass)
+  - Regressions: Full Markets regression suite passes cleanly (102 backend tests across Overview, Equities, Funds, FX, and Crypto; 48 frontend tests).
+- **Documentation**: See `docs/CRYPTOCURRENCY_MARKETS_V1.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

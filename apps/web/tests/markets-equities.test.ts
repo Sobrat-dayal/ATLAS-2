@@ -181,6 +181,9 @@ describe("Stage 57 - Equities Markets V1 Tests", () => {
       content.includes("/markets/fx") || content.includes("Stage 59"),
       "FX must be linked to /markets/fx or marked Stage 59"
     );
-    assert.ok(content.includes("Stage 60"), "Crypto must be marked Stage 60");
+    assert.ok(
+      content.includes("/markets/crypto") || content.includes("Stage 60"),
+      "Crypto must be linked to /markets/crypto or marked Stage 60"
+    );
   });
 });

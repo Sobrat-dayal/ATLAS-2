@@ -2561,6 +2561,180 @@ This document records the major architectural and product decisions established.
 167. Stage 59 documentation must match implementation.
 168. Stage 60 is the next canonical development stage.
 
+## Stage 60: Cryptocurrency Markets V1
+1. Stage 60 builds Cryptocurrency Markets V1.
+2. Cryptocurrency remains within Markets module 2.
+3. The canonical route is `/markets/crypto` unless repository conventions require an equivalent.
+4. Existing Markets routes remain functional.
+5. The authenticated AppShell is reused.
+6. No new global sidebar module is created.
+7. Cryptocurrency uses canonical Entity UUIDs.
+8. Asset identity is distinct from trading-pair identity.
+9. Token contract identity is distinct from display symbol.
+10. Blockchain network identity is explicit where applicable.
+11. Contract addresses are network-scoped.
+12. Native cryptocurrency does not require a token contract.
+13. Wrapped assets remain distinct where modeled.
+14. Bridged assets remain distinct where modeled.
+15. Stablecoins remain distinct from fiat currency.
+16. Stablecoin parity is not guaranteed or hardcoded.
+17. Crypto symbols are not globally unique.
+18. Symbol resolution reuses Stage 22.
+19. Identifier infrastructure reuses Stage 21.
+20. Existing Entity relationships remain authoritative.
+21. Stage 60 does not auto-create assets from symbols.
+22. Stage 60 does not auto-create tokens from arbitrary contracts.
+23. Spot trading markets remain distinct from perpetuals.
+24. Spot trading markets remain distinct from futures.
+25. Spot trading markets remain distinct from options.
+26. Crypto remains distinct from Stage 59 fiat FX.
+27. Precious-metal instruments remain outside ordinary crypto spot classification.
+28. Trading-pair base and quote are explicit.
+29. BASE/QUOTE means QUOTE units per BASE.
+30. BTC/USD and BTC/USDT remain distinct.
+31. Reverse pairs are not automatically equivalent market listings.
+32. No automatic synthetic pair inversion is stored.
+33. No automatic cross-pair triangulation is implemented.
+34. Venue identity is explicit.
+35. Provider identity is explicit.
+36. Different venue Quotes are not silently merged.
+37. Provider aliases are venue-scoped.
+38. Composite data is labeled explicitly.
+39. Bid/ask data is not mixed across incompatible observations.
+40. Crossed bid/ask observations are handled as inconsistent.
+41. Latest trade price remains distinct from bid/ask/midpoint.
+42. Stage 33 remains canonical Quote authority.
+43. Stage 41 remains latest Quote state authority.
+44. Stage 39 remains historical OHLCV authority.
+45. Stage 42 remains Market Event transport authority.
+46. Stage 43 remains WebSocket authority.
+47. Stage 44 remains freshness authority.
+48. Redis TTL is not observation freshness.
+49. Socket connectivity is not observation freshness.
+50. Source time remains distinct from received time.
+51. Data delay remains distinct from freshness.
+52. Quote units remain explicit.
+53. Crypto price precision is not universally two decimals.
+54. Tick size is not inferred from display decimals alone.
+55. Quantity precision is distinct from price precision.
+56. Backend financial arithmetic uses Decimal.
+57. Frontend API preserves Decimal values safely.
+58. Missing price is not zero.
+59. Missing spread is not zero spread.
+60. Missing 24h change is not zero movement.
+61. Rolling 24h change is distinct from UTC-day change.
+62. 24h change requires a qualified same-series reference.
+63. 24h change does not mix quote assets.
+64. 24h change does not mix venues without a defined methodology.
+65. No fabricated 24h performance is displayed.
+66. Base volume and quote volume remain distinct.
+67. Volume units are explicit.
+68. Rolling volume is distinct from calendar-day volume.
+69. No false global venue-volume aggregation is performed.
+70. Last price times base volume is not treated as authoritative quote volume.
+71. No fabricated trade count is displayed.
+72. Market cap is not derived without qualified circulating supply.
+73. Circulating supply, total supply and max supply remain distinct.
+74. FDV remains distinct from circulating market cap.
+75. No fabricated global crypto ranking is displayed.
+76. No fabricated total crypto market cap is displayed.
+77. No fabricated BTC dominance is displayed.
+78. Stablecoin prices are not normalized to a fixed peg.
+79. No stablecoin issuer-risk engine is introduced.
+80. No token-security verification is implied.
+81. Stage 60 uses the canonical digital-asset catalog.
+82. Stage 60 does not import unverified coin lists.
+83. Stage 60 uses the canonical spot-market catalog.
+84. Stage 60 does not claim complete global crypto coverage.
+85. Search is bounded.
+86. Token symbol ambiguity is handled explicitly.
+87. Venue filtering is canonical.
+88. Base-asset filtering is canonical.
+89. Quote-asset filtering is canonical.
+90. Crypto/fiat quote types are not conflated.
+91. Pagination is deterministic.
+92. Coverage counts are accurately scoped.
+93. Stage 60 APIs require authentication.
+94. Stage 60 APIs enforce authorization.
+95. Stage 60 APIs enforce financial-data entitlements.
+96. Stage 60 APIs do not invoke arbitrary Providers.
+97. Stage 60 read APIs do not create Entities.
+98. Stage 60 read APIs do not write Quotes.
+99. Stage 60 read APIs do not create live targets.
+100. Stage 60 read APIs do not create ingestion jobs.
+101. Stage 60 read APIs do not execute trading.
+102. Stage 60 read APIs do not invoke Agents.
+103. Stage 60 read APIs do not invoke Workflows.
+104. Stage 60 does not create a second Provider router.
+105. Stage 60 does not create a second Quote cache.
+106. Stage 60 does not create a second Market Event bus.
+107. Stage 60 does not create a second global WebSocket client.
+108. Stage 60 does not open upstream Provider sessions on page load.
+109. Stage 60 does not build a new historical database.
+110. Stage 60 avoids unnecessary database migrations.
+111. Stage 60 does not seed fictional crypto market data.
+112. Stage 60 may add minimal canonical asset/venue metadata only when justified.
+113. Stage 60 UI uses the existing Markets architecture.
+114. Stage 60 UI uses the existing ATLAS design system.
+115. Stage 60 does not use purple gradients.
+116. Stage 60 does not use emoji icons.
+117. Stage 60 does not use fabricated candlestick charts.
+118. Stage 60 does not use fake market-volume statistics.
+119. Stage 60 does not use fake market-cap rankings.
+120. Stage 60 does not use fake Provider health.
+121. Stage 60 does not use fake live status.
+122. Stage 60 does not use fake risk scores.
+123. Stage 60 does not use AI investment recommendations.
+124. Stage 60 does not implement wallet connection.
+125. Stage 60 does not request private keys or seed phrases.
+126. Stage 60 does not sign blockchain transactions.
+127. Stage 60 does not connect exchange trading accounts.
+128. Stage 60 does not execute orders.
+129. Stage 60 does not perform token swaps.
+130. Stage 60 does not provide leverage/margin management.
+131. Stage 60 does not build derivatives trading.
+132. Stage 60 does not build an order-book engine.
+133. Stage 60 does not build an on-chain indexing engine.
+134. Stage 60 does not build DeFi analytics.
+135. Stage 60 does not build staking-yield analytics.
+136. Stage 60 does not build wallet tracking.
+137. Stage 60 does not build blockchain explorer functionality.
+138. Stage 60 does not build autonomous trading bots.
+139. Stage 60 does not build a full crypto screener.
+140. Stage 60 does not create Watchlists.
+141. Stage 60 does not create Alerts.
+142. Stage 60 does not create Portfolios.
+143. Stage 60 does not create Risk analytics.
+144. Stage 60 does not create AI financial actions.
+145. Stage 60 does not execute LLM inference on page load.
+146. Stage 60 preserves Stage 25 selected Entity.
+147. Stage 60 preserves the global Search.
+148. Stage 60 preserves the Command Palette.
+149. Stage 60 preserves the Agent Dock.
+150. Stage 60 preserves the Bottom Taskbar.
+151. Stage 60 preserves the Notification Center.
+152. Stage 60 does not expand Personalized Activity collection.
+153. Stage 60 does not generate tasks/approvals.
+154. Stage 60 does not generate unsupported Intelligence events.
+155. Stage 60 supports truthful unavailable states.
+156. Stage 60 supports partial market-data coverage.
+157. Stage 60 supports desktop, tablet and mobile.
+158. Stage 60 supports accessible controls.
+159. Stage 60 prevents cross-user entitlement leakage.
+160. Stage 60 does not persist private Quote data in browser storage.
+161. Stage 60 must pass crypto identity tests.
+162. Stage 60 must pass spot-vs-derivative tests.
+163. Stage 60 must pass venue-scoping tests.
+164. Stage 60 must pass stablecoin distinction tests.
+165. Stage 60 must pass Decimal precision tests.
+166. Stage 60 must pass 24h change tests.
+167. Stage 60 must pass volume semantics tests.
+168. Stage 60 must pass authorization tests.
+169. Stage 60 must pass relevant prior-stage regressions.
+170. Stage 60 documentation must match actual implementation.
+171. Stage 61 is the next canonical development stage.
+
+
 
 
 
