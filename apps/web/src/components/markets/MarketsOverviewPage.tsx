@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useMarketsOverview } from "@/hooks/markets/useMarketsOverview";
+import { MarketsNavigationTabs } from "./MarketsNavigationTabs";
 import { MarketsHeader } from "./MarketsHeader";
 import { MarketsCoverageSummary } from "./MarketsCoverageSummary";
 import { MarketsGroupSelector } from "./MarketsGroupSelector";
@@ -30,6 +31,9 @@ export function MarketsOverviewPage() {
 
   return (
     <div className="w-full min-w-0 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      {/* 0. Markets Sub-Navigation Tabs */}
+      <MarketsNavigationTabs />
+
       {/* 1. Markets Header with Actions */}
       <MarketsHeader
         onRefresh={refetch}

@@ -2081,6 +2081,166 @@ This document records the major architectural and product decisions established.
 131. Markets documentation must match implementation.
 132. Stage 57 is the next canonical implementation stage.
 
+## Stage 57: Equities Markets V1
+1. Stage 57 builds Equities Markets V1.
+2. Equities remains within canonical Markets module 2.
+3. Stage 56 Markets Overview remains functional at `/markets`.
+4. Equities uses the existing AppShell.
+5. Equities does not add a global sidebar module.
+6. Equities reuses the Stage 56 Markets visual architecture.
+7. The chosen Equities route is `/markets/equities`.
+8. Equity identity uses canonical Financial Instrument UUIDs.
+9. Company identity remains distinct from Security identity.
+10. Listing identity remains distinct where the canonical model supports it.
+11. Multiple share classes are not merged.
+12. Depositary receipts are not automatically treated as ordinary shares.
+13. Preferred shares are not automatically common shares.
+14. Rights and warrants are not silently classified as ordinary equities.
+15. Tickers are not primary keys.
+16. Symbol resolution remains exchange-scoped.
+17. Ambiguous symbols are not guessed.
+18. Exchange MICs are not invented.
+19. Currency is taken from authoritative listing/Quote metadata.
+20. Same-symbol securities across exchanges remain separate.
+21. Cross-listed Quote series are not mixed.
+22. Alias/history semantics reuse Stage 21–22.
+23. Issuer relationships reuse Stage 23.
+24. Issuer identity is not inferred from display names.
+25. Company navigation requires a verified relationship.
+26. Selecting an Equity Security does not automatically select its Company.
+27. Stage 25 remains selected-Entity authority.
+28. Directory source is the canonical equity instrument catalog.
+29. Stage 57 is not limited solely to Stage 56 featured instruments.
+30. Stage 57 does not claim complete global equity coverage.
+31. Stage 57 does not bulk-import unverified exchange listings.
+32. Stage 57 does not scrape random symbol lists.
+33. Stage 57 does not create new Entities on search.
+34. Stage 57 does not auto-backfill market data.
+35. Stage 57 does not create live Quote targets on page load.
+36. Stage 57 directory discovery is read-only.
+37. Basic country filtering is based on listing-market semantics.
+38. Exchange filtering uses canonical venue identity.
+39. Equity subtype filtering uses canonical classification.
+40. Listing status is not inferred from Quote availability.
+41. Missing Quote does not imply delisting.
+42. Directory search is bounded and typed.
+43. Stage 45 Global Search is not duplicated.
+44. Stage 57 is not Stage 94 Screeners.
+45. Stage 57 does not implement fundamental screening.
+46. Stage 57 does not implement technical screening.
+47. Stage 57 does not implement saved screening formulas.
+48. Stage 57 reuses Stage 52/56 financial read logic.
+49. Stage 33 canonical Quote remains authoritative.
+50. Stage 41 latest Quote state remains authoritative.
+51. Stage 39 historical references are reused where qualified.
+52. Stage 44 freshness remains authoritative.
+53. Stage 42 event transport remains authoritative.
+54. Stage 43 WebSockets remain authoritative.
+55. Stage 57 does not create a second Quote model.
+56. Stage 57 does not create a second Redis Quote cache.
+57. Stage 57 does not create a second Provider router.
+58. Stage 57 does not create new Market Data ingestion workers.
+59. Stage 57 does not create another WebSocket transport.
+60. Stage 57 does not invent a new live event type.
+61. Last price semantics are preserved.
+62. Bid/Ask data is not silently substituted for last trade.
+63. Decimal precision is preserved.
+64. Currency and units are preserved.
+65. Qualified previous close is required for returns.
+66. Adjustment compatibility is enforced.
+67. Venue/series compatibility is enforced.
+68. Missing reference close yields unavailable change.
+69. Missing price is not rendered as zero.
+70. Missing change is not rendered as zero.
+71. Zero denominator is handled.
+72. Stale Quotes remain labeled stale.
+73. Delayed Quotes remain labeled delayed.
+74. Unknown freshness is not called realtime.
+75. Source timestamp and received timestamp are distinct.
+76. Redis TTL does not determine freshness.
+77. WebSocket connectivity does not determine freshness.
+78. No unsupported market-session state is displayed.
+79. Provider provenance is preserved safely.
+80. Provider credentials remain server-side.
+81. Equity directory APIs require authentication.
+82. Equity directory APIs enforce authorization.
+83. Market-data entitlements remain enforced.
+84. API pagination is bounded.
+85. Search parameters are validated.
+86. Filter combinations have documented semantics.
+87. Listing metadata queries are batched.
+88. Quote reads are batched where possible.
+89. Historical reference queries remain bounded.
+90. Equity APIs do not execute writes.
+91. Equity APIs do not invoke Providers directly.
+92. Equity APIs do not create ingestion jobs.
+93. Equity APIs do not create notifications.
+94. Equity APIs do not create tasks.
+95. Equity APIs do not place trades.
+96. Equity APIs do not invoke Agents.
+97. Equity APIs do not invoke Workflows.
+98. Stage 57 provides an Equity Directory Table.
+99. Stage 57 provides basic Equity filtering.
+100. Stage 57 provides an Equity Inspector.
+101. Inspector fields come from authoritative existing data.
+102. Inspector does not implement full Company analytics.
+103. Stage 58 remains responsible for ETFs/Funds.
+104. Stage 59 remains responsible for FX.
+105. Stage 60 remains responsible for Crypto.
+106. Stage 61 remains responsible for Bonds.
+107. Stage 62 remains responsible for Futures/Commodities.
+108. Stage 63 remains responsible for Market Movers.
+109. Stage 64 remains responsible for Heatmaps.
+110. Stage 65 remains responsible for Cross-Asset Analytics.
+111. Stage 66 remains responsible for Charts.
+112. Stage 76 remains responsible for Watchlists.
+113. Stage 80 remains responsible for Alerts.
+114. Stage 81 remains responsible for Companies V1.
+115. Stage 82 remains responsible for Statements.
+116. Stage 83 remains responsible for Financial Ratios.
+117. Stage 84 remains responsible for Earnings.
+118. Stage 85 remains responsible for Ownership.
+119. Stage 86 remains responsible for Filings.
+120. Stage 87 remains responsible for Peers.
+121. Stage 88 remains responsible for Supply Chains.
+122. Stage 94–98 remain responsible for Screeners.
+123. Stage 57 does not display fabricated volume.
+124. Stage 57 does not fabricate market capitalization.
+125. Stage 57 does not fabricate P/E.
+126. Stage 57 does not fabricate dividend yield.
+127. Stage 57 does not fabricate 52-week ranges.
+128. Stage 57 does not fabricate shares outstanding.
+129. Stage 57 does not provide trading recommendations.
+130. Stage 57 does not implement broker actions.
+131. Stage 57 does not build an order book.
+132. Stage 57 does not implement AI equity analysis.
+133. Stage 57 does not call LLMs on page load.
+134. Stage 57 does not implement Agent execution.
+135. Stage 57 does not expand Stage 53 behavioral tracking.
+136. Stage 57 does not change Stage 54 approval semantics.
+137. Stage 57 preserves the global Bottom Taskbar.
+138. Stage 57 preserves the global Agent Dock.
+139. Stage 57 preserves the global Search.
+140. Stage 57 preserves the Command Palette.
+141. Stage 57 preserves the Notification Center.
+142. Stage 57 uses ATLAS design tokens.
+143. Stage 57 does not use purple gradients.
+144. Stage 57 does not use emoji icons.
+145. Stage 57 does not display fabricated equity records.
+146. Stage 57 does not display fabricated prices.
+147. Stage 57 does not claim unsupported exchange coverage.
+148. Stage 57 supports honest partial-data states.
+149. Stage 57 supports responsive layouts.
+150. Stage 57 supports accessible controls.
+151. Stage 57 prevents unauthorized instrument data leakage.
+152. Stage 57 does not persist private Quotes in browser storage.
+153. Stage 57 uses only necessary new dependencies.
+154. Stage 57 must pass actual identity and financial-math tests.
+155. Stage 57 must pass permission and security tests.
+156. Stage 57 must pass prior-stage regression tests.
+157. Stage 57 documentation must match actual implementation.
+158. Stage 58 is the next canonical stage.
+
 
 
 

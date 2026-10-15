@@ -5,3 +5,5 @@ export * from "./MarketsGroupSelector";
 export * from "./FeaturedMarketInstruments";
 export * from "./MarketsInstrumentTable";
 export * from "./MarketsEmptyState";
+export * from "./MarketsNavigationTabs";
+export * from "./equities";
