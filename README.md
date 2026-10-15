@@ -288,6 +288,30 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Regressions: Stage 56 (35 tests) and Stage 57 (45 tests) pass cleanly without regressions.
 - **Documentation**: See `docs/ETF_FUNDS_MARKETS_V1.md`
 
+## Foreign Exchange (FX) Markets V1 (Stage 59)
+- **Status**: Implemented (`/markets/fx`)
+- **Capabilities**:
+  - Global Foreign Exchange intelligence, currency pair discovery, spot exchange rates, bid/ask analytics, and indicative currency conversion.
+  - Base and quote currency semantics strictly enforced (`BASE/QUOTE` = units of quote per 1 unit of base).
+  - Validated ISO 4217 fiat currency metadata registry.
+  - Canonical Financial Instrument UUID authority (`instrument_entity_id`) and alias resolution.
+  - Rate Kind classification: `SPOT_BID_ASK`, `INDICATIVE_MID`, `REFERENCE_RATE`, `LAST_TRADE`, `CROSSED_INVALID`.
+  - Absolute spread, normalized basis points, and pair-specific pip conventions (0.01 for JPY & INR, 0.0001 for non-JPY).
+  - Crossed market guards (`bid > ask` flagged as `CROSSED_INVALID`, spread null, midpoint null).
+  - Indicative Currency Converter: Direct, Reverse, and Same-Currency (1:1) arithmetic with Python Decimal precision and destination minor unit rounding.
+  - Strict no-triangulation guard: Unsupported cross-rates are rejected honestly without synthetic triangulation.
+  - High-density Bloomberg/OpenBB-inspired terminal interface with Pair Directory Table, Pair Inspector, Currency Converter, and Coverage Summary.
+- **Endpoints**:
+  - `GET /api/v1/markets/fx`: Paginated FX pair directory with quotes and spreads.
+  - `GET /api/v1/markets/fx/currencies`: Supported fiat currencies in the canonical catalog.
+  - `GET /api/v1/markets/fx/{instrument_entity_id}`: Deep pair overview, orientation explanation, and currency metadata.
+  - `POST /api/v1/markets/fx/convert`: Read-only indicative currency conversion.
+- **Testing**:
+  - Backend: `pytest apps/api/tests/markets/test_markets_fx.py` (20 test cases, 100% pass)
+  - Frontend: `npx tsx --test apps/web/tests/markets-fx.test.ts` (12 test cases, 100% pass)
+  - Regressions: Stage 56, 57, and 58 pass cleanly without regressions (47 web tests, 84 backend tests).
+- **Documentation**: See `docs/FX_MARKETS_V1.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

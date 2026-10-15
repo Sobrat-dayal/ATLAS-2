@@ -2390,6 +2390,178 @@ This document records the major architectural and product decisions established.
 145. Stage 58 documentation must match actual implementation.
 146. Stage 59 is the next canonical development stage.
 
+## Stage 59: FX Markets V1 Architecture & Implementation
+
+1. Stage 59 builds FX Markets V1.
+2. FX remains within canonical Markets module 2.
+3. The canonical route is `/markets/fx` integrated alongside Overview, Equities, and ETFs & Funds.
+4. Markets Overview remains functional.
+5. Equities remains functional.
+6. ETFs & Funds remains functional.
+7. The global AppShell remains unchanged.
+8. FX uses canonical Financial Instrument UUIDs (`instrument_entity_id`).
+9. Ticker text is not primary identity.
+10. Base and Quote currency are explicit.
+11. BASE/QUOTE means QUOTE units per BASE unit.
+12. Pair orientation is never guessed.
+13. Reverse conversion is a mathematical derivation, not necessarily a new Provider observation.
+14. Currency identifiers use validated ISO 4217 reference metadata.
+15. Fiat FX remains distinct from Cryptocurrency.
+16. Precious-metal crosses are not silently ordinary fiat FX.
+17. Spot FX remains distinct from forwards and derivatives.
+18. Provider aliases are resolved through existing identifier infrastructure.
+19. FX observations preserve Provider and series identity.
+20. FX Provider observations are not a universal consolidated market price.
+21. Reference fixings are distinct from spot bid/ask.
+22. Indicative rates are distinct from executable rates.
+23. Last-trade semantics are validated before use.
+24. Bid and Ask remain separate.
+25. Bid and Ask must be compatible.
+26. Cross-Provider bid/ask mixing is prohibited.
+27. Crossed bid/ask observations are not silently repaired.
+28. Midpoint is explicitly derived.
+29. Spread uses Decimal.
+30. Spread calculation requires valid compatible bid/ask.
+31. Spread basis points differ from pips.
+32. Pip convention is not universally hardcoded.
+33. FX quotation precision differs from ISO currency minor units.
+34. Rate currencies and units are explicit.
+35. Missing Quote is not zero.
+36. Missing spread is not zero spread.
+37. Missing change is not zero change.
+38. FX percentage changes require qualified comparable references.
+39. Equity previous-close rules are not blindly applied to FX.
+40. Weekend and holiday semantics are respected where supported.
+41. Reference rates are not mislabeled realtime.
+42. Stage 44 remains freshness authority.
+43. Source time remains distinct from receive time.
+44. Data delay remains distinct from freshness.
+45. WebSocket connection remains distinct from observation freshness.
+46. Redis TTL does not establish freshness.
+47. FX Directory uses canonical configured instruments.
+48. Stage 59 does not claim full global FX coverage.
+49. Stage 59 does not scrape pair lists.
+50. Stage 59 does not create instruments on search.
+51. Stage 59 does not invent Provider rate data.
+52. Base currency filtering is canonical.
+53. Quote currency filtering is canonical.
+54. FX search is bounded.
+55. FX pagination is deterministic.
+56. Coverage counts are scoped.
+57. Stage 59 reuses shared Markets read services.
+58. Stage 59 reuses Stage 41 latest Quote state.
+59. Stage 59 reuses Stage 39 historical data where compatible.
+60. Stage 59 reuses Stage 42 Market Events.
+61. Stage 59 reuses Stage 43 WebSockets.
+62. Stage 59 does not create a second Quote cache.
+63. Stage 59 does not create a second WebSocket client.
+64. Stage 59 does not create another realtime event bus.
+65. Stage 59 does not start upstream Provider streams on page load.
+66. Stage 59 does not create ingestion targets on page load.
+67. Stage 59 does not create historical jobs on page load.
+68. Stage 59 does not query external Providers on every read.
+69. Stage 59 includes a read-only indicative converter.
+70. Conversion uses canonical existing observations.
+71. Conversion arithmetic uses Decimal.
+72. Base-to-quote conversion respects direction.
+73. Quote-to-base conversion respects direction.
+74. Bid/ask conversion direction is explicit.
+75. Converter rate kind is explicit.
+76. Converter Provider is explicit.
+77. Converter timestamp is explicit.
+78. Converter freshness/delay is explicit.
+79. Converter amounts are validated.
+80. Converter output rounding is documented.
+81. Conversion is not a guaranteed executable offer.
+82. Conversion does not include unverified bank fees.
+83. Conversion does not place orders.
+84. Conversion does not transfer money.
+85. Conversion does not mutate Portfolios.
+86. Conversion does not perform settlement.
+87. Conversion does not infer tax-accounting rates.
+88. Same-currency conversion is arithmetic identity.
+89. Conversion does not silently triangulate.
+90. Conversion does not create synthetic pair Entities.
+91. Reverse conversion does not overwrite canonical Quote state.
+92. Unsupported direct pair conversion returns unavailable.
+93. FX APIs are authenticated.
+94. FX APIs enforce authorization.
+95. FX APIs enforce financial-data entitlements.
+96. Conversion cannot bypass entitlements.
+97. FX API pagination is bounded.
+98. FX API inputs are strictly validated.
+99. FX API reads cause no writes.
+100. FX API reads cause no Provider fanout.
+101. FX APIs do not place trades.
+102. FX APIs do not invoke Agents.
+103. FX APIs do not invoke Workflows.
+104. FX APIs do not invoke LLMs.
+105. FX uses the existing Markets table/filter primitives.
+106. FX uses ATLAS design tokens.
+107. FX does not use purple gradients.
+108. FX does not use emoji icons.
+109. FX does not use fabricated price charts.
+110. FX does not use fake spreads.
+111. FX does not use fake return percentages.
+112. FX does not use fake liquidity.
+113. FX does not use fake market-open status.
+114. FX does not use fake trading volume.
+115. FX does not use fake AI commentary.
+116. FX preserves selected Entity context.
+117. FX does not automatically select an arbitrary default pair.
+118. FX uses canonical internal navigation.
+119. FX does not add a global sidebar module.
+120. FX preserves the Agent Dock.
+121. FX preserves the Bottom Taskbar.
+122. FX preserves Search.
+123. FX preserves the Command Palette.
+124. FX preserves Notification Center.
+125. FX does not expand Personalized Activity tracking.
+126. FX does not create Stage 54 tasks/approvals.
+127. FX does not generate Stage 55 intelligence items.
+128. Stage 60 remains responsible for Cryptocurrency.
+129. Stage 61 remains responsible for Bonds.
+130. Stage 62 remains responsible for Futures/Commodities.
+131. Stage 63 remains responsible for Market Movers.
+132. Stage 64 remains responsible for Heatmaps.
+133. Stage 65 remains responsible for Cross-Asset Analytics.
+134. Stage 66 remains responsible for Charts.
+135. Stage 76 remains responsible for Watchlists.
+136. Stage 80 remains responsible for Alerts.
+137. Stage 94–98 remain responsible for Screeners.
+138. Stage 110+ remains responsible for Portfolio analytics.
+139. Stage 115+ remains responsible for Risk analytics.
+140. Stage 141+ remains responsible for advanced quant functionality.
+141. Stage 144+ remains responsible for Trading execution.
+142. Stage 146+ remains responsible for Agents.
+143. Stage 59 does not implement FX forwards.
+144. Stage 59 does not implement FX swaps.
+145. Stage 59 does not implement FX options.
+146. Stage 59 does not implement carry-trade analytics.
+147. Stage 59 does not implement cross-currency basis.
+148. Stage 59 does not implement triangular arbitrage.
+149. Stage 59 does not implement FX hedging execution.
+150. Stage 59 does not implement leverage/margin management.
+151. Stage 59 does not implement broker connectivity.
+152. Stage 59 does not implement financial recommendations.
+153. Stage 59 does not persist private rates in browser storage.
+154. Stage 59 prevents cross-user entitlement leakage.
+155. Stage 59 supports honest unavailable states.
+156. Stage 59 supports partial-data states.
+157. Stage 59 supports desktop, tablet and mobile.
+158. Stage 59 supports Agent Dock and Bottom Taskbar layouts.
+159. Stage 59 supports keyboard and screen-reader access.
+160. Stage 59 uses only justified database changes.
+161. Stage 59 does not seed fake data.
+162. Stage 59 must pass FX direction tests.
+163. Stage 59 must pass spread precision tests.
+164. Stage 59 must pass conversion tests.
+165. Stage 59 must pass authorization tests.
+166. Stage 59 must pass previous-stage regressions.
+167. Stage 59 documentation must match implementation.
+168. Stage 60 is the next canonical development stage.
+
+
 
 
 
