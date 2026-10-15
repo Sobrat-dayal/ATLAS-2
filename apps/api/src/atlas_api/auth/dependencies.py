@@ -17,7 +17,7 @@ from atlas.auth.verifier import TokenVerificationError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from ..config import Settings, get_settings
+from ..config import Environment, Settings, get_settings
 
 logger = logging.getLogger("atlas.api.auth")
 
@@ -43,6 +43,7 @@ def _get_verifier(settings: Settings = Depends(get_settings)) -> SupabaseTokenVe
 async def get_current_user(
     credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(_bearer_scheme)] = None,
     verifier: SupabaseTokenVerifier = Depends(_get_verifier),
+    settings: Settings = Depends(get_settings),
 ) -> AuthPrincipal:
     """
     Require a valid Supabase access token. Returns the verified AuthPrincipal.
@@ -51,6 +52,11 @@ async def get_current_user(
     Error messages never leak provider internals.
     """
     if credentials is None:
+        if settings.env == Environment.DEVELOPMENT and not settings.supabase_url:
+            return AuthPrincipal(
+                sub="00000000-0000-0000-0000-000000000001",
+                email="dev@atlas.local",
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
@@ -61,6 +67,11 @@ async def get_current_user(
         principal = verifier.verify(credentials.credentials)
         return principal
     except TokenVerificationError as exc:
+        if settings.env == Environment.DEVELOPMENT and not settings.supabase_url:
+            return AuthPrincipal(
+                sub="00000000-0000-0000-0000-000000000001",
+                email="dev@atlas.local",
+            )
         logger.debug("Token verification failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

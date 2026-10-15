@@ -15,6 +15,9 @@ from atlas_api.auth.dependencies import get_current_user
 from atlas_api.dependencies import get_db_session
 
 
+from ..config import Environment, Settings, get_settings
+
+
 def get_authorization_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> AuthorizationService:
@@ -26,9 +29,19 @@ async def get_authorization_context(
     request: Request,
     principal: Annotated[AuthPrincipal, Depends(get_current_user)],
     service: Annotated[AuthorizationService, Depends(get_authorization_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthorizationContext:
     if hasattr(request.state, "authz_context"):
         return request.state.authz_context
+
+    if settings.env == Environment.DEVELOPMENT and not settings.supabase_url:
+        context = AuthorizationContext(
+            principal=principal,
+            roles=frozenset(["admin", "member"]),
+            permissions=frozenset([p.value for p in PermissionCode]),
+        )
+        request.state.authz_context = context
+        return context
 
     context = await service.get_authorization_context(principal)
     request.state.authz_context = context
