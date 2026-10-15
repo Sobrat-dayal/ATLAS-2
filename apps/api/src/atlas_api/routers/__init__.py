@@ -6,6 +6,7 @@ from atlas.markets.equities.router import router as equities_router
 from atlas.markets.funds.router import router as funds_router
 from atlas.markets.fx.router import router as fx_router
 from atlas.markets.crypto.router import router as crypto_router
+from atlas.markets.bonds.router import router as bonds_router
 from atlas.markets.overview.router import router as markets_router
 from atlas.tasks.router import router as tasks_router
 from fastapi import APIRouter
@@ -57,6 +58,8 @@ api_router.include_router(equities_router, prefix="")
 api_router.include_router(funds_router, prefix="")
 api_router.include_router(fx_router, prefix="")
 api_router.include_router(crypto_router, prefix="")
+api_router.include_router(bonds_router, prefix="")
 api_router.include_router(activity_router, prefix="")
 api_router.include_router(tasks_router, prefix="")
 api_router.include_router(approvals_router, prefix="")
+

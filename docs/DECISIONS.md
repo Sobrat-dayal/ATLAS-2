@@ -2734,6 +2734,174 @@ This document records the major architectural and product decisions established.
 170. Stage 60 documentation must match actual implementation.
 171. Stage 61 is the next canonical development stage.
 
+## Stage 61: Bonds & Fixed-Income Markets V1
+1. Stage 61 builds Bonds & Fixed-Income Markets V1.
+2. Bonds remains within Markets module 2.
+3. The preferred route is `/markets/bonds`.
+4. Previous Markets sections remain functional.
+5. Existing AppShell remains authoritative.
+6. Bond identity uses canonical Financial Instrument UUID.
+7. Issuer identity remains distinct from Bond Security identity.
+8. Legal issuer remains distinct from guarantor.
+9. Tranches are not merged.
+10. Identifiers reuse Stage 21.
+11. Resolution reuses Stage 22.
+12. Issuer relationships reuse Stage 23.
+13. Provenance reuses Stage 24.
+14. Selection reuses Stage 25.
+15. Bond ticker is not a primary key.
+16. ISIN is validated where supported.
+17. CUSIP licensing constraints are respected.
+18. Bond classification uses canonical types.
+19. Treasury bills are not assumed coupon-bearing.
+20. Missing coupon is not zero coupon.
+21. Fixed and floating coupons remain distinct.
+22. Perpetual securities do not receive invented maturities.
+23. Maturity date is not duration.
+24. Past maturity is not automatically default.
+25. Bond currency remains explicit.
+26. Principal currency and quote currency are not silently conflated.
+27. Face value and minimum denomination remain distinct.
+28. Price basis is explicit.
+29. Clean price remains distinct from dirty price.
+30. Accrued interest remains distinct from market price.
+31. Price quote units are explicit.
+32. Price per 100 face is not an absolute security cost.
+33. Clean/dirty arithmetic requires compatible units.
+34. Accrued-interest settlement date is explicit.
+35. Day-count conventions are not guessed.
+36. Coupon schedules are not fabricated.
+37. Ex-coupon rules are not ignored when calculating accrued interest.
+38. Floating-reset assumptions are not invented.
+39. Amortizing principal is not assumed constant.
+40. Price kind is preserved.
+41. Trade price remains distinct from evaluated price.
+42. Evaluated price is not mislabeled an executed trade.
+43. OTC market coverage is not presented as consolidated exchange coverage.
+44. A bond may not have continuous realtime observations.
+45. Stage 33 canonical Market Data is reused where semantically compatible.
+46. Stage 41 latest Quote is reused where applicable.
+47. Stage 39 historical references are reused where compatible.
+48. Stage 44 remains freshness authority.
+49. Stage 42 remains Market Event authority.
+50. Stage 43 remains WebSocket authority.
+51. No synthetic bond streaming is introduced.
+52. No second Quote cache is created.
+53. No second event transport is created.
+54. No second global WebSocket is created.
+55. Quote compatibility includes bond price basis.
+56. Bid/ask compatibility includes units and Provider series.
+57. Different price bases are not mixed.
+58. Bond prices are Decimal-safe.
+59. Coupon rate remains distinct from yield.
+60. Source yield types are explicit.
+61. YTM is not inferred from generic yield labels.
+62. YTW remains distinct from YTM.
+63. YTC remains distinct from YTM.
+64. Discount yield remains distinct from conventional coupon-bond yield.
+65. Negative yield values are supported where valid.
+66. Zero yield remains distinct from missing yield.
+67. Missing yield is not replaced by coupon.
+68. Yield-scale conventions are explicit.
+69. Yield basis-point changes are distinct from price percentage changes.
+70. No generalized YTM solver is introduced.
+71. No generalized bond pricing engine is introduced.
+72. No general coupon cash-flow engine is introduced.
+73. No yield-curve bootstrapping is introduced.
+74. No duration engine is introduced.
+75. No convexity engine is introduced.
+76. No DV01/PV01 engine is introduced.
+77. No credit-risk model is introduced.
+78. No bond portfolio optimization is introduced.
+79. No bond trading system is introduced.
+80. No dealer RFQ engine is introduced.
+81. No settlement instruction engine is introduced.
+82. Stage 61 directory uses canonical Security data.
+83. Stage 61 does not scrape unverified bond lists.
+84. Stage 61 does not create Securities on search.
+85. Issuer type filters use canonical classification.
+86. Currency filters use verified denomination data.
+87. Coupon type filters use verified contractual metadata.
+88. Maturity filters use actual dates.
+89. Perpetuals are not assigned artificial maturity.
+90. Directory pagination is bounded.
+91. Result ordering is deterministic.
+92. Coverage counts are scoped.
+93. Price observations preserve source timestamps.
+94. Evaluated prices preserve valuation dates.
+95. Receive timestamps remain distinct.
+96. Redis TTL is not freshness.
+97. WebSocket connectivity is not freshness.
+98. Bond observation freshness may differ from equities.
+99. Unknown freshness is not labeled realtime.
+100. Unknown Provider delay is not invented.
+101. Provider provenance is preserved.
+102. Licensed data entitlements are enforced.
+103. Bond APIs require authentication.
+104. Bond APIs require authorization.
+105. Read APIs do not write financial data.
+106. Read APIs do not trigger Provider fanout.
+107. Read APIs do not create ingestion targets.
+108. Read APIs do not create background jobs.
+109. Read APIs do not execute trading.
+110. Read APIs do not run Agents.
+111. Read APIs do not run Workflows.
+112. Read APIs do not call LLMs.
+113. Bond Inspector uses actual canonical data.
+114. Issuer navigation requires a verified relationship.
+115. The Markets design system is reused.
+116. No new global sidebar module is created.
+117. Global Search is reused.
+118. Command Palette is preserved.
+119. Agent Dock is preserved.
+120. Bottom Taskbar is preserved.
+121. Notification Center is preserved.
+122. Selected Entity Context remains authoritative.
+123. No purple gradients are introduced.
+124. No emoji icons are introduced.
+125. No fake yield curves are displayed.
+126. No fabricated bond prices are displayed.
+127. No fabricated yields are displayed.
+128. No fabricated credit ratings are displayed.
+129. No fabricated coupon schedules are displayed.
+130. No fabricated accrued interest is displayed.
+131. No fabricated liquidity metrics are displayed.
+132. Missing financial data is not displayed as zero.
+133. Partial-data states are supported.
+134. Authentication cache isolation is preserved.
+135. No private licensed pricing is persisted in browser storage.
+136. Stage 62 remains responsible for Futures/Commodities.
+137. Stage 63 remains responsible for Market Movers.
+138. Stage 64 remains responsible for Heatmaps.
+139. Stage 65 remains responsible for Cross-Asset.
+140. Stage 66 remains responsible for Charts V1.
+141. Stage 76 remains responsible for Watchlists.
+142. Stage 80 remains responsible for Alerts.
+143. Stage 94–98 remain responsible for Screeners.
+144. Stage 110+ remains responsible for Portfolios.
+145. Stage 115+ remains responsible for Risk.
+146. Stage 118 remains responsible for advanced fixed-income risk.
+147. Stage 141+ remains responsible for Options/Quant.
+148. Stage 142 will introduce QuantLib.
+149. Stage 144+ remains responsible for Trading.
+150. Stage 146+ remains responsible for Agents.
+151. No unnecessary database migration is created.
+152. No fake bond records are seeded.
+153. Stage 61 supports desktop, tablet and mobile.
+154. Stage 61 supports keyboard accessibility.
+155. Stage 61 supports screen readers.
+156. Stage 61 supports Agent Dock open.
+157. Stage 61 supports Bottom Taskbar open.
+158. Stage 61 must pass Security identity tests.
+159. Stage 61 must pass coupon/maturity tests.
+160. Stage 61 must pass clean/dirty price tests.
+161. Stage 61 must pass yield-type tests.
+162. Stage 61 must pass accrued-interest safeguards.
+163. Stage 61 must pass authorization tests.
+164. Stage 61 must pass relevant prior-stage regressions.
+165. Stage 61 documentation must match implementation.
+166. Stage 62 is the next canonical stage.
+
 
 
 

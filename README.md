@@ -337,6 +337,28 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Regressions: Full Markets regression suite passes cleanly (102 backend tests across Overview, Equities, Funds, FX, and Crypto; 48 frontend tests).
 - **Documentation**: See `docs/CRYPTOCURRENCY_MARKETS_V1.md`
 
+## Bonds & Fixed-Income Markets V1 (Stage 61)
+- **Status**: Implemented (`/markets/bonds`)
+- **Capabilities**:
+  - Global debt security discovery, sovereign and corporate debt markets, coupon intelligence, yield observations, clean/dirty pricing, and professional fixed-income terminal.
+  - Canonical bond security identity: Universal UUID5 based on ISIN and symbol, strictly decoupled from legal debt issuer identity.
+  - Verified debt issuers: Sovereign treasuries (US Treasury, UK DMO, Germany Finance Agency, Japan MoF), corporate issuers (Apple, Microsoft, JPMorgan, Pfizer), and supranational institutions (World Bank IBRD, European Investment Bank).
+  - Contractual terms: Fixed, floating, and genuine zero-coupon schedules, coupon frequency, issue and dated dates, contractual maturity, perpetual debt, day-count conventions (`ACT/ACT ICMA`, `30/360`, `ACT/360`), and seniority.
+  - Source-aware pricing conventions: Clean price, dirty price, and accrued interest strictly distinguished on compatible quotation bases (`% of par`, `price per 100 face`, absolute).
+  - Typed yield observations: Source-provided YTM, YTC, YTW, and Discount Yield with explicit units and methodologies; full support for negative yields; yield changes expressed in basis points (bps).
+  - Strict financial boundaries: Zero synthetic yield curves, zero duration/convexity engines, zero generalized YTM solvers, zero bond trading/RFQ execution, zero fabricated bond prices or credit ratings.
+  - Read-only authenticated architecture: 0 database writes, 0 background worker jobs, 0 upstream provider fanout on read.
+  - High-density Bloomberg/OpenBB-inspired terminal workspace: Coverage Summary, Search & Multi-Dimensional Filters, Bond Directory Table with keyset pagination, and Selected Bond Inspector.
+- **Endpoints**:
+  - `GET /api/v1/markets/bonds`: Paginated bond directory with clean prices, dirty prices, accrued interest, and typed yields.
+  - `GET /api/v1/markets/bonds/filters`: Authoritative bond filter options and issuer categories.
+  - `GET /api/v1/markets/bonds/{instrument_entity_id}`: Deep bond overview with contractual terms, price/yield breakdown, provenance, and non-executable OTC disclaimer.
+- **Testing**:
+  - Backend: `pytest apps/api/tests/markets/test_markets_bonds.py` (24 test cases, 100% pass)
+  - Frontend: `npx tsx --test apps/web/tests/markets-bonds.test.ts` (11 test cases, 100% pass)
+  - Regressions: Full Markets regression suite passes cleanly (126 backend tests across Overview, Equities, Funds, FX, Crypto, and Bonds; 69 frontend tests).
+- **Documentation**: See `docs/BONDS_FIXED_INCOME_MARKETS_V1.md`
+
 ## The 20 Modules
 1. Home
 2. Markets
