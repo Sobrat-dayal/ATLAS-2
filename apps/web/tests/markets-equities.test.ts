@@ -173,7 +173,10 @@ describe("Stage 57 - Equities Markets V1 Tests", () => {
 
     assert.ok(content.includes("/markets"), "Tabs must link to /markets");
     assert.ok(content.includes("/markets/equities"), "Tabs must link to /markets/equities");
-    assert.ok(content.includes("Stage 58"), "ETFs & Funds must be marked Stage 58");
+    assert.ok(
+      content.includes("/markets/funds") || content.includes("Stage 58"),
+      "ETFs & Funds must be linked to /markets/funds or marked Stage 58"
+    );
     assert.ok(content.includes("Stage 59"), "FX must be marked Stage 59");
     assert.ok(content.includes("Stage 60"), "Crypto must be marked Stage 60");
   });

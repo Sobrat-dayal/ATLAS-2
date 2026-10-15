@@ -7,3 +7,4 @@ export * from "./MarketsInstrumentTable";
 export * from "./MarketsEmptyState";
 export * from "./MarketsNavigationTabs";
 export * from "./equities";
+export * from "./funds";

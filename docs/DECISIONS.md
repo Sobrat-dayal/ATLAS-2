@@ -2241,6 +2241,156 @@ This document records the major architectural and product decisions established.
 157. Stage 57 documentation must match actual implementation.
 158. Stage 58 is the next canonical stage.
 
+## Stage 58 Decisions — ETFs & Funds Markets V1
+
+1. Stage 58 implements ETFs & Funds Markets V1.
+2. ETFs & Funds remains inside canonical Markets module 2 (`/markets/funds`).
+3. The existing global sidebar is preserved.
+4. The existing AppShell is preserved.
+5. Stage 56 Markets Overview remains functional (`/markets`).
+6. Stage 57 Equities remains functional (`/markets/equities`).
+7. The chosen Funds route is canonical and documented as `/markets/funds`.
+8. Stage 58 does not create a separate financial-data platform.
+9. Fund identity uses canonical Financial Instrument UUIDs (`instrument_entity_id`).
+10. Fund product and fund share class are distinct where represented.
+11. Share classes are not merged by display name.
+12. Exchange listings are not merged by ticker.
+13. Ticker is not a primary key.
+14. ISIN/FIGI/provider identifiers reuse Stage 21.
+15. Symbol ambiguity reuses Stage 22.
+16. Fund relationships reuse Stage 23.
+17. Provenance reuses Stage 24.
+18. Selected Entity reuses Stage 25 (`useSelectedEntity`).
+19. ETF and ordinary corporate equity remain different classifications.
+20. ETF and ETN remain distinct (ETNs are debt notes, not equity funds).
+21. Mutual funds without exchange Quotes are valid and represent official close NAV.
+22. Closed-end funds can have both traded price and NAV.
+23. ETF market price and official NAV are separate measures.
+24. NAV is not stored in a market Quote field.
+25. NAV is not synthesized from market price.
+26. Market price is not synthesized from NAV.
+27. iNAV is not assumed equal to official NAV.
+28. NAV valuation date is preserved and explicit.
+29. NAV publication timestamp is distinct from valuation date.
+30. NAV currency is explicit.
+31. NAV is not automatically realtime.
+32. NAV share-class identity is preserved.
+33. NAV change is not the same as market-price change.
+34. NAV change is not automatically total return.
+35. Distribution effects are not ignored.
+36. Incompatible NAV observations are not compared.
+37. ETF market-price changes reuse Stage 52/56 logic.
+38. Decimal precision remains authoritative.
+39. Missing financial values are not zeros.
+40. Unknown fund data is not invented.
+41. Share-class currencies are distinct from trading currency.
+42. Fund domicile is distinct from listing market.
+43. Fund manager is distinct from sponsor and issuer.
+44. Benchmark identity is not inferred from names.
+45. An index is not replaced by an ETF proxy.
+46. Expense ratio metric types remain explicit.
+47. Gross expense ratio and net expense ratio are not conflated.
+48. TER, OCF and management fee are not silently interchangeable.
+49. Fee values preserve units and effective dates.
+50. Fee values preserve share-class scope.
+51. Missing expense ratio is not zero.
+52. AUM preserves currency.
+53. AUM preserves as-of date.
+54. AUM preserves fund/share-class scope.
+55. AUM is not fabricated from unverified units.
+56. AUM changes are not fund flows.
+57. Fund inception is not inferred from earliest Quote history.
+58. Accumulating/distributing classification requires verified metadata.
+59. Fund strategy descriptions are not AI-generated.
+60. Stage 58 does not create a full holdings ingestion engine.
+61. Optional holdings previews require genuine dated source data.
+62. Stage 58 does not calculate fund look-through risk.
+63. Stage 58 does not implement fund-flow analytics.
+64. Stage 58 does not implement advanced ETF arbitrage.
+65. Stage 58 does not implement tracking-error analytics.
+66. Stage 58 does not implement portfolio overlap.
+67. Stage 58 does not implement backtesting.
+68. Stage 58 does not implement a full fund screener.
+69. Fund directory source is canonical Financial Instrument data.
+70. Stage 58 does not import unverified ticker lists.
+71. Stage 58 does not create Entities on search.
+72. Stage 58 does not call Providers on page load.
+73. Stage 58 does not create upstream live-target subscriptions.
+74. Stage 58 does not trigger historical backfill on read.
+75. Stage 58 does not fabricate global fund coverage.
+76. Directory search is bounded.
+77. Directory filters are typed and validated.
+78. Country semantics are explicit.
+79. Currency filter semantics are explicit.
+80. Fund type classification is canonical.
+81. Exchange metadata is authoritative.
+82. Fund pagination is deterministic.
+83. Result counts are correctly scoped.
+84. Stage 41 remains latest Quote authority.
+85. Stage 42 remains Market Event authority.
+86. Stage 43 remains WebSocket authority.
+87. Stage 44 remains Quote freshness authority.
+88. Stage 58 does not introduce a new WebSocket transport.
+89. Stage 58 does not introduce a new Quote event type.
+90. ETF Quote updates do not update official NAV.
+91. Mutual funds do not receive synthetic realtime Quotes.
+92. Stage 58 preserves source timestamps.
+93. Stage 58 preserves NAV valuation dates.
+94. Stage 58 preserves Provider provenance.
+95. Stage 58 distinguishes unavailable from not applicable.
+96. Stage 58 APIs are authenticated.
+97. Stage 58 APIs enforce authorization.
+98. Stage 58 APIs enforce financial-data entitlements.
+99. Stage 58 directory reads are read-only.
+100. Stage 58 uses bounded backend queries.
+101. Stage 58 avoids N+1 reads.
+102. Stage 58 uses shared Markets UI primitives.
+103. Stage 58 uses ATLAS design tokens.
+104. Stage 58 does not use purple gradients.
+105. Stage 58 does not use emoji icons.
+106. Stage 58 does not use fake fund ratings.
+107. Stage 58 does not use fake NAV values.
+108. Stage 58 does not use fake expense ratios.
+109. Stage 58 does not use fake AUM values.
+110. Stage 58 does not use fake holdings.
+111. Stage 58 does not use fake fund returns.
+112. Stage 58 does not use fake source labels.
+113. Stage 58 does not create a new Agent panel.
+114. Stage 58 does not create a new Bottom Taskbar.
+115. Stage 58 does not create a new Search system.
+116. Stage 58 does not create a new Command Palette.
+117. Stage 58 does not create Watchlists.
+118. Stage 58 does not create Alerts.
+119. Stage 58 does not create Portfolios.
+120. Stage 58 does not execute Trading.
+121. Stage 58 does not execute Agents.
+122. Stage 58 does not execute Workflows.
+123. Stage 58 does not call LLMs on page load.
+124. Stage 58 does not generate AI fund recommendations.
+125. Stage 58 does not provide financial advice.
+126. Stage 58 does not create another Provider credential store.
+127. Stage 58 does not create unnecessary Redis keys.
+128. Stage 58 does not create unnecessary ClickHouse tables.
+129. Stage 58 does not create unnecessary workers.
+130. Stage 58 uses minimal migrations only if genuinely required.
+131. Stage 58 does not seed fake financial data.
+132. Stage 58 supports partial-data states.
+133. Stage 58 supports truthful missing-data states.
+134. Stage 58 supports desktop, tablet and mobile.
+135. Stage 58 supports Agent Dock open.
+136. Stage 58 supports Bottom Taskbar open.
+137. Stage 58 supports accessible tables and controls.
+138. Stage 58 preserves cross-user data isolation.
+139. Stage 58 must pass fund identity tests.
+140. Stage 58 must pass Quote/NAV separation tests.
+141. Stage 58 must pass currency tests.
+142. Stage 58 must pass fee/AUM scope tests.
+143. Stage 58 must pass authorization tests.
+144. Stage 58 must pass relevant previous-stage regressions.
+145. Stage 58 documentation must match actual implementation.
+146. Stage 59 is the next canonical development stage.
+
+
 
 
 

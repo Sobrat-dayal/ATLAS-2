@@ -15,7 +15,7 @@ interface MarketTabItem {
 const MARKET_TABS: MarketTabItem[] = [
   { id: "overview", label: "Overview", href: "/markets", isImplemented: true },
   { id: "equities", label: "Equities", href: "/markets/equities", isImplemented: true },
-  { id: "etfs", label: "ETFs & Funds", badge: "Stage 58", isImplemented: false },
+  { id: "etfs", label: "ETFs & Funds", href: "/markets/funds", isImplemented: true },
   { id: "fx", label: "FX", badge: "Stage 59", isImplemented: false },
   { id: "crypto", label: "Cryptocurrency", badge: "Stage 60", isImplemented: false },
   { id: "bonds", label: "Bonds", badge: "Stage 61", isImplemented: false },

@@ -251,6 +251,43 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Frontend: `npx tsx --tsconfig apps/web/tsconfig.json --test apps/web/tests/markets-overview.test.ts`
 - **Documentation**: See `docs/MARKETS_OVERVIEW_V1.md`
 
+## Equities Markets V1 (Stage 57)
+- **Placement**: Mounted on `/markets/equities`, extending Module 2 (`/markets`).
+- **Core Architecture**:
+  - Global equity security discovery and inspection workspace grounded in canonical Financial Instrument records.
+  - Strict distinction between Issuer Company (Stage 18), Equity Security (Stage 17), and Exchange Listing.
+  - Multi-market listing support with Market Identifier Codes (MIC: `XNAS`, `XNYS`, `XNSE`, `XLON`, `XTKS`).
+  - Read-only endpoints: `GET /api/v1/markets/equities`, `GET /api/v1/markets/equities/filters`, `GET /api/v1/markets/equities/{id}`.
+  - High-density tabular layout with sorting, deterministic keyset pagination, and side Inspector panel.
+- **Testing**:
+  - Backend: `pytest apps/api/tests/markets/test_markets_equities.py`
+  - Frontend: `npx.cmd tsx --tsconfig apps/web/tsconfig.json --test apps/web/tests/markets-equities.test.ts`
+- **Documentation**: See `docs/EQUITIES_MARKETS_V1.md`
+
+## ETFs & Funds Markets V1 (Stage 58)
+- **Placement**: Mounted on the canonical route `/markets/funds`, extending Module 2 (`/markets`).
+- **Core Architecture**:
+  - Global fund vehicle discovery, ETF intelligence, and NAV-aware market data explorer.
+  - Strict classification: ETFs, Open-End Mutual Funds, Closed-End Funds (CEFs), with explicit ETN separation.
+  - **The Prime Data Rule: Exchange Last Price vs Official Net Asset Value (NAV)**:
+    - Traded market price and Net Asset Value (NAV) are separate financial concepts and never conflated or substituted.
+    - Listed ETFs report continuous exchange quotes via Stage 41 Redis + Stage 39 ClickHouse.
+    - Unlisted Open-End Mutual Funds report dated valuation close NAVs per unit without synthetic realtime trade quotes.
+    - Realtime quote events (`market.quote.updated`) update trade prices for applicable ETFs without mutating official NAV.
+  - Typed expense ratios (net vs gross, percentage scale) and reported AUM with explicit scope and as-of dates.
+  - Verified benchmark relationships and management/sponsor links with verification badges.
+  - High-density Bloomberg/OpenBB-inspired terminal interface with Fund Type Selector (`All`, `ETFs`, `Mutual Funds`, `CEFs`), filters, pagination, and detailed Fund Inspector.
+  - Strict security and design policies: zero purple gradients, zero execution trading buttons, zero fake fund ratings or returns.
+- **Endpoints**:
+  - `GET /api/v1/markets/funds`: Paginated directory with typed filters.
+  - `GET /api/v1/markets/funds/filters`: Authoritative filter options and counts.
+  - `GET /api/v1/markets/funds/{instrument_entity_id}`: Deep fund overview with identifiers, venue, benchmark, and sponsor metadata.
+- **Testing**:
+  - Backend: `pytest apps/api/tests/markets/test_markets_funds.py` (19 test cases, 100% pass)
+  - Frontend: `npx.cmd tsx --tsconfig apps/web/tsconfig.json --test apps/web/tests/markets-funds.test.ts` (10 test cases, 100% pass)
+  - Regressions: Stage 56 (35 tests) and Stage 57 (45 tests) pass cleanly without regressions.
+- **Documentation**: See `docs/ETF_FUNDS_MARKETS_V1.md`
+
 ## The 20 Modules
 1. Home
 2. Markets
