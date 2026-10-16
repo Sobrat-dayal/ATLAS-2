@@ -19,7 +19,7 @@ const MARKET_TABS: MarketTabItem[] = [
   { id: "fx", label: "FX", href: "/markets/fx", isImplemented: true },
   { id: "crypto", label: "Cryptocurrency", href: "/markets/crypto", isImplemented: true },
   { id: "bonds", label: "Bonds", href: "/markets/bonds", isImplemented: true },
-  { id: "futures", label: "Futures & Commodities", badge: "Stage 62", isImplemented: false },
+  { id: "futures", label: "Futures & Commodities", href: "/markets/futures", isImplemented: true },
   { id: "movers", label: "Movers", badge: "Stage 63", isImplemented: false },
   { id: "heatmaps", label: "Heatmaps", badge: "Stage 64", isImplemented: false },
   { id: "cross-asset", label: "Cross-Asset", badge: "Stage 65", isImplemented: false },

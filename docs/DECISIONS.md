@@ -2902,6 +2902,178 @@ This document records the major architectural and product decisions established.
 165. Stage 61 documentation must match implementation.
 166. Stage 62 is the next canonical stage.
 
+## Stage 62 — Futures & Commodities Markets V1 Decisions
+
+1. Stage 62 builds Futures & Commodities Markets V1.
+2. Futures remains within Markets module 2.
+3. The preferred route is `/markets/futures`.
+4. Existing Markets sections (Stages 56–61) remain functional.
+5. Existing AppShell remains authoritative.
+6. Commodity Underlying identity is distinct from Futures Product.
+7. Futures Product identity is distinct from individual Futures Contract.
+8. Spot Benchmark identity is distinct from Futures price.
+9. Individual contracts use canonical UUIDs.
+10. Underlying relationships reuse Stage 23.
+11. Identifiers reuse Stage 21.
+12. Alias resolution reuses Stage 22.
+13. Provenance reuses Stage 24.
+14. Selected Entity reuse follows Stage 25.
+15. Futures symbols are not primary keys.
+16. Product roots are venue-scoped.
+17. Contract month includes full year.
+18. Single-digit year ambiguity is not guessed.
+19. Month-code parsing does not create canonical contracts.
+20. Contract month is distinct from expiration.
+21. Last trading day is distinct from expiration.
+22. Notice dates are separate.
+23. Delivery dates are separate.
+24. Final settlement date is separate.
+25. Expired contract identity is preserved.
+26. Expiration does not trigger automatic rollover.
+27. Continuous Futures are not constructed.
+28. Historical prices remain contract-specific.
+29. Commodity grades are distinct where material.
+30. Delivery/assessment locations are preserved.
+31. Spot benchmarks are not inferred from Futures.
+32. No universal physical commodity price is invented.
+33. Exchanges and Providers are distinct.
+34. MIC data is validated.
+35. Exchange-specific contract specs are preserved.
+36. Contract size is explicit.
+37. Contract unit is explicit.
+38. Price quotation unit is explicit.
+39. Quotation currency is explicit.
+40. Tick size is not inferred from decimals.
+41. Tick value requires compatible units.
+42. Contract multipliers are validated.
+43. Physical settlement is distinct from cash settlement.
+44. Unknown settlement type remains Unknown.
+45. Exchange specifications may be effective-dated.
+46. Last Trade is distinct from Settlement.
+47. Preliminary Settlement is distinct from Final Settlement.
+48. Settlement trade date is preserved.
+49. Settlement publication time is preserved where available.
+50. Bid/Ask observations remain separate.
+51. Incompatible bid/ask values are not mixed.
+52. Futures prices may legitimately be negative.
+53. Zero Futures prices are not automatically missing.
+54. Negative price support does not weaken other asset-class validation.
+55. Percentage change is suppressed for invalid/nonpositive references unless a validated policy exists.
+56. Absolute price change preserves quotation units.
+57. Tick-based change requires verified tick size.
+58. No automatic account P&L is calculated.
+59. No Futures roll return is calculated.
+60. Same-contract reference is required.
+61. Previous settlement is used only when methodologically valid.
+62. Different contract months are not compared as one series.
+63. Volume counts contracts under verified source definitions.
+64. Volume windows are explicit.
+65. Open interest is distinct from volume.
+66. Open interest as-of date is preserved.
+67. Open interest is not automatically realtime.
+68. Missing volume is not zero.
+69. Missing open interest is not zero.
+70. No global liquidity ranking is fabricated.
+71. Stage 33 canonical Market Data is reused.
+72. Stage 39 historical data is reused.
+73. Stage 40 update workers are reused.
+74. Stage 41 latest Quote state is reused.
+75. Stage 42 event transport is reused.
+76. Stage 43 WebSocket infrastructure is reused.
+77. Stage 44 freshness remains authoritative.
+78. No new global WebSocket is created.
+79. No new Quote cache is created.
+80. No new event bus is created.
+81. No new historical database is created.
+82. No uncontrolled Provider polling is added.
+83. Provider capabilities are verified.
+84. Provider aliases remain source-scoped.
+85. Frontend page views do not create upstream sessions.
+86. Contract directory is canonical and read-only.
+87. Search does not create contracts.
+88. Filters are validated.
+89. Pagination is bounded.
+90. Ordering is deterministic.
+91. Coverage counts are scoped.
+92. Contract specifications are sourced.
+93. Missing specs are not invented.
+94. Market observations preserve Provider provenance.
+95. Source timestamps are distinct from receive times.
+96. Settlement dates are distinct from Quote timestamps.
+97. Redis TTL does not imply freshness.
+98. WebSocket connectivity does not imply freshness.
+99. Unknown freshness is not labeled Live.
+100. Exchange sessions are not guessed.
+101. APIs require authentication.
+102. APIs enforce authorization.
+103. APIs enforce exchange/Provider entitlements.
+104. APIs do not perform arbitrary upstream fetches.
+105. APIs do not write on read.
+106. APIs do not create ingestion jobs on read.
+107. APIs do not create live targets on read.
+108. APIs do not execute trading.
+109. APIs do not execute margin operations.
+110. APIs do not execute physical delivery instructions.
+111. APIs do not invoke Agents.
+112. APIs do not invoke Workflows.
+113. APIs do not call LLMs on page load.
+114. Frontend reuses ATLAS design tokens.
+115. No purple gradients are introduced.
+116. No emoji icons are introduced.
+117. No fabricated settlement values are displayed.
+118. No fabricated contract volumes are displayed.
+119. No fabricated open interest is displayed.
+120. No fabricated market curves are displayed.
+121. No fabricated trading opportunities are displayed.
+122. No fabricated spot benchmarks are displayed.
+123. No fake market-open status is displayed.
+124. No fake global commodity statistics are displayed.
+125. No Futures trading buttons are added.
+126. No Futures Options analytics are introduced.
+127. No margin engine is introduced.
+128. No continuous Futures roll engine is introduced.
+129. No contango/backwardation engine is introduced.
+130. No cost-of-carry valuation engine is introduced.
+131. No Futures portfolio accounting is introduced.
+132. No physical supply analytics is introduced.
+133. No warehouse inventory tracking is introduced.
+134. No shipping logistics system is introduced.
+135. Stage 63 remains responsible for Market Movers.
+136. Stage 64 remains responsible for Heatmaps.
+137. Stage 65 remains responsible for Cross-Asset.
+138. Stage 66 remains responsible for Charts.
+139. Stage 76 remains responsible for Watchlists.
+140. Stage 80 remains responsible for Alerts.
+141. Stage 94–98 remain responsible for Screeners.
+142. Stage 110+ remains responsible for Portfolios.
+143. Stage 115+ remains responsible for Risk.
+144. Stage 141+ remains responsible for Options.
+145. Stage 142 remains responsible for QuantLib.
+146. Stage 143 remains responsible for Backtesting.
+147. Stage 144 remains responsible for Paper Trading.
+148. Stage 145 remains responsible for Broker Sandbox.
+149. Stage 146+ remains responsible for Agents.
+150. Stage 62 uses minimal justified migrations.
+151. Stage 62 does not seed fake market records.
+152. Stage 62 supports truthful unavailable states.
+153. Stage 62 supports partial-data states.
+154. Stage 62 supports desktop, tablet and mobile.
+155. Stage 62 supports accessible table and Inspector controls.
+156. Stage 62 preserves Agent Dock and Bottom Taskbar.
+157. Stage 62 preserves global Search and Command Palette.
+158. Stage 62 preserves authentication cache isolation.
+159. Stage 62 does not persist private Quotes in browser storage.
+160. Stage 62 must pass contract identity tests.
+161. Stage 62 must pass quotation-unit tests.
+162. Stage 62 must pass tick-value tests.
+163. Stage 62 must pass negative Futures price tests.
+164. Stage 62 must pass settlement distinction tests.
+165. Stage 62 must pass volume/open-interest tests.
+166. Stage 62 must pass authorization tests.
+167. Stage 62 must pass relevant prior-stage regressions.
+168. Stage 62 documentation must match implementation.
+169. Stage 63 is the next canonical development stage.
+
 
 
 

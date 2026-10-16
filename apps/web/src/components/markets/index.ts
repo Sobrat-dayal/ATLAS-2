@@ -11,3 +11,4 @@ export * from "./funds";
 export * from "./fx";
 export * from "./crypto";
 export * from "./bonds";
+export * from "./futures";

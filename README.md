@@ -359,6 +359,31 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Regressions: Full Markets regression suite passes cleanly (126 backend tests across Overview, Equities, Funds, FX, Crypto, and Bonds; 69 frontend tests).
 - **Documentation**: See `docs/BONDS_FIXED_INCOME_MARKETS_V1.md`
 
+## Futures & Commodities Markets V1 (Stage 62)
+- **Status**: Implemented (`/markets/futures`)
+- **Capabilities**:
+  - Global Commodity Intelligence, Exchange-Traded Futures, Contract Discovery, Settlement Data, Expiration Management, and Professional Derivatives Market Terminal.
+  - Strict four-level financial instrument taxonomy: Commodity Underlying (reference physical asset/grade/region), Spot Benchmark (physical price assessment), Futures Product (standardized exchange family), and Individual Futures Contract (specific delivery/expiration period) are strictly decoupled and never conflated.
+  - Exchange/venue-aware contract discovery: Authoritative listing exchanges (NYMEX, ICE, COMEX, CBOT, CME) with Market Identifier Codes (MIC: `XNYM`, `IFUS`, `XCEC`, `XCBT`, `XCME`) and venue-scoped symbol aliases.
+  - Expiration and lifecycle management: Full year/month (`YYYY-MM`) semantics, standard month-code mapping (F through Z), genuine last trading days, notice days, and physical delivery windows. Expired contracts remain historically queryable without synthetic rollover.
+  - Verified contract specifications: Contract size, physical size unit (barrels, troy ounces, bushels, metric tons, MMBtu), quote currency, quote scale, tick size, verified tick value per contract, and cash-settled vs. physically delivered classifications.
+  - Market observation integrity: Last executed trade, official daily settlement (distinctly preserved with session trade date), volume (contracts traded in session), and open interest (clearinghouse reported open contracts with as-of date).
+  - Negative futures price support: Full support for legitimate negative futures prices (e.g. historical WTI `CLK20` -$37.63 on 2020-04-20); percentage change suppressed when reference price $\le 0$.
+  - Read-only derivatives terminal: 0 writes on read, 0 upstream provider fanout on read, no continuous futures/auto-roll, no contango/backwardation curves, no margin engine, no futures trading.
+  - High-density Bloomberg/OpenBB-inspired terminal interface: Coverage Summary, Market Type Selector (`Futures Contracts`, `Commodities`, `Spot Benchmarks`), Search & Multi-Dimensional Filters, Contract Directory Table with keyset pagination, and Selected Contract Inspector.
+- **Endpoints**:
+  - `GET /api/v1/markets/futures/contracts`: Paginated futures contracts directory with quotes, settlements, volume, and open interest.
+  - `GET /api/v1/markets/futures/contracts/{instrument_entity_id}`: Deep contract overview with specifications, lifecycle dates, market observations, and source provenance.
+  - `GET /api/v1/markets/futures/commodities`: Paginated canonical commodity underlyings and linked futures products.
+  - `GET /api/v1/markets/futures/commodities/{commodity_entity_id}`: Detail view of specific commodity underlying.
+  - `GET /api/v1/markets/futures/spot-benchmarks`: Supported physical commodity spot benchmarks with location basis and assessment methodology.
+  - `GET /api/v1/markets/futures/filters`: Authoritative filter options and counts across categories, exchanges, products, and months.
+- **Testing**:
+  - Backend: `pytest apps/api/tests/markets/test_markets_futures.py` (27 test cases, 100% pass)
+  - Frontend: `npx tsx --test apps/web/tests/markets-futures.test.ts` (11 test cases, 100% pass)
+  - Regressions: Full Markets regression suite passes cleanly (153 backend tests across Overview, Equities, Funds, FX, Crypto, Bonds, and Futures; 80 frontend tests).
+- **Documentation**: See `docs/FUTURES_COMMODITIES_MARKETS_V1.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

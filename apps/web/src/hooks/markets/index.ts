@@ -11,3 +11,6 @@ export * from "./useCryptoMarketDetail";
 export * from "./useCryptoAssets";
 export * from "./useBondDirectory";
 export * from "./useBondOverview";
+export * from "./useFuturesContracts";
+export * from "./useFuturesContractOverview";
+export * from "./useCommodities";
