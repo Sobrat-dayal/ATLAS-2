@@ -482,6 +482,36 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Regressions: Full Markets regression suite passes cleanly (189 backend tests across Overview, Equities, Funds, FX, Crypto, Bonds, Futures, Movers, Heatmaps, and Cross-Asset; 108 frontend tests).
 - **Documentation**: See `docs/CROSS_ASSET_MARKETS_V1.md`
 
+## Charts V1 (Stage 66)
+- **Overview**: Dedicated institutional financial charting workspace at `/charts` (Canonical Module 03), providing real historical candlestick rendering, close-line visualization, and canonical financial instrument exploration.
+- **Core Principles & Capabilities**:
+  - **Lightweight Charts Engine**: Powered by open-source TradingView Lightweight Charts (`lightweight-charts@5.2.1`, Apache 2.0). Client-only rendering, robust SSR boundary with Suspense, auto-resize via `ResizeObserver`, theme token synchronization, and explicit cleanup to prevent leaks.
+  - **Canonical OHLCV Integration**: Consumes canonical stored market bars from ClickHouse (`historical_market_bars_versions FINAL`) with logical-latest revision selection and strict chronological ordering.
+  - **Strict Financial Data Integrity**:
+    - Strict OHLC envelope validation (`high >= max(open, close, low)` and `low <= min(open, close, high)`).
+    - Support for valid negative commodity futures prices (e.g. WTI Crude `CLZ26`).
+    - Asset-class-specific volume semantics (OTC FX and Sovereign Debt evaluated prices report volume as `None` / `—`, never synthetic zero).
+    - Single verified baseline interval: `1D` (daily bars); requests for other intervals are cleanly rejected and deferred to Stage 68.
+    - Zero synthetic bar generation, zero intraday fabrication from daily, and zero synthetic continuous futures rolls.
+  - **Interactive Terminal Workspace**:
+    - Multi-asset instrument selector across Equities (`AAPL`, `MSFT`, `NVDA`), ETFs (`SPY`, `QQQ`), FX (`EURUSD`, `USDJPY`), Crypto (`BTCUSDT`, `ETHUSDT`), Bonds (`US10Y`), and Futures (`CLZ26`, `GCZ26`, `ESZ26`).
+    - Rendering mode toggle: Candlestick vs Close Line.
+    - Viewport controls: Reset View, Fit Content, Refresh history.
+    - Interactive crosshair inspection: Live `Date`, `Open`, `High`, `Low`, `Close`, `Volume`, and `Change%` metrics.
+    - Bounded incremental older-history backfill on horizontal scroll.
+    - Accessible, paginated historical data table for screen-reader and keyboard users.
+    - Deep linking support via URL query parameters (`/charts?symbol=BTCUSDT` or `/charts?instrument_id=<uuid>`).
+  - **Read-Only Invariants**: 0 database writes, 0 quote writes, 0 ClickHouse writes, 0 upstream provider calls on read, 0 trading executions, 0 LLM calls.
+- **Endpoints**:
+  - `GET /api/v1/charts/instruments`: Catalog of verified chartable instruments and metadata.
+  - `GET /api/v1/charts/instruments/{id}`: Detailed instrument metadata.
+  - `GET /api/v1/charts/history`: Authenticated, bounded historical bars with coverage and pagination.
+- **Testing**:
+  - Backend: `uv run pytest tests/test_charts_v1.py` (15 test cases, 100% pass).
+  - Frontend: `pnpm dlx tsx --test tests/charts-v1.test.ts` (9 test cases, 100% pass).
+  - Regressions: Full Markets regression suite passes cleanly (189 backend tests, 242 frontend tests).
+- **Documentation**: See `docs/CHARTS_V1.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

@@ -3642,6 +3642,181 @@ This document records the major architectural and product decisions established.
 169. Stage 65 documentation must match implementation.
 170. Stage 66 is the next canonical development stage.
 
+## Stage 66 — Charts V1: Institutional Financial Charting Workspace
+
+### Product and Navigation
+1. Stage 66 establishes Charts V1 as the foundational financial charting workspace.
+2. Charts uses the existing global module route `/charts`.
+3. Charts does not add a new sidebar module; it activates the existing navigation item.
+4. Existing ATLAS AppShell remains authoritative.
+5. Existing Agent Dock is preserved on the right side.
+6. Existing Bottom Taskbar is preserved at the workspace footer.
+7. Existing appearance preferences (dark/light mode tokens) are reused.
+8. Existing Global Search is reused for instrument lookup.
+9. Existing Selected Entity Context (Stage 25) is updated when a chart instrument is selected.
+10. Cross-module chart navigation uses canonical instrument UUIDs.
+
+### Canonical Data
+11. Stage 33 OHLCV remains the canonical financial market data model.
+12. Stage 39 remains the historical ingestion authority.
+13. Stage 40 remains the historical update worker authority.
+14. Stage 37 ClickHouse `historical_market_bars_versions FINAL` remains historical storage.
+15. Stage 24 provenance remains authoritative for historical observations.
+16. Provider routing is not duplicated.
+17. Historical chart API is strictly read-only.
+18. No Provider calls occur on ordinary chart reads.
+19. Chart visits do not create ingestion jobs.
+20. Chart visits do not enroll live Quote targets.
+21. Chart reads do not mutate canonical OHLCV rows.
+
+### Identity
+22. Instrument UUID is authoritative for chart identity.
+23. Market-series identity is preserved across venues and listings.
+24. Listing venue is preserved and displayed.
+25. Crypto base/quote and venue identity are strictly preserved (e.g. BTC/USDT vs BTC/USD).
+26. FX pair orientation is preserved without silent inversion.
+27. Futures contract month and expiration are preserved.
+28. Bond clean/dirty price basis is preserved.
+29. Raw and split-adjusted equity series remain distinct.
+30. Ticker string is never used as the chart primary key.
+31. Ambiguous symbols require explicit disambiguation.
+32. Non-chartable Entities do not receive fabricated price series.
+
+### Historical Data
+33. Charts V1 uses one verified baseline interval: `1D` (daily bars).
+34. Preferred interval is daily where supported by canonical historical ingestion.
+35. Stage 68 owns expanded intervals (1m, 5m, 1h, 1W) and timeframe resampling.
+36. Historical queries use bounded ranges with strict limit caps (default 250, max 2000).
+37. Historical pagination is deterministic using chronological cursor timestamps.
+38. Duplicate logical bars are resolved through canonical revision policy (`FINAL` + latest version).
+39. A candle represents one coherent source observation.
+40. No mixed-Provider OHLC candle is constructed.
+41. Missing history is not interpolated.
+42. Missing volume is not forced to zero.
+43. No synthetic candles are created.
+44. No fake historical coverage is reported.
+45. Source timestamps are preserved in UTC.
+46. Daily session dates are not shifted incorrectly across timezones.
+47. Financial values preserve Decimal precision before serialization.
+48. Invalid OHLC relationships (`high < open`, `low > close`, etc.) are strictly rejected.
+49. Valid negative Futures prices are supported (e.g. WTI Crude oil).
+50. Zero/negative price restrictions remain asset-class specific.
+51. NaN, Infinity, and -Infinity are strictly prohibited.
+
+### Chart Engine
+52. One approved charting library is used: TradingView Lightweight Charts (`lightweight-charts@5.2.1`).
+53. Library version is pinned in package.json.
+54. Licensing and attribution requirements are reviewed (Apache 2.0).
+55. SSR and client-only behavior is handled via Next.js `"use client"` and dynamic imports.
+56. Renderer lifecycle is explicit with proper unmount cleanup.
+57. Chart disposal (`chart.remove()`) is required to prevent memory leaks.
+58. Responsive resize is supported via `ResizeObserver`.
+59. Theme updates preserve data and viewport where practical.
+60. Chart geometry does not alter underlying financial values.
+61. Candlestick rendering uses genuine OHLC observations.
+62. Basic Close Line uses canonical Close values from the same bars.
+63. Advanced chart types (Heikin-Ashi, Renko, Kagi) belong to Stage 68.
+64. No arbitrary smoothing is presented as genuine historical data.
+65. Volume histogram appears only when genuine volume exists.
+66. Price axis uses actual quote units and precision.
+67. Price axis supports valid negative values.
+68. Price precision is source- and instrument-aware.
+
+### Time and Interaction
+69. Time basis is explicit (UTC epoch seconds).
+70. UTC canonical timestamps are preserved.
+71. Exchange trading dates are respected.
+72. Daylight saving time handling is timezone-aware.
+73. Weekend and holiday gaps are not fabricated.
+74. Crosshair uses actual bar timestamps.
+75. Crosshair inspection uses actual OHLC values.
+76. Keyboard-accessible inspection is provided.
+77. Historical data table is provided for screen-reader accessibility.
+78. Pan and zoom are supported.
+79. Older-history backfill is bounded and triggered on horizontal scroll.
+80. Duplicate backfill requests are prevented via refs and guards.
+81. Backfill does not reset the viewport abruptly.
+82. Empty pagination terminates correctly when `has_more` is false.
+83. Instrument switching cancels stale in-flight requests via `AbortController`.
+84. Chart rendering does not require LLM inference (0 LLM calls).
+
+### Security
+85. Charts APIs require authentication.
+86. Authorization is enforced on all endpoints.
+87. Historical-data entitlements are enforced.
+88. Chart previews cannot bypass licensed-data restrictions.
+89. No Provider secrets are exposed to the client.
+90. No arbitrary Provider URLs are accepted.
+91. No arbitrary SQL is accepted.
+92. No unsafe HTML is rendered.
+93. Authenticated query caches are isolated.
+94. Restricted prices are not persisted insecurely in browser storage.
+95. No Trading execution occurs from Charts V1.
+96. No Portfolio changes occur from Charts V1.
+97. No autonomous Agent runs occur from Charts V1.
+98. No Workflow executions occur from Charts V1.
+99. No LLM calls are required for charting.
+
+### UI
+100. Charts uses canonical ATLAS design tokens.
+101. Dark and light modes are supported.
+102. The chart occupies the main workspace viewport.
+103. Toolbar remains compact and uncluttered.
+104. Instrument identity is visible in the header.
+105. Price units are visible.
+106. Baseline interval is visible.
+107. Source provenance is accessible in the status bar.
+108. Adjustment basis is accessible in the status bar.
+109. Historical coverage is visible.
+110. Missing data is not disguised.
+111. No fake Live badge is shown.
+112. No purple gradients are introduced.
+113. No emoji icons are introduced.
+114. No fake candles are introduced.
+115. No fake volumes are introduced.
+116. No promotional hero graphics are introduced.
+117. Responsive chart rendering is required across all device viewports.
+118. Accessibility is required (WCAG 2.1 AA).
+119. Color does not serve as the only indicator (text and labels accompany directional color).
+120. Resource cleanup is required on unmount.
+
+### Roadmap Boundaries
+121. Stage 67 owns Live Chart Streaming.
+122. Stage 68 owns expanded intervals and chart types.
+123. Stage 69 owns Technical Indicator Infrastructure.
+124. Stage 70 owns TA-Lib integration.
+125. Stage 71 owns Drawing Tools.
+126. Stage 72 owns Multi-Chart Layouts.
+127. Stage 73 owns Chart Synchronization.
+128. Stage 74 owns Saved Chart Layouts.
+129. Stage 75 owns Chart Replay.
+130. Stage 76 owns Watchlists.
+131. Stage 80 owns Alerts.
+132. Stage 94–98 own Screeners.
+133. Stage 110+ owns Portfolios.
+134. Stage 115+ owns Risk.
+135. Stage 141–142 own Options/Quant.
+136. Stage 143 owns Backtesting.
+137. Stage 144 owns Paper Trading.
+138. Stage 145 owns Broker Sandbox.
+139. Stage 146+ owns Agents.
+140. Stage 66 introduces no chart trading.
+141. Stage 66 introduces no technical indicators.
+142. Stage 66 introduces no user drawings.
+143. Stage 66 introduces no multi-chart synchronization.
+144. Stage 66 introduces no chart replay.
+145. Stage 66 introduces no chart-layout persistence.
+146. Stage 66 introduces no duplicate Quote/event infrastructure.
+147. Stage 66 introduces no unnecessary database schema.
+148. Stage 66 does not seed fake financial data.
+149. Stage 66 tests verify OHLC correctness.
+150. Stage 66 tests verify timestamp correctness.
+151. Stage 66 tests verify pagination and revisions.
+152. Stage 66 tests verify entitlements.
+153. Stage 66 tests verify cleanup and responsiveness.
+154. Stage 66 documentation matches implementation.
+155. Stage 67 is the next canonical development stage.
+
 
 
 

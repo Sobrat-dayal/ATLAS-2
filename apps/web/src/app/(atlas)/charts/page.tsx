@@ -1,13 +1,13 @@
-import { ATLAS_MODULES } from "@/config/atlas-modules";
-import { ModuleFoundation } from "@/components/modules/ModuleFoundation";
 import { Metadata } from "next";
+import { ChartsPage } from "@/components/charts";
 
 export function generateMetadata(): Metadata {
   return {
-    title: `${ATLAS_MODULES.charts.label} | ATLAS`
+    title: "Charts | ATLAS Financial Intelligence",
+    description: "Institutional financial charting workspace, historical candlestick engine and market exploration.",
   };
 }
 
-export default function ChartsPage() {
-  return <ModuleFoundation module={ATLAS_MODULES.charts} />;
+export default function Page() {
+  return <ChartsPage />;
 }
