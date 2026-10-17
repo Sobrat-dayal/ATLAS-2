@@ -3257,6 +3257,199 @@ This document records the major architectural and product decisions established.
 160. Stage 63 documentation must match actual implementation.
 161. Stage 64 is the next canonical stage.
 
+## Stage 64 Decisions - Market Heatmaps V1
+
+### Product and Navigation
+1. Stage 64 builds Market Heatmaps V1.
+2. Heatmaps remains within Markets module 2.
+3. Canonical route is `/markets/heatmaps`.
+4. All previous Markets routes remain functional.
+5. Existing AppShell is reused.
+6. No new global module is added.
+7. Selected Entity Context is reused.
+8. Global Search is reused.
+9. Agent Dock is preserved.
+10. Bottom Taskbar is preserved.
+
+### Data and Universe
+11. Heatmaps use canonical Financial Instrument identities.
+12. Universe membership is explicit.
+13. Ranking grain is explicit.
+14. Exchange/venue scope is explicit.
+15. Stage 63 universe and metric qualification are reused.
+16. Stage 63 Top N results are not treated as a full market universe.
+17. Incomplete coverage is disclosed.
+18. Candidate truncation is disclosed.
+19. Authorized scope is enforced.
+20. Source provenance is preserved.
+21. Comparison windows are explicit.
+22. Missing performance is not zero performance.
+23. Stale/unknown data is conservatively handled.
+24. Data delays remain visible.
+25. Heatmap calculation time is distinct from Quote time.
+
+### Visualization Modes
+26. Equal-size heatmap is the baseline.
+27. Equal-size tile area has no financial-size meaning.
+28. Weighted treemap is conditional on verified weights.
+29. Market Cap Weighted means verified market capitalization.
+30. Arbitrary weights are prohibited.
+31. Unsupported weighting does not silently fall back while retaining the label.
+32. Color and area represent separate quantities.
+33. Weight normalization is deterministic.
+34. Weight units are explicit.
+35. Weight as-of dates are preserved.
+36. Weight currency compatibility is required.
+37. Cross-currency normalization is not guessed.
+38. Float-adjusted and full market cap remain distinct.
+39. Multi-listed capitalization is not double-counted without methodology.
+40. ETF AUM is not equity market cap.
+41. Crypto FDV is not circulating market cap.
+42. Futures open interest is not market cap.
+43. Bond principal is not market cap.
+44. Missing weight is not assigned an arbitrary positive value.
+45. Invalid weights are rejected.
+46. Weight coverage is disclosed.
+47. Unknown weighted completeness remains unknown.
+
+### Color and Performance
+48. Tile color uses qualified metric values.
+49. Positive values use appropriate positive colors.
+50. Negative values use appropriate negative colors.
+51. Zero is distinct from unavailable.
+52. Missing values use an explicit unavailable treatment.
+53. Color domains are documented.
+54. Saturation does not alter actual numeric returns.
+55. Color scales remain stable under ordinary realtime changes.
+56. Color meaning is accessible without hue.
+57. Financial calculations use Decimal.
+58. Display rounding does not alter qualification or grouping.
+59. Asset-class comparison periods are not mixed.
+60. Bond yield changes are not relabeled price returns.
+61. Futures negative references are handled safely.
+62. FX pair orientation is preserved.
+63. Crypto venue/quote-asset identity is preserved.
+64. Mutual fund NAV changes are not treated as intraday exchange prices.
+
+### Sector and Industry
+65. Sector grouping requires authoritative classification.
+66. Industry grouping requires authoritative classification.
+67. GICS and ICB are not silently merged.
+68. Classification codes are stable identifiers.
+69. Effective-dated taxonomy is respected where supported.
+70. Missing sector is not guessed.
+71. Unclassified members are disclosed.
+72. Equal-size grouped area represents member count, not market cap.
+73. Weighted group area represents qualified sum of member weights.
+74. Sector performance is explicitly method-labeled.
+75. Equal-weight mean is not cap-weighted return.
+76. Cap-weighted return requires verified compatible weights.
+77. Group aggregation is not called an official market index.
+78. Insufficient constituent coverage produces partial/unavailable status.
+
+### Layout and Interaction
+79. Layout is deterministic for a fixed snapshot and viewport.
+80. Area proportions respect qualified weights.
+81. No overlapping rectangles are permitted.
+82. Tiny tiles do not show unreadable labels.
+83. Instrument access is retained despite tiny tile size.
+84. Tile selection uses canonical UUID.
+85. Group drilldown uses actual hierarchy.
+86. Breadcrumbs are required for drilldown.
+87. Hover/focus details preserve provenance.
+88. Keyboard interaction is required.
+89. A nonvisual accessible table is required.
+90. Geometry is not recomputed for color-only changes.
+91. No decorative 3D heatmap is introduced.
+92. Visualization dependencies must be justified.
+
+### Snapshot and Realtime
+93. A heatmap uses a coherent snapshot.
+94. Snapshot IDs are stable.
+95. Snapshot calculation time is explicit.
+96. Source observation times are preserved.
+97. Derived snapshots are non-authoritative.
+98. Cache TTL does not imply Quote freshness.
+99. Existing Stage 41 Quote state is reused.
+100. Existing Stage 42 events are reused.
+101. Existing Stage 43 WebSockets are reused.
+102. Stage 44 remains freshness authority.
+103. No second global socket is created.
+104. No new Quote cache is created.
+105. No independent event bus is created.
+106. Realtime refresh is bounded.
+107. Stale HTTP snapshots do not overwrite newer snapshots.
+108. Bursty events are coalesced.
+109. No full-universe browser subscriptions are opened without capacity controls.
+110. Reconnect uses authoritative snapshot refresh.
+
+### Security
+111. APIs require authentication.
+112. Authorization is enforced.
+113. Financial-data entitlements are enforced.
+114. Derived colors do not bypass price entitlements.
+115. Derived area weights do not bypass fundamental-data entitlements.
+116. Cache isolation prevents cross-user leakage.
+117. No arbitrary Provider calls are exposed.
+118. No arbitrary SQL is accepted.
+119. No unsafe HTML rendering is permitted.
+120. No Provider credentials are exposed.
+121. No canonical financial-data writes occur on read.
+122. No ingestion jobs are created on page view.
+123. No live targets are created on page view.
+124. No Trading occurs.
+125. No Agent execution occurs.
+126. No Workflow execution occurs.
+127. No LLM calls are required.
+
+### UI
+128. ATLAS design tokens are reused.
+129. Dark/light modes are supported.
+130. No purple gradients are introduced.
+131. No emoji icons are introduced.
+132. No fake market-cap statistics are introduced.
+133. No fake sector classifications are introduced.
+134. No fake price changes are introduced.
+135. No fake global coverage claims are introduced.
+136. No fake trading signals are introduced.
+137. Legend is visible.
+138. Scope is visible.
+139. Coverage is visible.
+140. Snapshot time is visible.
+141. Data freshness/delay is visible.
+142. Source metadata is accessible.
+143. Keyboard and screen-reader alternatives exist.
+144. Responsive behavior is required.
+
+### Roadmap Scope
+145. Stage 65 owns Cross-Asset Analytics.
+146. Stage 66 owns Charts.
+147. Stage 76 owns Watchlists.
+148. Stage 80 owns Alerts.
+149. Stage 94–98 own Screeners.
+150. Stage 110+ owns Portfolios.
+151. Stage 115+ owns Risk.
+152. Stage 129+ owns geospatial Maps layers.
+153. Stage 135+ owns Universal Event intelligence.
+154. Stage 143 owns Backtesting.
+155. Stage 144 owns Paper Trading.
+156. Stage 145 owns Broker Sandbox.
+157. Stage 146+ owns autonomous Agents.
+158. No portfolio exposure heatmaps are introduced.
+159. No geospatial choropleths are introduced.
+160. No cross-asset correlation matrices are introduced.
+161. No predictive AI ratings are introduced.
+162. No trading strategies are introduced.
+163. No unnecessary new database infrastructure is created.
+164. No fabricated production data is seeded.
+165. Stage 64 must pass financial visualization tests.
+166. Stage 64 must pass weight integrity tests.
+167. Stage 64 must pass coverage tests.
+168. Stage 64 must pass authorization tests.
+169. Stage 64 must pass prior-stage regressions.
+170. Stage 64 documentation must match actual implementation.
+171. Stage 65 is the next canonical stage.
+
 
 
 

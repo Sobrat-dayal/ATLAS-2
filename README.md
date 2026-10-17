@@ -416,6 +416,47 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Regression: Full Markets regression suite passes cleanly (162 backend tests across Overview, Equities, Funds, FX, Crypto, Bonds, Futures, and Movers; 90 frontend tests).
 - **Documentation**: See `docs/MARKET_MOVERS_V1.md`
 
+## Market Heatmaps V1 (Stage 64)
+- **Overview**: Dedicated market performance visualization, sector & industry treemaps, and real-time market intelligence workspace located canonically at `/markets/heatmaps` within Markets (Module 02).
+- **Key Features**:
+  - Two Distinct Visualization Modes:
+    - `Equal-Size Performance Heatmap` (`equal_size`): Every qualified instrument receives an identical layout area fraction ($1 / N$). Tile area has zero financial weight meaning. Operates reliably as an institutional baseline even without market cap data.
+    - `Size-Weighted Market Treemap` (`market_cap_weighted`): Tile area is strictly proportional to verified, strictly positive market capitalization ($w_i / \sum w$). If capitalization is unsupported (e.g. Futures), weighted mode is disabled and clearly explained—never silently fall back to equal size while claiming market-cap weighting.
+  - Mathematical Qualification & Return Calculation:
+    - Decimal arithmetic for price return percentage: $((P_{\text{current}} - P_{\text{reference}}) / P_{\text{reference}}) \times 100$.
+    - Missing returns are **never** colored or reported as zero percent.
+    - Zero/negative reference prices are excluded with `INVALID_DENOMINATOR`.
+    - Missing quotes are excluded with `NO_CURRENT_QUOTE`.
+    - Missing weights in weighted mode are excluded with `MISSING_WEIGHT`.
+  - Diverging Financial Performance Color Scale:
+    - Domain `[-5.0%, +5.0%]`: Green family for positive returns, neutral zinc for flat/zero, red family for negative returns.
+    - Extreme returns (> +5% or < -5%) saturated at domain boundary colors while preserving exact numeric returns.
+    - Distinct unavailable pattern for missing/excluded observations.
+  - GICS Sector & Industry Taxonomy:
+    - Grouping into Technology, Consumer Cyclical, Communication Services, Financial Services, Healthcare, Energy, and Unclassified.
+    - Group aggregate returns explicitly labeled: Equal-weight mean ($\sum r_i / n$) vs. Cap-weighted return ($\sum w_i r_i / \sum w_i$).
+    - Marked explicitly as "Based on qualified ATLAS constituents", never claimed as an official market index.
+  - Squarified Treemap Layout Engine:
+    - Pure squarified algorithm generating non-overlapping, aspect-ratio-optimized rectangles.
+    - Dynamic responsiveness with `ResizeObserver`.
+    - Tiny tile handling: tiles smaller than 52px width or 36px height suppress long text to prevent visual clutter while preserving full hover, focus, click, and inspector access.
+  - Interactive Terminal Interface:
+    - Universe selector, comparison window selector, weighting mode toggle, and hierarchy mode toggle.
+    - Coverage transparency summary with candidate count, qualified count, missing counts, total capitalization, and coverage status badge.
+    - Sector container headers with aggregate returns and click-to-drilldown navigation with breadcrumbs.
+    - Selected Tile Inspector with canonical UUID (Stage 17), series key, pricing, capitalization, taxonomy, and quick navigation links ("Open Charts", "Open Market", "Open Company").
+    - Accessible semantic HTML data table alternative for screen-reader users.
+  - Read-Only Invariants: 0 writes to database or cache, 0 external provider RPC calls on read, 0 trading actions, 0 autonomous agents.
+- **Endpoints**:
+  - `GET /api/v1/markets/heatmaps`: Coherent calculation snapshot with coverage and nodes/groups.
+  - `GET /api/v1/markets/heatmaps/universes`: Available, authorized heatmap universes.
+  - `GET /api/v1/markets/heatmaps/options`: Supported visualization modes, hierarchies, and comparison windows.
+- **Testing**:
+  - Backend: `pytest apps/api/tests/markets/test_markets_heatmaps.py` (14 comprehensive test cases, 100% pass).
+  - Frontend: `pnpm dlx tsx --test apps/web/tests/markets-heatmaps.test.ts` (9 test cases, 100% pass).
+  - Regressions: Full Markets regression suite passes cleanly (176 backend tests across Overview, Equities, Funds, FX, Crypto, Bonds, Futures, Movers, and Heatmaps; 99 frontend tests).
+- **Documentation**: See `docs/MARKET_HEATMAPS_V1.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

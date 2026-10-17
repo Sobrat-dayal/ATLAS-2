@@ -8,6 +8,7 @@ from atlas.markets.equities.router import router as equities_router
 from atlas.markets.funds.router import router as funds_router
 from atlas.markets.futures.router import router as futures_router
 from atlas.markets.fx.router import router as fx_router
+from atlas.markets.heatmaps.router import router as heatmaps_router
 from atlas.markets.movers.router import router as movers_router
 from atlas.markets.overview.router import router as markets_router
 from atlas.tasks.router import router as tasks_router
@@ -63,6 +64,7 @@ api_router.include_router(crypto_router, prefix="")
 api_router.include_router(bonds_router, prefix="")
 api_router.include_router(futures_router, prefix="")
 api_router.include_router(movers_router, prefix="")
+api_router.include_router(heatmaps_router, prefix="")
 api_router.include_router(activity_router, prefix="")
 api_router.include_router(tasks_router, prefix="")
 api_router.include_router(approvals_router, prefix="")

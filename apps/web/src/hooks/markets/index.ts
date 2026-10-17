@@ -17,3 +17,4 @@ export * from "./useCommodities";
 export * from "./useMoverUniverses";
 export * from "./useMoverMetrics";
 export * from "./useMarketMovers";
+export * from "./useMarketHeatmap";

@@ -21,7 +21,7 @@ const MARKET_TABS: MarketTabItem[] = [
   { id: "bonds", label: "Bonds", href: "/markets/bonds", isImplemented: true },
   { id: "futures", label: "Futures & Commodities", href: "/markets/futures", isImplemented: true },
   { id: "movers", label: "Movers", href: "/markets/movers", isImplemented: true },
-  { id: "heatmaps", label: "Heatmaps", badge: "Stage 64", isImplemented: false },
+  { id: "heatmaps", label: "Heatmaps", href: "/markets/heatmaps", isImplemented: true },
   { id: "cross-asset", label: "Cross-Asset", badge: "Stage 65", isImplemented: false },
 ];
 
