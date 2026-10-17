@@ -384,6 +384,38 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Regressions: Full Markets regression suite passes cleanly (153 backend tests across Overview, Equities, Funds, FX, Crypto, Bonds, and Futures; 80 frontend tests).
 - **Documentation**: See `docs/FUTURES_COMMODITIES_MARKETS_V1.md`
 
+## Market Movers V1 (Stage 63)
+- **Overview**: Dedicated market movement intelligence and professional terminal workspace located canonically at `/markets/movers` as a core subsection of Markets (Module 02).
+- **Key Features**:
+  - Defined Ranking Universes: `univ_us_equities` (Covered US Equities), `univ_crypto_spot` (Supported Crypto Spot Markets), `univ_futures` (Supported Futures Contracts).
+  - Three Canonical Categories: `Top Gainers`, `Top Losers`, `Most Active`.
+  - Financial Qualification Pipeline:
+    - Decimal arithmetic (`percent_change` and `absolute_change`) computed before sorting.
+    - Zero denominator protection: non-positive reference prices excluded with `INVALID_DENOMINATOR`.
+    - Zero price changes strictly excluded from both Top Gainers and Top Losers.
+    - Missing volume strictly excluded from Most Active (missing is never fabricated as zero).
+    - Deterministic tie-breaking using canonical instrument UUID.
+  - Institutional Coverage Transparency (`MoverCoverage`):
+    - Reports universe size, candidates evaluated, qualified count, excluded count, typed exclusion reasons dictionary, and coverage status (`COMPLETE_FOR_DEFINED_UNIVERSE` vs. `PARTIAL_COVERAGE`).
+    - Truthful scope labeling: never claims global/worldwide coverage for catalog-bounded rankings.
+  - High-Density Bloomberg/OpenBB Terminal Interface:
+    - Header with snapshot as-of timestamp and refresh trigger.
+    - Universe & Comparison Window selectors.
+    - Category tabs (Gainers, Losers, Most Active with explicit activity unit label).
+    - Venue filters and coverage summary with expandable exclusion breakdown.
+    - Dense Leaderboard Table with tabular numerals, ordinal ranks, and click-to-inspect row selection.
+    - Selected Mover Inspector with canonical UUID, series key, observation breakdown, and deep links to `/charts` and asset-class directories.
+  - Read-only guarantees: 0 writes to database or cache, 0 external provider fanout on read, no trading actions, no AI commentary.
+- **Endpoints**:
+  - `GET /api/v1/markets/movers`: Paginated qualified market movers ranking snapshot.
+  - `GET /api/v1/markets/movers/universes`: Available, authorized mover universes.
+  - `GET /api/v1/markets/movers/metrics`: Valid ranking metrics and observation windows for a universe.
+- **Testing**:
+  - Backend: `pytest apps/api/tests/markets/test_markets_movers.py` (9 comprehensive test cases, 100% pass)
+  - Frontend: `pnpm dlx tsx --test apps/web/tests/markets-movers.test.ts` (10 test cases, 100% pass)
+  - Regression: Full Markets regression suite passes cleanly (162 backend tests across Overview, Equities, Funds, FX, Crypto, Bonds, Futures, and Movers; 90 frontend tests).
+- **Documentation**: See `docs/MARKET_MOVERS_V1.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

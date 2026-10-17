@@ -3074,6 +3074,190 @@ This document records the major architectural and product decisions established.
 168. Stage 62 documentation must match implementation.
 169. Stage 63 is the next canonical development stage.
 
+---
+
+# STAGE 63 — MARKET MOVERS V1 DECISIONS
+
+### Product and Architecture
+1. Stage 63 builds Market Movers V1.
+2. Market Movers remains within Markets module 2.
+3. Canonical route is `/markets/movers`.
+4. Previous Markets modules remain functional (`/markets`, `/markets/equities`, `/markets/funds`, `/markets/fx`, `/markets/crypto`, `/markets/bonds`, `/markets/futures`).
+5. Existing AppShell is reused.
+6. Existing Sidebar is preserved.
+7. Existing Agent Dock is preserved.
+8. Existing Bottom Taskbar is preserved.
+9. Existing Global Search is reused.
+10. Existing Selected Entity Context is reused.
+11. Market Movers introduces no new canonical financial instrument identity.
+12. Universe membership uses canonical IDs.
+13. Ranking grain is explicit (listing / venue-scoped market series).
+14. Exchange/venue scope is explicit.
+15. Ranking universe is explicitly defined.
+
+### Ranking Integrity
+16. Every ranking requires a qualified metric.
+17. Every ranking requires a qualified period.
+18. Every ranking requires a defined universe.
+19. Rankings are computed after eligibility validation.
+20. Rankings are not created by sorting one arbitrary directory page.
+21. Rankings do not claim worldwide coverage without evidence.
+22. Incomplete coverage is disclosed.
+23. Candidate truncation is disclosed.
+24. Qualified counts are reported.
+25. Exclusion reasons are reported.
+26. Ranking snapshot time is explicit.
+27. Ranking source time remains distinct.
+28. Ranking methods are versioned where necessary.
+29. Ranking order is deterministic.
+30. Tie-breaking uses canonical identity.
+31. Full Decimal precision is used before sorting.
+32. Pagination preserves snapshot consistency.
+
+### Top Gainers and Losers
+33. Gainers require qualified positive returns.
+34. Losers require qualified negative returns.
+35. Zero returns are not automatically classified as gainers or losers.
+36. Reference denominator must be valid.
+37. Current/reference observations must be compatible.
+38. Source/series identity must be compatible.
+39. Observation units must be compatible.
+40. Comparison windows must be compatible.
+41. Corporate-action mismatches are not ignored.
+42. Missing reference is not zero change.
+43. Missing current Quote is not zero change.
+44. Invalid returns are excluded.
+45. NaN and Infinity are prohibited.
+46. Large genuine returns are not arbitrarily capped.
+
+### Most Active
+47. Most Active requires a typed activity metric.
+48. Shares are not contracts.
+49. Base volume is not quote volume.
+50. Stablecoin volume is not automatically USD volume.
+51. Volume intervals are explicit.
+52. Volume units are explicit.
+53. Missing volume is not zero.
+54. Open interest is not trading volume.
+55. Last price multiplied by volume is not automatically authoritative turnover.
+56. Cross-asset volume metrics are not silently ranked together.
+57. Invalid activity combinations are disabled.
+
+### Asset Class Policies
+58. Equity moves reuse qualified previous-session references.
+59. Equity session definitions follow existing shared services.
+60. Equity corporate-action adjustment bases must be compatible.
+61. ETF moves use exchange prices rather than NAV.
+62. Mutual-fund NAV changes are not mixed into live ETF/equity rankings.
+63. FX movers preserve pair orientation.
+64. FX movers preserve rate kind.
+65. FX Most Active is unavailable without actual compatible activity data.
+66. Cryptocurrency movers use qualified rolling 24-hour data where available.
+67. Cryptocurrency venue identity is preserved.
+68. BTC/USD and BTC/USDT remain distinct.
+69. Stablecoin parity is not assumed.
+70. Cryptocurrency volumes require compatible units.
+71. Bond yields are not stock-style percentage price changes.
+72. Bond clean and dirty prices are not mixed.
+73. Evaluated and trade prices are not assumed equivalent.
+74. Futures rankings preserve individual expirations.
+75. Futures do not auto-roll contracts.
+76. Nonpositive Futures reference prices are handled conservatively.
+77. Futures activity uses actual contract-volume semantics.
+78. Spot benchmarks are not mixed with Futures contract prices.
+
+### Data Infrastructure
+79. Existing Stage 33 Market Data is reused.
+80. Existing Stage 39 historical data is reused.
+81. Existing Stage 41 latest Quote state is reused.
+82. Existing Stage 42 Market Event pipeline is reused.
+83. Existing Stage 43 WebSocket infrastructure is reused.
+84. Stage 44 remains data freshness authority.
+85. Existing Provider routing is reused.
+86. Existing Provenance is reused.
+87. No duplicate Quote cache is created.
+88. No new market event bus is created.
+89. No new historical market database is created.
+90. No uncontrolled Provider polling is introduced.
+91. Ranking computation does not use unbounded Redis key scans.
+92. Ranking computation uses bounded batch reads.
+93. Ranking cache is derived and non-authoritative.
+94. Ranking cache TTL is not market-data freshness.
+95. Full ranking is not recalculated on every UI Quote event without controls.
+96. Large universes use documented bounded/scalable calculation strategies.
+97. Expired ranking snapshots are handled explicitly.
+98. Snapshot cursors are validated.
+
+### Authorization and Security
+99. Movers APIs require authentication.
+100. Movers APIs enforce authorization.
+101. Movers APIs enforce market-data entitlements.
+102. Derived return values cannot bypass data entitlements.
+103. Ranking caches cannot leak cross-user information.
+104. Read APIs do not mutate canonical Quotes.
+105. Read APIs do not create market instruments.
+106. Read APIs do not trigger new ingestion jobs.
+107. Read APIs do not create live targets.
+108. Read APIs do not execute trading.
+109. Read APIs do not run Agents.
+110. Read APIs do not run Workflows.
+111. Read APIs do not call LLMs.
+112. No arbitrary Provider calls are exposed.
+113. No arbitrary SQL is accepted.
+114. No unsafe HTML rendering is permitted.
+115. No licensed data is persisted insecurely in browser storage.
+
+### UI
+116. ATLAS design tokens are reused.
+117. No purple gradients are introduced.
+118. No emoji icons are introduced.
+119. No fake financial statistics are shown.
+120. No fake worldwide rankings are shown.
+121. No fake real-time indicators are shown.
+122. No fake trading signals are shown.
+123. No animated speculative counters are shown.
+124. Ranking universe is visible.
+125. Metric window is visible.
+126. Coverage is visible.
+127. Ranking calculation time is visible.
+128. Provider provenance is accessible.
+129. Data delay is visible.
+130. Partial ranking status is visible.
+131. Unsupported metric combinations are explained.
+132. Canonical Entity selection is preserved.
+133. Accessible keyboard navigation is required.
+134. Responsive layouts are required.
+135. Live updates must not constantly disrupt navigation.
+
+### Roadmap Boundaries
+136. Stage 64 owns Heatmaps.
+137. Stage 65 owns Cross-Asset Analytics.
+138. Stage 66 owns Charts.
+139. Stage 76 owns Watchlists.
+140. Stage 80 owns Alerts.
+141. Stage 94–98 own Screeners.
+142. Stage 110+ owns Portfolios.
+143. Stage 115+ owns Risk.
+144. Stage 143 owns Backtesting.
+145. Stage 144 owns Paper Trading.
+146. Stage 145 owns Broker Sandbox.
+147. Stage 146+ owns Agents.
+148. Stage 63 does not implement investment recommendations.
+149. Stage 63 does not implement momentum-trading strategies.
+150. Stage 63 does not implement alert notifications.
+151. Stage 63 does not implement a heatmap engine.
+152. Stage 63 does not implement multi-factor Screeners.
+153. Stage 63 does not implement a cross-asset composite score.
+154. Stage 63 does not implement automatic portfolio actions.
+155. Stage 63 does not introduce unnecessary schema migrations.
+156. Stage 63 does not seed fabricated ranking results.
+157. Stage 63 tests must verify ranking correctness.
+158. Stage 63 tests must verify coverage truthfulness.
+159. Stage 63 tests must verify data entitlements.
+160. Stage 63 documentation must match actual implementation.
+161. Stage 64 is the next canonical stage.
+
+
 
 
 

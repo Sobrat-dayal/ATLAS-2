@@ -12,3 +12,4 @@ export * from "./fx";
 export * from "./crypto";
 export * from "./bonds";
 export * from "./futures";
+export * from "./movers";
