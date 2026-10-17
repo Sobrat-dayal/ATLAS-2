@@ -11,7 +11,7 @@
 import React, { Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Activity, CandlestickChart } from "lucide-react";
-import { useChartHistory, useLiveChart } from "@/hooks/charts";
+import { useChartHistory, useChartIntervals, useLiveChart } from "@/hooks/charts";
 import { ChartInstrumentHeader } from "./ChartInstrumentHeader";
 import { ChartToolbar } from "./ChartToolbar";
 import { ChartCrosshairDetails } from "./ChartCrosshairDetails";
@@ -37,7 +37,11 @@ function ChartsContent() {
     selectedSymbol,
     selectedInstrument,
     interval,
+    setInterval,
     renderMode,
+    setRenderMode,
+    intervalSourceKind,
+    derivedSourceInterval,
     bars,
     coverage,
     pagination,
@@ -46,12 +50,13 @@ function ChartsContent() {
     error,
     hoveredBar,
     selectInstrument,
-    setRenderMode,
     loadOlderHistory,
     refreshHistory,
     setHoveredBar,
     availableInstruments,
   } = useChartHistory(initialParam);
+
+  const { intervals } = useChartIntervals(selectedInstrument?.entity_id || selectedSymbol);
 
   const {
     quote: liveQuote,
@@ -100,15 +105,15 @@ function ChartsContent() {
                 CHARTS
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded">
-                STAGE 67
+                STAGE 68
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded flex items-center gap-1">
                 <Activity className="w-3 h-3 text-emerald-400" />
-                <span>LIVE STREAMING V1</span>
+                <span>MULTI-TIMEFRAME & ADVANCED TYPES</span>
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Institutional financial charting workspace, real-time price streaming, live Last overlay and market exploration.
+              Multi-timeframe financial charting, verified OHLCV aggregation, session-aware time axes, 4 chart types and live streaming.
             </p>
           </div>
         </div>
@@ -119,11 +124,13 @@ function ChartsContent() {
 
       {/* Main Chart Card */}
       <div className="flex flex-col bg-zinc-950/90 border border-zinc-800/80 rounded overflow-hidden shadow-2xl">
-        {/* Toolbar with Live Controls */}
+        {/* Toolbar with Interval & Chart Type Selectors & Live Controls */}
         <ChartToolbar
           selectedSymbol={selectedSymbol}
           availableInstruments={availableInstruments}
           interval={interval}
+          onSelectInterval={setInterval}
+          intervals={intervals}
           renderMode={renderMode}
           isLoading={isLoading}
           onSelectInstrument={selectInstrument}
@@ -179,7 +186,13 @@ function ChartsContent() {
             venue={liveVenue}
           />
           <div className="border-t border-zinc-900 pt-2">
-            <ChartDataStatus coverage={coverage} instrument={selectedInstrument} />
+            <ChartDataStatus
+              coverage={coverage}
+              instrument={selectedInstrument}
+              interval={interval}
+              intervalSourceKind={intervalSourceKind}
+              derivedSourceInterval={derivedSourceInterval}
+            />
           </div>
         </div>
       </div>

@@ -14,14 +14,23 @@ import { ChartCoverageDTO, ChartInstrumentMetadata, formatBarDate } from "@/lib/
 export interface ChartDataStatusProps {
   coverage: ChartCoverageDTO | null;
   instrument: ChartInstrumentMetadata | null;
+  interval?: string;
+  intervalSourceKind?: string;
+  derivedSourceInterval?: string | null;
 }
 
-export function ChartDataStatus({ coverage, instrument }: ChartDataStatusProps) {
+export function ChartDataStatus({
+  coverage,
+  instrument,
+  interval = "1d",
+  intervalSourceKind = "NATIVE",
+  derivedSourceInterval,
+}: ChartDataStatusProps) {
   if (!coverage || !instrument) return null;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 bg-zinc-950/60 border border-zinc-800/80 rounded text-[11px] font-mono text-zinc-400">
-      {/* Left: Quality status & Provider */}
+      {/* Left: Quality status & Provider & Lineage */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1 text-emerald-400 font-semibold">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
@@ -32,6 +41,20 @@ export function ChartDataStatus({ coverage, instrument }: ChartDataStatusProps) 
           <Database className="w-3 h-3 text-cyan-400" />
           <span>Source:</span>
           <span className="text-zinc-200">{instrument.provider_key}</span>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-zinc-400">
+          <span>Interval:</span>
+          <span className="text-zinc-200 font-bold">{interval.toUpperCase()}</span>
+          {intervalSourceKind === "DERIVED" ? (
+            <span className="px-1.5 py-0.2 bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 rounded text-[10px]">
+              DERIVED ({derivedSourceInterval || "1d"})
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.2 bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 rounded text-[10px]">
+              NATIVE
+            </span>
+          )}
         </div>
 
         {/* Range */}
@@ -57,9 +80,12 @@ export function ChartDataStatus({ coverage, instrument }: ChartDataStatusProps) 
           <span className="text-zinc-500"> / {coverage.total_bars_available} available</span>
         </div>
 
-        <div className="flex items-center gap-1 text-zinc-500 hover:text-zinc-300 cursor-help" title="Stage 66 Baseline: Daily (1D) bars only. Stage 68 will introduce 1m, 5m, 15m, 1h, 1w intervals.">
-          <HelpCircle className="w-3 h-3" />
-          <span>Stage 66 Baseline (1D)</span>
+        <div
+          className="flex items-center gap-1 text-zinc-400 hover:text-zinc-200 cursor-help"
+          title="ATLAS Stage 68 Multi-Timeframe Charting Engine: Validated OHLCV aggregation, session boundaries, and 4 professional chart types."
+        >
+          <HelpCircle className="w-3 h-3 text-cyan-400" />
+          <span className="text-zinc-400">Stage 68 Multi-Timeframe</span>
         </div>
       </div>
     </div>

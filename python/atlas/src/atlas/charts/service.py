@@ -19,6 +19,7 @@ from .models import (
     ChartCoverageDTO,
     ChartHistoryResponse,
     ChartInstrumentMetadata,
+    ChartIntervalsResponse,
     ChartPaginationDTO,
     ChartSearchResponse,
 )
@@ -71,13 +72,18 @@ class HistoricalChartService:
             ValueError: If instrument is invalid, interval is unsupported,
                 or time bounds are reversed.
         """
-        # 1. Validate interval policy for Stage 66
-        normalized_interval = interval.strip().lower()
-        if normalized_interval != BASELINE_INTERVAL_CODE:
-            raise ValueError(
-                f"Unsupported interval '{interval}'. Stage 66 enforces the baseline '1d' interval. "
-                "Expanded intraday and multi-resolution intervals belong to Stage 68."
+        # 1. Normalize interval
+        trimmed_int = interval.strip()
+        if trimmed_int.lower() == "1m":
+            normalized_interval = (
+                "1M" if (trimmed_int == "1M" or trimmed_int.lower() == "1mo") else "1m"
             )
+        elif trimmed_int.lower() == "1d":
+            normalized_interval = "1d"
+        elif trimmed_int.lower() == "1w":
+            normalized_interval = "1w"
+        else:
+            normalized_interval = trimmed_int.lower()
 
         # 2. Validate time boundaries
         if start_time and end_time and start_time >= end_time:
@@ -91,8 +97,16 @@ class HistoricalChartService:
         # 4. Clamp limit
         clamped_limit = max(MIN_BARS_LIMIT, min(limit, MAX_BARS_LIMIT))
 
-        # 5. Fetch bars from repository
-        bars, total_count, has_more, earliest_ts, latest_ts = self._repository.get_historical_bars(
+        # 5. Fetch bars from repository (including native vs derived classification)
+        (
+            bars,
+            total_count,
+            has_more,
+            earliest_ts,
+            latest_ts,
+            source_kind,
+            derived_source,
+        ) = self._repository.get_historical_bars(
             instrument_id=instrument.entity_id,
             interval=normalized_interval,
             start_time=start_time,
@@ -129,4 +143,23 @@ class HistoricalChartService:
             bars=bars,
             coverage=coverage,
             pagination=pagination,
+            interval_source_kind=source_kind,
+            derived_source_interval=derived_source,
+        )
+
+    def get_available_intervals(self, instrument_identifier: str) -> ChartIntervalsResponse:
+        """Discovers authorized available intervals for a canonical instrument."""
+        instrument = self.resolve_instrument(instrument_identifier)
+        if not instrument:
+            raise ValueError(f"Unknown or non-chartable instrument '{instrument_identifier}'.")
+
+        options = self._repository.get_interval_options(instrument.entity_id)
+
+        return ChartIntervalsResponse(
+            schema_version="1.0.0",
+            instrument_entity_id=instrument.entity_id,
+            display_symbol=instrument.display_symbol,
+            instrument=instrument,
+            default_interval="1d",
+            intervals=options,
         )

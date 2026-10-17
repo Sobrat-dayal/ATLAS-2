@@ -17,6 +17,7 @@ from .live_service import LiveChartService
 from .models import (
     ChartHistoryResponse,
     ChartInstrumentMetadata,
+    ChartIntervalsResponse,
     ChartLiveStateResponse,
     ChartSearchResponse,
 )
@@ -27,6 +28,31 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/charts", tags=["charts"])
 _chart_service = HistoricalChartService()
 _live_chart_service = LiveChartService()
+
+
+@router.get(
+    "/intervals",
+    response_model=ChartIntervalsResponse,
+    summary="Get available chart intervals for an instrument",
+    description=(
+        "Discovers supported native and derived intervals with availability, "
+        "coverage timestamps, and live bar support status."
+    ),
+)
+async def get_chart_intervals(
+    instrument_id: Optional[str] = Query(None, description="Canonical instrument UUID or symbol"),
+    symbol: Optional[str] = Query(None, description="Alternative symbol parameter for convenience"),
+) -> ChartIntervalsResponse:
+    target_ident = instrument_id or symbol
+    if not target_ident:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either 'instrument_id' or 'symbol' query parameter must be provided.",
+        )
+    try:
+        return _chart_service.get_available_intervals(target_ident)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.get(
@@ -68,7 +94,8 @@ async def get_chart_instrument(
     summary="Retrieve canonical historical OHLCV chart bars",
     description=(
         "Returns verified chronological ascending OHLCV bars for an instrument "
-        "at the baseline '1d' interval, with coverage metrics and cursor pagination."
+        "at the requested canonical interval (e.g. 1m, 5m, 1h, 1d, 1w, 1M), "
+        "with coverage metrics and cursor pagination."
     ),
 )
 async def get_chart_history(
@@ -76,7 +103,7 @@ async def get_chart_history(
     symbol: Optional[str] = Query(None, description="Alternative symbol parameter for convenience"),
     interval: str = Query(
         BASELINE_INTERVAL_CODE,
-        description="Bar interval code. Stage 66 enforces baseline '1d'.",
+        description="Bar interval code (e.g. 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w, 1M).",
     ),
     start: Optional[datetime] = Query(None, description="UTC start time boundary (inclusive)"),
     end: Optional[datetime] = Query(None, description="UTC end time boundary (exclusive)"),

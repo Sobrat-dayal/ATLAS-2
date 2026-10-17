@@ -220,6 +220,96 @@ class ChartHistoryResponse(BaseModel):
         default=None,
         description="Pagination metadata for viewport backfill.",
     )
+    interval_source_kind: str = Field(
+        default="NATIVE",
+        description="Whether returned bars are NATIVE (source stored) or DERIVED (aggregated).",
+    )
+    derived_source_interval: Optional[str] = Field(
+        default=None,
+        description="Source interval used if bars were mathematically aggregated (e.g. '1d').",
+    )
+
+
+class ChartIntervalOptionDTO(BaseModel):
+    """Typed representation of a selectable chart interval."""
+
+    model_config = ConfigDict(frozen=True)
+
+    interval_id: str = Field(
+        ...,
+        description="Canonical interval code (e.g. 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w, 1M).",
+    )
+    display_label: str = Field(
+        ...,
+        description="Human-readable interval display label.",
+    )
+    duration_seconds: Optional[int] = Field(
+        default=None,
+        description="Nominal duration of the interval in seconds (None for calendar intervals).",
+    )
+    availability: str = Field(
+        default="AVAILABLE_NATIVE",
+        description="Availability: AVAILABLE_NATIVE, AVAILABLE_DERIVED, PARTIAL, UNAVAILABLE.",
+    )
+    native_or_derived: str = Field(
+        default="NATIVE",
+        description="Lineage classification: NATIVE, DERIVED, or UNAVAILABLE.",
+    )
+    is_supported: bool = Field(
+        default=True,
+        description="True if this interval can be charted for the instrument.",
+    )
+    source_interval: Optional[str] = Field(
+        default=None,
+        description="Constituent base interval code if derived (e.g. '1d' or '1m').",
+    )
+    earliest_available: Optional[str] = Field(
+        default=None,
+        description="ISO 8601 UTC timestamp of earliest available bar.",
+    )
+    latest_available: Optional[str] = Field(
+        default=None,
+        description="ISO 8601 UTC timestamp of latest available bar.",
+    )
+    live_bar_supported: bool = Field(
+        default=False,
+        description="True if provisional live bar updates are supported for this interval.",
+    )
+    unavailability_reason: Optional[str] = Field(
+        default=None,
+        description="Explicit explanation if this interval cannot be provided.",
+    )
+
+
+class ChartIntervalsResponse(BaseModel):
+    """Response payload for GET /api/v1/charts/intervals."""
+
+    model_config = ConfigDict(frozen=True)
+
+    schema_version: str = Field(
+        default="1.0.0",
+        description="Contract schema version.",
+    )
+    instrument_entity_id: UUID = Field(
+        ...,
+        description="Canonical instrument UUID.",
+    )
+    display_symbol: str = Field(
+        ...,
+        description="Authoritative ticker or market symbol.",
+    )
+    instrument: Optional[ChartInstrumentMetadata] = Field(
+        default=None,
+        description="Canonical instrument metadata.",
+    )
+    default_interval: str = Field(
+        default="1d",
+        description="Default baseline interval code.",
+    )
+    intervals: List[ChartIntervalOptionDTO] = Field(
+        ...,
+        description="Complete list of selectable and available intervals.",
+    )
 
 
 class ChartSearchResponse(BaseModel):

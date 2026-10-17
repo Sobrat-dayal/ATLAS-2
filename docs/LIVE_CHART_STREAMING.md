@@ -36,7 +36,7 @@ Stage 67 extends Stage 66 without prematurely implementing subsequent roadmap st
 | :--- | :--- | :--- |
 | Stage 66 | Historical Charts V1: Candlesticks & Line, 1D Baseline, Historical Navigation | COMPLETE |
 | **Stage 67** | **Live Chart Streaming V1: Last-Price Overlay, WebSocket Integration, Reconciliation** | **COMPLETE** |
-| Stage 68 | Expanded Chart Intervals (1m, 5m, 1h, 1W), Resampling Engine, Alternative Chart Types | DEFERRED |
+| **Stage 68** | **Advanced Chart Intervals & Chart Types V1: Multi-Timeframe, Aggregation, OHLC/Area** | **COMPLETE** (See `docs/CHART_INTERVALS_AND_TYPES.md`) |
 | Stage 69 | Technical Indicator Infrastructure (SMA, EMA, RSI, MACD, Bollinger Bands) | DEFERRED |
 | Stage 70 | TA-Lib Integration & Advanced Quantitative Studies | DEFERRED |
 | Stage 71 | Interactive Drawing Tools (Trendlines, Rays, Fibonacci, Price Channels) | DEFERRED |

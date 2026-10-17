@@ -5,7 +5,7 @@
  * instrument metadata, coverage audits, and visualization settings.
  */
 
-export type ChartRenderMode = "candlestick" | "line";
+export type ChartRenderMode = "candlestick" | "bar" | "line" | "area";
 
 export interface ChartBarDTO {
   timestamp: string; // ISO 8601 UTC
@@ -64,6 +64,52 @@ export interface ChartHistoryResponse {
   bars: ChartBarDTO[];
   coverage: ChartCoverageDTO;
   pagination?: ChartPaginationDTO | null;
+  interval_source_kind?: "NATIVE" | "DERIVED" | string;
+  derived_source_interval?: string | null;
+}
+
+// ============================================================================
+// Stage 68 Multi-Timeframe Interval Types
+// ============================================================================
+
+export type ChartIntervalId =
+  | "1m"
+  | "5m"
+  | "15m"
+  | "30m"
+  | "1h"
+  | "4h"
+  | "1d"
+  | "1w"
+  | "1M";
+
+export type ChartIntervalAvailability =
+  | "AVAILABLE_NATIVE"
+  | "AVAILABLE_DERIVED"
+  | "PARTIAL"
+  | "UNAVAILABLE";
+
+export interface ChartIntervalOptionDTO {
+  interval_id: ChartIntervalId | string;
+  display_label: string;
+  duration_seconds: number | null;
+  availability: ChartIntervalAvailability | string;
+  native_or_derived: "NATIVE" | "DERIVED" | "UNAVAILABLE" | string;
+  is_supported: boolean;
+  source_interval?: string | null;
+  earliest_available?: string | null;
+  latest_available?: string | null;
+  live_bar_supported: boolean;
+  unavailability_reason?: string | null;
+}
+
+export interface ChartIntervalsResponse {
+  schema_version: string;
+  instrument_entity_id: string;
+  display_symbol: string;
+  instrument?: ChartInstrumentMetadata | null;
+  default_interval: string;
+  intervals: ChartIntervalOptionDTO[];
 }
 
 export interface ChartSearchResponse {

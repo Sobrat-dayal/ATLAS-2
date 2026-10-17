@@ -10,6 +10,7 @@
 import {
   ChartHistoryResponse,
   ChartInstrumentMetadata,
+  ChartIntervalsResponse,
   ChartLiveStateResponse,
   ChartSearchResponse,
 } from "./types";
@@ -152,4 +153,43 @@ export async function fetchChartLiveState(
   }
 
   return (await res.json()) as ChartLiveStateResponse;
+}
+
+export interface FetchChartIntervalsParams {
+  instrumentId?: string;
+  symbol?: string;
+  signal?: AbortSignal;
+}
+
+export async function fetchChartIntervals(
+  params: FetchChartIntervalsParams
+): Promise<ChartIntervalsResponse> {
+  const query = new URLSearchParams();
+  if (params.instrumentId) query.set("instrument_id", params.instrumentId);
+  if (params.symbol) query.set("symbol", params.symbol);
+
+  const url = `${getBaseApiUrl()}/api/v1/charts/intervals?${query.toString()}`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    signal: params.signal,
+  });
+
+  if (!res.ok) {
+    let errorMsg = `Chart intervals request failed (${res.status})`;
+    try {
+      const errJson = await res.json();
+      if (errJson?.error?.message) {
+        errorMsg = errJson.error.message;
+      } else if (errJson?.detail) {
+        errorMsg = errJson.detail;
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return (await res.json()) as ChartIntervalsResponse;
 }

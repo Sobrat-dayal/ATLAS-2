@@ -539,6 +539,41 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Regressions: Clean execution across Stage 66 Charts V1 and prior market modules.
 - **Documentation**: See `docs/LIVE_CHART_STREAMING.md`
 
+## Advanced Chart Intervals & Chart Types V1 (Stage 68)
+- **Overview**: Upgrades ATLAS Charts at `/charts` to a full multi-timeframe institutional charting interface supporting 9 canonical intervals (`1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1d`, `1w`, `1M`), truthful availability discovery, mathematical & temporal Decimal OHLCV aggregation, 4 professional chart types (Candlestick, OHLC Bar, Line, Area), and multi-interval live streaming compatibility.
+- **Core Principles & Capabilities**:
+  - **Canonical Multi-Timeframe Intervals**: Stable typed interval identifiers (`1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1d`, `1w`, `1M`) separating bar aggregation granularity from viewport time range.
+  - **Truthful Availability Discovery**: `GET /api/v1/charts/intervals` endpoint providing instrument-specific availability (`AVAILABLE_NATIVE`, `AVAILABLE_DERIVED`, `PARTIAL`, `UNAVAILABLE`) with explicit unavailability reasons (e.g. daily-only providers or missing constituent bars).
+  - **Mathematical & Temporal Decimal Aggregation**:
+    - `OPEN` = first bar open, `HIGH` = max high, `LOW` = min low, `CLOSE` = last bar close.
+    - Strict envelope checks: `high >= max(open, close)` and `low <= min(open, close)`.
+    - Genuine Volume semantics: sums volume only if all constituent bars have valid volume; otherwise `None` (never synthetic 0).
+    - Session-aware ISO week (`1w`) and calendar month (`1M`) boundaries.
+    - Preserves negative commodity futures prices (`CLZ26` WTI Crude).
+    - Distinguishes finalized historical bars from provisional open-period aggregates.
+  - **4 Professional Chart Renderers**:
+    - Candlestick (`candlestick`): Up/down candles with wick and body styling.
+    - OHLC Bar (`bar`): Classical vertical high-low spine with left-open and right-close ticks.
+    - Line (`line`): Crisp close-price line with zero artificial curve smoothing.
+    - Area (`area`): Close-price line with translucent gradient fill and adaptive baseline scaling.
+  - **Interactive Workspace UI**:
+    - Compact segmented Interval Selector with tooltips on disabled timeframes.
+    - Segmented Chart-Type Selector.
+    - Accessible HTML table alternative with interval and lineage context.
+    - Rapid interval switching protection with query cancellation (`AbortController`).
+  - **Stage 67 Live Compatibility**:
+    - Genuine Last-price overlay persists seamlessly across all intervals.
+    - Live candle updates are interval-specific; prevents cross-interval contamination.
+  - **Read-Only Invariants**: 0 database writes, 0 ClickHouse writes, 0 upstream provider calls on read, 0 trading executions, 0 LLM calls.
+- **Endpoints**:
+  - `GET /api/v1/charts/intervals`: Available intervals and capabilities for selected instrument.
+  - `GET /api/v1/charts/history`: Authenticated, interval-aware historical bars with target-bar pagination and lineage metadata.
+- **Testing**:
+  - Backend: `uv run pytest apps/api/tests/test_charts_intervals_and_types.py` (17 tests, 100% pass). Full charts suite: 49/49 pass.
+  - Frontend: `npx.cmd tsx --test apps/web/tests/charts-intervals-and-types.test.ts` (8 tests, 100% pass). Full web suite: 263/263 pass across 42 suites.
+  - Production build: `npm.cmd run build` in `apps/web` compiled with 0 errors across all 38 routes.
+- **Documentation**: See `docs/CHART_INTERVALS_AND_TYPES.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

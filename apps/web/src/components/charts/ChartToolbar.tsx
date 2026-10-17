@@ -12,11 +12,7 @@
 
 import React, { useState } from "react";
 import {
-  Calendar,
-  CandlestickChart,
   ChevronDown,
-  Info,
-  LineChart,
   Maximize2,
   RefreshCw,
   RotateCcw,
@@ -24,15 +20,20 @@ import {
 } from "lucide-react";
 import {
   ChartInstrumentMetadata,
+  ChartIntervalOptionDTO,
   ChartRenderMode,
   getAssetClassBadgeLabel,
   getAssetClassColor,
 } from "@/lib/charts";
+import { ChartIntervalSelector } from "./ChartIntervalSelector";
+import { ChartTypeSelector } from "./ChartTypeSelector";
 
 export interface ChartToolbarProps {
   selectedSymbol: string;
   availableInstruments: ChartInstrumentMetadata[];
   interval: string;
+  onSelectInterval?: (interval: string) => void;
+  intervals?: ChartIntervalOptionDTO[];
   renderMode: ChartRenderMode;
   isLoading: boolean;
   onSelectInstrument: (symbol: string) => void;
@@ -47,6 +48,8 @@ export function ChartToolbar({
   selectedSymbol,
   availableInstruments,
   interval,
+  onSelectInterval,
+  intervals = [],
   renderMode,
   isLoading,
   onSelectInstrument,
@@ -58,7 +61,6 @@ export function ChartToolbar({
 }: ChartToolbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
-  const [showIntervalInfo, setShowIntervalInfo] = useState(false);
 
   const filtered = availableInstruments.filter((inst) => {
     if (!searchFilter.trim()) return true;
@@ -141,62 +143,21 @@ export function ChartToolbar({
           )}
         </div>
 
-        {/* Baseline Interval Badge */}
-        <div className="relative flex items-center">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-950 border border-zinc-800 rounded text-zinc-200 font-mono font-semibold">
-            <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{interval.toUpperCase()}</span>
-            <button
-              type="button"
-              onClick={() => setShowIntervalInfo(!showIntervalInfo)}
-              className="text-zinc-500 hover:text-zinc-300 ml-0.5"
-              title="Baseline Interval Policy"
-            >
-              <Info className="w-3 h-3" />
-            </button>
-          </div>
+        {/* Stage 68 Multi-Timeframe Interval Selector */}
+        {onSelectInterval && (
+          <ChartIntervalSelector
+            selectedInterval={interval}
+            intervals={intervals}
+            onSelectInterval={onSelectInterval}
+            isLoading={isLoading}
+          />
+        )}
 
-          {showIntervalInfo && (
-            <div className="absolute top-full left-0 mt-1 w-64 p-2.5 bg-zinc-950 border border-zinc-800 rounded shadow-xl text-[11px] text-zinc-300 z-50 leading-relaxed">
-              <div className="font-semibold text-zinc-100 mb-1">
-                Baseline Interval: 1D
-              </div>
-              Stage 66 enforces the single verified baseline interval (&apos;1d&apos; daily bars).
-              Expanded intraday timeframes (1m, 5m, 1h) and multi-resolution intervals belong to Stage 68.
-            </div>
-          )}
-        </div>
-
-        {/* Render Mode Toggle: Candlestick vs Line */}
-        <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded p-0.5">
-          <button
-            type="button"
-            onClick={() => onSelectRenderMode("candlestick")}
-            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
-              renderMode === "candlestick"
-                ? "bg-zinc-800 text-zinc-100 font-medium"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
-            title="Candlestick Chart Mode"
-          >
-            <CandlestickChart className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Candles</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectRenderMode("line")}
-            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
-              renderMode === "line"
-                ? "bg-zinc-800 text-zinc-100 font-medium"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
-            title="Close Line Chart Mode"
-          >
-            <LineChart className="w-3.5 h-3.5 text-sky-400" />
-            <span>Line</span>
-          </button>
-        </div>
+        {/* Stage 68 Chart Type Selector (Candles, OHLC, Line, Area) */}
+        <ChartTypeSelector
+          selectedMode={renderMode}
+          onSelectMode={onSelectRenderMode}
+        />
       </div>
 
       {/* Middle/Live Controls Slot */}

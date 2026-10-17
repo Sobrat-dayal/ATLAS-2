@@ -4018,16 +4018,157 @@ This document records the major architectural and product decisions established.
 174. Stage 67 documentation must match actual implementation.
 175. Stage 68 is the next canonical development stage.
 
+## Stage 68: Advanced Chart Intervals & Chart Types V1
 
+### Architecture
+1. Stage 68 extends the existing Charts module at `/charts`.
+2. Canonical route remains `/charts`.
+3. Stage 66 historical charting is reused without duplication.
+4. Stage 67 live streaming is reused without duplication.
+5. Stage 33 OHLCV remains canonical.
+6. Stage 39 ingestion remains authoritative.
+7. Stage 40 updates remain separate from reads.
+8. ClickHouse remains historical storage.
+9. No duplicate OHLCV database is introduced.
+10. No new Provider routing layer is created.
+11. No additional global WebSocket is created.
+12. No new Quote cache is introduced.
+13. No unnecessary microservice is introduced.
 
+### Intervals
+14. Intervals have stable typed IDs: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1d`, `1w`, `1M`.
+15. Interval and visible time range are distinct dimensions.
+16. Interval availability is series-specific.
+17. Availability must reflect genuine stored/source coverage.
+18. Unsupported intervals are not advertised as functional.
+19. Source-native (`AVAILABLE_NATIVE`) and derived (`AVAILABLE_DERIVED`) intervals are distinguished.
+20. Daily intervals follow canonical trading/session dates.
+21. Weekly intervals use validated calendar/session grouping (ISO weeks starting Monday).
+22. Monthly intervals use validated calendar-month grouping (first of month).
+23. DST is handled using timezone-aware calendar rules.
+24. No arbitrary universal UTC-day policy is imposed.
+25. No intraday data is manufactured from daily bars.
+26. No Quote snapshots are converted into authoritative candles.
+27. Historical interval requests are bounded.
+28. Interval selection does not create ingestion jobs.
+29. Interval selection does not trigger Provider fanout.
 
+### Aggregation
+30. Aggregation requires compatible canonical series.
+31. Aggregation requires compatible Providers/source methodology.
+32. Aggregation requires consistent price basis.
+33. Aggregation requires consistent adjustment basis.
+34. Aggregation requires consistent quotation units.
+35. Aggregation uses high-precision Python Decimal.
+36. Open uses first constituent bar Open.
+37. High uses maximum constituent bar High.
+38. Low uses minimum constituent bar Low.
+39. Close uses last constituent bar Close.
+40. Volume sums only genuine compatible quantities.
+41. Missing Volume is not treated as zero; aggregate Volume is None.
+42. Missing intervals are not silently synthesized.
+43. Market closures are not fabricated as flat bars.
+44. Unknown completeness prevents finalized aggregate claims.
+45. Verified no-trade periods remain distinct from missing data.
+46. Partial periods are explicitly handled and labeled provisional.
+47. Current week/month is not automatically finalized.
+48. Native target bars are preferred where available.
+49. Derived bars preserve lineage (`source_interval`, `interval_source_kind`).
+50. Derived cache responds to source corrections.
+51. Provider observations are not arbitrarily stitched.
+52. Futures contract expirations are never merged.
+53. Bond clean/dirty/yield series are not merged.
+54. Raw and adjusted equities are not merged.
+55. Negative Futures price support remains intact (e.g. `CLZ26`).
+56. Invalid OHLC/NaN/Infinity are rejected (`high < max(open, close)` or `high < low`).
 
+### APIs and State
+57. Existing history API `GET /api/v1/charts/history` is extended with `interval` parameter.
+58. Available intervals are discoverable via `GET /api/v1/charts/intervals`.
+59. Unsupported selections return explicit `HTTPException(400)`.
+60. Pagination operates on target bars.
+61. Cursor identity includes interval context.
+62. Stale responses cannot overwrite newly selected intervals via request abort controllers.
+63. Query caches are interval-aware.
+64. Derived caches are non-authoritative.
+65. Cache TTL is not market-data freshness.
+66. Authorization applies to every interval.
+67. Derived intervals cannot bypass source entitlements.
+68. No canonical writes occur on history reads.
 
+### Chart Types
+69. Candlestick renderer is preserved (`candlestick`).
+70. OHLC Bar renderer is added (`bar`).
+71. Line renderer is preserved (`line`).
+72. Area renderer is added (`area`).
+73. Chart types share canonical source observations.
+74. Area baseline semantics are documented and use adaptive scaling.
+75. Line/Area do not invent intermediate financial values.
+76. Unsupported renderers are disabled for incompatible data.
+77. Chart-type switching avoids unnecessary Provider/API calls.
+78. Price units and precision remain accurate.
+79. Valid negative prices remain supported across all renderers.
+80. Historical gaps remain visible/traceable without smoothing.
+81. Theme compatibility is required across dark and light modes.
+82. Viewport preservation is required where practical.
 
+### Stage 67 Live Integration
+83. Latest Last-price overlay remains separate from historical candles.
+84. Interval switching does not duplicate Quote subscriptions.
+85. Live bar updates require matching interval identity.
+86. Only authoritative live bars or verified complete aggregation may update candles.
+87. Incomplete lower-interval feeds cannot create finalized target bars.
+88. Browser wall clock alone cannot finalize OHLC.
+89. Historical corrections trigger derived-bar reconciliation.
+90. Reconnection does not fabricate missed OHLC.
+91. Quote freshness/delay metadata remains visible.
 
+### UI and Security
+92. Existing AppShell is preserved.
+93. Existing Agent Dock is preserved.
+94. Existing Bottom Taskbar is preserved.
+95. Existing appearance/design tokens are reused.
+96. No purple gradients are introduced.
+97. No emoji icons are introduced.
+98. No fake prices/candles/volume are introduced.
+99. Interval availability is clearly communicated with status tags and tooltips.
+100. Native/derived provenance is visible in status and inspector.
+101. Accessible controls are required (ARIA, keyboard navigation, accessible table).
+102. Responsive layouts are required (desktop, tablet, mobile).
+103. Authentication is enforced.
+104. Authorization is enforced.
+105. Intraday market-data entitlements are enforced.
+106. Provider credentials remain server-side.
+107. No arbitrary SQL/aggregation expressions are accepted.
+108. No Trading or Agent execution is introduced.
+109. No LLM calls are required.
 
-
-
-
-
+### Roadmap Boundaries
+110. Stage 69 owns indicator infrastructure.
+111. Stage 70 owns TA-Lib.
+112. Stage 71 owns drawings.
+113. Stage 72 owns multi-chart layouts.
+114. Stage 73 owns synchronization.
+115. Stage 74 owns saved chart layouts.
+116. Stage 75 owns replay.
+117. Stage 76 owns Watchlists.
+118. Stage 80 owns Alerts.
+119. Stage 94–98 own Screeners.
+120. Stage 110+ owns Portfolios.
+121. Stage 115+ owns Risk.
+122. Stage 143 owns Backtesting.
+123. Stage 144 owns Paper Trading.
+124. Stage 145 owns Broker Sandbox.
+125. Stage 146+ owns Agents.
+126. No technical indicators are implemented prematurely.
+127. No drawing tool infrastructure is implemented prematurely.
+128. No replay system is implemented prematurely.
+129. No trade execution is implemented.
+130. Stage 68 tests must verify interval integrity.
+131. Stage 68 tests must verify OHLC aggregation.
+132. Stage 68 tests must verify session boundaries.
+133. Stage 68 tests must verify live compatibility.
+134. Stage 68 tests must verify entitlement isolation.
+135. Stage 68 documentation must match implementation.
+136. Stage 69 is the next canonical stage.
 

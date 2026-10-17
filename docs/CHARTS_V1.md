@@ -34,7 +34,7 @@ To maintain software architecture integrity across the 150-stage roadmap, Stage 
 | :--- | :--- | :--- |
 | **Stage 66** | **Charts V1: Historical OHLCV, Candlesticks & Line, 1D Baseline** | **IMPLEMENTED** |
 | **Stage 67** | **Live Chart Streaming V1: Last-Price Overlay, WebSocket, Reconnection** | **IMPLEMENTED** (See `docs/LIVE_CHART_STREAMING.md`) |
-| Stage 68 | Multi-Timeframe Selectors (1m, 5m, 1h, 1W), Resampling, Alternate Chart Types | Deferred |
+| **Stage 68** | **Advanced Chart Intervals & Chart Types V1: Multi-Timeframe, Aggregation, OHLC/Area** | **IMPLEMENTED** (See `docs/CHART_INTERVALS_AND_TYPES.md`) |
 | Stage 69 | Technical Indicator Infrastructure (SMA, EMA, RSI, MACD, Bollinger Bands) | Deferred |
 | Stage 70 | TA-Lib Integration & Complex Quant Studies | Deferred |
 | Stage 71 | Interactive Drawing Tools (Trendlines, Rays, Fibonacci, Channels) | Deferred |

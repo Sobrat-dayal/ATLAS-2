@@ -18,20 +18,35 @@ def gen_chart_instrument_id(symbol: str) -> UUID:
 
 
 class ChartInterval(StrEnum):
-    """Supported baseline interval for Stage 66.
+    """Supported canonical intervals for ATLAS Charts (Stage 68)."""
 
-    Stage 66 enforces a single verified baseline interval ('1d').
-    Stage 68 will introduce expanded intraday and multi-resolution intervals.
-    """
-
+    ONE_MINUTE = "1m"
+    FIVE_MINUTES = "5m"
+    FIFTEEN_MINUTES = "15m"
+    THIRTY_MINUTES = "30m"
+    ONE_HOUR = "1h"
+    FOUR_HOURS = "4h"
     ONE_DAY = "1d"
+    ONE_WEEK = "1w"
+    ONE_MONTH = "1M"
 
 
 class ChartRenderMode(StrEnum):
-    """Foundational chart visualization modes for Stage 66."""
+    """Foundational and expanded chart visualization modes for Stage 68."""
 
     CANDLESTICK = "candlestick"
+    BAR = "bar"
     LINE = "line"
+    AREA = "area"
+
+
+class ChartIntervalAvailability(StrEnum):
+    """Availability classification of an interval for a canonical series."""
+
+    AVAILABLE_NATIVE = "AVAILABLE_NATIVE"
+    AVAILABLE_DERIVED = "AVAILABLE_DERIVED"
+    PARTIAL = "PARTIAL"
+    UNAVAILABLE = "UNAVAILABLE"
 
 
 class ChartPriceBasis(StrEnum):
@@ -60,6 +75,31 @@ MIN_BARS_LIMIT = 10
 
 # Baseline interval definition
 BASELINE_INTERVAL_CODE = ChartInterval.ONE_DAY.value
+
+# Canonical list of ordered intervals presented in the interface
+CANONICAL_INTERVAL_ORDER = [
+    ChartInterval.ONE_MINUTE.value,
+    ChartInterval.FIVE_MINUTES.value,
+    ChartInterval.FIFTEEN_MINUTES.value,
+    ChartInterval.THIRTY_MINUTES.value,
+    ChartInterval.ONE_HOUR.value,
+    ChartInterval.FOUR_HOURS.value,
+    ChartInterval.ONE_DAY.value,
+    ChartInterval.ONE_WEEK.value,
+    ChartInterval.ONE_MONTH.value,
+]
+
+INTERVAL_DISPLAY_LABELS: Dict[str, str] = {
+    ChartInterval.ONE_MINUTE.value: "1m",
+    ChartInterval.FIVE_MINUTES.value: "5m",
+    ChartInterval.FIFTEEN_MINUTES.value: "15m",
+    ChartInterval.THIRTY_MINUTES.value: "30m",
+    ChartInterval.ONE_HOUR.value: "1h",
+    ChartInterval.FOUR_HOURS.value: "4h",
+    ChartInterval.ONE_DAY.value: "1D",
+    ChartInterval.ONE_WEEK.value: "1W",
+    ChartInterval.ONE_MONTH.value: "1M",
+}
 
 
 # ============================================================================
@@ -133,6 +173,9 @@ class CanonicalChartInstrumentConfig:
         contract_expiration: str | None = None,
         base_asset: str | None = None,
         quote_asset: str | None = None,
+        supported_native_intervals: List[str] | None = None,
+        supported_derived_intervals: List[str] | None = None,
+        unsupported_intervals_reasons: Dict[str, str] | None = None,
     ):
         self.symbol = symbol.upper()
         self.entity_id = gen_chart_instrument_id(symbol)
@@ -150,11 +193,19 @@ class CanonicalChartInstrumentConfig:
         self.contract_expiration = contract_expiration
         self.base_asset = base_asset
         self.quote_asset = quote_asset
+        self.supported_native_intervals = supported_native_intervals or ["1d"]
+        self.supported_derived_intervals = supported_derived_intervals or ["1w", "1M"]
+        self.unsupported_intervals_reasons = unsupported_intervals_reasons or {}
+
+    def get_supported_intervals(self) -> List[str]:
+        """Returns ordered list of all supported intervals (both native and derived)."""
+        combined = set(self.supported_native_intervals + self.supported_derived_intervals)
+        return [i for i in CANONICAL_INTERVAL_ORDER if i in combined]
 
 
 # Verified catalog of canonical chartable instruments across financial asset classes
 DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
-    # Equities
+    # Equities (High liquidity supports native intraday 1m-1d; derived 1w, 1M)
     CanonicalChartInstrumentConfig(
         symbol="AAPL",
         display_name="Apple Inc.",
@@ -166,6 +217,8 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         adjustment_basis=ChartAdjustmentBasis.SPLIT_ADJUSTED,
         provider_key="OPENBB_POLYGON",
         has_volume=True,
+        supported_native_intervals=["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
     ),
     CanonicalChartInstrumentConfig(
         symbol="MSFT",
@@ -178,6 +231,8 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         adjustment_basis=ChartAdjustmentBasis.SPLIT_ADJUSTED,
         provider_key="OPENBB_POLYGON",
         has_volume=True,
+        supported_native_intervals=["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
     ),
     CanonicalChartInstrumentConfig(
         symbol="NVDA",
@@ -190,6 +245,8 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         adjustment_basis=ChartAdjustmentBasis.SPLIT_ADJUSTED,
         provider_key="OPENBB_POLYGON",
         has_volume=True,
+        supported_native_intervals=["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
     ),
     # ETFs
     CanonicalChartInstrumentConfig(
@@ -203,6 +260,8 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         adjustment_basis=ChartAdjustmentBasis.SPLIT_ADJUSTED,
         provider_key="OPENBB_POLYGON",
         has_volume=True,
+        supported_native_intervals=["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
     ),
     CanonicalChartInstrumentConfig(
         symbol="QQQ",
@@ -215,8 +274,10 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         adjustment_basis=ChartAdjustmentBasis.SPLIT_ADJUSTED,
         provider_key="OPENBB_POLYGON",
         has_volume=True,
+        supported_native_intervals=["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
     ),
-    # Foreign Exchange (OTC FX - volume is explicitly None)
+    # Foreign Exchange (OTC FX - volume is explicitly None, 1m is license-restricted)
     CanonicalChartInstrumentConfig(
         symbol="EURUSD",
         display_name="Euro / US Dollar Spot",
@@ -228,6 +289,11 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         adjustment_basis=ChartAdjustmentBasis.UNADJUSTED,
         provider_key="CANONICAL_FX_FEED",
         has_volume=False,
+        supported_native_intervals=["5m", "15m", "30m", "1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
+        unsupported_intervals_reasons={
+            "1m": "Intraday 1-minute OTC interbank feed is restricted by license."
+        },
     ),
     CanonicalChartInstrumentConfig(
         symbol="USDJPY",
@@ -240,8 +306,13 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         adjustment_basis=ChartAdjustmentBasis.UNADJUSTED,
         provider_key="CANONICAL_FX_FEED",
         has_volume=False,
+        supported_native_intervals=["5m", "15m", "30m", "1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
+        unsupported_intervals_reasons={
+            "1m": "Intraday 1-minute OTC interbank feed is restricted by license."
+        },
     ),
-    # Cryptocurrency Spot
+    # Cryptocurrency Spot (24/7 continuous trading, supports all native and derived intervals)
     CanonicalChartInstrumentConfig(
         symbol="BTCUSDT",
         display_name="Bitcoin / Tether Spot",
@@ -255,6 +326,8 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         has_volume=True,
         base_asset="BTC",
         quote_asset="USDT",
+        supported_native_intervals=["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
     ),
     CanonicalChartInstrumentConfig(
         symbol="ETHUSDT",
@@ -269,8 +342,10 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         has_volume=True,
         base_asset="ETH",
         quote_asset="USDT",
+        supported_native_intervals=["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
     ),
-    # Sovereign Debt / Fixed Income (Clean price % of par, OTC - no trade volume)
+    # Sovereign Debt / Fixed Income (Clean price % par; OTC evaluated pricing: Daily only)
     CanonicalChartInstrumentConfig(
         symbol="US10Y",
         display_name="US 10-Year Benchmark Treasury Note",
@@ -282,6 +357,16 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         adjustment_basis=ChartAdjustmentBasis.UNADJUSTED,
         provider_key="EVALUATED_PRICING_FEED",
         has_volume=False,
+        supported_native_intervals=["1d"],
+        supported_derived_intervals=["1w", "1M"],
+        unsupported_intervals_reasons={
+            "1m": "Intraday bar feed is not published for OTC evaluated benchmark sovereign debt.",
+            "5m": "Intraday bar feed is not published for OTC evaluated benchmark sovereign debt.",
+            "15m": "Intraday bar feed is not published for OTC evaluated benchmark sovereign debt.",
+            "30m": "Intraday bar feed is not published for OTC evaluated benchmark sovereign debt.",
+            "1h": "Intraday bar feed is not published for OTC evaluated benchmark sovereign debt.",
+            "4h": "Intraday bar feed is not published for OTC evaluated benchmark sovereign debt.",
+        },
     ),
     # Exchange-Traded Futures (Individual contracts, supports negative prices for commodities)
     CanonicalChartInstrumentConfig(
@@ -298,6 +383,14 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         is_futures=True,
         allows_negative_price=True,
         contract_expiration="2026-11-20T20:00:00Z",
+        supported_native_intervals=["1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
+        unsupported_intervals_reasons={
+            "1m": "High-frequency minute data requires CME Level 2 entitlement.",
+            "5m": "High-frequency minute data requires CME Level 2 entitlement.",
+            "15m": "High-frequency minute data requires CME Level 2 entitlement.",
+            "30m": "High-frequency minute data requires CME Level 2 entitlement.",
+        },
     ),
     CanonicalChartInstrumentConfig(
         symbol="GCZ26",
@@ -313,6 +406,14 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         is_futures=True,
         allows_negative_price=False,
         contract_expiration="2026-12-28T18:30:00Z",
+        supported_native_intervals=["1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
+        unsupported_intervals_reasons={
+            "1m": "High-frequency minute data requires CME Level 2 entitlement.",
+            "5m": "High-frequency minute data requires CME Level 2 entitlement.",
+            "15m": "High-frequency minute data requires CME Level 2 entitlement.",
+            "30m": "High-frequency minute data requires CME Level 2 entitlement.",
+        },
     ),
     CanonicalChartInstrumentConfig(
         symbol="ESZ26",
@@ -328,6 +429,11 @@ DEFAULT_CANONICAL_CHART_INSTRUMENTS: List[CanonicalChartInstrumentConfig] = [
         is_futures=True,
         allows_negative_price=False,
         contract_expiration="2026-12-18T14:30:00Z",
+        supported_native_intervals=["5m", "15m", "30m", "1h", "4h", "1d"],
+        supported_derived_intervals=["1w", "1M"],
+        unsupported_intervals_reasons={
+            "1m": "1-minute feed requires dedicated CME Globex intraday subscription."
+        },
     ),
 ]
 

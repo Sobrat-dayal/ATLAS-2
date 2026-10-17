@@ -9,3 +9,5 @@ export * from "./ChartEmptyErrorStates";
 export * from "./LiveMarketDataStatus";
 export * from "./LiveChartControls";
 export * from "./LatestQuoteDetails";
+export * from "./ChartIntervalSelector";
+export * from "./ChartTypeSelector";

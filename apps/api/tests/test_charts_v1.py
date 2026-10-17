@@ -162,9 +162,15 @@ def test_baseline_interval_validation(chart_service):
     assert len(valid_res.bars) > 0
 
     # Unsupported intervals must be rejected with descriptive message
-    for bad_interval in ["1m", "5m", "15m", "1h", "4h", "1w", "1M"]:
+    for bad_interval in ["invalid_int", "2d", "99h", "10s"]:
         with pytest.raises(ValueError, match="Unsupported interval"):
             chart_service.get_chart_history(aapl_id, interval=bad_interval)
+
+    # OTC Sovereign Debt does not support intraday intervals
+    us10y_id = str(gen_chart_instrument_id("US10Y"))
+    for bad_intraday in ["1m", "5m", "15m"]:
+        with pytest.raises(ValueError, match="Unsupported interval"):
+            chart_service.get_chart_history(us10y_id, interval=bad_intraday)
 
 
 def test_ohlc_envelope_invariants(chart_service):
@@ -299,12 +305,12 @@ async def test_api_chart_history_unsupported_interval(app, settings):
     """Test GET /api/v1/charts/history with unsupported interval returns 400."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        res = await client.get(f"{settings.api_prefix}/charts/history?symbol=SPY&interval=15m")
+        res = await client.get(f"{settings.api_prefix}/charts/history?symbol=US10Y&interval=15m")
         assert res.status_code == 400
         data = res.json()
         error_msg = data["error"]["message"] if "error" in data else data.get("detail", "")
         assert "Unsupported interval" in error_msg
-        assert "Stage 68" in error_msg
+        assert "US10Y" in error_msg
 
 
 @pytest.mark.asyncio

@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Custom React hook managing historical chart data, pagination, viewport backfill,
- * and crosshair inspection for ATLAS Charts V1 (Stage 66).
+ * Custom React hook managing multi-timeframe chart history, pagination,
+ * interval switching, viewport backfill, and crosshair inspection for ATLAS Charts (Stage 68).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -23,7 +23,11 @@ export interface UseChartHistoryReturn {
   selectedSymbol: string;
   selectedInstrument: ChartInstrumentMetadata | null;
   interval: string;
+  setInterval: (newInterval: string) => void;
   renderMode: ChartRenderMode;
+  setRenderMode: (mode: ChartRenderMode) => void;
+  intervalSourceKind: string;
+  derivedSourceInterval: string | null;
   bars: ChartBarDTO[];
   coverage: ChartCoverageDTO | null;
   pagination: ChartPaginationDTO | null;
@@ -32,7 +36,6 @@ export interface UseChartHistoryReturn {
   error: string | null;
   hoveredBar: HoveredBarData | null;
   selectInstrument: (symbolOrId: string) => void;
-  setRenderMode: (mode: ChartRenderMode) => void;
   loadOlderHistory: () => Promise<void>;
   refreshHistory: () => Promise<void>;
   setHoveredBar: (data: HoveredBarData | null) => void;
@@ -40,11 +43,17 @@ export interface UseChartHistoryReturn {
   isSearching: boolean;
 }
 
-export function useChartHistory(initialSymbol: string = "SPY"): UseChartHistoryReturn {
+export function useChartHistory(
+  initialSymbol: string = "SPY",
+  initialInterval: string = "1d"
+): UseChartHistoryReturn {
   const [selectedSymbol, setSelectedSymbol] = useState<string>(initialSymbol);
   const [selectedInstrument, setSelectedInstrument] = useState<ChartInstrumentMetadata | null>(null);
-  const [interval] = useState<string>("1d"); // Baseline interval for Stage 66
+  const [interval, setIntervalState] = useState<string>(initialInterval);
   const [renderMode, setRenderMode] = useState<ChartRenderMode>("candlestick");
+  const [intervalSourceKind, setIntervalSourceKind] = useState<string>("NATIVE");
+  const [derivedSourceInterval, setDerivedSourceInterval] = useState<string | null>(null);
+
   const [bars, setBars] = useState<ChartBarDTO[]>([]);
   const [coverage, setCoverage] = useState<ChartCoverageDTO | null>(null);
   const [pagination, setPagination] = useState<ChartPaginationDTO | null>(null);
@@ -61,7 +70,7 @@ export function useChartHistory(initialSymbol: string = "SPY"): UseChartHistoryR
   const activeAbortRef = useRef<AbortController | null>(null);
   const isBackfillingRef = useRef<boolean>(false);
 
-  // Sync state if initialSymbol changes externally (e.g. via deep-linking query param)
+  // Sync state if initialSymbol changes externally
   const [prevInitialSymbol, setPrevInitialSymbol] = useState(initialSymbol);
   if (initialSymbol !== prevInitialSymbol) {
     setPrevInitialSymbol(initialSymbol);
@@ -90,89 +99,118 @@ export function useChartHistory(initialSymbol: string = "SPY"): UseChartHistoryR
     };
   }, []);
 
-  // Fetch initial history when selected symbol/instrument changes
-  const fetchHistory = useCallback(async (symbolOrId: string) => {
-    if (activeAbortRef.current) {
-      activeAbortRef.current.abort();
-    }
-    const ac = new AbortController();
-    activeAbortRef.current = ac;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const data: ChartHistoryResponse = await fetchChartHistory({
-        symbol: symbolOrId,
-        interval: "1d",
-        limit: 250,
-        signal: ac.signal,
-      });
-
-      setSelectedInstrument(data.instrument);
-      setSelectedSymbol(data.instrument.display_symbol);
-      setBars(data.bars);
-      setCoverage(data.coverage);
-      setPagination(data.pagination ?? null);
-
-      // Inform global context of selected entity
-      if (selectEntity && data.instrument.entity_id) {
-        selectEntity(data.instrument.entity_id);
+  // Fetch history when selected symbol or interval changes
+  const fetchHistory = useCallback(
+    async (symbolOrId: string, targetInterval: string) => {
+      // Abort previous in-flight request to prevent race conditions during rapid switching
+      if (activeAbortRef.current) {
+        activeAbortRef.current.abort();
       }
+      const ac = new AbortController();
+      activeAbortRef.current = ac;
 
-      // Initialize default hovered bar with latest bar
-      if (data.bars.length > 0) {
-        const last = data.bars[data.bars.length - 1];
-        const openVal = typeof last.open === "string" ? parseFloat(last.open) : Number(last.open);
-        const closeVal = typeof last.close === "string" ? parseFloat(last.close) : Number(last.close);
-        const highVal = typeof last.high === "string" ? parseFloat(last.high) : Number(last.high);
-        const lowVal = typeof last.low === "string" ? parseFloat(last.low) : Number(last.low);
-        const volVal = last.volume !== null ? (typeof last.volume === "string" ? parseFloat(last.volume) : Number(last.volume)) : null;
-        const pct = openVal !== 0 ? ((closeVal - openVal) / openVal) * 100 : 0;
+      setIsLoading(true);
+      setError(null);
 
-        setHoveredBar({
-          time_unix: last.time_unix,
-          timestamp: last.timestamp,
-          open: openVal,
-          high: highVal,
-          low: lowVal,
-          close: closeVal,
-          volume: volVal,
-          changePercent: pct,
+      // Default requested bars count: 500 for intraday, 250 for daily/weekly/monthly
+      const isIntraday = ["1m", "5m", "15m", "30m", "1h", "4h"].includes(targetInterval);
+      const limit = isIntraday ? 500 : 250;
+
+      try {
+        const data: ChartHistoryResponse = await fetchChartHistory({
+          symbol: symbolOrId,
+          interval: targetInterval,
+          limit,
+          signal: ac.signal,
         });
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === "AbortError") {
-        return;
-      }
-      setError(err instanceof Error ? err.message : "Failed to load chart history.");
-      setBars([]);
-      setCoverage(null);
-      setPagination(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectEntity]);
 
-  // Initial trigger
+        setSelectedInstrument(data.instrument);
+        setSelectedSymbol(data.instrument.display_symbol);
+        setBars(data.bars);
+        setCoverage(data.coverage);
+        setPagination(data.pagination ?? null);
+        setIntervalSourceKind(data.interval_source_kind || "NATIVE");
+        setDerivedSourceInterval(data.derived_source_interval || null);
+
+        // Inform global context of selected entity
+        if (selectEntity && data.instrument.entity_id) {
+          selectEntity(data.instrument.entity_id);
+        }
+
+        // Initialize default hovered bar with latest bar
+        if (data.bars.length > 0) {
+          const last = data.bars[data.bars.length - 1];
+          const openVal = typeof last.open === "string" ? parseFloat(last.open) : Number(last.open);
+          const closeVal = typeof last.close === "string" ? parseFloat(last.close) : Number(last.close);
+          const highVal = typeof last.high === "string" ? parseFloat(last.high) : Number(last.high);
+          const lowVal = typeof last.low === "string" ? parseFloat(last.low) : Number(last.low);
+          const volVal =
+            last.volume !== null
+              ? typeof last.volume === "string"
+                ? parseFloat(last.volume)
+                : Number(last.volume)
+              : null;
+          const pct = openVal !== 0 ? ((closeVal - openVal) / openVal) * 100 : 0;
+
+          setHoveredBar({
+            time_unix: last.time_unix,
+            timestamp: last.timestamp,
+            open: openVal,
+            high: highVal,
+            low: lowVal,
+            close: closeVal,
+            volume: volVal,
+            changePercent: pct,
+          });
+        } else {
+          setHoveredBar(null);
+        }
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          // Ignored: request was cleanly superseded by another interval/symbol switch
+          return;
+        }
+        const msg = err instanceof Error ? err.message : "Failed to load historical chart bars.";
+        setError(msg);
+        setBars([]);
+        setCoverage(null);
+        setPagination(null);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [selectEntity]
+  );
+
+  // Trigger history fetch when symbol or interval changes
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchHistory(selectedSymbol);
+    fetchHistory(selectedSymbol, interval);
     return () => {
       if (activeAbortRef.current) {
         activeAbortRef.current.abort();
       }
     };
-  }, [selectedSymbol, fetchHistory]);
+  }, [selectedSymbol, interval, fetchHistory]);
 
   // Select instrument handler
   const selectInstrument = useCallback((symbolOrId: string) => {
     setSelectedSymbol(symbolOrId);
   }, []);
 
+  // Interval setter
+  const setInterval = useCallback((newInterval: string) => {
+    setIntervalState(newInterval);
+  }, []);
+
   // Backfill older history
   const loadOlderHistory = useCallback(async () => {
-    if (!pagination?.has_more || !pagination.next_cursor || isBackfillingRef.current || !selectedSymbol) {
+    if (
+      !pagination?.has_more ||
+      !pagination.next_cursor ||
+      isBackfillingRef.current ||
+      !selectedSymbol
+    ) {
       return;
     }
 
@@ -182,9 +220,9 @@ export function useChartHistory(initialSymbol: string = "SPY"): UseChartHistoryR
     try {
       const data = await fetchChartHistory({
         symbol: selectedSymbol,
-        interval: "1d",
+        interval,
         before: pagination.next_cursor,
-        limit: 100,
+        limit: 150,
       });
 
       if (data.bars.length > 0) {
@@ -205,17 +243,21 @@ export function useChartHistory(initialSymbol: string = "SPY"): UseChartHistoryR
       isBackfillingRef.current = false;
       setIsBackfilling(false);
     }
-  }, [pagination, selectedSymbol]);
+  }, [pagination, selectedSymbol, interval]);
 
   const refreshHistory = useCallback(async () => {
-    await fetchHistory(selectedSymbol);
-  }, [fetchHistory, selectedSymbol]);
+    await fetchHistory(selectedSymbol, interval);
+  }, [fetchHistory, selectedSymbol, interval]);
 
   return {
     selectedSymbol,
     selectedInstrument,
     interval,
+    setInterval,
     renderMode,
+    setRenderMode,
+    intervalSourceKind,
+    derivedSourceInterval,
     bars,
     coverage,
     pagination,
@@ -224,7 +266,6 @@ export function useChartHistory(initialSymbol: string = "SPY"): UseChartHistoryR
     error,
     hoveredBar,
     selectInstrument,
-    setRenderMode,
     loadOlderHistory,
     refreshHistory,
     setHoveredBar,

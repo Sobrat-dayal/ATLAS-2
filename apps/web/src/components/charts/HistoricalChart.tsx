@@ -17,6 +17,10 @@
 
 import React, { useEffect, useRef } from "react";
 import {
+  AreaData,
+  AreaSeries,
+  BarData,
+  BarSeries,
   CandlestickData,
   CandlestickSeries,
   ColorType,
@@ -69,7 +73,13 @@ export function HistoricalChart({
 }: HistoricalChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const mainSeriesRef = useRef<ISeriesApi<"Candlestick"> | ISeriesApi<"Line"> | null>(null);
+  const mainSeriesRef = useRef<
+    | ISeriesApi<"Candlestick">
+    | ISeriesApi<"Bar">
+    | ISeriesApi<"Line">
+    | ISeriesApi<"Area">
+    | null
+  >(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const priceLineRef = useRef<IPriceLine | null>(null);
   const lastBarsLengthRef = useRef<number>(0);
@@ -161,7 +171,7 @@ export function HistoricalChart({
       const isoTime = new Date(timeUnix * 1000).toISOString();
 
       if ("open" in seriesData && "close" in seriesData) {
-        const cData = seriesData as CandlestickData;
+        const cData = seriesData as CandlestickData | BarData;
         const openVal = Number(cData.open);
         const closeVal = Number(cData.close);
         const highVal = Number(cData.high);
@@ -187,8 +197,15 @@ export function HistoricalChart({
           changePercent: pct,
         });
       } else if ("value" in seriesData) {
-        const lData = seriesData as LineData;
+        const lData = seriesData as LineData | AreaData;
         const closeVal = Number(lData.value);
+        let volVal: number | null = null;
+        if (volumeSeriesRef.current) {
+          const volData = param.seriesData.get(volumeSeriesRef.current) as HistogramData | undefined;
+          if (volData && typeof volData.value === "number") {
+            volVal = volData.value;
+          }
+        }
         onHoverBar({
           time_unix: timeUnix,
           timestamp: isoTime,
@@ -196,7 +213,7 @@ export function HistoricalChart({
           high: closeVal,
           low: closeVal,
           close: closeVal,
-          volume: null,
+          volume: volVal,
           changePercent: 0,
         });
       }
@@ -270,7 +287,7 @@ export function HistoricalChart({
     barsCountRef.current = bars.length;
     if (bars.length === 0) return;
 
-    // 1. Create main series (Candlestick or Line)
+    // 1. Create main series (Candlestick, Bar, Line, or Area)
     if (renderMode === "candlestick") {
       const candleSeries = chart.addSeries(CandlestickSeries, {
         upColor: "#10b981", // Emerald 500
@@ -293,7 +310,25 @@ export function HistoricalChart({
 
       candleSeries.setData(formattedCandles);
       mainSeriesRef.current = candleSeries;
-    } else {
+    } else if (renderMode === "bar") {
+      const barSeries = chart.addSeries(BarSeries, {
+        upColor: "#10b981",
+        downColor: "#ef4444",
+        openVisible: true,
+        thinBars: false,
+      });
+
+      const formattedBars: BarData[] = bars.map((b) => ({
+        time: b.time_unix as Time,
+        open: typeof b.open === "string" ? parseFloat(b.open) : Number(b.open),
+        high: typeof b.high === "string" ? parseFloat(b.high) : Number(b.high),
+        low: typeof b.low === "string" ? parseFloat(b.low) : Number(b.low),
+        close: typeof b.close === "string" ? parseFloat(b.close) : Number(b.close),
+      }));
+
+      barSeries.setData(formattedBars);
+      mainSeriesRef.current = barSeries;
+    } else if (renderMode === "line") {
       const lineSeries = chart.addSeries(LineSeries, {
         color: "#38bdf8", // Sky 400
         lineWidth: 2,
@@ -310,6 +345,26 @@ export function HistoricalChart({
 
       lineSeries.setData(formattedLine);
       mainSeriesRef.current = lineSeries;
+    } else {
+      // Area Series
+      const areaSeries = chart.addSeries(AreaSeries, {
+        topColor: "rgba(56, 189, 248, 0.35)", // Sky 400 translucent gradient
+        bottomColor: "rgba(56, 189, 248, 0.0)",
+        lineColor: "#38bdf8",
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
+        crosshairMarkerBorderColor: "#38bdf8",
+        crosshairMarkerBackgroundColor: "#09090b",
+      });
+
+      const formattedArea: AreaData[] = bars.map((b) => ({
+        time: b.time_unix as Time,
+        value: typeof b.close === "string" ? parseFloat(b.close) : Number(b.close),
+      }));
+
+      areaSeries.setData(formattedArea);
+      mainSeriesRef.current = areaSeries;
     }
 
     // 2. Add volume histogram if instrument has volume
