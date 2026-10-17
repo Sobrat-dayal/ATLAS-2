@@ -193,3 +193,10 @@ Located in `ChartToolbar.tsx`:
 4. **Frontend Unit & Component Tests**:
    - `tests/charts-intervals-and-types.test.ts` -> 8 passed.
    - Total web tests across all 42 test suites: **263 passed out of 263**.
+
+---
+
+## 8. Stage 69 Extension: Technical Indicator Multi-Timeframe Compatibility
+
+Stage 69 ensures that all indicator calculations (`atlas.sma` v1) are strictly interval-aware. An SMA(20) on 1D evaluates across daily bars, while an SMA(20) on 1h evaluates across hourly bars. Chart-type switching (Candlestick, Bar, Line, Area) preserves indicator overlays cleanly without triggering unnecessary recalculations.
+

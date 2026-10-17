@@ -195,3 +195,10 @@ Charts V1 provides validated historical chart data across 6 financial asset clas
 4. **Frontend Unit Tests:** `apps/web/tests/charts-v1.test.ts` (9/9 passed).
 5. **Full Frontend Suite:** `apps/web/tests/*.test.ts` (242/242 passed across 21 test files).
 6. **Production Build:** `next build` completed with all 38 static and dynamic routes compiled without errors.
+
+---
+
+## 9. Stage 69 Extension: Technical Indicator Overlays
+
+Stage 69 extends `HistoricalChart` with an indicator overlay layer (`LineSeries`) and attached subpane container adapter (`IndicatorSubpane`). Historical bars provide the qualified input series for deterministic indicator calculations (`atlas.sma` v1) with full lookback and warmup synchronization.
+

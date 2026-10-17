@@ -11,6 +11,8 @@ import React from "react";
 import {
   ChartInstrumentMetadata,
   HoveredBarData,
+  IndicatorCalculationResult,
+  IndicatorInstanceConfig,
   formatBarDate,
   formatPercentChange,
   formatPrice,
@@ -20,11 +22,15 @@ import {
 export interface ChartCrosshairDetailsProps {
   hoveredBar: HoveredBarData | null;
   instrument: ChartInstrumentMetadata | null;
+  indicatorResults?: IndicatorCalculationResult[];
+  activeIndicators?: IndicatorInstanceConfig[];
 }
 
 export function ChartCrosshairDetails({
   hoveredBar,
   instrument,
+  indicatorResults = [],
+  activeIndicators = [],
 }: ChartCrosshairDetailsProps) {
   if (!hoveredBar) {
     return (
@@ -88,6 +94,44 @@ export function ChartCrosshairDetails({
           <span className="text-zinc-200">{formatVolume(hoveredBar.volume)}</span>
         </div>
       )}
+
+      {/* Stage 69 Active Technical Indicator Values at hovered bar */}
+      {activeIndicators.map((inst) => {
+        if (!inst.visible) return null;
+        const res = indicatorResults.find((r) => r.instance_id === inst.instance_id);
+        const pts = res?.series?.[0]?.points || [];
+        // Match exact or nearest within 1 sec
+        const barTimeUnix =
+          typeof hoveredBar.timestamp === "number"
+            ? hoveredBar.timestamp
+            : !isNaN(Number(hoveredBar.timestamp))
+              ? Number(hoveredBar.timestamp)
+              : Math.floor(new Date(hoveredBar.timestamp).getTime() / 1000);
+        const match = pts.find((p) => Math.abs(p.time_unix - barTimeUnix) <= 1);
+        const label = inst.parameters?.period
+          ? `SMA(${inst.parameters.period})`
+          : "SMA";
+        const color = inst.color || "#38bdf8";
+
+        return (
+          <div key={inst.instance_id} className="flex items-center gap-1.5">
+            <span
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: color }}
+            />
+            <span className="text-zinc-400 font-semibold">{label}:</span>
+            {match && match.value !== null && match.value !== undefined ? (
+              <span className="font-semibold text-zinc-100">
+                {formatPrice(match.value, precision)}
+              </span>
+            ) : match?.status === "WARMUP" ? (
+              <span className="text-zinc-500 italic text-[11px]">warmup</span>
+            ) : (
+              <span className="text-zinc-600">—</span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

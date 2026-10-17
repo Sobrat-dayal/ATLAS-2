@@ -13,6 +13,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, status
 
 from .config import BASELINE_INTERVAL_CODE, DEFAULT_BARS_LIMIT, MAX_BARS_LIMIT, MIN_BARS_LIMIT
+from .indicators import indicator_router
 from .live_service import LiveChartService
 from .models import (
     ChartHistoryResponse,
@@ -26,6 +27,7 @@ from .service import HistoricalChartService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/charts", tags=["charts"])
+router.include_router(indicator_router)
 _chart_service = HistoricalChartService()
 _live_chart_service = LiveChartService()
 

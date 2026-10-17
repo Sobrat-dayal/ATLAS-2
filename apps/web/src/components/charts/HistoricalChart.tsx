@@ -34,6 +34,7 @@ import {
   LineSeries,
   LineStyle,
   Time,
+  WhitespaceData,
   createChart,
 } from "lightweight-charts";
 import {
@@ -41,6 +42,8 @@ import {
   ChartInstrumentMetadata,
   ChartRenderMode,
   HoveredBarData,
+  IndicatorCalculationResult,
+  IndicatorInstanceConfig,
   LiveQuoteDTO,
 } from "@/lib/charts";
 
@@ -49,6 +52,8 @@ export interface HistoricalChartProps {
   renderMode: ChartRenderMode;
   instrument: ChartInstrumentMetadata | null;
   liveQuote?: LiveQuoteDTO | null;
+  indicatorResults?: IndicatorCalculationResult[];
+  activeIndicators?: IndicatorInstanceConfig[];
   onHoverBar?: (data: HoveredBarData | null) => void;
   onBackfill?: () => void;
   hasMore?: boolean;
@@ -63,6 +68,8 @@ export function HistoricalChart({
   renderMode,
   instrument,
   liveQuote,
+  indicatorResults = [],
+  activeIndicators = [],
   onHoverBar,
   onBackfill,
   hasMore,
@@ -81,6 +88,7 @@ export function HistoricalChart({
     | null
   >(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const indicatorSeriesMapRef = useRef<Map<string, ISeriesApi<"Line">>>(new Map());
   const priceLineRef = useRef<IPriceLine | null>(null);
   const lastBarsLengthRef = useRef<number>(0);
   const isBackfillingRef = useRef<boolean>(false);
@@ -237,6 +245,14 @@ export function HistoricalChart({
 
     return () => {
       resizeObserver.disconnect();
+      indicatorSeriesMapRef.current.forEach((series) => {
+        try {
+          chart.removeSeries(series);
+        } catch {
+          // ignore
+        }
+      });
+      indicatorSeriesMapRef.current.clear();
       chart.remove();
       chartRef.current = null;
       mainSeriesRef.current = null;
@@ -454,6 +470,87 @@ export function HistoricalChart({
       priceLineRef.current = null;
     }
   }, [liveQuote]);
+
+  // Synchronize Stage 69 Technical Indicator Overlays
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const activeMap = new Map<string, IndicatorInstanceConfig>();
+    for (const inst of activeIndicators) {
+      activeMap.set(inst.instance_id, inst);
+    }
+
+    const currentSeriesMap = indicatorSeriesMapRef.current;
+    const activeInstanceIds = new Set<string>();
+
+    for (const res of indicatorResults) {
+      const config = activeMap.get(res.instance_id);
+      if (!config || !config.visible) continue;
+
+      activeInstanceIds.add(res.instance_id);
+
+      const primarySeries = res.series?.[0];
+      if (!primarySeries || !primarySeries.points || primarySeries.points.length === 0) continue;
+
+      const color = config.color || primarySeries.color || "#38bdf8";
+      const lineWidth = config.line_width || 2;
+
+      let lineSeries = currentSeriesMap.get(res.instance_id);
+
+      if (!lineSeries) {
+        lineSeries = chart.addSeries(LineSeries, {
+          color,
+          lineWidth: lineWidth as 1 | 2 | 3 | 4,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          crosshairMarkerVisible: true,
+          crosshairMarkerRadius: 3,
+          crosshairMarkerBorderColor: color,
+          crosshairMarkerBackgroundColor: "#09090b",
+        });
+        currentSeriesMap.set(res.instance_id, lineSeries);
+      } else {
+        lineSeries.applyOptions({
+          color,
+          lineWidth: lineWidth as 1 | 2 | 3 | 4,
+          crosshairMarkerBorderColor: color,
+        });
+      }
+
+      // Convert points to LineData or WhitespaceData
+      const lineData: (LineData | WhitespaceData)[] = primarySeries.points.map((pt) => {
+        if (pt.value !== null && pt.value !== undefined && !isNaN(Number(pt.value))) {
+          return {
+            time: pt.time_unix as Time,
+            value: Number(pt.value),
+          };
+        }
+        return {
+          time: pt.time_unix as Time,
+        };
+      });
+
+      lineSeries.setData(lineData);
+    }
+
+    // Clean up series for removed or hidden instances
+    const toRemove: string[] = [];
+    currentSeriesMap.forEach((series, instanceId) => {
+      if (!activeInstanceIds.has(instanceId)) {
+        try {
+          chart.removeSeries(series);
+        } catch {
+          // ignore
+        }
+        toRemove.push(instanceId);
+      }
+    });
+
+    for (const id of toRemove) {
+      currentSeriesMap.delete(id);
+    }
+  }, [indicatorResults, activeIndicators]);
 
   return (
     <div className="relative w-full h-full min-h-[460px] flex flex-col bg-zinc-950 rounded border border-zinc-800/80 overflow-hidden">

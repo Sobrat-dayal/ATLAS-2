@@ -275,3 +275,12 @@ When a qualified Last-price exists on `currentQuote`:
 - TypeScript: `tsc --noEmit` passed with 0 errors across all monorepo packages.
 - ESLint: `eslint src/components/charts src/hooks/charts src/lib/charts` passed with 0 errors.
 - Production Build: Next.js Turbopack production build (`next build`) compiled successfully with static route generation for `/charts`.
+
+---
+
+## 10. Stage 69 Extension: Live Indicator Compatibility
+
+Stage 69 preserves live market data integration while enforcing strict financial mathematical integrity:
+- **Last Quote Is Not Final OHLC:** Real-time Last-price updates (`LiveQuoteDTO`) adjust the live price line but **never create finalized indicator points**.
+- **Finalized Bar Updates:** When genuine new finalized canonical bars are accepted, active technical indicator overlays recalculate using the authoritative historical engine.
+

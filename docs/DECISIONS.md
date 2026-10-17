@@ -4172,3 +4172,152 @@ This document records the major architectural and product decisions established.
 135. Stage 68 documentation must match implementation.
 136. Stage 69 is the next canonical stage.
 
+## Stage 69 — Technical Indicator Infrastructure V1
+
+### Product & Scope
+1. Stage 69 implements Technical Indicator Infrastructure V1 inside `/charts`.
+2. Indicators remain strictly inside the existing Charts module (`/charts`); no new sidebar module is created.
+3. No new global sidebar route or top-level navigation item is added.
+4. Existing AppShell, Agent Dock, and Bottom Taskbar are preserved.
+5. Stage 66 chart rendering engine is reused; no duplicate canvas engine is installed.
+6. Stage 67 live streaming infrastructure and Last-price overlay are reused.
+7. Stage 68 multi-timeframe interval framework and chart types are reused.
+8. Stage 70 TA-Lib integration and broad indicator catalog are formally deferred.
+
+### Registry & Indicator Identity
+9. Indicator definitions have stable, namespaced identifiers (`atlas.sma`).
+10. Indicator definitions are explicitly versioned (`version: 1`).
+11. Indicator instances are strictly distinguished from indicator definitions.
+12. Registry implementations are statically allowlisted on the backend.
+13. Duplicate `(indicator_id, version)` registrations are rejected.
+14. Unknown indicator IDs return typed `UNKNOWN_INDICATOR` validation errors.
+15. Unsupported versions return typed `UNSUPPORTED_VERSION` validation errors.
+16. No user-executable formulas, scripts, or arbitrary code (`eval`, `exec`) are permitted.
+17. Registry design is forward-compatible with future Stage 70 TA-Lib adapters.
+
+### Parameters
+18. Indicator parameters are strictly typed (`INTEGER`, `DECIMAL`, `BOOLEAN`, `STRING`).
+19. Parameters have validated bounds and schema definitions (`min_value`, `max_value`, `allowed_values`).
+20. Default parameter values are defined authoritative by the backend registry.
+21. Backend parameter validation is authoritative over client-side validation.
+22. Invalid parameters reject calculation and never trigger execution.
+23. Parameter changes invalidate previous calculation results atomically.
+24. Instance identity is distinct from definition identity, allowing multiple instances of one indicator.
+
+### Financial Data Inputs & Integrity
+25. Canonical OHLCV observations from Stage 33 remain authoritative.
+26. Indicator inputs preserve canonical financial instrument identity (UUID).
+27. Market-series identity is strictly preserved.
+28. Interval identity is strictly preserved (calculations are interval-aware).
+29. Provider and venue semantics are strictly preserved.
+30. Price basis is strictly preserved.
+31. Adjustment basis (split/dividend adjusted vs unadjusted) is strictly preserved.
+32. Source revisions are preserved using the logical-latest policy.
+33. Incompatible market series or providers are never mixed.
+34. Futures contract expirations are never silently joined.
+35. Missing observations are never fabricated or silently interpolated.
+36. Zero look-ahead is guaranteed: calculations at bar $T$ use only observations $\le T$.
+
+### Deterministic Calculation Engine
+37. Indicator calculations are deterministic mathematical transformations.
+38. Reference SMA is implemented natively without third-party dependencies.
+39. SMA uses qualified Close observations only.
+40. SMA uses an efficient $O(N)$ rolling-sum accumulator window.
+41. SMA warmup requires exactly $N$ real qualified observations.
+42. Missing warmup points ($1 \dots N-1$) are explicitly represented as `None`/`null` (`WARMUP`), never 0.
+43. Authoritative financial arithmetic uses Python `Decimal` to avoid floating-point drift.
+44. Non-finite outputs (`NaN`, `Infinity`) are strictly prohibited and rejected.
+45. Output timestamps align exactly to canonical bar timestamps without forward/backward shifts.
+46. Output quotation units match the verified source quotation units.
+47. Calculations enforce resource limits (max 5 instances, max 2,000 bars, max lookback).
+48. Large lookback requests are strictly bounded (SMA period max 500).
+49. Indicators are descriptive studies and never imply predictions or trading signals.
+
+### Chart Overlays & Panes
+50. Indicator overlays reuse the approved Lightweight Charts rendering adapter.
+51. SMA is rendered as a clean price overlay on the compatible primary price scale.
+52. Future oscillators are provided with a dedicated attached subpane container contract.
+53. Subpane infrastructure does not create multi-chart layouts (Stage 72).
+54. Crosshair inspection displays time-aligned numerical indicator values.
+55. Toggling visibility does not mutate underlying source data or historical bars.
+56. Removing one instance cleans up its series without removing other instances.
+57. Indicator overlays do not modify or mutate underlying OHLCV candlesticks.
+58. No fake or decorative indicator graphics are used.
+
+### Historical & Live Integration
+59. Historical backfill panning triggers safe lookback retrieval and recalculation.
+60. Interval changes trigger requalification and interval-specific recalculation.
+61. Instrument changes cleanly invalidate previous outputs and recalculate for the new series.
+62. Source corrections invalidate and recompute affected rolling windows.
+63. Latest Last-price Quotes do not create finalized indicator points.
+64. Genuine finalized canonical bars update or append indicator outputs safely.
+65. Provisional indicator values, if supported, must be visibly classified as provisional.
+66. Duplicate or older live events cannot regress indicator output state.
+67. No duplicate global WebSocket connection is created (reuses Stage 43).
+68. No duplicate Quote cache is introduced (reuses Stage 41).
+69. No duplicate market event bus is introduced (reuses Stage 42).
+
+### Security & Governance
+70. Catalog and calculation APIs require Stage 13 authentication.
+71. Stage 14 authorization is enforced on all indicator requests.
+72. Financial market-data entitlements are enforced.
+73. Derived indicator studies cannot bypass source market-data entitlements.
+74. No arbitrary Python execution is permitted.
+75. No arbitrary JavaScript execution is permitted.
+76. No arbitrary SQL execution is permitted.
+77. No upstream Provider credentials or secrets are exposed.
+78. Calculation resource limits (instances, bars, lookback) are enforced.
+79. Cache isolation prevents cross-user or cross-instrument leakage.
+80. Calculation requests have read-only semantics (0 writes to canonical database/ClickHouse).
+81. No Trading, Agent, or Workflow action is executed.
+82. No LLM calls are required.
+
+### User Interface & Accessibility
+83. ATLAS design tokens and color palettes are reused.
+84. Indicator Picker shows actual registered definitions with categories and parameters.
+85. Parameter controls are functional with inline validation and integer constraints.
+86. Active indicator instances can be configured via a compact settings dialog.
+87. Active indicator instances can be shown or hidden with an eye toggle.
+88. Active indicator instances can be removed individually.
+89. Multiple SMA instances (e.g., SMA 20 and SMA 50) are supported concurrently.
+90. Insufficient-history and warmup states are clearly communicated.
+91. Source interval, instrument, and provenance metadata are transparent.
+92. Numerical indicator values are accessible via legend, inspector, and table.
+93. Full dark and light theme compatibility is maintained.
+94. Responsive layouts (desktop, tablet, mobile) are supported.
+95. Strict UI ban: No purple gradients.
+96. Strict UI ban: No emoji icons.
+97. Strict UI ban: No fake technical analysis, fake oscillators, or artificial signals.
+
+### Roadmap Boundaries
+98. Stage 70 owns TA-Lib integration and expanded indicator catalog.
+99. Stage 71 owns Drawing Tools.
+100. Stage 72 owns Multi-Chart Layout.
+101. Stage 73 owns Chart Synchronization.
+102. Stage 74 owns Saved Chart Layouts.
+103. Stage 75 owns Chart Replay.
+104. Stage 76 owns Watchlists.
+105. Stage 80 owns Alerts.
+106. Stage 94–98 own Screeners.
+107. Stage 110+ owns Portfolios.
+108. Stage 115+ owns Risk.
+109. Stage 141–142 own Options and Quant pricing.
+110. Stage 143 owns Backtesting.
+111. Stage 144 owns Paper Trading.
+112. Stage 145 owns Broker Sandbox.
+113. Stage 146+ owns Autonomous Agents.
+114. No generalized indicator library is prematurely implemented before Stage 70.
+115. No strategy engine is implemented.
+116. No price prediction engine is implemented.
+117. No chart-layout database is implemented.
+118. No indicator replay is implemented.
+119. No unnecessary new infrastructure is introduced.
+120. Stage 69 must pass deterministic calculation tests.
+121. Stage 69 must pass warmup and lookback tests.
+122. Stage 69 must pass authorization and entitlement tests.
+123. Stage 69 must pass overlay rendering tests.
+124. Stage 69 must pass Stage 66–68 regressions.
+125. Stage 69 documentation must match actual code.
+126. Stage 70 is the next canonical stage.
+
+

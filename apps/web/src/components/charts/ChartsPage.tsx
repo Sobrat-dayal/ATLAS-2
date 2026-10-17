@@ -8,10 +8,11 @@
  * streaming, genuine Last-price overlay, transport/freshness status, and controls.
  */
 
-import React, { Suspense, useRef } from "react";
+import React, { Suspense, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Activity, CandlestickChart } from "lucide-react";
-import { useChartHistory, useChartIntervals, useLiveChart } from "@/hooks/charts";
+import { useChartHistory, useChartIntervals, useIndicators, useLiveChart } from "@/hooks/charts";
+import { IndicatorInstanceConfig } from "@/lib/charts";
 import { ChartInstrumentHeader } from "./ChartInstrumentHeader";
 import { ChartToolbar } from "./ChartToolbar";
 import { ChartCrosshairDetails } from "./ChartCrosshairDetails";
@@ -21,6 +22,11 @@ import { HistoricalDataTable } from "./HistoricalDataTable";
 import { LiveMarketDataStatus } from "./LiveMarketDataStatus";
 import { LiveChartControls } from "./LiveChartControls";
 import { LatestQuoteDetails } from "./LatestQuoteDetails";
+import {
+  ActiveIndicators,
+  IndicatorParameterEditor,
+  IndicatorPicker,
+} from "./indicators";
 import {
   ChartEmptyState,
   ChartErrorState,
@@ -74,6 +80,27 @@ function ChartsContent() {
 
   const chartActionsRef = useRef<{ goToLatest: () => void } | null>(null);
 
+  // Stage 69 Technical Indicator State & Calculations
+  const [isIndicatorPickerOpen, setIsIndicatorPickerOpen] = useState(false);
+  const [editingIndicator, setEditingIndicator] = useState<IndicatorInstanceConfig | null>(null);
+
+  const {
+    catalog,
+    isLoadingCatalog,
+    activeInstances,
+    results: indicatorResults,
+    isCalculating: isIndicatorsCalculating,
+    calculationError: indicatorsError,
+    addIndicator,
+    updateInstance,
+    toggleVisibility,
+    removeInstance,
+  } = useIndicators({
+    instrument: selectedInstrument,
+    interval,
+    barsCount: bars.length,
+  });
+
   const handleGoToLatest = () => {
     if (chartActionsRef.current) {
       chartActionsRef.current.goToLatest();
@@ -105,15 +132,18 @@ function ChartsContent() {
                 CHARTS
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded">
-                STAGE 68
+                STAGE 69
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded flex items-center gap-1">
                 <Activity className="w-3 h-3 text-emerald-400" />
-                <span>MULTI-TIMEFRAME & ADVANCED TYPES</span>
+                <span>TECHNICAL INDICATOR INFRASTRUCTURE</span>
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
+                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES]
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Multi-timeframe financial charting, verified OHLCV aggregation, session-aware time axes, 4 chart types and live streaming.
+              Multi-timeframe financial charting, verified OHLCV aggregation, extensible technical indicators, deterministic calculations, and chart overlays.
             </p>
           </div>
         </div>
@@ -124,7 +154,7 @@ function ChartsContent() {
 
       {/* Main Chart Card */}
       <div className="flex flex-col bg-zinc-950/90 border border-zinc-800/80 rounded overflow-hidden shadow-2xl">
-        {/* Toolbar with Interval & Chart Type Selectors & Live Controls */}
+        {/* Toolbar with Interval & Chart Type Selectors, Indicators & Live Controls */}
         <ChartToolbar
           selectedSymbol={selectedSymbol}
           availableInstruments={availableInstruments}
@@ -137,16 +167,32 @@ function ChartsContent() {
           onSelectRenderMode={setRenderMode}
           onRefresh={refreshHistory}
           liveControls={liveControls}
+          onOpenIndicators={() => setIsIndicatorPickerOpen(true)}
+          activeIndicatorCount={activeInstances.length}
         />
 
         {/* Detailed Live Quote Metrics Strip */}
         <LatestQuoteDetails quote={liveQuote} instrument={selectedInstrument} />
 
-        {/* Dynamic Crosshair Details Bar */}
+        {/* Dynamic Crosshair Details Bar (with real-time indicator inspection) */}
         <ChartCrosshairDetails
           hoveredBar={hoveredBar}
           instrument={selectedInstrument}
+          indicatorResults={indicatorResults}
+          activeIndicators={activeInstances}
         />
+
+        {/* Active Indicators Legend Strip */}
+        {activeInstances.length > 0 && (
+          <ActiveIndicators
+            instances={activeInstances}
+            catalog={catalog}
+            results={indicatorResults}
+            onToggleVisibility={toggleVisibility}
+            onConfigure={(inst) => setEditingIndicator(inst)}
+            onRemove={removeInstance}
+          />
+        )}
 
         {/* Primary Chart Viewport */}
         <div className="w-full h-[540px] relative p-1">
@@ -162,6 +208,8 @@ function ChartsContent() {
               renderMode={renderMode}
               instrument={selectedInstrument}
               liveQuote={liveQuote}
+              indicatorResults={indicatorResults}
+              activeIndicators={activeInstances}
               onHoverBar={setHoveredBar}
               onBackfill={loadOlderHistory}
               hasMore={pagination?.has_more}
@@ -199,6 +247,31 @@ function ChartsContent() {
 
       {/* Accessible Historical Data Table */}
       <HistoricalDataTable bars={bars} instrument={selectedInstrument} />
+
+      {/* Stage 69 Indicator Modals */}
+      <IndicatorPicker
+        isOpen={isIndicatorPickerOpen}
+        catalog={catalog}
+        isLoading={isLoadingCatalog}
+        activeCount={activeInstances.length}
+        onClose={() => setIsIndicatorPickerOpen(false)}
+        onSelect={(indicatorId: string) => {
+          addIndicator(indicatorId);
+        }}
+      />
+
+      {editingIndicator && (
+        <IndicatorParameterEditor
+          isOpen={!!editingIndicator}
+          instance={editingIndicator}
+          definition={catalog.find((d) => d.indicator_id === editingIndicator.indicator_id)}
+          onClose={() => setEditingIndicator(null)}
+          onSave={(instanceId, updates) => {
+            updateInstance(instanceId, updates);
+            setEditingIndicator(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ cursor pagination, and metadata resolution.
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from .config import (
@@ -48,9 +48,11 @@ class HistoricalChartService:
         results = self._repository.search_instruments(query=query, asset_class=asset_class)
         return ChartSearchResponse(results=results, count=len(results))
 
-    def resolve_instrument(self, identifier: str) -> Optional[ChartInstrumentMetadata]:
+    def resolve_instrument(self, identifier: Any) -> Optional[ChartInstrumentMetadata]:
         """Resolves an instrument by either canonical UUID or ticker symbol."""
-        trimmed = identifier.strip()
+        if isinstance(identifier, UUID):
+            return self._repository.get_instrument_by_id(identifier)
+        trimmed = str(identifier).strip()
         try:
             entity_uuid = UUID(trimmed)
             return self._repository.get_instrument_by_id(entity_uuid)

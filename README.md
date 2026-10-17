@@ -574,6 +574,35 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `npm.cmd run build` in `apps/web` compiled with 0 errors across all 38 routes.
 - **Documentation**: See `docs/CHART_INTERVALS_AND_TYPES.md`
 
+## Technical Indicator Infrastructure V1 (Stage 69)
+- **Mathematical Integrity**: Provides the extensible, typed, deterministic calculation engine for technical indicators in `/charts`:
+  - **Indicator Registry (`IndicatorRegistry`)**: Server-controlled allowlist of versioned indicator definitions. Strictly prohibits user-submitted executable code (`eval`, `exec`).
+  - **Reference Implementation (`atlas.sma` v1)**: Deterministic Simple Moving Average using $O(N)$ rolling-sum accumulation and high-precision Python `Decimal` arithmetic.
+  - **Warmup & Lookback Policy**: First $N-1$ points are output as `WARMUP` with `value = None`. Never zero-fills or synthesizes warmup values.
+  - **Zero Look-Ahead**: Mathematical transformation at bar $T$ depends only on qualified observations $\le T$.
+  - **Data Continuity**: Detects and tags data gaps without silent forward-filling or interpolation.
+  - **Chart Overlays**: Synchronizes indicator instances as dedicated `LineSeries` on the primary canvas without mutating candlestick bars. Supports multiple concurrent instances (e.g., SMA 20 and SMA 50).
+  - **Subpane Infrastructure**: Extensible attached subpane container contract for future Stage 70 oscillators.
+  - **Interactive Workspace UI**:
+    - `IndicatorPicker`: Modal to discover registered definitions, search by category, and inspect parameter specifications.
+    - `ActiveIndicators`: Legend strip displaying active indicators, dynamic values, visibility toggles, and remove actions.
+    - `IndicatorParameterEditor`: Inline dialog enforcing integer bounds (2–500), stroke colors, and line widths.
+    - `ChartCrosshairDetails`: Displays time-aligned indicator values at hovered candles for exact inspection and accessibility.
+  - **Multi-Stage Integration**: Fully compatible with Stage 66 historical backfill, Stage 67 live streaming, and Stage 68 multi-timeframe intervals.
+  - **Strict Security**: 0 user-submitted code, 0 canonical database writes, 0 upstream provider calls on read, 0 trading executions, 0 LLM calls.
+- **Endpoints**:
+  - `GET /api/v1/charts/indicators/catalog`: Allowlisted indicator definitions, parameter schemas, and capabilities.
+  - `GET /api/v1/charts/indicators/{indicator_id}`: Detailed specification for an indicator.
+  - `POST /api/v1/charts/indicators/calculate`: Authenticated calculation endpoint with resource bounds (max 5 instances, max 2,000 bars, max lookback).
+- **Testing**:
+  - Backend: `uv run pytest apps/api/tests/test_charts_indicators.py` (14 tests, 100% pass). Full charts suite: 63/63 pass.
+  - Python lint & format: `uv run ruff check` and `uv run ruff format --check` (0 errors).
+  - Frontend: `npx.cmd tsx --test apps/web/tests/charts-indicators.test.ts` (10 tests, 100% pass). Full web charts suite: 40/40 pass.
+  - TypeScript: `npx.cmd tsc --noEmit` passed with 0 errors.
+  - ESLint: passed with 0 errors.
+  - Production build: `npm.cmd run build` in `apps/web` compiled with 0 errors across all 38 routes.
+- **Documentation**: See `docs/TECHNICAL_INDICATOR_INFRASTRUCTURE.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

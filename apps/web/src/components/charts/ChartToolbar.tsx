@@ -12,6 +12,7 @@
 
 import React, { useState } from "react";
 import {
+  Activity,
   ChevronDown,
   Maximize2,
   RefreshCw,
@@ -42,6 +43,8 @@ export interface ChartToolbarProps {
   onResetView?: () => void;
   onFitContent?: () => void;
   liveControls?: React.ReactNode;
+  onOpenIndicators?: () => void;
+  activeIndicatorCount?: number;
 }
 
 export function ChartToolbar({
@@ -58,6 +61,8 @@ export function ChartToolbar({
   onResetView,
   onFitContent,
   liveControls,
+  onOpenIndicators,
+  activeIndicatorCount = 0,
 }: ChartToolbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
@@ -158,6 +163,29 @@ export function ChartToolbar({
           selectedMode={renderMode}
           onSelectMode={onSelectRenderMode}
         />
+
+        {/* Stage 69 Technical Indicators Control */}
+        {onOpenIndicators && (
+          <button
+            type="button"
+            onClick={onOpenIndicators}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded font-mono font-medium border transition-colors ${
+              activeIndicatorCount > 0
+                ? "bg-cyan-950/60 border-cyan-700/80 text-cyan-200 hover:border-cyan-500"
+                : "bg-zinc-950 border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-zinc-100"
+            }`}
+            title="Open Technical Indicators Catalog"
+            aria-label="Indicators"
+          >
+            <Activity className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Indicators</span>
+            {activeIndicatorCount > 0 && (
+              <span className="ml-0.5 px-1.5 py-0.2 bg-cyan-500/20 text-cyan-300 text-[10px] font-bold rounded-full">
+                {activeIndicatorCount}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Middle/Live Controls Slot */}
