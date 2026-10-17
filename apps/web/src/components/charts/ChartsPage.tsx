@@ -1,21 +1,26 @@
 "use client";
 
 /**
- * Master Charts V1 Workspace Page for ATLAS (Stage 66).
+ * Master Charts Workspace Page for ATLAS (Stage 67).
  *
- * Implements the institutional Bloomberg/TradingView-inspired workspace at /charts.
+ * Implements the institutional Bloomberg/TradingView-inspired workspace at /charts,
+ * integrating Stage 66 historical OHLCV candles with Stage 67 live market data
+ * streaming, genuine Last-price overlay, transport/freshness status, and controls.
  */
 
-import React, { Suspense } from "react";
+import React, { Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Activity, CandlestickChart } from "lucide-react";
-import { useChartHistory } from "@/hooks/charts";
+import { useChartHistory, useLiveChart } from "@/hooks/charts";
 import { ChartInstrumentHeader } from "./ChartInstrumentHeader";
 import { ChartToolbar } from "./ChartToolbar";
 import { ChartCrosshairDetails } from "./ChartCrosshairDetails";
 import { HistoricalChart } from "./HistoricalChart";
 import { ChartDataStatus } from "./ChartDataStatus";
 import { HistoricalDataTable } from "./HistoricalDataTable";
+import { LiveMarketDataStatus } from "./LiveMarketDataStatus";
+import { LiveChartControls } from "./LiveChartControls";
+import { LatestQuoteDetails } from "./LatestQuoteDetails";
 import {
   ChartEmptyState,
   ChartErrorState,
@@ -48,6 +53,39 @@ function ChartsContent() {
     availableInstruments,
   } = useChartHistory(initialParam);
 
+  const {
+    quote: liveQuote,
+    connectionState,
+    freshnessStatus,
+    delayStatus,
+    liveCapability,
+    isPaused,
+    isFollowingLatest,
+    provider: liveProvider,
+    venue: liveVenue,
+    togglePause,
+    setFollowingLatest,
+  } = useLiveChart(selectedInstrument);
+
+  const chartActionsRef = useRef<{ goToLatest: () => void } | null>(null);
+
+  const handleGoToLatest = () => {
+    if (chartActionsRef.current) {
+      chartActionsRef.current.goToLatest();
+    }
+    setFollowingLatest(true);
+  };
+
+  const liveControls = (
+    <LiveChartControls
+      isPaused={isPaused}
+      isFollowingLatest={isFollowingLatest}
+      liveCapability={liveCapability}
+      onTogglePause={togglePause}
+      onGoToLatest={handleGoToLatest}
+    />
+  );
+
   return (
     <div className="w-full flex flex-col gap-3 p-4 md:p-6 min-h-screen bg-black text-zinc-100 font-sans">
       {/* Workspace Top Header */}
@@ -62,15 +100,15 @@ function ChartsContent() {
                 CHARTS
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded">
-                STAGE 66
+                STAGE 67
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded flex items-center gap-1">
                 <Activity className="w-3 h-3 text-emerald-400" />
-                <span>CANONICAL OHLCV</span>
+                <span>LIVE STREAMING V1</span>
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Institutional financial charting workspace, historical candlestick engine and market exploration.
+              Institutional financial charting workspace, real-time price streaming, live Last overlay and market exploration.
             </p>
           </div>
         </div>
@@ -81,7 +119,7 @@ function ChartsContent() {
 
       {/* Main Chart Card */}
       <div className="flex flex-col bg-zinc-950/90 border border-zinc-800/80 rounded overflow-hidden shadow-2xl">
-        {/* Toolbar */}
+        {/* Toolbar with Live Controls */}
         <ChartToolbar
           selectedSymbol={selectedSymbol}
           availableInstruments={availableInstruments}
@@ -91,7 +129,11 @@ function ChartsContent() {
           onSelectInstrument={selectInstrument}
           onSelectRenderMode={setRenderMode}
           onRefresh={refreshHistory}
+          liveControls={liveControls}
         />
+
+        {/* Detailed Live Quote Metrics Strip */}
+        <LatestQuoteDetails quote={liveQuote} instrument={selectedInstrument} />
 
         {/* Dynamic Crosshair Details Bar */}
         <ChartCrosshairDetails
@@ -112,17 +154,33 @@ function ChartsContent() {
               bars={bars}
               renderMode={renderMode}
               instrument={selectedInstrument}
+              liveQuote={liveQuote}
               onHoverBar={setHoveredBar}
               onBackfill={loadOlderHistory}
               hasMore={pagination?.has_more}
               isBackfilling={isBackfilling}
+              onUserPan={() => setFollowingLatest(false)}
+              onAtLatest={() => setFollowingLatest(true)}
+              chartActionsRef={chartActionsRef}
             />
           )}
         </div>
 
-        {/* Data Status & Provenance Bar */}
-        <div className="p-2 border-t border-zinc-800/80 bg-zinc-950">
-          <ChartDataStatus coverage={coverage} instrument={selectedInstrument} />
+        {/* Live Market Data Status & Coverage Provenance Footer */}
+        <div className="p-2 border-t border-zinc-800/80 bg-zinc-950 flex flex-col gap-2">
+          <LiveMarketDataStatus
+            connectionState={connectionState}
+            freshnessStatus={freshnessStatus}
+            delayStatus={delayStatus}
+            liveCapability={liveCapability}
+            quote={liveQuote}
+            instrument={selectedInstrument}
+            provider={liveProvider}
+            venue={liveVenue}
+          />
+          <div className="border-t border-zinc-900 pt-2">
+            <ChartDataStatus coverage={coverage} instrument={selectedInstrument} />
+          </div>
         </div>
       </div>
 

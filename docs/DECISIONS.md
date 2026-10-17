@@ -3817,6 +3817,208 @@ This document records the major architectural and product decisions established.
 154. Stage 66 documentation matches implementation.
 155. Stage 67 is the next canonical development stage.
 
+## Stage 67 — Live Chart Streaming V1
+
+### Product and Scope
+1. Stage 67 implements Live Chart Streaming V1.
+2. Charts continues using `/charts`.
+3. No new global module is created.
+4. Stage 66 historical chart remains functional.
+5. Existing AppShell is preserved.
+6. Existing Agent Dock is preserved.
+7. Existing Bottom Taskbar is preserved.
+8. Existing design tokens are reused.
+9. Selected Entity remains canonical.
+10. Stage 67 does not implement Stage 68 functionality.
+
+### Historical and Live Separation
+11. Stage 66 historical OHLCV remains authoritative.
+12. Stage 39 remains historical ingestion authority.
+13. Stage 41 remains latest Quote authority.
+14. Stage 42 remains Market Event authority.
+15. Stage 43 remains WebSocket authority.
+16. Stage 44 remains freshness authority.
+17. Live Quote state is separate from historical bars.
+18. Latest Last-price overlay does not mutate stored OHLC.
+19. No Quote-derived fake candles are created.
+20. No client-side ClickHouse writes occur.
+21. No direct Provider feed is opened by the browser.
+
+### Quote Semantics
+22. Quote snapshot is not a complete trade feed.
+23. Bid is not Last.
+24. Ask is not Last.
+25. Midpoint is not executed Last.
+26. Quote event count is not Volume.
+27. Latest Last does not establish complete Open/High/Low.
+28. Missing Last is not zero Last.
+29. Source timestamps are preserved.
+30. Receive timestamps remain distinct.
+31. Provider metadata is preserved.
+32. Venue metadata is preserved.
+33. Decimal precision is preserved.
+34. Negative Futures prices are supported.
+35. Market-series identity is explicit.
+
+### Event Processing
+36. Stage 42 typed Quote events are reused (`market.quote.updated`).
+37. Event schema validation is required.
+38. Older events cannot overwrite newer accepted state.
+39. Duplicate events are handled idempotently.
+40. Transport event ID is not market event time.
+41. At-least-once delivery is assumed.
+42. No exactly-once claim is made.
+43. Provider failover follows existing routing semantics.
+44. Invalid events are rejected.
+45. Unknown schema versions fail safely.
+46. No raw Provider payload is directly rendered.
+
+### Bootstrap
+47. Initial live state is read from Stage 41.
+48. WebSocket subscription is authorized.
+49. Snapshot/event races are handled.
+50. Bootstrap buffers are bounded (max 50 events).
+51. Buffer overflow triggers reconciliation.
+52. Stale HTTP snapshots cannot replace newer events.
+53. Chart history and live state have separate lifecycles.
+54. No new latest Quote cache is created.
+
+### Live Candle Policy
+55. Live bars require authoritative source OHLC or sufficiently complete trade data.
+56. Snapshot-only Quotes do not authorize live OHLC construction.
+57. Genuine trade quantity is required for trade-derived volume.
+58. Complete period coverage must be established.
+59. Missing trades invalidate claims of complete bar coverage.
+60. Market-session boundaries must be verified.
+61. Provisional bars remain distinct from finalized history.
+62. Finalization is source/reconciliation-driven.
+63. Browser clock alone does not finalize a bar.
+64. Historical corrections remain authoritative.
+65. Reconciliation must avoid duplicate bars.
+66. No synthetic Futures continuous roll is introduced.
+67. Optional typed bar events use existing Stage 42 transport.
+68. No second event bus is introduced.
+69. Unsupported live-candle capability is disclosed honestly.
+
+### Subscription and Authorization
+70. Existing global Stage 43 WebSocket is reused.
+71. No second chart-specific global socket is created.
+72. Subscriptions use canonical UUIDs (`instrument_entity_id`).
+73. Market-series variants are preserved.
+74. Authorization precedes subscription.
+75. Realtime/delayed entitlements are enforced.
+76. Subscription counts are bounded.
+77. Reference-counted subscriptions are preserved where implemented.
+78. Instrument switching releases obsolete subscriptions.
+79. Unmount releases page-specific subscriptions.
+80. Other modules' shared subscriptions are not disrupted.
+81. Unauthorized streams cannot leak data.
+82. No Provider secrets are exposed.
+
+### Connection and Freshness
+83. Transport connection is distinct from market freshness.
+84. Connected does not automatically mean Live.
+85. Delayed data is labeled Delayed.
+86. Stale data is labeled Stale.
+87. Unknown freshness remains Unknown.
+88. Market Closed requires authoritative evidence.
+89. Source times are displayed.
+90. Last accepted observations are not silently represented as current.
+91. Provider outages are reported.
+92. Redis outages produce degraded states.
+
+### Controls and UX
+93. Live Updates control is functional.
+94. Pause does not create an unbounded queue.
+95. Resume triggers authoritative reconciliation.
+96. Go to Latest changes viewport, not market data.
+97. Manual historical navigation is respected.
+98. Follow-live is disabled appropriately during manual panning.
+99. Crosshair remains stable.
+100. Historical bars remain visible during disconnects.
+101. No random price animation is allowed.
+102. No fake Live badge is allowed.
+103. No purple gradients are introduced.
+104. No emoji icons are introduced.
+105. No nonfunctional trading buttons are added.
+106. Price/unit formatting remains accurate.
+107. Accessible status controls are required.
+108. Responsive layouts remain supported.
+
+### Reconnection and Performance
+109. Reconnect uses Stage 43 infrastructure.
+110. Resubscription is required where necessary.
+111. Latest-state reconciliation follows reconnect.
+112. Redis Stream replay is bounded.
+113. Event gaps are not ignored.
+114. Quote snapshot cannot reconstruct missing OHLC history.
+115. Browser suspension triggers safe reconciliation.
+116. Rendering updates are coalesced (100ms cadence).
+117. Event buffers are bounded.
+118. No unbounded full-history refetch occurs per event.
+119. Historical pagination remains independent.
+120. Chart renderer instances are reused.
+121. Theme changes do not duplicate sockets.
+122. Cleanup prevents listener/observer leaks.
+123. Structured logging is reused.
+124. High-cardinality metric labels are avoided.
+
+### Security and Side Effects
+125. Live-state reads require authentication.
+126. Live-state reads enforce authorization.
+127. Market-data entitlements are enforced.
+128. No direct browser Provider credentials are used.
+129. No arbitrary Provider URLs are accepted.
+130. No arbitrary Redis commands are exposed.
+131. No arbitrary SQL is accepted.
+132. No unsafe HTML is rendered.
+133. Private market data is not persisted insecurely.
+134. Chart reads do not create ingestion jobs.
+135. Chart reads do not create live targets.
+136. Chart reads do not write OHLC history.
+137. Chart reads do not append market events.
+138. Chart display does not create trading orders.
+139. Chart display does not modify Portfolios.
+140. Chart display does not run Agents.
+141. Chart display does not run Workflows.
+142. Chart display does not require LLM calls.
+
+### Roadmap Boundaries
+143. Stage 68 owns expanded intervals/types.
+144. Stage 69 owns Technical Indicator Infrastructure.
+145. Stage 70 owns TA-Lib.
+146. Stage 71 owns Drawing Tools.
+147. Stage 72 owns Multi-Chart.
+148. Stage 73 owns Chart Synchronization.
+149. Stage 74 owns Saved Chart Layouts.
+150. Stage 75 owns Chart Replay.
+151. Stage 76 owns Watchlists.
+152. Stage 80 owns Alerts.
+153. Stage 94–98 own Screeners.
+154. Stage 110+ owns Portfolios.
+155. Stage 115+ owns Risk.
+156. Stage 141–142 own Options/Quant.
+157. Stage 143 owns Backtesting.
+158. Stage 144 owns Paper Trading.
+159. Stage 145 owns Broker Sandbox.
+160. Stage 146+ owns Agents.
+161. No indicator engine is introduced.
+162. No advanced resampling engine is introduced.
+163. No multi-chart synchronization is introduced.
+164. No chart-layout persistence is introduced.
+165. No replay system is introduced.
+166. No trading automation is introduced.
+167. No fake market data is seeded.
+168. Stage 67 must pass quote/candle integrity tests.
+169. Stage 67 must pass ordering and race tests.
+170. Stage 67 must pass entitlements tests.
+171. Stage 67 must pass reconnection tests.
+172. Stage 67 must pass performance/cleanup tests.
+173. Stage 67 must pass Stage 66 regressions.
+174. Stage 67 documentation must match actual implementation.
+175. Stage 68 is the next canonical development stage.
+
+
 
 
 

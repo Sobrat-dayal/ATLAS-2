@@ -235,3 +235,125 @@ class ChartSearchResponse(BaseModel):
         ...,
         description="Total number of results returned.",
     )
+
+
+# ============================================================================
+# Stage 67 Live Chart Streaming DTOs
+# ============================================================================
+
+
+class LiveQuoteDTO(BaseModel):
+    """Canonical representation of an accepted live quote observation.
+
+    Strict financial integrity rules:
+    - Quote snapshot is not a complete trade feed.
+    - Bid/ask are not last. Midpoint is not an executed trade.
+    - Quote count is not volume.
+    - Negative commodity futures prices are fully supported.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    bid_price: Optional[Decimal] = Field(
+        default=None,
+        description="Highest price a buyer will pay. Decimal precision preserved.",
+    )
+    ask_price: Optional[Decimal] = Field(
+        default=None,
+        description="Lowest price a seller will accept. Decimal precision preserved.",
+    )
+    bid_size: Optional[Decimal] = Field(
+        default=None,
+        description="Quantity offered at bid price.",
+    )
+    ask_size: Optional[Decimal] = Field(
+        default=None,
+        description="Quantity offered at ask price.",
+    )
+    last_price: Optional[Decimal] = Field(
+        default=None,
+        description="Real executed trade or settlement price. None when quote has bid/ask only.",
+    )
+    last_size: Optional[Decimal] = Field(
+        default=None,
+        description="Real executed transaction quantity. Never fabricated from quote updates.",
+    )
+    as_of: Optional[str] = Field(
+        default=None,
+        description="ISO 8601 UTC source observation timestamp.",
+    )
+    is_midpoint: bool = Field(
+        default=False,
+        description="Flag indicating whether value is an indicative midpoint rather than a trade.",
+    )
+    has_genuine_last: bool = Field(
+        default=False,
+        description="True if last_price represents a genuine qualified executed transaction.",
+    )
+
+
+class ChartLiveStateResponse(BaseModel):
+    """Authoritative snapshot of the live market streaming state for a chart instrument."""
+
+    model_config = ConfigDict(frozen=True)
+
+    schema_version: str = Field(
+        default="1.0.0",
+        description="Schema contract version.",
+    )
+    instrument_entity_id: UUID = Field(
+        ...,
+        description="Canonical instrument UUID.",
+    )
+    display_symbol: str = Field(
+        ...,
+        description="Authoritative ticker or market symbol.",
+    )
+    market_or_venue: str = Field(
+        ...,
+        description="Primary venue or exchange.",
+    )
+    price_currency: str = Field(
+        ...,
+        description="Quoted currency code.",
+    )
+    quotation_unit: str = Field(
+        ...,
+        description="Quotation convention (e.g. USD/share, % par, USD/barrel).",
+    )
+    quote: Optional[LiveQuoteDTO] = Field(
+        default=None,
+        description="Latest accepted market quote observation.",
+    )
+    source_timestamp: Optional[str] = Field(
+        default=None,
+        description="Source observation time in ISO 8601 UTC.",
+    )
+    received_at: Optional[str] = Field(
+        default=None,
+        description="System receipt time in ISO 8601 UTC.",
+    )
+    provider: str = Field(
+        default="canonical_feed",
+        description="Authoritative source provider identifier.",
+    )
+    freshness_status: str = Field(
+        default="LIVE",
+        description="Freshness classification: LIVE, DELAYED, STALE, UNKNOWN, UNAVAILABLE.",
+    )
+    delay_status: str = Field(
+        default="REALTIME",
+        description="Feed delay classification: REALTIME, DELAYED_15M, UNKNOWN.",
+    )
+    live_capability: str = Field(
+        default="LIVE_PRICE_AVAILABLE",
+        description="Live capability: LIVE_PRICE_AVAILABLE, HISTORICAL_ONLY, LIVE_BAR_AVAILABLE.",
+    )
+    availability: str = Field(
+        default="AVAILABLE",
+        description="Availability status: AVAILABLE, UNAVAILABLE.",
+    )
+    is_paused: bool = Field(
+        default=False,
+        description="Whether live stream updates are paused in client viewport.",
+    )

@@ -24,9 +24,11 @@ import {
   HistogramData,
   HistogramSeries,
   IChartApi,
+  IPriceLine,
   ISeriesApi,
   LineData,
   LineSeries,
+  LineStyle,
   Time,
   createChart,
 } from "lightweight-charts";
@@ -35,33 +37,44 @@ import {
   ChartInstrumentMetadata,
   ChartRenderMode,
   HoveredBarData,
+  LiveQuoteDTO,
 } from "@/lib/charts";
 
 export interface HistoricalChartProps {
   bars: ChartBarDTO[];
   renderMode: ChartRenderMode;
   instrument: ChartInstrumentMetadata | null;
+  liveQuote?: LiveQuoteDTO | null;
   onHoverBar?: (data: HoveredBarData | null) => void;
   onBackfill?: () => void;
   hasMore?: boolean;
   isBackfilling?: boolean;
+  onUserPan?: () => void;
+  onAtLatest?: () => void;
+  chartActionsRef?: React.MutableRefObject<{ goToLatest: () => void } | null>;
 }
 
 export function HistoricalChart({
   bars,
   renderMode,
   instrument,
+  liveQuote,
   onHoverBar,
   onBackfill,
   hasMore,
   isBackfilling,
+  onUserPan,
+  onAtLatest,
+  chartActionsRef,
 }: HistoricalChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const mainSeriesRef = useRef<ISeriesApi<"Candlestick"> | ISeriesApi<"Line"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const priceLineRef = useRef<IPriceLine | null>(null);
   const lastBarsLengthRef = useRef<number>(0);
   const isBackfillingRef = useRef<boolean>(false);
+  const barsCountRef = useRef<number>(0);
 
   useEffect(() => {
     isBackfillingRef.current = !!isBackfilling;
@@ -189,11 +202,19 @@ export function HistoricalChart({
       }
     });
 
-    // Viewport range subscription to detect scrolling left for backfill
+    // Viewport range subscription to detect scrolling left for backfill and user pan
     chart.timeScale().subscribeVisibleLogicalRangeChange((logicalRange) => {
       if (!logicalRange) return;
       if (logicalRange.from <= 2 && hasMore && onBackfill && !isBackfillingRef.current) {
         onBackfill();
+      }
+      const totalBars = barsCountRef.current;
+      if (totalBars > 0) {
+        if (logicalRange.to < totalBars - 3) {
+          onUserPan?.();
+        } else if (logicalRange.to >= totalBars - 1) {
+          onAtLatest?.();
+        }
       }
     });
 
@@ -203,13 +224,36 @@ export function HistoricalChart({
       chartRef.current = null;
       mainSeriesRef.current = null;
       volumeSeriesRef.current = null;
+      priceLineRef.current = null;
     };
-  }, [hasMore, onBackfill, onHoverBar]);
+  }, [hasMore, onBackfill, onHoverBar, onUserPan, onAtLatest]);
+
+  // Imperative handle for Go to Latest action
+  useEffect(() => {
+    if (chartActionsRef) {
+      chartActionsRef.current = {
+        goToLatest: () => {
+          if (chartRef.current) {
+            chartRef.current.timeScale().scrollToRealTime();
+            onAtLatest?.();
+          }
+        },
+      };
+    }
+    return () => {
+      if (chartActionsRef) {
+        chartActionsRef.current = null;
+      }
+    };
+  }, [chartActionsRef, onAtLatest]);
 
   // Update series and data when bars or renderMode changes
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
+
+    // Reset price line reference since series is being recreated
+    priceLineRef.current = null;
 
     // Remove existing main series if render mode changed
     if (mainSeriesRef.current) {
@@ -223,6 +267,7 @@ export function HistoricalChart({
       volumeSeriesRef.current = null;
     }
 
+    barsCountRef.current = bars.length;
     if (bars.length === 0) return;
 
     // 1. Create main series (Candlestick or Line)
@@ -308,6 +353,52 @@ export function HistoricalChart({
     }
     lastBarsLengthRef.current = bars.length;
   }, [bars, renderMode, instrument]);
+
+  // Manage Stage 67 Live Last-Price Overlay on chart canvas
+  useEffect(() => {
+    const series = mainSeriesRef.current;
+    if (!series) return;
+
+    if (
+      liveQuote &&
+      liveQuote.has_genuine_last &&
+      liveQuote.last_price !== null &&
+      liveQuote.last_price !== undefined
+    ) {
+      const priceNum =
+        typeof liveQuote.last_price === "string"
+          ? parseFloat(liveQuote.last_price)
+          : Number(liveQuote.last_price);
+
+      if (!isNaN(priceNum)) {
+        if (!priceLineRef.current) {
+          priceLineRef.current = series.createPriceLine({
+            price: priceNum,
+            color: "#10b981", // Emerald 500 for active live quote
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: "LAST",
+          });
+        } else {
+          priceLineRef.current.applyOptions({
+            price: priceNum,
+          });
+        }
+        return;
+      }
+    }
+
+    // If no genuine last price (e.g. OTC FX / bonds / feed missing last), remove price line
+    if (priceLineRef.current) {
+      try {
+        series.removePriceLine(priceLineRef.current);
+      } catch {
+        // ignore
+      }
+      priceLineRef.current = null;
+    }
+  }, [liveQuote]);
 
   return (
     <div className="relative w-full h-full min-h-[460px] flex flex-col bg-zinc-950 rounded border border-zinc-800/80 overflow-hidden">

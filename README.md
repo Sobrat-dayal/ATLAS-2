@@ -512,6 +512,33 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Regressions: Full Markets regression suite passes cleanly (189 backend tests, 242 frontend tests).
 - **Documentation**: See `docs/CHARTS_V1.md`
 
+## Live Chart Streaming V1 (Stage 67)
+- **Overview**: Transforms ATLAS Charts into a live-capable institutional financial charting workstation at `/charts`, integrating real-time market data streaming, Redis/Valkey latest Quote state (Stage 41), typed Market Events (Stage 42), authenticated frontend WebSockets (Stage 43), and market data freshness classification (Stage 44).
+- **Core Principles & Capabilities**:
+  - **Canonical Instrument & Series Subscriptions**: Live subscriptions bound to canonical `instrument_entity_id` UUIDs and market-series dimensions, preventing cross-venue or cross-listing Quote pollution.
+  - **Initial State Bootstrap & Race Reconciliation**: Authenticated initial Quote state fetch via `GET /api/v1/charts/live-state` combined with bounded bootstrap event buffering (max 50 events) to deterministically resolve HTTP/WebSocket races.
+  - **Genuine Live Last-Price Overlay**: TradingView Lightweight Charts price line and price-axis marker displaying verified Last-price execution without mutating historical OHLC candles.
+  - **Strict Financial Integrity**:
+    - Distinguishes Quote snapshots from executed trade feeds and authoritative OHLC bars.
+    - Never fabricates Open, High, Low, Close, or Volume from sparse Quote samples.
+    - Never converts indicative Bid/Ask or midpoint into an executed Last price.
+    - Never derives trading Volume from Quote event counts.
+    - Preserves negative commodity futures prices (e.g. `CLZ26` WTI Crude Oil) without zero-clamping.
+  - **Interactive Terminal Live Controls**:
+    - Functional Pause / Resume Live Updates toggle with bounded memory guarantees.
+    - "Go to Latest" viewport recentering with automatic Follow-Live decoupling during manual historical panning.
+    - Live Market Data Status bar with dual-state modeling: transport connection (`CONNECTED`, `CONNECTING`, `RECONNECTING`, `DISCONNECTED`) and market data freshness (`LIVE`, `DELAYED`, `STALE`, `UNKNOWN`).
+    - High-density Latest Quote Details panel showing Last, Bid/Ask, Spread (bps), and quotation units.
+  - **Render Coalescing & Backpressure**: Coalesced update scheduler (100ms cadence) maintaining 60fps canvas interaction under market tick bursts.
+  - **Read-Only Invariants**: 0 database writes, 0 ClickHouse writes, 0 upstream provider calls on read, 0 trading executions, 0 LLM calls.
+- **Endpoints**:
+  - `GET /api/v1/charts/live-state`: Authenticated, entitlement-enforced latest quote state reading Stage 41 Redis authority.
+- **Testing**:
+  - Backend: `uv run pytest tests/test_charts_live_streaming.py` (17 test cases, 100% pass). Full charts suite: 32/32 pass.
+  - Frontend: `npx.cmd tsx --test tests/charts-live-streaming.test.ts` (13 test cases, 100% pass). Full web suite: 255/255 pass.
+  - Regressions: Clean execution across Stage 66 Charts V1 and prior market modules.
+- **Documentation**: See `docs/LIVE_CHART_STREAMING.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

@@ -62,6 +62,57 @@ MIN_BARS_LIMIT = 10
 BASELINE_INTERVAL_CODE = ChartInterval.ONE_DAY.value
 
 
+# ============================================================================
+# Stage 67 Live Chart Streaming Enums & Invariants
+# ============================================================================
+
+
+class ChartConnectionState(StrEnum):
+    """Transport-layer connection states for the live chart streaming client."""
+
+    DISCONNECTED = "DISCONNECTED"
+    CONNECTING = "CONNECTING"
+    CONNECTED = "CONNECTED"
+    RECONNECTING = "RECONNECTING"
+    ERROR = "ERROR"
+
+
+class ChartMarketDataFreshness(StrEnum):
+    """Market-data freshness and delay classification (Stage 44 integration)."""
+
+    LIVE = "LIVE"
+    DELAYED = "DELAYED"
+    STALE = "STALE"
+    UNKNOWN = "UNKNOWN"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
+class ChartLiveCapability(StrEnum):
+    """Supported live charting capabilities for the selected instrument."""
+
+    HISTORICAL_ONLY = "HISTORICAL_ONLY"
+    LIVE_PRICE_AVAILABLE = "LIVE_PRICE_AVAILABLE"
+    LIVE_BAR_AVAILABLE = "LIVE_BAR_AVAILABLE"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
+class ChartDisplayState(StrEnum):
+    """Chart workspace presentation state combining live stream and viewport controls."""
+
+    HISTORICAL_ONLY = "HISTORICAL_ONLY"
+    LIVE_PRICE_AVAILABLE = "LIVE_PRICE_AVAILABLE"
+    LIVE_BAR_AVAILABLE = "LIVE_BAR_AVAILABLE"
+    PAUSED = "PAUSED"
+    RECONCILING = "RECONCILING"
+
+
+# Stage 67 live stream buffers and timing parameters
+DEFAULT_LIVE_FRESH_SECONDS = 60
+DEFAULT_LIVE_STALE_SECONDS = 300
+DEFAULT_COALESCE_INTERVAL_MS = 100
+MAX_BOOTSTRAP_BUFFER_SIZE = 100
+
+
 class CanonicalChartInstrumentConfig:
     """Configuration record for a canonical chartable financial instrument."""
 

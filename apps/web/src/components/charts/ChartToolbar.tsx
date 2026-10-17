@@ -40,6 +40,7 @@ export interface ChartToolbarProps {
   onRefresh: () => void;
   onResetView?: () => void;
   onFitContent?: () => void;
+  liveControls?: React.ReactNode;
 }
 
 export function ChartToolbar({
@@ -53,6 +54,7 @@ export function ChartToolbar({
   onRefresh,
   onResetView,
   onFitContent,
+  liveControls,
 }: ChartToolbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
@@ -196,6 +198,9 @@ export function ChartToolbar({
           </button>
         </div>
       </div>
+
+      {/* Middle/Live Controls Slot */}
+      {liveControls && <div className="flex items-center">{liveControls}</div>}
 
       {/* Right controls: Viewport & Refresh */}
       <div className="flex items-center gap-2">

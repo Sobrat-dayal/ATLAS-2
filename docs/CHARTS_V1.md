@@ -30,10 +30,10 @@ Charts V1 provides:
 
 To maintain software architecture integrity across the 150-stage roadmap, Stage 66 establishes the baseline rendering and read engine while strictly deferring later-stage functionality:
 
-| Roadmap Stage | Scope / Assigned Capability | Stage 66 Status |
+| Roadmap Stage | Scope / Assigned Capability | Roadmap Status |
 | :--- | :--- | :--- |
 | **Stage 66** | **Charts V1: Historical OHLCV, Candlesticks & Line, 1D Baseline** | **IMPLEMENTED** |
-| Stage 67 | Live Chart Streaming, Tick-to-Bar Aggregation, Active Bar Mutation | Deferred |
+| **Stage 67** | **Live Chart Streaming V1: Last-Price Overlay, WebSocket, Reconnection** | **IMPLEMENTED** (See `docs/LIVE_CHART_STREAMING.md`) |
 | Stage 68 | Multi-Timeframe Selectors (1m, 5m, 1h, 1W), Resampling, Alternate Chart Types | Deferred |
 | Stage 69 | Technical Indicator Infrastructure (SMA, EMA, RSI, MACD, Bollinger Bands) | Deferred |
 | Stage 70 | TA-Lib Integration & Complex Quant Studies | Deferred |

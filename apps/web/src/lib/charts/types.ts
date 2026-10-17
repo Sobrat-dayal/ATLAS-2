@@ -81,3 +81,82 @@ export interface HoveredBarData {
   volume: number | null;
   changePercent?: number | null;
 }
+
+// ============================================================================
+// Stage 67 Live Chart Streaming Types
+// ============================================================================
+
+export type ChartConnectionState =
+  | "DISCONNECTED"
+  | "CONNECTING"
+  | "CONNECTED"
+  | "RECONNECTING"
+  | "ERROR";
+
+export type ChartMarketDataFreshness =
+  | "LIVE"
+  | "DELAYED"
+  | "STALE"
+  | "UNKNOWN"
+  | "UNAVAILABLE";
+
+export type ChartLiveCapability =
+  | "HISTORICAL_ONLY"
+  | "LIVE_PRICE_AVAILABLE"
+  | "LIVE_BAR_AVAILABLE"
+  | "UNAVAILABLE";
+
+export type ChartDisplayState =
+  | "HISTORICAL_ONLY"
+  | "LIVE_PRICE_AVAILABLE"
+  | "LIVE_BAR_AVAILABLE"
+  | "PAUSED"
+  | "RECONCILING";
+
+export interface LiveQuoteDTO {
+  bid_price: number | string | null;
+  ask_price: number | string | null;
+  bid_size?: number | string | null;
+  ask_size?: number | string | null;
+  last_price: number | string | null;
+  last_size?: number | string | null;
+  as_of: string | null;
+  is_midpoint: boolean;
+  has_genuine_last: boolean;
+}
+
+export interface ChartLiveStateResponse {
+  schema_version: string;
+  instrument_entity_id: string;
+  display_symbol: string;
+  market_or_venue: string;
+  price_currency: string;
+  quotation_unit: string;
+  quote: LiveQuoteDTO | null;
+  source_timestamp: string | null;
+  received_at: string | null;
+  provider: string;
+  freshness_status: ChartMarketDataFreshness | string;
+  delay_status: "REALTIME" | "DELAYED_15M" | "UNKNOWN" | string;
+  live_capability: ChartLiveCapability | string;
+  availability: "AVAILABLE" | "UNAVAILABLE" | string;
+  is_paused: boolean;
+}
+
+export interface LiveChartSubscriptionKey {
+  instrument_entity_id: string;
+  variant?: string | null;
+  symbol?: string | null;
+}
+
+export interface LiveChartEvent {
+  schema_version?: number;
+  event_type?: string;
+  instrument_entity_id?: string;
+  instrument_id?: string;
+  source_timestamp?: string;
+  payload?: {
+    quote?: Partial<LiveQuoteDTO> & Record<string, unknown>;
+  } & Record<string, unknown>;
+  [key: string]: unknown;
+}

@@ -62,11 +62,11 @@ export function useChartHistory(initialSymbol: string = "SPY"): UseChartHistoryR
   const isBackfillingRef = useRef<boolean>(false);
 
   // Sync state if initialSymbol changes externally (e.g. via deep-linking query param)
-  useEffect(() => {
-    if (initialSymbol) {
-      setSelectedSymbol(initialSymbol);
-    }
-  }, [initialSymbol]);
+  const [prevInitialSymbol, setPrevInitialSymbol] = useState(initialSymbol);
+  if (initialSymbol !== prevInitialSymbol) {
+    setPrevInitialSymbol(initialSymbol);
+    setSelectedSymbol(initialSymbol);
+  }
 
   // Load available canonical instruments on mount
   useEffect(() => {

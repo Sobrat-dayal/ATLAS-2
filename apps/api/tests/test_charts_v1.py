@@ -69,6 +69,7 @@ def settings():
 # 1. CANONICAL INSTRUMENT IDENTITY TESTS
 # =========================================================================
 
+
 def test_canonical_instrument_catalog(chart_repo):
     """Verify all default canonical chartable instruments are registered with UUIDs."""
     instruments = chart_repo.search_instruments()
@@ -127,6 +128,7 @@ def test_asset_class_specific_semantics(chart_repo):
 # 2. SEARCH & DISCOVERY TESTS
 # =========================================================================
 
+
 def test_instrument_search_query(chart_service):
     """Test searching instruments by symbol and company name."""
     res_apple = chart_service.search_instruments(query="Apple")
@@ -148,6 +150,7 @@ def test_instrument_search_asset_class_filter(chart_service):
 # =========================================================================
 # 3. BASELINE INTERVAL & OHLC ENVELOPE INVARIANT TESTS
 # =========================================================================
+
 
 def test_baseline_interval_validation(chart_service):
     """Verify that only the '1d' baseline interval is accepted in Stage 66."""
@@ -214,6 +217,7 @@ def test_volume_treatment_by_asset_class(chart_service):
 # 4. TIME BOUNDS & PAGINATION / BACKFILL TESTS
 # =========================================================================
 
+
 def test_time_range_validation(chart_service):
     """Verify start_time >= end_time is rejected."""
     t_start = datetime(2026, 6, 1, tzinfo=timezone.utc)
@@ -242,6 +246,7 @@ def test_pagination_and_backfill(chart_service):
 # =========================================================================
 # 5. FASTAPI REST API TESTS
 # =========================================================================
+
 
 @pytest.mark.asyncio
 async def test_api_instruments_search(app, settings):
@@ -294,9 +299,7 @@ async def test_api_chart_history_unsupported_interval(app, settings):
     """Test GET /api/v1/charts/history with unsupported interval returns 400."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        res = await client.get(
-            f"{settings.api_prefix}/charts/history?symbol=SPY&interval=15m"
-        )
+        res = await client.get(f"{settings.api_prefix}/charts/history?symbol=SPY&interval=15m")
         assert res.status_code == 400
         data = res.json()
         error_msg = data["error"]["message"] if "error" in data else data.get("detail", "")
@@ -309,9 +312,7 @@ async def test_api_chart_history_unknown_instrument(app, settings):
     """Test GET /api/v1/charts/history with nonexistent instrument returns 400."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        res = await client.get(
-            f"{settings.api_prefix}/charts/history?symbol=NONEXISTENT_XYZ"
-        )
+        res = await client.get(f"{settings.api_prefix}/charts/history?symbol=NONEXISTENT_XYZ")
         assert res.status_code == 400
         data = res.json()
         error_msg = data["error"]["message"] if "error" in data else data.get("detail", "")

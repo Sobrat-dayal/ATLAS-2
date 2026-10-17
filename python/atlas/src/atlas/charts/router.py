@@ -13,9 +13,11 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, status
 
 from .config import BASELINE_INTERVAL_CODE, DEFAULT_BARS_LIMIT, MAX_BARS_LIMIT, MIN_BARS_LIMIT
+from .live_service import LiveChartService
 from .models import (
     ChartHistoryResponse,
     ChartInstrumentMetadata,
+    ChartLiveStateResponse,
     ChartSearchResponse,
 )
 from .service import HistoricalChartService
@@ -24,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/charts", tags=["charts"])
 _chart_service = HistoricalChartService()
+_live_chart_service = LiveChartService()
 
 
 @router.get(
@@ -114,3 +117,33 @@ async def get_chart_history(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve chart history.",
         )
+
+
+@router.get(
+    "/live-state",
+    response_model=ChartLiveStateResponse,
+    summary="Get initial authorized live quote state for chart streaming (Stage 67)",
+    description=(
+        "Returns the latest accepted canonical market quote state, source timestamp, "
+        "delay status, freshness classification, and live capability without "
+        "mutating historical data."
+    ),
+)
+async def get_chart_live_state(
+    instrument_id: Optional[str] = Query(None, description="Canonical instrument UUID"),
+    symbol: Optional[str] = Query(None, description="Symbol (e.g. SPY, BTCUSDT, CLZ26)"),
+) -> ChartLiveStateResponse:
+    target_ident = instrument_id or symbol
+    if not target_ident:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either 'instrument_id' or 'symbol' query parameter must be provided.",
+        )
+
+    live_state = _live_chart_service.get_live_state(target_ident)
+    if not live_state:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Instrument '{target_ident}' not found in canonical chart catalog.",
+        )
+    return live_state
