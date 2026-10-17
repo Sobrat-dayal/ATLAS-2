@@ -22,7 +22,7 @@ const MARKET_TABS: MarketTabItem[] = [
   { id: "futures", label: "Futures & Commodities", href: "/markets/futures", isImplemented: true },
   { id: "movers", label: "Movers", href: "/markets/movers", isImplemented: true },
   { id: "heatmaps", label: "Heatmaps", href: "/markets/heatmaps", isImplemented: true },
-  { id: "cross-asset", label: "Cross-Asset", badge: "Stage 65", isImplemented: false },
+  { id: "cross-asset", label: "Cross-Asset", href: "/markets/cross-asset", isImplemented: true },
 ];
 
 export function MarketsNavigationTabs() {

@@ -457,6 +457,31 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Regressions: Full Markets regression suite passes cleanly (176 backend tests across Overview, Equities, Funds, FX, Crypto, Bonds, Futures, Movers, and Heatmaps; 99 frontend tests).
 - **Documentation**: See `docs/MARKET_HEATMAPS_V1.md`
 
+## Cross-Asset Markets V1 (Stage 65)
+- **Overview**: Dedicated multi-asset market intelligence and comparative terminal workspace at `/markets/cross-asset` (Markets Module 02).
+- **Core Principles & Capabilities**:
+  - **Native Market Overview**: Preserves individual financial asset-class quotation conventions without conflating incompatible measurements:
+    - Equities: Regular-session traded price and % change vs previous official close.
+    - ETFs: Exchange market price % change (explicitly distinguished from NAV).
+    - FX: Spot rate change % with directional pair orientation.
+    - Crypto: Continuous 24/7 rolling 24-hour return in quoted denomination.
+    - Bonds: Benchmark yield level in % and yield change in basis points (`bps`), strictly separated from equity price returns.
+    - Futures: Last traded price vs prior settlement in contractual units.
+  - **Aligned Price Performance**: Common UTC window (`last_24h`, `last_7d`, `last_30d`) with strict temporal alignment, zero look-ahead bias (effective start <= requested start), maximum tolerance enforcement (<= 7200s), and Decimal price returns. Yield-only series excluded with `UNSUPPORTED_METRIC`.
+  - **Benchmark vs Proxy Disclosures**: Authoritative index benchmarks clearly distinguished from exchange-traded ETF and Futures proxies (`SPY`, `QQQ`, `ESZ26`).
+  - **Coverage & Exclusion Reporting**: Truthful coverage accounting (`requested`, `evaluated`, `qualified`, `excluded`, and typed reason breakdown).
+  - **Interactive Terminal Workspace**: Universe selector, analytical mode toggle, window selector, coverage summary, multi-asset grid cards, institutional comparison table, selected instrument inspector, and collapsible methodology panel.
+  - **Read-Only Invariants**: 0 database writes, 0 quote writes, 0 upstream provider RPC calls on read, 0 trading actions, 0 autonomous agents.
+- **Endpoints**:
+  - `GET /api/v1/markets/cross-asset`: Coherent calculation snapshot with coverage, asset-class sections, comparison table, and exclusions.
+  - `GET /api/v1/markets/cross-asset/universes`: Available canonical multi-asset universes.
+  - `GET /api/v1/markets/cross-asset/options`: Supported analytical modes, comparison windows, and alignment parameters.
+- **Testing**:
+  - Backend: `uv run pytest tests/markets/test_markets_cross_asset.py` (13 test cases, 100% pass).
+  - Frontend: `pnpm dlx tsx --test apps/web/tests/markets-cross-asset.test.ts` (9 test cases, 100% pass).
+  - Regressions: Full Markets regression suite passes cleanly (189 backend tests across Overview, Equities, Funds, FX, Crypto, Bonds, Futures, Movers, Heatmaps, and Cross-Asset; 108 frontend tests).
+- **Documentation**: See `docs/CROSS_ASSET_MARKETS_V1.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

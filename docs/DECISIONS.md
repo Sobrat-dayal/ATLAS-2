@@ -3450,6 +3450,199 @@ This document records the major architectural and product decisions established.
 170. Stage 64 documentation must match actual implementation.
 171. Stage 65 is the next canonical stage.
 
+## Stage 65 Decisions - Cross-Asset Markets V1
+
+### Product and Navigation
+1. Stage 65 builds Cross-Asset Markets V1.
+2. Cross-Asset remains within Markets module 2.
+3. Canonical route is `/markets/cross-asset`.
+4. All previous Markets routes remain functional.
+5. Existing AppShell is reused.
+6. No new global module is created.
+7. Existing Selected Entity Context is reused.
+8. Global Search is reused.
+9. Agent Dock is preserved.
+10. Bottom Taskbar is preserved.
+
+### Identity
+11. Canonical Financial Instrument UUIDs remain authoritative.
+12. Market-series identity is explicit.
+13. Benchmark identity is distinct from proxy identity.
+14. ETF proxies are not silently presented as underlying indexes.
+15. Futures contracts are not interchangeable with spot benchmarks.
+16. Crypto venue-specific spot pairs remain distinct.
+17. FX pair orientation is preserved.
+18. Bond Security remains distinct from issuer.
+19. No ticker-based primary keys are introduced.
+20. No fictional benchmark records are created.
+
+### Analytical Modes
+21. Native Overview and Aligned Price Performance are distinct modes.
+22. Native metrics preserve their units.
+23. Bond yield bps are not treated as price returns.
+24. Futures settlement changes are not automatically investor ROI.
+25. FX rate changes are not automatically currency investment total returns.
+26. Crypto native rolling 24h returns are not automatically aligned with stock previous-session returns.
+27. Mutual fund NAV observations are not mislabeled intraday market prices.
+28. No arbitrary cross-asset scoring is introduced.
+29. No unsupported global risk sentiment scores are introduced.
+
+### Time Alignment
+30. Strict aligned comparison uses explicit UTC start/end instants.
+31. Requested times are distinct from effective observation times.
+32. Alignment tolerance is explicit.
+33. No look-ahead is permitted.
+34. Market closures are not filled with invented prices.
+35. Weekend differences are respected.
+36. Exchange holidays are respected.
+37. Futures trading-date conventions are preserved.
+38. Bond valuation dates remain distinct.
+39. Sparse observations may be excluded.
+40. Last-known values are not automatically synchronized.
+41. Alignment qualification happens before return calculation.
+42. Alignment exclusions are reported.
+43. Unsupported comparison windows are disabled.
+
+### Financial Calculation
+44. Aligned percentage price return uses compatible observations.
+45. Financial arithmetic uses Decimal.
+46. Same instrument/series identity is required.
+47. Compatible quote units are required.
+48. Compatible price types are required.
+49. Compatible adjustment bases are required.
+50. Corporate-action mismatches are not ignored.
+51. Missing values are not zero.
+52. Invalid denominators are rejected.
+53. NaN/Infinity are prohibited.
+54. Negative Futures reference prices are handled conservatively.
+55. No synthetic Futures roll is created.
+56. Price return is distinct from total return.
+57. Local-currency price return is explicitly labeled.
+58. Local-currency return is not automatically USD investor return.
+59. Cross-currency conversion requires verified rates/timing/methodology.
+60. No unsupported common-currency return is displayed.
+61. Stablecoin parity is not assumed.
+62. Bond yields are not mathematically transformed into price returns without actual compatible prices.
+63. Benchmark proxies are explicitly labeled.
+
+### Data Quality and Coverage
+64. Stage 44 remains freshness authority.
+65. Source timestamps are preserved.
+66. Receive timestamps are distinct.
+67. Valuation dates are distinct.
+68. Snapshot calculation time is distinct.
+69. Delayed data is disclosed.
+70. Stale data is conservatively handled.
+71. Unknown freshness is not labeled Live.
+72. Provider outages are reported.
+73. Incomplete comparisons are labeled partial.
+74. Qualified member counts are truthful.
+75. Exclusion reasons are typed.
+76. No silent universe truncation occurs.
+77. No unsupported global coverage claims occur.
+78. Derived comparisons preserve Provider provenance.
+79. Corrections trigger appropriate invalidation.
+
+### Infrastructure
+80. Stages 16–17 remain canonical identity authority.
+81. Stages 21–22 remain identifier authority.
+82. Stage 23 remains relationship authority.
+83. Stage 24 remains provenance authority.
+84. Stage 25 remains selection authority.
+85. Stage 27 remains capability layer.
+86. Stages 28–32 remain Provider infrastructure.
+87. Stage 33 remains canonical Market Data authority.
+88. Stage 39 remains historical-data authority.
+89. Stage 41 remains latest Quote authority.
+90. Stage 42 remains Market Event authority.
+91. Stage 43 remains frontend WebSocket authority.
+92. Stage 44 remains freshness authority.
+93. Stage 63 metric qualification is reused.
+94. Stage 64 visualizations are not duplicated.
+95. No new Quote cache is introduced.
+96. No new Market Event transport is introduced.
+97. No duplicate global WebSocket is introduced.
+98. No independent historical market database is introduced.
+99. No uncontrolled Provider polling is introduced.
+100. Batch reads are preferred over N+1 requests.
+101. Derived snapshots are non-authoritative.
+102. Cache TTL does not imply market freshness.
+
+### APIs and Security
+103. APIs require authentication.
+104. APIs enforce authorization.
+105. Data entitlements are enforced.
+106. Derived returns cannot bypass price entitlements.
+107. Cache isolation prevents cross-user leakage.
+108. Input UUIDs and windows are validated.
+109. No arbitrary Provider URLs are accepted.
+110. No arbitrary SQL is accepted.
+111. No unsafe HTML is rendered.
+112. Read requests do not mutate canonical market data.
+113. Read requests do not create live ingestion targets.
+114. Read requests do not create market-data jobs.
+115. Read requests do not execute trading.
+116. Read requests do not modify Portfolios.
+117. Read requests do not run Agents.
+118. Read requests do not run Workflows.
+119. Read requests do not require LLM calls.
+120. Licensed market data is not persisted insecurely in browser storage.
+
+### UI
+121. Existing ATLAS design tokens are reused.
+122. Native/Aligned methodology is visible.
+123. Asset-class metric names are visible.
+124. Units are explicit.
+125. Comparison windows are visible.
+126. Coverage status is visible.
+127. Source observation time is visible.
+128. Snapshot calculation time is visible.
+129. Freshness/delay is visible.
+130. No purple gradients are introduced.
+131. No emoji icons are introduced.
+132. No fake benchmark values are introduced.
+133. No fake financial statistics are introduced.
+134. No fake trading signals are introduced.
+135. No invented global sentiment score is introduced.
+136. Desktop/tablet/mobile are supported.
+137. Keyboard accessibility is required.
+138. Color is not the only information channel.
+
+### Roadmap Boundaries
+139. Stage 66 owns Charts V1.
+140. Stage 67 owns live chart streaming.
+141. Stage 68 owns chart intervals/types.
+142. Stages 69–75 own indicators/drawings/multi-chart/replay.
+143. Stage 76 owns Watchlists.
+144. Stage 80 owns Alerts.
+145. Stage 94–98 own Screeners.
+146. Stage 110+ owns Portfolios.
+147. Stage 115+ owns Risk.
+148. Stage 118 owns advanced factor risk.
+149. Stage 129+ owns geospatial Maps.
+150. Stage 135+ owns Universal Event intelligence.
+151. Stage 141–142 owns Options/QuantLib.
+152. Stage 143 owns Backtesting.
+153. Stage 144 owns Paper Trading.
+154. Stage 145 owns Broker Sandbox.
+155. Stage 146+ owns Agents.
+156. No correlation/covariance engine is introduced.
+157. No cross-asset predictive scoring is introduced.
+158. No portfolio optimization is introduced.
+159. No automated strategy execution is introduced.
+160. No speculative economic regime classifier is introduced.
+161. No full charting engine is introduced.
+162. No unnecessary migrations are introduced.
+163. No fabricated production market data is seeded.
+164. Stage 65 must pass financial comparison tests.
+165. Stage 65 must pass alignment tests.
+166. Stage 65 must pass coverage tests.
+167. Stage 65 must pass entitlement tests.
+168. Stage 65 must pass prior-stage regressions.
+169. Stage 65 documentation must match implementation.
+170. Stage 66 is the next canonical development stage.
+
+
 
 
 
