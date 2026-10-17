@@ -6,17 +6,13 @@ import path from "node:path";
 import {
   formatContractMonth,
   formatContractSize,
-  formatDate,
   formatFuturesPrice,
-  formatObservationTime,
   formatOpenInterest,
   formatPriceChange,
-  formatPriceChangeClass,
   formatSettlementType,
   formatTickSpecs,
   formatTicksChange,
   formatVolume,
-  getFreshnessBadgeClass,
 } from "../src/lib/markets/futures/formatting";
 import * as futuresComponents from "../src/components/markets/futures";
 import * as marketsComponents from "../src/components/markets";
