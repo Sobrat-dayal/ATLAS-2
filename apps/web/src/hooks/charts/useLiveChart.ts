@@ -35,33 +35,28 @@ export interface UseLiveChartReturn {
   dispatchLiveEvent: (event: LiveChartEvent) => boolean;
 }
 
+const DEFAULT_STATUS: LiveChartStatus = {
+  connection: "DISCONNECTED",
+  freshness: "UNKNOWN",
+  delay: "UNKNOWN",
+  capability: "HISTORICAL_ONLY",
+  isPaused: false,
+  provider: "canonical_feed",
+  venue: "Primary Venue",
+};
+
 export function useLiveChart(
   instrument: ChartInstrumentMetadata | null
 ): UseLiveChartReturn {
   const [quote, setQuote] = useState<LiveQuoteDTO | null>(null);
-  const [status, setStatus] = useState<LiveChartStatus>({
-    connection: "DISCONNECTED",
-    freshness: "UNKNOWN",
-    delay: "UNKNOWN",
-    capability: "HISTORICAL_ONLY",
-    isPaused: false,
-    provider: "canonical_feed",
-    venue: "Primary Venue",
-  });
+  const [status, setStatus] = useState<LiveChartStatus>(DEFAULT_STATUS);
 
-  const [prevEntityId, setPrevEntityId] = useState<string | null>(instrument?.entity_id ?? null);
-  if (instrument?.entity_id !== prevEntityId) {
-    setPrevEntityId(instrument?.entity_id ?? null);
+  const currentEntityId = instrument?.entity_id ?? null;
+  const [prevEntityId, setPrevEntityId] = useState<string | null>(currentEntityId);
+  if (currentEntityId !== prevEntityId) {
+    setPrevEntityId(currentEntityId);
     setQuote(null);
-    setStatus({
-      connection: "DISCONNECTED",
-      freshness: "UNKNOWN",
-      delay: "UNKNOWN",
-      capability: "HISTORICAL_ONLY",
-      isPaused: false,
-      provider: "canonical_feed",
-      venue: "Primary Venue",
-    });
+    setStatus(DEFAULT_STATUS);
   }
 
   const [isFollowingLatest, setIsFollowingLatest] = useState<boolean>(true);

@@ -126,17 +126,16 @@ export function useIndicators({ instrument, interval, barsCount }: UseIndicators
 
   // 5. Remove an indicator instance
   const removeInstance = useCallback((instanceId: string) => {
-    setActiveInstances((prev) => prev.filter((inst) => inst.instance_id !== instanceId));
+    setActiveInstances((prev) => {
+      const next = prev.filter((inst) => inst.instance_id !== instanceId);
+      return next;
+    });
     setResults((prev) => prev.filter((r) => r.instance_id !== instanceId));
   }, []);
 
   // 6. Recalculate indicators when instances, instrument, interval, or bars change
   useEffect(() => {
     if (activeInstances.length === 0 || !instrument || barsCount === 0) {
-      queueMicrotask(() => {
-        setResults([]);
-        setIsCalculating(false);
-      });
       return;
     }
 
@@ -145,11 +144,6 @@ export function useIndicators({ instrument, interval, barsCount }: UseIndicators
     }
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
-
-    queueMicrotask(() => {
-      setIsCalculating(true);
-      setCalculationError(null);
-    });
 
     const request: IndicatorCalculationRequest = {
       instrument_id: instrument.entity_id,

@@ -101,6 +101,14 @@ function ChartsContent() {
     barsCount: bars.length,
   });
 
+  const handleUserPan = React.useCallback(() => {
+    setFollowingLatest(false);
+  }, [setFollowingLatest]);
+
+  const handleAtLatest = React.useCallback(() => {
+    setFollowingLatest(true);
+  }, [setFollowingLatest]);
+
   const handleGoToLatest = () => {
     if (chartActionsRef.current) {
       chartActionsRef.current.goToLatest();
@@ -214,8 +222,8 @@ function ChartsContent() {
               onBackfill={loadOlderHistory}
               hasMore={pagination?.has_more}
               isBackfilling={isBackfilling}
-              onUserPan={() => setFollowingLatest(false)}
-              onAtLatest={() => setFollowingLatest(true)}
+              onUserPan={handleUserPan}
+              onAtLatest={handleAtLatest}
               chartActionsRef={chartActionsRef}
             />
           )}

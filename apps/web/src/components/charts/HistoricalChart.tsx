@@ -94,9 +94,20 @@ export function HistoricalChart({
   const isBackfillingRef = useRef<boolean>(false);
   const barsCountRef = useRef<number>(0);
 
+  const hasMoreRef = useRef(hasMore);
+  const onBackfillRef = useRef(onBackfill);
+  const onHoverBarRef = useRef(onHoverBar);
+  const onUserPanRef = useRef(onUserPan);
+  const onAtLatestRef = useRef(onAtLatest);
+
   useEffect(() => {
     isBackfillingRef.current = !!isBackfilling;
-  }, [isBackfilling]);
+    hasMoreRef.current = hasMore;
+    onBackfillRef.current = onBackfill;
+    onHoverBarRef.current = onHoverBar;
+    onUserPanRef.current = onUserPan;
+    onAtLatestRef.current = onAtLatest;
+  });
 
   // Initialize and mount chart
   useEffect(() => {
@@ -168,7 +179,7 @@ export function HistoricalChart({
 
     // Crosshair movement subscription
     chart.subscribeCrosshairMove((param) => {
-      if (!param || !param.time || !mainSeriesRef.current || !onHoverBar) {
+      if (!param || !param.time || !mainSeriesRef.current || !onHoverBarRef.current) {
         return;
       }
 
@@ -193,8 +204,7 @@ export function HistoricalChart({
             volVal = volData.value;
           }
         }
-
-        onHoverBar({
+        onHoverBarRef.current({
           time_unix: timeUnix,
           timestamp: isoTime,
           open: openVal,
@@ -214,7 +224,7 @@ export function HistoricalChart({
             volVal = volData.value;
           }
         }
-        onHoverBar({
+        onHoverBarRef.current({
           time_unix: timeUnix,
           timestamp: isoTime,
           open: closeVal,
@@ -230,15 +240,15 @@ export function HistoricalChart({
     // Viewport range subscription to detect scrolling left for backfill and user pan
     chart.timeScale().subscribeVisibleLogicalRangeChange((logicalRange) => {
       if (!logicalRange) return;
-      if (logicalRange.from <= 2 && hasMore && onBackfill && !isBackfillingRef.current) {
-        onBackfill();
+      if (logicalRange.from <= 2 && hasMoreRef.current && onBackfillRef.current && !isBackfillingRef.current) {
+        onBackfillRef.current();
       }
       const totalBars = barsCountRef.current;
       if (totalBars > 0) {
         if (logicalRange.to < totalBars - 3) {
-          onUserPan?.();
+          onUserPanRef.current?.();
         } else if (logicalRange.to >= totalBars - 1) {
-          onAtLatest?.();
+          onAtLatestRef.current?.();
         }
       }
     });
@@ -259,7 +269,7 @@ export function HistoricalChart({
       volumeSeriesRef.current = null;
       priceLineRef.current = null;
     };
-  }, [hasMore, onBackfill, onHoverBar, onUserPan, onAtLatest]);
+  }, []);
 
   // Imperative handle for Go to Latest action
   useEffect(() => {
