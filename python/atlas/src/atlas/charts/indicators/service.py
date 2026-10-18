@@ -26,7 +26,7 @@ from .registry import IndicatorRegistry, default_indicator_registry
 logger = logging.getLogger(__name__)
 
 # Resource limits
-MAX_INSTANCES_PER_REQUEST = 5
+MAX_INSTANCES_PER_REQUEST = 12
 MAX_LOOKBACK_BARS = 1000
 
 

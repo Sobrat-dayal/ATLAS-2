@@ -93,6 +93,18 @@ function EditorContent({
     } else {
       delete newErrors[name];
     }
+
+    // Cross-parameter validation for MACD
+    if (definition.indicator_id === "atlas.macd") {
+      const fast = typeof updated["fast_period"] === "number" ? (updated["fast_period"] as number) : 12;
+      const slow = typeof updated["slow_period"] === "number" ? (updated["slow_period"] as number) : 26;
+      if (fast >= slow) {
+        newErrors["fast_period"] = "Fast period must be less than slow period";
+      } else if (newErrors["fast_period"] === "Fast period must be less than slow period") {
+        delete newErrors["fast_period"];
+      }
+    }
+
     setErrors(newErrors);
   };
 

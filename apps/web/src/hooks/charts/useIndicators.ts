@@ -70,8 +70,8 @@ export function useIndicators({ instrument, interval, barsCount }: UseIndicators
       const defn = catalog.find((d) => d.indicator_id === indicatorId);
       if (!defn) return;
 
-      if (activeInstances.length >= 5) {
-        alert("Maximum 5 active indicators allowed simultaneously.");
+      if (activeInstances.length >= 12) {
+        alert("Maximum 12 active indicators allowed simultaneously.");
         return;
       }
 

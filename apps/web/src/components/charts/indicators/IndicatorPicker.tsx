@@ -38,13 +38,19 @@ export function IndicatorPicker({
     }
   };
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(
     catalog.length > 0 ? catalog[0].indicator_id : null
   );
 
   if (!isOpen) return null;
 
+  const categories = ["ALL", "TREND", "MOMENTUM", "VOLATILITY", "VOLUME"];
+
   const filtered = catalog.filter((ind) => {
+    if (selectedCategory !== "ALL" && ind.category !== selectedCategory) {
+      return false;
+    }
     if (!search.trim()) return true;
     const q = search.trim().toLowerCase();
     return (
@@ -77,7 +83,7 @@ export function IndicatorPicker({
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-cyan-400" />
             <h2 className="text-sm font-semibold tracking-wide text-zinc-100 font-mono">
-              TECHNICAL INDICATORS
+              TECHNICAL INDICATORS & STUDIES
             </h2>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
               {catalog.length} Available
@@ -93,8 +99,8 @@ export function IndicatorPicker({
           </button>
         </div>
 
-        {/* Search */}
-        <div className="p-3 border-b border-zinc-800 bg-zinc-950">
+        {/* Search & Category Filter Toolbar */}
+        <div className="p-3 border-b border-zinc-800 bg-zinc-950 space-y-2">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-500" />
             <input
@@ -105,6 +111,23 @@ export function IndicatorPicker({
               className="w-full pl-9 pr-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-cyan-500 font-sans"
               autoFocus
             />
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors uppercase ${
+                  selectedCategory === cat
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
+                    : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 border border-zinc-800"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -181,10 +204,32 @@ export function IndicatorPicker({
                   <div>
                     <span className="text-[10px] font-mono text-zinc-500">Target:</span>
                     <div className="text-zinc-300 font-mono mt-0.5">
-                      {selectedDef.rendering_target === "PRICE_OVERLAY" ? "Price Overlay" : "Subpane"}
+                      {selectedDef.rendering_target === "PRICE_OVERLAY" ? "Price Overlay" : "Independent Subpane"}
                     </div>
                   </div>
                 </div>
+
+                {selectedDef.output_names && selectedDef.output_names.length > 0 && (
+                  <div>
+                    <span className="text-[10px] font-mono text-zinc-500">Output Series ({selectedDef.output_names.length}):</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedDef.output_names.map((out) => (
+                        <span
+                          key={out}
+                          className="px-1.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-[10px] font-mono text-zinc-300"
+                        >
+                          {out}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedDef.input_requirements.includes("VOLUME") && (
+                  <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded text-[10px] font-mono text-amber-300">
+                    Volume Requirement: Requires genuine consolidated traded volume. Incompatible with OTC FX feeds.
+                  </div>
+                )}
 
                 <div>
                   <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-semibold mb-1.5">
@@ -209,29 +254,30 @@ export function IndicatorPicker({
               </div>
             )}
 
-            {/* Action footer */}
-            <div className="pt-4 border-t border-zinc-800 flex items-center justify-between mt-4">
-              <span className="text-[11px] text-zinc-500 font-mono">
-                Active: {activeCount}/5
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded text-xs text-zinc-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAdd}
-                  disabled={!selectedDef || activeCount >= 5}
-                  className="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded text-xs font-medium font-mono transition-colors flex items-center gap-1.5"
-                >
-                  <span>Add to Chart</span>
-                </button>
-              </div>
-            </div>
+          </div>
+        </div>
+
+        {/* Pinned Action footer */}
+        <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
+          <span className="text-[11px] text-zinc-500 font-mono">
+            Active Studies: {activeCount}/12
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded text-xs text-zinc-300 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={!selectedDef || activeCount >= 12}
+              className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded text-xs font-semibold font-mono transition-colors flex items-center gap-1.5"
+            >
+              <span>Add to Chart</span>
+            </button>
           </div>
         </div>
       </div>

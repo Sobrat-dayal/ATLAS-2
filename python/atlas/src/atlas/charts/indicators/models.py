@@ -47,6 +47,8 @@ class IndicatorStatus(str, Enum):
     DATA_GAP = "DATA_GAP"
     INSUFFICIENT_HISTORY = "INSUFFICIENT_HISTORY"
     INCOMPATIBLE_INPUT = "INCOMPATIBLE_INPUT"
+    MISSING_VOLUME = "MISSING_VOLUME"
+    TALIB_UNAVAILABLE = "TALIB_UNAVAILABLE"
     UNSUPPORTED_INTERVAL = "UNSUPPORTED_INTERVAL"
     NOT_ENTITLED = "NOT_ENTITLED"
     CALCULATION_ERROR = "CALCULATION_ERROR"
@@ -106,6 +108,10 @@ class IndicatorDefinition(BaseModel):
     min_history_bars: int = Field(
         2, ge=1, description="Minimum total history bars required for meaningful evaluation"
     )
+    output_names: List[str] = Field(
+        default_factory=lambda: ["main"],
+        description="Names of output series produced (e.g. ['macd', 'signal', 'histogram'])",
+    )
 
 
 class IndicatorPoint(BaseModel):
@@ -133,6 +139,9 @@ class IndicatorOutputSeries(BaseModel):
     )
     name: str = Field(..., description="Human-readable series name")
     rendering_type: str = Field("LINE", description="Visual style: LINE, HISTOGRAM, BAND")
+    unit: Optional[str] = Field(
+        None, description="Output measurement unit (e.g. 'USD', 'percent', 'points', 'volume')"
+    )
     color: Optional[str] = Field(None, description="Rendered stroke color")
     line_width: Optional[int] = Field(None, description="Rendered line width")
     points: List[IndicatorPoint] = Field(
@@ -176,8 +185,8 @@ class IndicatorCalculationRequest(BaseModel):
     instances: List[IndicatorInstanceConfig] = Field(
         ...,
         min_length=1,
-        max_length=5,
-        description="List of active indicator instances to compute (max 5 per request)",
+        max_length=12,
+        description="List of active indicator instances to compute (max 12 per request)",
     )
 
 

@@ -10,6 +10,8 @@ dependencies = [
     "pydantic-settings>=2.2.0",
     "atlas",
     "clickhouse-connect>=1.9.0",
+    "numpy>=2.0.0",
+    "ta-lib>=0.8.2",
 ]
 
 [tool.uv.sources]

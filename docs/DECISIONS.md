@@ -4320,4 +4320,161 @@ This document records the major architectural and product decisions established.
 125. Stage 69 documentation must match actual code.
 126. Stage 70 is the next canonical stage.
 
+## Stage 70 — Integrate TA-Lib & Build Production Technical Analysis Engine
+
+### Library Integration
+1. TA-Lib is the approved Stage 70 technical-analysis library.
+2. The Python wrapper version is pinned (`ta-lib>=0.8.2`).
+3. Native runtime compatibility is verified (`0.8.1`).
+4. NumPy compatibility is verified (`numpy>=2.0.0`).
+5. Production container installation is reproducible.
+6. CI verifies installation.
+7. Missing TA-Lib causes explicit capability failure (`TALIB_UNAVAILABLE`).
+8. Stage 69 native reference SMA remains preserved.
+9. TA-Lib functions are exposed through approved adapters (`TALibIndicatorCalculator`).
+10. No arbitrary function dispatch is exposed.
+
+### Registry
+11. Stage 69 Indicator Registry remains authoritative.
+12. Indicator IDs remain stable (`atlas.sma`, `atlas.ema`, `atlas.wma`, `atlas.rsi`, `atlas.macd`, `atlas.bbands`, `atlas.atr`, `atlas.stoch`, `atlas.adx`, `atlas.cci`, `atlas.roc`, `atlas.mom`, `atlas.obv`, `atlas.mfi`).
+13. Indicator definitions remain versioned (`version: 1`).
+14. Parameter schemas remain typed with bounds.
+15. Backend validation remains authoritative.
+16. TA-Lib parameter mappings are explicit.
+17. Multi-output metadata is supported (`output_names`, `rendering_type`).
+18. Actual capability availability is reported (`GET /charts/indicators/capabilities`).
+19. Unsupported functions are not advertised as operational.
+20. No arbitrary executable formulas are permitted.
+
+### Financial Inputs
+21. Canonical OHLCV remains authoritative.
+22. Canonical Financial Instrument UUIDs are preserved.
+23. Market-series identity is preserved.
+24. Provider compatibility is enforced.
+25. Venue compatibility is enforced.
+26. Interval identity is preserved.
+27. Price basis is preserved.
+28. Adjustment basis is preserved.
+29. Quote units are preserved.
+30. Source revisions are respected.
+31. Futures expirations are not mixed.
+32. FX orientation is preserved.
+33. Crypto quote-asset identity is preserved.
+34. Bond price/yield semantics remain distinct.
+35. Missing inputs are not fabricated.
+36. Missing Volume is not zero.
+37. Tick count is not automatically traded Volume.
+
+### Numerical Correctness
+38. Canonical Decimal inputs have an explicit TA-Lib conversion boundary (`extract_finite_float_series`).
+39. TA-Lib calculations use the selected library's actual numeric conventions.
+40. Float64 precision limitations are documented.
+41. Nonfinite inputs (`NaN`, `Inf`) are rejected.
+42. Expected warmup values are represented as unavailable (`null`, `WARMUP`).
+43. Unexpected nonfinite outputs are treated as errors/data gaps.
+44. No look-ahead is permitted.
+45. Recursive lookback and seed history are respected.
+46. TA-Lib global unstable-period configuration is not mutated per concurrent request.
+47. Same inputs and versions produce reproducible results within documented tolerances.
+48. Source corrections invalidate dependent outputs.
+49. Unit formatting does not corrupt numerical values.
+
+### Indicator Catalog
+50. Trend indicators are implemented (SMA, EMA, WMA, ADX).
+51. Momentum indicators are implemented (RSI, MACD, STOCH, CCI, ROC, MOM).
+52. Volatility indicators are implemented (BBANDS, ATR).
+53. Oscillator studies are implemented in independent subpanes.
+54. Volume studies require genuine Volume.
+55. EMA is based on actual TA-Lib semantics.
+56. RSI uses correct lookback (14 bars lookback).
+57. MACD produces three typed outputs (`macd_line`, `signal_line`, `histogram`).
+58. Bollinger Bands produce three typed outputs (`upper_band`, `middle_band`, `lower_band`).
+59. Stochastic produces two typed outputs (`slowk`, `slowd`).
+60. ATR units remain price-distance units.
+61. ADX is not represented as a trading forecast.
+62. ROC and MOM remain distinct measures.
+63. OBV and MFI do not fabricate Volume (`MISSING_VOLUME`).
+64. No indicator is presented as guaranteed profitability.
+
+### Rendering
+65. Stage 66–68 charting library is reused (`lightweight-charts`).
+66. Price overlays share compatible price scale.
+67. Oscillator panes use their own scales with dedicated subpane canvases.
+68. MACD histograms use correct sign/zero reference (green positive, red negative).
+69. Bollinger Bands use accurate upper/middle/lower values.
+70. Multi-output series are explicitly named.
+71. Crosshair inspection uses source-aligned timestamps.
+72. Warmup values are not plotted as zero.
+73. Removing an indicator cleans up its series/pane.
+74. Multiple instances are supported (up to 12 active instances).
+75. UI remains responsive and accessible.
+76. Dark/light themes are supported.
+77. No purple gradients or emoji icons are introduced.
+78. No fake indicator data is shown.
+
+### History and Live
+79. Stage 68 intervals remain authoritative.
+80. Indicators are recalculated per selected interval.
+81. Historical backfill is supported.
+82. Source revisions are respected.
+83. Stage 67 Last Quote remains separate from finalized OHLC.
+84. Indicator output is updated from genuine finalized bars.
+85. Provisional results are labeled if supported.
+86. Duplicate and older events cannot regress output.
+87. No additional global WebSocket is introduced.
+88. No new market-data event bus is introduced.
+89. No separate historical database is introduced.
+90. No upstream Provider calls occur during ordinary calculation.
+
+### Security and Performance
+91. Catalog/calculation APIs require authentication.
+92. Authorization is enforced.
+93. Market-data entitlements are enforced.
+94. Derived outputs cannot bypass source restrictions.
+95. No arbitrary Python/JavaScript/SQL executes.
+96. Input lengths are bounded (max 2,000 bars).
+97. Parameter values are bounded.
+98. Concurrent calculations are bounded.
+99. Calculation time/memory use is controlled.
+100. Failed indicators do not crash the chart.
+101. Cache isolation prevents cross-user leakage.
+102. Normal calculations do not modify canonical market data (0 writes).
+103. No Trading orders are created.
+104. No Portfolio changes are created.
+105. No Agent/Workflow execution occurs.
+106. No LLM calls are required.
+
+### Roadmap Boundaries
+107. Stage 71 owns Drawing Tools.
+108. Stage 72 owns Multi-Chart Layout.
+109. Stage 73 owns Synchronization.
+110. Stage 74 owns Saved Chart Layouts.
+111. Stage 75 owns Replay.
+112. Stage 76 owns Watchlists.
+113. Stage 80 owns Alerts.
+114. Stage 94–98 own Screeners.
+115. Stage 110+ own Portfolios.
+116. Stage 115+ own Risk.
+117. Stage 141–142 own Options/Quant pricing.
+118. Stage 143 owns Backtesting.
+119. Stage 144 owns Paper Trading.
+120. Stage 145 owns Broker Sandbox.
+121. Stage 146+ own Agents.
+122. No drawing tools are implemented early.
+123. No multi-chart synchronization is implemented early.
+124. No saved layout persistence is implemented early.
+125. No replay system is implemented early.
+126. No automated strategy engine is implemented.
+127. No predictive AI trading engine is implemented.
+128. No fake financial data is seeded.
+129. Stage 70 must pass TA-Lib dependency tests.
+130. Stage 70 must pass numerical parity tests.
+131. Stage 70 must pass warmup/gap tests.
+132. Stage 70 must pass multi-output tests.
+133. Stage 70 must pass authorization tests.
+134. Stage 70 must pass previous chart regressions.
+135. Documentation must reflect actual behavior.
+136. Stage 71 is the next canonical stage.
+
+
 

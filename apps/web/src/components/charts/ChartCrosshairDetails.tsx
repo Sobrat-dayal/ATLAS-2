@@ -95,23 +95,34 @@ export function ChartCrosshairDetails({
         </div>
       )}
 
-      {/* Stage 69 Active Technical Indicator Values at hovered bar */}
+      {/* Stage 70 Active Technical Indicator Values at hovered bar */}
       {activeIndicators.map((inst) => {
         if (!inst.visible) return null;
         const res = indicatorResults.find((r) => r.instance_id === inst.instance_id);
-        const pts = res?.series?.[0]?.points || [];
-        // Match exact or nearest within 1 sec
         const barTimeUnix =
           typeof hoveredBar.timestamp === "number"
             ? hoveredBar.timestamp
             : !isNaN(Number(hoveredBar.timestamp))
               ? Number(hoveredBar.timestamp)
               : Math.floor(new Date(hoveredBar.timestamp).getTime() / 1000);
-        const match = pts.find((p) => Math.abs(p.time_unix - barTimeUnix) <= 1);
-        const label = inst.parameters?.period
-          ? `SMA(${inst.parameters.period})`
-          : "SMA";
+
+        const p = inst.parameters;
+        let paramLabel = "";
+        if (inst.indicator_id === "atlas.macd") {
+          paramLabel = `(${p["fast_period"] ?? 12},${p["slow_period"] ?? 26},${p["signal_period"] ?? 9})`;
+        } else if (inst.indicator_id === "atlas.stoch") {
+          paramLabel = `(${p["fastk_period"] ?? 5},${p["slowk_period"] ?? 3},${p["slowd_period"] ?? 3})`;
+        } else if (inst.indicator_id === "atlas.bbands") {
+          paramLabel = `(${p["period"] ?? 20},${p["nbdevup"] ?? 2},${p["nbdevdn"] ?? 2})`;
+        } else if (p["period"] != null) {
+          paramLabel = `(${p["period"]})`;
+        }
+
+        const name = inst.indicator_id.replace("atlas.", "").toUpperCase();
+        const label = `${name}${paramLabel}`;
         const color = inst.color || "#38bdf8";
+
+        const seriesList = res?.series || [];
 
         return (
           <div key={inst.instance_id} className="flex items-center gap-1.5">
@@ -120,14 +131,43 @@ export function ChartCrosshairDetails({
               style={{ backgroundColor: color }}
             />
             <span className="text-zinc-400 font-semibold">{label}:</span>
-            {match && match.value !== null && match.value !== undefined ? (
-              <span className="font-semibold text-zinc-100">
-                {formatPrice(match.value, precision)}
-              </span>
-            ) : match?.status === "WARMUP" ? (
-              <span className="text-zinc-500 italic text-[11px]">warmup</span>
-            ) : (
+
+            {seriesList.length === 0 ? (
               <span className="text-zinc-600">—</span>
+            ) : seriesList.length === 1 ? (
+              (() => {
+                const match = seriesList[0].points.find((pt) => Math.abs(pt.time_unix - barTimeUnix) <= 1);
+                if (match && match.value !== null && match.value !== undefined) {
+                  return (
+                    <span className="font-semibold text-zinc-100">
+                      {formatPrice(match.value, precision)}
+                    </span>
+                  );
+                } else if (match?.status === "WARMUP") {
+                  return <span className="text-zinc-500 italic text-[11px]">warmup</span>;
+                }
+                return <span className="text-zinc-600">—</span>;
+              })()
+            ) : (
+              <div className="flex items-center gap-1.5">
+                {seriesList.map((s) => {
+                  const match = s.points.find((pt) => Math.abs(pt.time_unix - barTimeUnix) <= 1);
+                  const sPrefix = s.name.slice(0, 1).toUpperCase();
+                  return (
+                    <span key={s.series_id} className="text-zinc-300 font-mono text-[11px]">
+                      <span className="text-zinc-500 mr-0.5">{sPrefix}:</span>
+                      {match && match.value !== null && match.value !== undefined ? (
+                        <span className="font-semibold text-zinc-100">
+                          {s.series_id === "histogram" && match.value >= 0 ? `+` : ""}
+                          {formatPrice(match.value, 2)}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-600">—</span>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
             )}
           </div>
         );

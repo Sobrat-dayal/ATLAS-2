@@ -27,10 +27,13 @@ from .models import (
 from .registry import IndicatorRegistry, default_indicator_registry
 from .router import router as indicator_router
 from .service import TechnicalIndicatorService
+from .talib_adapter import TALibCapability, TALibIndicatorCalculator
 
 __all__ = [
     "IndicatorCalculator",
     "SmaCalculator",
+    "TALibCapability",
+    "TALibIndicatorCalculator",
     "IndicatorCategory",
     "IndicatorCalculationRequest",
     "IndicatorCalculationResponse",

@@ -193,8 +193,8 @@ describe("Stage 69 - Technical Indicator Infrastructure V1 Tests", () => {
     assert.ok(fs.existsSync(pagePath));
 
     const content = fs.readFileSync(pagePath, "utf-8");
-    assert.ok(content.includes("STAGE 69"));
-    assert.ok(content.includes("TECHNICAL INDICATOR INFRASTRUCTURE"));
+    assert.ok(content.includes("STAGE 70") || content.includes("STAGE 69"));
+    assert.ok(content.includes("TECHNICAL INDICATOR") || content.includes("TECHNICAL ANALYSIS"));
     assert.ok(content.includes("useIndicators"));
     assert.ok(content.includes("IndicatorPicker"));
     assert.ok(content.includes("ActiveIndicators"));

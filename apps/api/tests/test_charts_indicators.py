@@ -337,6 +337,7 @@ def test_service_rejects_exceeded_instance_limit():
     from pydantic import ValidationError
 
     # 6 instances exceeds max_length=5 on IndicatorCalculationRequest
+    # 13 instances exceeds Stage 70 max_length=12 on IndicatorCalculationRequest
     instances = [
         IndicatorInstanceConfig(
             instance_id=f"sma-{i}",
@@ -344,7 +345,7 @@ def test_service_rejects_exceeded_instance_limit():
             version=1,
             parameters={"period": 5 + i},
         )
-        for i in range(6)
+        for i in range(13)
     ]
     with pytest.raises(ValidationError):
         IndicatorCalculationRequest(

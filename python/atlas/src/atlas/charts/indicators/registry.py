@@ -9,7 +9,6 @@ import logging
 from typing import Dict, List, Tuple
 
 from .calculators.base import IndicatorCalculator
-from .calculators.sma import SmaCalculator
 from .models import IndicatorDefinition
 
 logger = logging.getLogger(__name__)
@@ -74,6 +73,9 @@ class IndicatorRegistry:
         return (indicator_id, version) in self._entries
 
 
-# Initialize standard registry with reference SMA
+# Initialize standard registry with all production indicators (Stage 70)
 default_indicator_registry = IndicatorRegistry()
-default_indicator_registry.register(SmaCalculator())
+from .factory import get_all_production_calculators  # noqa: E402
+
+for calc in get_all_production_calculators():
+    default_indicator_registry.register(calc)

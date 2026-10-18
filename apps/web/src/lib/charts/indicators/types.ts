@@ -19,6 +19,8 @@ export type IndicatorStatus =
   | "DATA_GAP"
   | "INSUFFICIENT_HISTORY"
   | "INCOMPATIBLE_INPUT"
+  | "MISSING_VOLUME"
+  | "TALIB_UNAVAILABLE"
   | "UNSUPPORTED_INTERVAL"
   | "NOT_ENTITLED"
   | "CALCULATION_ERROR";
@@ -43,6 +45,7 @@ export interface IndicatorDefinition {
   rendering_target: IndicatorRenderingTarget;
   input_requirements: string[];
   parameters: IndicatorParameterDefinition[];
+  output_names?: string[];
   default_color: string;
   default_line_width: number;
   supported_intervals: string[];
@@ -60,6 +63,7 @@ export interface IndicatorOutputSeries {
   series_id: string;
   name: string;
   rendering_type: string;
+  unit?: string | null;
   color?: string | null;
   line_width?: number | null;
   points: IndicatorPoint[];

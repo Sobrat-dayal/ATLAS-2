@@ -47,42 +47,53 @@ export function ActiveIndicators({
         const defn = catalog.find((d) => d.indicator_id === inst.indicator_id);
         const res = results.find((r) => r.instance_id === inst.instance_id);
 
-        // Find value at hovered bar, or fallback to latest point
-        let displayVal: string = "—";
-        let pointStatus = res?.status || "READY";
+        const p = inst.parameters;
+        let paramLabel = "";
+        if (inst.indicator_id === "atlas.macd") {
+          paramLabel = `(${p["fast_period"] ?? 12}, ${p["slow_period"] ?? 26}, ${p["signal_period"] ?? 9})`;
+        } else if (inst.indicator_id === "atlas.stoch") {
+          paramLabel = `(${p["fastk_period"] ?? 5}, ${p["slowk_period"] ?? 3}, ${p["slowd_period"] ?? 3})`;
+        } else if (inst.indicator_id === "atlas.bbands") {
+          paramLabel = `(${p["period"] ?? 20}, ${p["nbdevup"] ?? 2}, ${p["nbdevdn"] ?? 2})`;
+        } else if (p["period"] != null) {
+          paramLabel = `(${p["period"]})`;
+        }
+
+        const name = defn?.display_name || inst.indicator_id.replace("atlas.", "").toUpperCase();
+        const label = `${name} ${paramLabel}`.trim();
+        const color = inst.color || defn?.default_color || "#38bdf8";
+
+        // Collect point values for all series in the indicator result
+        const seriesValues: { id: string; name: string; val: number | null; color?: string }[] = [];
+        let overallStatus = res?.status || "READY";
 
         if (res && res.series.length > 0) {
-          const pts = res.series[0].points;
-          if (pts.length > 0) {
+          for (const s of res.series) {
             let matchedPt = null;
-            if (hoveredBar?.time_unix) {
-              matchedPt = pts.find((p) => p.time_unix === hoveredBar.time_unix);
+            if (hoveredBar?.time_unix && s.points.length > 0) {
+              matchedPt = s.points.find((pt) => Math.abs(pt.time_unix - hoveredBar.time_unix) <= 1);
             }
-            if (!matchedPt) {
-              // fallback to latest valid point in series
-              for (let i = pts.length - 1; i >= 0; i--) {
-                if (pts[i].value != null) {
-                  matchedPt = pts[i];
+            if (!matchedPt && s.points.length > 0) {
+              for (let i = s.points.length - 1; i >= 0; i--) {
+                if (s.points[i].value != null) {
+                  matchedPt = s.points[i];
                   break;
                 }
               }
-              if (!matchedPt) {
-                matchedPt = pts[pts.length - 1];
-              }
             }
 
-            if (matchedPt) {
-              pointStatus = matchedPt.status;
-              if (matchedPt.value != null) {
-                displayVal = matchedPt.value.toFixed(2);
-              }
+            if (matchedPt && matchedPt.status !== "READY") {
+              overallStatus = matchedPt.status;
             }
+
+            seriesValues.push({
+              id: s.series_id,
+              name: s.name,
+              val: matchedPt?.value != null ? Number(matchedPt.value) : null,
+              color: s.color || undefined,
+            });
           }
         }
-
-        const period = inst.parameters["period"] || 20;
-        const label = `${defn?.display_name || "SMA"} (${period})`;
-        const color = inst.color || defn?.default_color || "#38bdf8";
 
         return (
           <div
@@ -103,14 +114,21 @@ export function ActiveIndicators({
             </div>
 
             {/* Value / Status */}
-            <div className="flex items-center gap-1 font-semibold">
-              {pointStatus === "READY" ? (
-                <span style={{ color }}>{displayVal}</span>
-              ) : pointStatus === "WARMUP" ? (
+            <div className="flex items-center gap-1.5 font-semibold">
+              {overallStatus === "READY" && seriesValues.length > 0 ? (
+                seriesValues.map((sv) => (
+                  <span key={sv.id} style={{ color: sv.color || color }} className="text-[10px]">
+                    {seriesValues.length > 1 && <span className="text-zinc-500 mr-0.5">{sv.name.slice(0, 3)}:</span>}
+                    {sv.val != null ? sv.val.toFixed(2) : "—"}
+                  </span>
+                ))
+              ) : overallStatus === "WARMUP" ? (
                 <span className="text-zinc-500 text-[10px] uppercase">Warmup</span>
-              ) : pointStatus === "DATA_GAP" ? (
+              ) : overallStatus === "MISSING_VOLUME" ? (
+                <span className="text-amber-400 text-[10px] uppercase">Vol Req</span>
+              ) : overallStatus === "DATA_GAP" ? (
                 <span className="text-amber-500 text-[10px] uppercase">Gap</span>
-              ) : pointStatus === "INSUFFICIENT_HISTORY" ? (
+              ) : overallStatus === "INSUFFICIENT_HISTORY" ? (
                 <span className="text-rose-400 text-[10px] uppercase">Low Bars</span>
               ) : (
                 <span className="text-zinc-500 text-[10px]">—</span>

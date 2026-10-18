@@ -24,8 +24,10 @@ import { LiveChartControls } from "./LiveChartControls";
 import { LatestQuoteDetails } from "./LatestQuoteDetails";
 import {
   ActiveIndicators,
+  IndicatorInspectorTable,
   IndicatorParameterEditor,
   IndicatorPicker,
+  IndicatorSubpane,
 } from "./indicators";
 import {
   ChartEmptyState,
@@ -140,18 +142,18 @@ function ChartsContent() {
                 CHARTS
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded">
-                STAGE 69
+                STAGE 70
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded flex items-center gap-1">
                 <Activity className="w-3 h-3 text-emerald-400" />
-                <span>TECHNICAL INDICATOR INFRASTRUCTURE</span>
+                <span>PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB)</span>
               </span>
               <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
-                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES]
+                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 70 TA-LIB STUDIES]
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Multi-timeframe financial charting, verified OHLCV aggregation, extensible technical indicators, deterministic calculations, and chart overlays.
+              Institutional technical analysis engine with TA-Lib integration, multi-output overlays, independent oscillator panes, volume analytics, and verified numerical precision.
             </p>
           </div>
         </div>
@@ -229,6 +231,27 @@ function ChartsContent() {
           )}
         </div>
 
+        {/* Stage 70 Independent Indicator Subpanes (Oscillators, Momentum, Volume) */}
+        {activeInstances.map((inst) => {
+          const defn = catalog.find((d) => d.indicator_id === inst.indicator_id);
+          const res = indicatorResults.find((r) => r.instance_id === inst.instance_id);
+          if (res?.rendering_target !== "INDICATOR_PANE" && defn?.rendering_target !== "INDICATOR_PANE") {
+            return null;
+          }
+          return (
+            <IndicatorSubpane
+              key={inst.instance_id}
+              instance={inst}
+              definition={defn}
+              result={res}
+              hoveredBar={hoveredBar}
+              onToggleVisibility={() => toggleVisibility(inst.instance_id)}
+              onConfigure={() => setEditingIndicator(inst)}
+              onRemove={() => removeInstance(inst.instance_id)}
+            />
+          );
+        })}
+
         {/* Live Market Data Status & Coverage Provenance Footer */}
         <div className="p-2 border-t border-zinc-800/80 bg-zinc-950 flex flex-col gap-2">
           <LiveMarketDataStatus
@@ -255,6 +278,14 @@ function ChartsContent() {
 
       {/* Accessible Historical Data Table */}
       <HistoricalDataTable bars={bars} instrument={selectedInstrument} />
+
+      {/* Stage 70 Accessible Technical Indicator Numerical Inspector Table */}
+      <IndicatorInspectorTable
+        bars={bars}
+        catalog={catalog}
+        instances={activeInstances}
+        results={indicatorResults}
+      />
 
       {/* Stage 69 Indicator Modals */}
       <IndicatorPicker

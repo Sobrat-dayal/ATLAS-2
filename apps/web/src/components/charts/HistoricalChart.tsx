@@ -481,7 +481,7 @@ export function HistoricalChart({
     }
   }, [liveQuote]);
 
-  // Synchronize Stage 69 Technical Indicator Overlays
+  // Synchronize Stage 70 Technical Indicator Overlays (Price Overlays: SMA, EMA, WMA, Bollinger Bands)
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
@@ -492,73 +492,90 @@ export function HistoricalChart({
     }
 
     const currentSeriesMap = indicatorSeriesMapRef.current;
-    const activeInstanceIds = new Set<string>();
+    const activeSeriesKeys = new Set<string>();
 
     for (const res of indicatorResults) {
       const config = activeMap.get(res.instance_id);
       if (!config || !config.visible) continue;
 
-      activeInstanceIds.add(res.instance_id);
+      // Ensure only PRICE_OVERLAY targets render on the primary price axis
+      if (res.rendering_target !== "PRICE_OVERLAY") continue;
 
-      const primarySeries = res.series?.[0];
-      if (!primarySeries || !primarySeries.points || primarySeries.points.length === 0) continue;
+      const baseColor = config.color || "#38bdf8";
+      const baseLineWidth = config.line_width || 2;
 
-      const color = config.color || primarySeries.color || "#38bdf8";
-      const lineWidth = config.line_width || 2;
+      for (const s of res.series) {
+        if (!s.points || s.points.length === 0) continue;
 
-      let lineSeries = currentSeriesMap.get(res.instance_id);
+        const seriesKey = `${res.instance_id}__${s.series_id}`;
+        activeSeriesKeys.add(seriesKey);
 
-      if (!lineSeries) {
-        lineSeries = chart.addSeries(LineSeries, {
-          color,
-          lineWidth: lineWidth as 1 | 2 | 3 | 4,
-          priceLineVisible: false,
-          lastValueVisible: true,
-          crosshairMarkerVisible: true,
-          crosshairMarkerRadius: 3,
-          crosshairMarkerBorderColor: color,
-          crosshairMarkerBackgroundColor: "#09090b",
-        });
-        currentSeriesMap.set(res.instance_id, lineSeries);
-      } else {
-        lineSeries.applyOptions({
-          color,
-          lineWidth: lineWidth as 1 | 2 | 3 | 4,
-          crosshairMarkerBorderColor: color,
-        });
-      }
+        // Customize appearance for multi-series overlays like Bollinger Bands
+        let seriesColor = s.color || baseColor;
+        let seriesWidth = (s.line_width || baseLineWidth) as 1 | 2 | 3 | 4;
+        let lineStyle = LineStyle.Solid;
 
-      // Convert points to LineData or WhitespaceData
-      const lineData: (LineData | WhitespaceData)[] = primarySeries.points.map((pt) => {
-        if (pt.value !== null && pt.value !== undefined && !isNaN(Number(pt.value))) {
+        if (s.series_id === "upper_band" || s.series_id === "lower_band") {
+          seriesWidth = 1;
+          lineStyle = LineStyle.Dashed;
+        }
+
+        let lineSeries = currentSeriesMap.get(seriesKey);
+
+        if (!lineSeries) {
+          lineSeries = chart.addSeries(LineSeries, {
+            color: seriesColor,
+            lineWidth: seriesWidth,
+            lineStyle,
+            priceLineVisible: false,
+            lastValueVisible: true,
+            crosshairMarkerVisible: true,
+            crosshairMarkerRadius: 3,
+            crosshairMarkerBorderColor: seriesColor,
+            crosshairMarkerBackgroundColor: "#09090b",
+          });
+          currentSeriesMap.set(seriesKey, lineSeries);
+        } else {
+          lineSeries.applyOptions({
+            color: seriesColor,
+            lineWidth: seriesWidth,
+            lineStyle,
+            crosshairMarkerBorderColor: seriesColor,
+          });
+        }
+
+        // Convert points to LineData or WhitespaceData
+        const lineData: (LineData | WhitespaceData)[] = s.points.map((pt) => {
+          if (pt.value !== null && pt.value !== undefined && !isNaN(Number(pt.value))) {
+            return {
+              time: pt.time_unix as Time,
+              value: Number(pt.value),
+            };
+          }
           return {
             time: pt.time_unix as Time,
-            value: Number(pt.value),
           };
-        }
-        return {
-          time: pt.time_unix as Time,
-        };
-      });
+        });
 
-      lineSeries.setData(lineData);
+        lineSeries.setData(lineData);
+      }
     }
 
     // Clean up series for removed or hidden instances
     const toRemove: string[] = [];
-    currentSeriesMap.forEach((series, instanceId) => {
-      if (!activeInstanceIds.has(instanceId)) {
+    currentSeriesMap.forEach((series, seriesKey) => {
+      if (!activeSeriesKeys.has(seriesKey)) {
         try {
           chart.removeSeries(series);
         } catch {
           // ignore
         }
-        toRemove.push(instanceId);
+        toRemove.push(seriesKey);
       }
     });
 
-    for (const id of toRemove) {
-      currentSeriesMap.delete(id);
+    for (const key of toRemove) {
+      currentSeriesMap.delete(key);
     }
   }, [indicatorResults, activeIndicators]);
 

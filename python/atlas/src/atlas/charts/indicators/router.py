@@ -17,11 +17,22 @@ from .models import (
     IndicatorDefinition,
 )
 from .service import TechnicalIndicatorService
+from .talib_adapter import TALibCapability
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/indicators", tags=["charts-indicators"])
 _indicator_service = TechnicalIndicatorService()
+
+
+@router.get(
+    "/capabilities",
+    summary="Get technical indicator calculation capabilities",
+    description="Returns environment readiness, TA-Lib library versions, and engine capabilities.",
+)
+async def get_indicator_capabilities():
+    """Return TA-Lib and indicator engine runtime capabilities."""
+    return TALibCapability.get_info()
 
 
 @router.get(
