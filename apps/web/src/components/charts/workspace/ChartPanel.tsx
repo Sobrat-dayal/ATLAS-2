@@ -1,12 +1,17 @@
 "use client";
 
 /**
- * Self-Contained Financial Chart Panel Component for ATLAS Multi-Chart Workspaces (Stage 72).
+ * Self-Contained Financial Chart Panel Component for ATLAS Multi-Chart Workspaces (Stage 72 & 73).
  *
  * Implements:
  * - Independent instrument & market series selection
  * - Independent interval & chart-type selection
  * - Independent viewport, pan, zoom, and crosshair inspection
+ * - Stage 73 Chart Synchronization Adapter integration:
+ *   - Linked crosshairs & precision time guides with coalesced animation frames
+ *   - Synchronized visible time ranges (horizontal pan & zoom) with clamping and loop suppression
+ *   - Linked canonical financial instrument and interval selection
+ *   - Linked chart render modes (candlestick, bar, line, area)
  * - Independent TA-Lib indicator calculations & oscillator subpanes
  * - Independent drawing session store & coordinate mapping (via panelId)
  * - Shared historical data query caching (via chartQueryCache)
@@ -22,14 +27,26 @@ import {
   IndicatorInstanceConfig,
   LiveQuoteDTO,
   LiveChartStatus,
+  HoveredBarData,
 } from "@/lib/charts";
 import { sharedSubscriptionManager } from "@/lib/charts/workspace";
 import {
+  chartSyncController,
+  clampVisibleTimeRange,
+  ChartSynchronizationAdapter,
+  loopPreventionCoordinator,
+} from "@/lib/charts/sync";
+import {
   useChartHistory,
   useChartIntervals,
+  useChartSync,
   useIndicators,
 } from "@/hooks/charts";
-import { HistoricalChart } from "../HistoricalChart";
+import {
+  HistoricalChart,
+  ChartImperativeActions,
+  SynchronizedCrosshairState,
+} from "../HistoricalChart";
 import { ChartCrosshairDetails } from "../ChartCrosshairDetails";
 import {
   ActiveIndicators,
@@ -73,7 +90,8 @@ export function ChartPanel({
   onRemove,
   onUpdateState,
 }: ChartPanelProps) {
-  const chartActionsRef = useRef<{ goToLatest: () => void } | null>(null);
+  const chartActionsRef = useRef<ChartImperativeActions | null>(null);
+  const [linkedCrosshair, setLinkedCrosshair] = useState<SynchronizedCrosshairState | null>(null);
 
   // 1. Independent historical chart data hook (with shared cache deduplication)
   const {
@@ -98,17 +116,55 @@ export function ChartPanel({
     syncGlobalEntity: isActive,
   });
 
-  // Keep parent workspace store in sync with local panel changes
+  // Stage 73 Chart Synchronization Hook
+  const {
+    getPanelGroup,
+    syncCrosshair,
+    syncVisibleRange,
+    syncInstrument,
+    syncInterval,
+    syncChartType,
+  } = useChartSync();
+  const group = getPanelGroup(panelId);
+
+  // Keep parent workspace store in sync with local panel changes without infinite render loops
+  const onUpdateStateRef = useRef(onUpdateState);
   useEffect(() => {
-    if (onUpdateState) {
-      onUpdateState({
-        symbol: selectedSymbol,
-        instrument: selectedInstrument,
-        interval,
-        renderMode,
-      });
+    onUpdateStateRef.current = onUpdateState;
+  });
+
+  const lastEmittedStateRef = useRef<{
+    symbol?: string;
+    interval?: string;
+    renderMode?: string;
+    instrumentId?: string;
+  }>({});
+
+  useEffect(() => {
+    const last = lastEmittedStateRef.current;
+    if (
+      last.symbol === selectedSymbol &&
+      last.interval === interval &&
+      last.renderMode === renderMode &&
+      last.instrumentId === selectedInstrument?.entity_id
+    ) {
+      return;
     }
-  }, [selectedSymbol, selectedInstrument, interval, renderMode, onUpdateState]);
+
+    lastEmittedStateRef.current = {
+      symbol: selectedSymbol,
+      interval,
+      renderMode,
+      instrumentId: selectedInstrument?.entity_id,
+    };
+
+    onUpdateStateRef.current?.({
+      symbol: selectedSymbol,
+      instrument: selectedInstrument,
+      interval,
+      renderMode,
+    });
+  }, [selectedSymbol, selectedInstrument, interval, renderMode]);
 
   // 2. Independent intervals available for this panel's selected instrument
   const { intervals } = useChartIntervals(selectedInstrument?.entity_id || selectedSymbol);
@@ -158,6 +214,189 @@ export function ChartPanel({
     barsCount: bars.length,
   });
 
+  // 5. Stage 73 Panel Synchronization Adapter Registration
+  useEffect(() => {
+    const adapter: ChartSynchronizationAdapter = {
+      panelId,
+      generation: loopPreventionCoordinator.getPanelGeneration(panelId),
+      getInstrument: () => selectedInstrument,
+      getInterval: () => interval,
+      getChartType: () => renderMode,
+      getVisibleTimeRange: () => chartActionsRef.current?.getVisibleRange() ?? null,
+
+      applyCrosshair: (payload) => {
+        if (payload.timestampSeconds === null) {
+          setLinkedCrosshair(null);
+          chartActionsRef.current?.clearCrosshairPosition();
+          return { panelId, property: "crosshair", result: "APPLIED" };
+        }
+
+        setLinkedCrosshair({
+          timestampSeconds: payload.timestampSeconds,
+          isoTime: payload.isoTime || new Date(payload.timestampSeconds * 1000).toISOString(),
+          sourceSymbol: payload.sourceSymbol,
+          sourceInterval: payload.sourceInterval,
+          color: group?.color || "#06b6d4",
+        });
+
+        if (chartActionsRef.current && payload.price !== undefined) {
+          chartActionsRef.current.setCrosshairPosition(payload.price ?? null, payload.timestampSeconds);
+        }
+
+        return { panelId, property: "crosshair", result: "APPLIED" };
+      },
+
+      clearCrosshair: () => {
+        setLinkedCrosshair(null);
+        chartActionsRef.current?.clearCrosshairPosition();
+      },
+
+      applyVisibleTimeRange: (payload) => {
+        if (!chartActionsRef.current) {
+          return { panelId, property: "visibleTimeRange", result: "NOT_READY" };
+        }
+        const minTime = bars.length > 0 ? bars[0].time_unix : null;
+        const maxTime = bars.length > 0 ? bars[bars.length - 1].time_unix : null;
+        const clamped = clampVisibleTimeRange(payload.from, payload.to, minTime, maxTime);
+
+        const ok = chartActionsRef.current.setVisibleRange({
+          from: clamped.from,
+          to: clamped.to,
+        });
+        return {
+          panelId,
+          property: "visibleTimeRange",
+          result: ok ? "APPLIED" : "ERROR",
+        };
+      },
+
+      applyInstrument: async (payload) => {
+        selectInstrument(payload.symbol);
+        return { panelId, property: "instrument", result: "APPLIED" };
+      },
+
+      applyInterval: async (payload) => {
+        setInterval(payload.intervalId);
+        return { panelId, property: "interval", result: "APPLIED" };
+      },
+
+      applyChartType: (payload) => {
+        setRenderMode(payload.renderMode);
+        return { panelId, property: "chartType", result: "APPLIED" };
+      },
+
+      getCapabilities: () => ({
+        canSyncCrosshair: true,
+        canSyncTimeRange: true,
+        canSyncInstrument: true,
+        canSyncInterval: true,
+        canSyncChartType: true,
+        canSyncDrawings: false,
+        supportedIntervals: intervals.map((i) => i.interval_id),
+        supportedChartTypes: ["candlestick", "bar", "line", "area"],
+        hasOHLC: true,
+      }),
+
+      isReady: () => !isLoading && bars.length > 0,
+    };
+
+    chartSyncController.registerAdapter(adapter);
+
+    return () => {
+      chartSyncController.unregisterAdapter(panelId);
+    };
+  }, [
+    panelId,
+    selectedInstrument,
+    interval,
+    renderMode,
+    bars,
+    isLoading,
+    intervals,
+    selectInstrument,
+    setInterval,
+    setRenderMode,
+    group?.color,
+  ]);
+
+  // Stage 73 Synchronization Interaction Handlers
+  const handleHoverBar = (data: HoveredBarData | null) => {
+    setHoveredBar(data);
+    if (group && group.enabled && group.settings.crosshair) {
+      if (data) {
+        syncCrosshair(panelId, {
+          timestampSeconds: data.time_unix,
+          isoTime: data.timestamp,
+          sourceInterval: interval,
+          price: data.close,
+          sourceSymbol: selectedSymbol,
+        });
+      } else {
+        syncCrosshair(panelId, {
+          timestampSeconds: null,
+          isoTime: null,
+          sourceInterval: interval,
+          price: null,
+          sourceSymbol: selectedSymbol,
+        });
+      }
+    }
+  };
+
+  const handleCrosshairLeave = () => {
+    setHoveredBar(null);
+    if (group && group.enabled && group.settings.crosshair) {
+      syncCrosshair(panelId, {
+        timestampSeconds: null,
+        isoTime: null,
+        sourceInterval: interval,
+        price: null,
+        sourceSymbol: selectedSymbol,
+      });
+    }
+  };
+
+  const handleVisibleTimeRangeChange = (range: { from: number; to: number }) => {
+    if (group && group.enabled && group.settings.visibleTimeRange) {
+      syncVisibleRange(panelId, {
+        from: range.from,
+        to: range.to,
+        sourceBarsCount: bars.length,
+      });
+    }
+  };
+
+  const handleSelectInstrument = (sym: string) => {
+    selectInstrument(sym);
+    if (group && group.enabled && group.settings.instrument) {
+      const inst = availableInstruments.find((i) => i.display_symbol === sym);
+      if (inst) {
+        syncInstrument(panelId, {
+          canonicalInstrumentId: inst.entity_id,
+          symbol: inst.display_symbol,
+          assetClass: inst.asset_class,
+          currency: inst.price_currency,
+          venue: inst.market_or_venue,
+          instrument: inst,
+        });
+      }
+    }
+  };
+
+  const handleSelectInterval = (intv: string) => {
+    setInterval(intv);
+    if (group && group.enabled && group.settings.interval) {
+      syncInterval(panelId, { intervalId: intv });
+    }
+  };
+
+  const handleSelectRenderMode = (mode: ChartRenderMode) => {
+    setRenderMode(mode);
+    if (group && group.enabled && group.settings.chartType) {
+      syncChartType(panelId, { renderMode: mode });
+    }
+  };
+
   const handleUserPan = () => {
     setIsFollowingLatest(false);
   };
@@ -199,9 +438,9 @@ export function ChartPanel({
           availableInstruments={availableInstruments}
           isLoading={isLoading}
           onActivate={onActivate}
-          onSelectInstrument={selectInstrument}
-          onSelectInterval={setInterval}
-          onSelectRenderMode={setRenderMode}
+          onSelectInstrument={handleSelectInstrument}
+          onSelectInterval={handleSelectInterval}
+          onSelectRenderMode={handleSelectRenderMode}
           onRefresh={refreshHistory}
           onGoToLatest={handleGoToLatest}
           onResetView={handleGoToLatest}
@@ -229,7 +468,7 @@ export function ChartPanel({
           />
         )}
 
-        {/* Primary Chart Viewport (with panelId passed for Drawing Isolation) */}
+        {/* Primary Chart Viewport (with panelId passed for Drawing Isolation & Sync) */}
         <div className="w-full flex-1 min-h-[180px] relative p-1 bg-black">
           {isLoading && bars.length === 0 ? (
             <ChartLoadingSkeleton />
@@ -245,7 +484,10 @@ export function ChartPanel({
               liveQuote={liveQuote}
               indicatorResults={indicatorResults}
               activeIndicators={activeInstances}
-              onHoverBar={setHoveredBar}
+              onHoverBar={handleHoverBar}
+              onCrosshairLeave={handleCrosshairLeave}
+              onVisibleTimeRangeChange={handleVisibleTimeRangeChange}
+              synchronizedCrosshair={linkedCrosshair}
               onBackfill={loadOlderHistory}
               hasMore={pagination?.has_more}
               isBackfilling={isBackfilling}

@@ -684,6 +684,52 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Full TypeScript typecheck (`npx tsc --noEmit`) and Next.js production build (`npm run build`) pass across all 38 routes.
 - **Documentation**: See `docs/MULTI_CHART_LAYOUTS.md` and `docs/DECISIONS.md`.
 
+## Professional Chart Synchronization V1 (Stage 73)
+- **Chart Synchronization Engine**:
+  - Transforms ATLAS Multi-Chart Workspaces into an institutional-grade synchronized financial analysis workspace at `/charts`.
+  - Implements a high-performance local synchronization controller (`ChartSyncController`) and session-level group store (`ChartSyncStore`) with zero external broker or server message bus overhead.
+- **Intelligent Synchronization Groups**:
+  - Bounded session-level groups (`Group A`, `Group B`, etc.) supporting up to 4 member panels per group.
+  - **100% Opt-In / Independent by Default**: All chart panels initialize in strictly independent mode; zero synchronization occurs until explicitly enabled by the user.
+  - Policy: In V1, each panel belongs to at most one synchronization group at a time to prevent conflicting updates.
+  - Safe group lifecycle: create, rename, toggle individual properties, pause/enable, delete, and "Align Group to Active Panel".
+- **Fine-Grained Per-Property Controls**:
+  - `crosshair`: Synchronizes vertical time cursor across panels at canonical UTC timestamp.
+  - `visibleTimeRange`: Synchronizes horizontal pan and zoom with coverage clamping.
+  - `instrument`: Links canonical financial instrument UUID and market series selection.
+  - `interval`: Synchronizes timeframe (`1m`, `5m`, `15m`, `1h`, `1d`, `1w`, `1M`) respecting series-specific availability.
+  - `chartType`: Synchronizes `candlestick`, `bar`, `line`, or `area` presentation modes.
+  - `drawings`: Optional compatible drawing synchronization gated to identical canonical series and quotation units.
+- **Loop-Free Event Propagation**:
+  - Strong distinction between `USER` actions and `SYNC_APPLIED` programmatic updates.
+  - Token-based suppression window (`LoopPreventionCoordinator`) absorbs chart library callbacks and prevents infinite retransmission (`A -> B -> A`).
+  - Monotonic sequence ordering and LRU duplicate event protection reject duplicate or out-of-order events.
+  - Group revision tokens invalidate in-flight events when group membership or settings change.
+- **Linked Crosshairs & Multi-Market Calendar Alignment**:
+  - High-precision timestamp synchronization using canonical UTC Unix seconds (never candle index or raw screen X pixels).
+  - High-frequency pointer motion coalesced via `requestAnimationFrame` to eliminate UI rerender storms.
+  - Renders `<LinkedCrosshairOverlay />` with vertical dashed guide line and bottom timestamp badge.
+  - Crosshair leave cleans up temporary ghost guides immediately.
+  - Multi-market calendar awareness: crypto 24/7 continuous trading vs US equity sessions without fabricating fake bars or synthetic OHLC tooltips.
+- **Linked Visible Time Ranges (Pan & Zoom)**:
+  - Synchronizes horizontal time axis scrolling and zooming across compatible members.
+  - Destination coverage clamping: charts with shorter history clamp safely without bouncing clamped range back to the source chart.
+  - Vertical price scales remain strictly independent (autoscaled to each instrument's price range).
+- **Linked Instruments, Intervals & Types**:
+  - Preflight entitlement verification prevents unauthorized market data access.
+  - Partial failures reported explicitly; target panels preserve existing instruments rather than silently substituting symbols or providers.
+  - Target panels recalculate indicators from new series data; drawing contexts remain isolated.
+  - Series availability check verifies supported intervals without artificial data resampling.
+- **Frontend UI & Accessibility**:
+  - Compact `ChartSyncButton` in top workspace toolbar alongside `ChartLayoutSelector`: `[Sync: Group A (2 linked)]` or `[Sync: Independent]`.
+  - Institutional popover `ChartSyncMenu` with group selector tabs, panel checkboxes, per-property switches, and quick actions.
+  - Per-panel header badge: `[P1] [LINK A]` or `[P2] [IND]`.
+- **Testing & Verification**:
+  - `apps/web/tests/charts-synchronization.test.ts`: 10/10 tests pass (group models, default independence, sequence ordering, loop prevention, crosshairs, calendar alignment, range clamping, instrument linking, interval checks, drawing gates, security invariants).
+  - All 80 automated tests across Stages 66 to 73 pass with 0 regressions.
+  - Full TypeScript typecheck (`npx tsc --noEmit`) and Next.js production build (`npm run build`) pass across all 38 routes.
+- **Documentation**: See `docs/CHART_SYNCHRONIZATION.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

@@ -5,3 +5,4 @@ export * from "./live-controller";
 export * from "./indicators";
 export * from "./drawings";
 export * from "./workspace";
+export * from "./sync";

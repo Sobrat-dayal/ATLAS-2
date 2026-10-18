@@ -17,11 +17,14 @@ import {
   Activity,
   ArrowUpRight,
   ChevronDown,
+  Link2,
   Maximize2,
   RefreshCw,
   RotateCcw,
   Search,
+  Unlink,
 } from "lucide-react";
+import { useChartSync } from "@/hooks/charts";
 import {
   ChartInstrumentMetadata,
   ChartIntervalOptionDTO,
@@ -95,6 +98,9 @@ export function ChartPanelHeader({
   const lastPrice = liveQuote?.last_price ?? null;
   const isGenuineLast = liveQuote?.has_genuine_last ?? false;
 
+  const { getPanelGroup } = useChartSync();
+  const group = getPanelGroup(panelId);
+
   return (
     <div
       onClick={onActivate}
@@ -119,6 +125,30 @@ export function ChartPanelHeader({
         >
           P{panelIndex + 1}
         </button>
+
+        {/* Sync Group Badge */}
+        {group && group.enabled ? (
+          <div
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold border shadow-xs"
+            style={{
+              borderColor: `${group.color}60`,
+              backgroundColor: `${group.color}15`,
+              color: group.color,
+            }}
+            title={`Synchronized in ${group.name} (${group.memberPanelIds.length} panels)`}
+          >
+            <Link2 className="w-2.5 h-2.5" />
+            <span>LINK {group.name.replace("Group ", "")}</span>
+          </div>
+        ) : (
+          <div
+            className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-mono text-zinc-500 border border-zinc-800 bg-zinc-900/50"
+            title="Independent Chart Panel"
+          >
+            <Unlink className="w-2.5 h-2.5 text-zinc-600" />
+            <span>IND</span>
+          </div>
+        )}
 
         {/* Instrument Dropdown */}
         <div className="relative">

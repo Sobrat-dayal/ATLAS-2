@@ -171,6 +171,15 @@ export class MultiChartWorkspaceStore {
     const existing = this.state.panels[panelId];
     if (!existing) return;
 
+    let hasChanges = false;
+    for (const [key, val] of Object.entries(updates)) {
+      if ((existing as any)[key] !== val) {
+        hasChanges = true;
+        break;
+      }
+    }
+    if (!hasChanges) return;
+
     this.state = {
       ...this.state,
       panels: {

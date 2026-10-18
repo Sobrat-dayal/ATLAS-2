@@ -46,6 +46,7 @@ import {
   IndicatorInstanceConfig,
   LiveQuoteDTO,
 } from "@/lib/charts";
+import { loopPreventionCoordinator } from "@/lib/charts/sync";
 import { DrawingObject } from "@/lib/charts/drawings";
 import { useDrawingTools } from "@/hooks/charts";
 import {
@@ -55,6 +56,24 @@ import {
   DrawingSettingsPanel,
   DrawingToolbar,
 } from "./drawings";
+import { LinkedCrosshairOverlay } from "./sync";
+
+export interface ChartImperativeActions {
+  goToLatest: () => void;
+  setVisibleRange: (range: { from: number; to: number }) => boolean;
+  getVisibleRange: () => { from: number; to: number } | null;
+  setCrosshairPosition: (price: number | null, timeUnix: number) => boolean;
+  clearCrosshairPosition: () => void;
+  timeToCoordinate: (timeUnix: number) => number | null;
+}
+
+export interface SynchronizedCrosshairState {
+  timestampSeconds: number;
+  isoTime: string;
+  sourceSymbol?: string;
+  sourceInterval?: string;
+  color?: string;
+}
 
 export interface HistoricalChartProps {
   bars: ChartBarDTO[];
@@ -69,8 +88,11 @@ export interface HistoricalChartProps {
   isBackfilling?: boolean;
   onUserPan?: () => void;
   onAtLatest?: () => void;
-  chartActionsRef?: React.MutableRefObject<{ goToLatest: () => void } | null>;
+  chartActionsRef?: React.MutableRefObject<ChartImperativeActions | null>;
   panelId?: string;
+  onVisibleTimeRangeChange?: (range: { from: number; to: number }) => void;
+  onCrosshairLeave?: () => void;
+  synchronizedCrosshair?: SynchronizedCrosshairState | null;
 }
 
 export function HistoricalChart({
@@ -88,6 +110,9 @@ export function HistoricalChart({
   onAtLatest,
   chartActionsRef,
   panelId,
+  onVisibleTimeRangeChange,
+  onCrosshairLeave,
+  synchronizedCrosshair,
 }: HistoricalChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -110,6 +135,8 @@ export function HistoricalChart({
   const onHoverBarRef = useRef(onHoverBar);
   const onUserPanRef = useRef(onUserPan);
   const onAtLatestRef = useRef(onAtLatest);
+  const onVisibleTimeRangeChangeRef = useRef(onVisibleTimeRangeChange);
+  const onCrosshairLeaveRef = useRef(onCrosshairLeave);
 
   // Drawing Tools Hook (Stage 71 & 72 panel isolation)
   const {
@@ -146,6 +173,8 @@ export function HistoricalChart({
     onHoverBarRef.current = onHoverBar;
     onUserPanRef.current = onUserPan;
     onAtLatestRef.current = onAtLatest;
+    onVisibleTimeRangeChangeRef.current = onVisibleTimeRangeChange;
+    onCrosshairLeaveRef.current = onCrosshairLeave;
   });
 
   // Initialize and mount chart
@@ -298,7 +327,52 @@ export function HistoricalChart({
       }
     });
 
+    // Viewport visible time range subscription for Stage 73 synchronization
+    chart.timeScale().subscribeVisibleTimeRangeChange((timeRange) => {
+      if (!timeRange || !timeRange.from || !timeRange.to) return;
+      const fromUnix =
+        typeof timeRange.from === "number"
+          ? timeRange.from
+          : (timeRange.from as any)?.year
+          ? Math.floor(
+              Date.UTC(
+                (timeRange.from as any).year,
+                (timeRange.from as any).month - 1,
+                (timeRange.from as any).day
+              ) / 1000
+            )
+          : 0;
+      const toUnix =
+        typeof timeRange.to === "number"
+          ? timeRange.to
+          : (timeRange.to as any)?.year
+          ? Math.floor(
+              Date.UTC(
+                (timeRange.to as any).year,
+                (timeRange.to as any).month - 1,
+                (timeRange.to as any).day
+              ) / 1000
+            )
+          : 0;
+
+      if (fromUnix > 0 && toUnix > 0 && onVisibleTimeRangeChangeRef.current) {
+        // If this update was triggered by programmatic sync application, suppress echo
+        if (panelId && loopPreventionCoordinator.isSuppressed(panelId, "visibleTimeRange")) {
+          return;
+        }
+        onVisibleTimeRangeChangeRef.current({ from: fromUnix, to: toUnix });
+      }
+    });
+
+    // Mouseleave listener to clear crosshair position and hover state
+    const handleMouseLeave = () => {
+      onCrosshairLeaveRef.current?.();
+      onHoverBarRef.current?.(null);
+    };
+    container.addEventListener("mouseleave", handleMouseLeave);
+
     return () => {
+      container.removeEventListener("mouseleave", handleMouseLeave);
       resizeObserver.disconnect();
       indicatorSeriesMapRef.current.forEach((series) => {
         try {
@@ -318,7 +392,7 @@ export function HistoricalChart({
     };
   }, []);
 
-  // Imperative handle for Go to Latest action
+  // Imperative handle for Go to Latest, Range Sync, and Crosshair Sync actions
   useEffect(() => {
     if (chartActionsRef) {
       chartActionsRef.current = {
@@ -326,6 +400,58 @@ export function HistoricalChart({
           if (chartRef.current) {
             chartRef.current.timeScale().scrollToRealTime();
             onAtLatest?.();
+          }
+        },
+        setVisibleRange: (range: { from: number; to: number }) => {
+          if (!chartRef.current) return false;
+          try {
+            chartRef.current.timeScale().setVisibleRange({
+              from: range.from as any,
+              to: range.to as any,
+            });
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        getVisibleRange: () => {
+          if (!chartRef.current) return null;
+          try {
+            const r = chartRef.current.timeScale().getVisibleRange();
+            if (!r || !r.from || !r.to) return null;
+            const f = typeof r.from === "number" ? r.from : Number(r.from);
+            const t = typeof r.to === "number" ? r.to : Number(r.to);
+            return { from: f, to: t };
+          } catch {
+            return null;
+          }
+        },
+        timeToCoordinate: (timeUnix: number) => {
+          if (!chartRef.current) return null;
+          try {
+            return chartRef.current.timeScale().timeToCoordinate(timeUnix as any);
+          } catch {
+            return null;
+          }
+        },
+        setCrosshairPosition: (price: number | null, timeUnix: number) => {
+          if (!chartRef.current || !mainSeriesRef.current) return false;
+          try {
+            if (price !== null && Number.isFinite(price)) {
+              chartRef.current.setCrosshairPosition(price, timeUnix as any, mainSeriesRef.current);
+              return true;
+            }
+            return false;
+          } catch {
+            return false;
+          }
+        },
+        clearCrosshairPosition: () => {
+          if (!chartRef.current) return;
+          try {
+            chartRef.current.clearCrosshairPosition();
+          } catch {
+            // ignore
           }
         },
       };
@@ -676,6 +802,23 @@ export function HistoricalChart({
             onDelete={deleteDrawing}
             onOpenCoordinateEditor={(d) => setEditingCoordinatesDrawing(d)}
             onClose={() => selectDrawing(null)}
+          />
+        )}
+
+        {/* Stage 73 Linked Crosshair Ghost Guide Overlay */}
+        {synchronizedCrosshair && (
+          <LinkedCrosshairOverlay
+            xPx={
+              chartRef.current
+                ? chartRef.current
+                    .timeScale()
+                    .timeToCoordinate(synchronizedCrosshair.timestampSeconds as any)
+                : null
+            }
+            timestamp={synchronizedCrosshair.isoTime}
+            sourceSymbol={synchronizedCrosshair.sourceSymbol}
+            sourceInterval={synchronizedCrosshair.sourceInterval}
+            color={synchronizedCrosshair.color}
           />
         )}
 

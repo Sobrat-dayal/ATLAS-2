@@ -4858,5 +4858,179 @@ This document records the major architectural and product decisions established.
 163. Documentation must match actual implementation.
 164. Stage 73 is the next canonical development stage.
 
+## Stage 73 — Build Professional Chart Synchronization V1
+
+### Product
+1. Stage 73 implements Chart Synchronization V1.
+2. Synchronization remains inside `/charts`.
+3. No additional Sidebar module is created.
+4. Existing AppShell remains unchanged.
+5. Stage 72 multi-chart layouts are reused.
+6. Synchronization is opt-in.
+7. Independent chart behavior remains the default.
+8. Session-level group configuration is used.
+9. Persistent saved configurations are deferred.
+10. No fake financial data is introduced.
+
+### Synchronization Groups
+11. Groups have stable unique IDs.
+12. Group membership uses stable Stage 72 panel IDs.
+13. Each panel belongs to at most one group in V1.
+14. Group membership is bounded.
+15. Group settings are typed.
+16. Group properties are individually configurable.
+17. Group creation does not automatically overwrite chart state.
+18. Group deletion restores independent behavior.
+19. Panel removal preserves local configuration.
+20. Group revision invalidates stale events.
+21. Hidden/disposed panels cannot receive invalid actions.
+
+### Event Architecture
+22. Synchronization uses local application events.
+23. Stage 42 market-data events remain separate.
+24. No new Redis Stream is introduced.
+25. No new global WebSocket is introduced.
+26. Events identify source panel.
+27. Events identify group and property.
+28. Events use ordering metadata.
+29. Duplicate events are handled.
+30. Stale events are rejected.
+31. Sync-applied changes are not retransmitted.
+32. Asynchronous callback feedback is suppressed correctly.
+33. Target clamping does not propagate back to source.
+34. High-frequency events are coalesced.
+35. Pending event work is bounded.
+36. Disposed panels release listeners.
+
+### Crosshairs
+37. Crosshair linking is time-based.
+38. Raw screen X coordinates are not propagated.
+39. Candle indices are not cross-panel identity.
+40. Different intervals use verified temporal mapping.
+41. Daily bars preserve trading-date semantics.
+42. Different market calendars are handled.
+43. Missing target candles are not fabricated.
+44. Price-coordinate synchronization is not assumed across assets.
+45. Ghost crosshair rendering uses supported APIs.
+46. Crosshair leave clears stale guides.
+47. High-frequency pointer updates are throttled.
+48. Accessible timestamp readouts are provided.
+
+### Time Ranges
+49. Visible ranges are represented as valid financial time coordinates.
+50. Horizontal pan may be linked.
+51. Horizontal zoom may be linked.
+52. Price-axis autoscale remains independent.
+53. Historical coverage is respected.
+54. Clamping does not cause feedback loops.
+55. Different market sessions do not create synthetic bars.
+56. Invalid ranges are rejected.
+57. Unsupported mappings produce explicit status.
+
+### Instruments
+58. Instrument linking uses canonical UUIDs.
+59. Market-series identity is preserved.
+60. Venue identity is preserved.
+61. Futures expiration is preserved.
+62. Crypto pair quote asset is preserved.
+63. FX orientation is preserved.
+64. Bond price/yield basis remains distinct.
+65. Group updates require compatibility checks.
+66. Market-data entitlements remain enforced.
+67. Unsupported targets do not silently substitute instruments.
+68. Partial failures are explicitly reported.
+69. Indicator outputs are recalculated for new instruments.
+70. Drawings remain context-isolated.
+71. Live subscriptions reuse Stage 43 reference counting.
+72. Global Selected Entity feedback loops are prevented.
+
+### Intervals and Types
+73. Interval linking uses Stage 68 canonical interval IDs.
+74. Series-specific availability remains authoritative.
+75. Unsupported intervals are not fabricated.
+76. Unsupported destination intervals remain unchanged.
+77. Stage 68 owns resampling.
+78. Indicators recalculate on valid interval change.
+79. Drawings preserve financial anchors.
+80. Chart-type linking uses existing supported types.
+81. Unsupported chart types remain unchanged.
+82. Chart-type changes do not mutate historical bars.
+83. Indicators/drawings remain available where compatible.
+
+### Drawings
+84. Drawing synchronization is opt-in.
+85. Drawing compatibility is checked against canonical financial context.
+86. Incompatible price bases are not linked.
+87. Drawing synchronization uses committed commands if supported.
+88. No direct shared mutable drawing references are used.
+89. Existing drawings are not silently mass-overwritten.
+90. Stable drawing synchronization identities are required.
+91. Unsupported drawing linking is reported honestly.
+
+### Security and Performance
+92. Stage 13 Authentication is reused.
+93. Stage 14 Authorization is reused.
+94. Market-data entitlements remain enforced.
+95. No user-submitted scripts execute.
+96. No arbitrary SQL is accepted.
+97. No Provider credentials are exposed.
+98. No canonical OHLCV writes occur.
+99. No market-data ingestion is triggered by synchronization.
+100. No new Provider router is introduced.
+101. No new historical database is introduced.
+102. No duplicate global WebSocket is introduced.
+103. No unbounded event queues are created.
+104. Chart indicators are not recalculated on crosshair motion.
+105. Historical data is not refetched on crosshair motion.
+106. Chart viewport updates are bounded.
+107. Per-panel resource budgets remain enforced.
+108. No Trading orders are created.
+109. No Portfolio transactions occur.
+110. No Agent/Workflow execution occurs.
+111. No LLM calls are required.
+
+### UI and Accessibility
+112. Synchronization controls use existing ATLAS design tokens.
+113. Groups and members are visible.
+114. Per-property toggles are functional.
+115. Independent mode is accessible.
+116. Group status is not color-only.
+117. Keyboard group management is supported.
+118. Screen-reader labels are supported.
+119. Responsive layouts are supported.
+120. Mobile hidden panels do not receive unnecessary render work.
+121. Agent Dock remains compatible.
+122. Bottom Taskbar remains compatible.
+123. No purple gradients are introduced.
+124. No emoji icons are introduced.
+125. No fake synchronized market data is introduced.
+
+### Roadmap Boundaries
+126. Stage 74 owns saved chart layouts.
+127. Stage 74 owns persistent synchronization groups.
+128. Stage 75 owns Chart Replay.
+129. Stage 76 owns Watchlists.
+130. Stage 80 owns Alerts.
+131. Stage 94–98 own Screeners.
+132. Stage 110+ own Portfolios.
+133. Stage 115+ own Risk.
+134. Stage 143 owns Backtesting.
+135. Stage 144 owns Paper Trading.
+136. Stage 145 owns Broker Sandbox.
+137. Stage 146+ own Agents.
+138. No persistent layout database is added.
+139. No cross-browser synchronization is introduced.
+140. No multi-user collaborative charts are introduced.
+141. No replay synchronization is introduced.
+142. No automated trading signals are introduced.
+143. Stage 73 must pass default independence tests.
+144. Stage 73 must pass loop-prevention tests.
+145. Stage 73 must pass crosshair/time-range tests.
+146. Stage 73 must pass instrument/interval compatibility tests.
+147. Stage 73 must pass entitlement tests.
+148. Stage 73 must pass Stage 66–72 regressions.
+149. Documentation must match actual implementation.
+150. Stage 74 is the next canonical development stage.
+
 
 

@@ -30,6 +30,7 @@ import {
   ChartLayoutSelector,
   MultiChartWorkspace,
 } from "./workspace";
+import { ChartSyncButton } from "./sync";
 
 function ChartsContent() {
   const searchParams = useSearchParams();
@@ -111,23 +112,23 @@ function ChartsContent() {
                 CHARTS
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded">
-                STAGE 72
+                STAGE 73
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded flex items-center gap-1">
                 <Activity className="w-3 h-3 text-emerald-400" />
-                <span>PROFESSIONAL MULTI-CHART WORKSPACE & INDEPENDENT PANELS</span>
+                <span>PROFESSIONAL CHART SYNCHRONIZATION V1: LINKED CROSSHAIRS & TIME RANGES</span>
               </span>
               <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
-                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 70 PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB) | STAGE 71 DRAWING SUITE | STAGE 72 MULTI-CHART]
+                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 69 TECHNICAL INDICATOR INFRASTRUCTURE | STAGE 70 PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB) | STAGE 71 DRAWING SUITE | STAGE 72 MULTI-CHART | STAGE 73 SYNCHRONIZATION]
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Institutional multi-chart financial workstation with independent financial chart panels, resizable splitters, per-panel TA-Lib indicators and drawings, shared live market streaming, and bounded resource budgets.
+              Institutional multi-chart financial workstation with linked crosshairs, synchronized time ranges, intelligent synchronization groups, multi-market calendar alignment and loop-free coordination.
             </p>
           </div>
         </div>
 
-        {/* Top Controls: Layout Selector & Active Panel Badge */}
+        {/* Top Controls: Active Panel Badge, Chart Sync Button & Layout Selector */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded text-xs font-mono">
             <Layers className="w-3.5 h-3.5 text-cyan-400" />
@@ -136,6 +137,18 @@ function ChartsContent() {
               P{activePanelDisplayIndex} ({activeSymbol})
             </span>
           </div>
+
+          <ChartSyncButton
+            workspaceState={{
+              layoutId,
+              panelIds,
+              activePanelId,
+              splitRatios: {},
+              panels,
+              isMobileTabMode: false,
+              activeMobileTabId: activePanelId,
+            }}
+          />
 
           <ChartLayoutSelector
             currentLayout={layoutId}
