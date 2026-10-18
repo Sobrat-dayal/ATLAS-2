@@ -3,3 +3,4 @@ export * from "./api";
 export * from "./formatting";
 export * from "./live-controller";
 export * from "./indicators";
+export * from "./drawings";

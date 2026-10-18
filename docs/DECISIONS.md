@@ -4476,5 +4476,195 @@ This document records the major architectural and product decisions established.
 135. Documentation must reflect actual behavior.
 136. Stage 71 is the next canonical stage.
 
+## Stage 71 Decisions - Professional Chart Drawing Tools V1
+
+### Product and Scope
+1. Stage 71 implements interactive drawing tools in the ATLAS Charts module.
+2. Drawings remain within `/charts`.
+3. No new global Sidebar module is created.
+4. Existing AppShell is preserved.
+5. Existing Agent Dock is preserved.
+6. Existing Bottom Taskbar is preserved.
+7. Existing charting library (`lightweight-charts` v5.2.1) is reused.
+8. Existing technical indicators remain functional and unobstructed.
+9. No automated trading signals are introduced from user drawings.
+10. No AI drawing generation or LLM predictions are introduced.
+
+### Drawing Architecture
+11. Drawings use typed, versioned object models (`DrawingObject`, version 1).
+12. Every drawing has a stable, collision-resistant UUID identifier.
+13. Drawing definitions are registered through approved application code in `DrawingToolRegistry`.
+14. Drawing anchors use canonical financial coordinates `{ time, price }`.
+15. Permanent drawing state never stores raw screen pixel positions.
+16. Rendering geometry derives dynamically from active chart transforms.
+17. Interaction logic is separated from rendering (`DrawingSessionStore` vs `DrawingLayer`).
+18. Hit testing is separated from financial data access.
+19. Snapping uses qualified canonical market observations from loaded bars.
+20. Undo/Redo uses committed drawing actions as atomic transactions.
+21. Session drawings are completely isolated from canonical market data.
+
+### Financial Coordinates
+22. Instrument entity ID remains authoritative.
+23. Market-series identity is preserved.
+24. Venue and quotation basis are preserved.
+25. Adjustment basis is preserved.
+26. Time anchors remain stable across zoom and pan.
+27. Price anchors remain stable across resize and autoscale.
+28. Chart logical index is not permanent drawing identity.
+29. CSS pixels and device pixels are handled separately via SVG vectors.
+30. Valid negative Futures prices are supported.
+31. Unsupported price-scale modes fail safely without NaN geometry.
+32. Unsupported future-time projection does not generate synthetic market candles.
+33. Daily trading dates are not shifted incorrectly across timezones.
+34. Existing anchors are not silently resnapped after interval changes.
+35. Drawings from incompatible instruments or price bases are isolated.
+
+### Tools
+36. Trendlines are supported (2 anchors).
+37. Horizontal lines are supported (1 anchor, full width).
+38. Horizontal rays are supported (1 anchor, rightward projection).
+39. Vertical lines are supported (1 anchor, full height).
+40. Rectangles are supported (2 corner anchors, customizable fill opacity).
+41. Price range measurement is supported (absolute $\Delta P$, percentage $\Delta P\%$, quotation units).
+42. Time range measurement is supported (elapsed duration, canonical bar count).
+43. Combined price/time measurement is supported.
+44. Fibonacci retracements are supported (standard institutional ratios).
+45. Every supported drawing has genuine creation, selection, and editing behavior.
+46. User drawings are annotations, not market forecasts.
+
+### Geometry and Editing
+47. Pointer interaction uses an explicit controller state machine.
+48. Drawing preview is transient and uncommitted.
+49. Invalid partial drawings are never committed to session state.
+50. Draw and Pan modes are distinguished through non-intrusive SVG pass-through.
+51. Anchor handles are individually editable.
+52. Whole drawings can be moved translating all anchors simultaneously.
+53. Selected drawing hit tests are deterministic with priority on handles.
+54. Overlapping drawings use stable z-index priority.
+55. High-DPI coordinates are rendered sharply via SVG vector elements.
+56. Drawing geometry is clipped to chart viewport bounds.
+57. Pan/zoom redraws geometry without modifying stored financial anchors.
+58. Drag cancellation restores previous committed geometry.
+59. Locked drawings cannot be accidentally edited or dragged.
+60. Hidden drawings remain in session state but are omitted from rendering.
+
+### Fibonacci and Measurements
+61. Fibonacci ratios use explicit directional formula $L(r) = P_0 + r(P_1 - P_0)$.
+62. Anchor direction is preserved (high-to-low and low-to-high).
+63. Fibonacci levels are geometric annotations, not guaranteed support/resistance.
+64. Price difference preserves canonical quotation units.
+65. Percentage change requires a strictly positive reference denominator.
+66. Zero denominator does not produce a percentage (`N/A (base 0)`).
+67. Negative denominator is handled conservatively (`N/A (negative base)`).
+68. Elapsed time is distinct from qualified bar count.
+69. Market holidays and weekend gaps do not create synthetic trading bars.
+70. Price measurement is not investor total return or broker P/L.
+
+### Snapping
+71. Snapping is optional and configurable (`OFF`, `NEAREST_BAR`, `OHLC`).
+72. Snapping candidates are genuine qualified canonical bars.
+73. Missing bars cannot become snap targets.
+74. Snapshot-only Last Quotes do not create OHLC snap targets.
+75. Pixel snapping tolerance is bounded (15px).
+76. Snapping respects active instrument, series, and interval.
+77. Existing committed drawings are not automatically mutated by source corrections.
+78. Snapping feedback displays target indicator without implying trade signals.
+
+### Undo/Redo
+79. Drawing edit actions are fully undoable and redoable.
+80. One continuous pointer drag produces exactly one committed history command.
+81. Redo history is invalidated immediately by new edits after Undo.
+82. Undo history is bounded to 100 commands per context.
+83. Clear All can be undone as a single atomic transaction.
+84. Undo does not modify financial market data, quotes, or indicators.
+85. Undo does not change Trading or Portfolio state.
+
+### Session State and Persistence
+86. Stage 71 drawing state is session-level in-memory state.
+87. Drawings are scoped to canonical chart context `[instrument_entity_id : price_basis]`.
+88. Drawings are restored when returning to a chart within the same active browser session.
+89. Drawings are not guaranteed to survive full page reloads or logouts.
+90. No drawing persistence database table is created.
+91. No cloud-saved chart layout API is created.
+92. No automatic localStorage persistence is claimed as saved layouts.
+93. Stage 74 owns persistent chart layouts and cloud synchronization.
+94. Drawing schema remains versioned for future Stage 74 compatibility.
+
+### Chart Integration
+95. Candlestick rendering remains functional.
+96. OHLC Bar rendering remains functional.
+97. Line rendering remains functional.
+98. Area rendering remains functional.
+99. Stage 67 live quote overlay remains functional.
+100. Stage 70 TA-Lib indicators and subpanes remain functional.
+101. Drawing operations do not trigger indicator recalculations.
+102. Drawing operations do not refetch historical market data.
+103. Drawing operations do not create live WebSocket subscriptions.
+104. Chart resize does not corrupt drawings.
+105. Chart theme changes do not corrupt drawings.
+106. Source corrections do not silently rewrite manual anchors.
+
+### Accessibility and UX
+107. Keyboard tool selection is supported.
+108. An accessible Drawing Manager drawer is provided.
+109. Numerical coordinate editing is provided via `DrawingCoordinateEditor`.
+110. Keyboard Delete, Backspace, Undo (Ctrl+Z), and Redo (Ctrl+Shift+Z) are supported.
+111. Keyboard shortcuts respect focused form text inputs and textareas.
+112. Pointer and touch placement are supported.
+113. Selection does not rely only on color; anchor handles and bounding indicators are used.
+114. Drawing labels use correct financial units and prices.
+115. ATLAS design tokens (`zinc-950`, `zinc-900`, `zinc-800`, `cyan-400`, `emerald-400`) are reused.
+116. No purple gradients are introduced.
+117. No emoji icons are introduced.
+118. No fake market observations are introduced.
+119. No oversized decorative UI is introduced.
+120. Responsive desktop, tablet, and mobile behavior is supported.
+
+### Security and Performance
+121. Drawing schemas are strictly validated.
+122. Non-finite coordinate values (NaN, Infinity) are rejected.
+123. User labels cannot execute arbitrary HTML, JavaScript, or scripts.
+124. Drawing count is bounded (max 250 drawings per instrument context).
+125. Undo history is bounded (100 commands).
+126. Pointer and rendering work is bounded to animation frames and SVG transforms.
+127. Cleanup prevents leaked observers, event listeners, or timers.
+128. Drawing interaction does not mutate canonical financial data (0 writes).
+129. Drawing interaction does not call external market Providers.
+130. Drawing interaction does not create ingestion jobs.
+131. Drawing interaction does not place orders or execute trades.
+132. Drawing interaction does not modify Portfolios.
+133. Drawing interaction does not execute autonomous Agents.
+134. Drawing interaction does not execute Workflows.
+135. Drawing interaction requires 0 LLM calls.
+
+### Roadmap Boundaries
+136. Stage 72 owns Multi-Chart Layouts.
+137. Stage 73 owns Cross-Chart Synchronization.
+138. Stage 74 owns Saved Chart Layouts.
+139. Stage 75 owns Chart Replay.
+140. Stage 76 owns Watchlists.
+141. Stage 80 owns Alerts.
+142. Stage 94–98 own Screeners.
+143. Stage 110+ own Portfolios.
+144. Stage 115+ own Risk.
+145. Stage 143 owns Backtesting.
+146. Stage 144 owns Paper Trading.
+147. Stage 145 owns Broker Sandbox.
+148. Stage 146+ own Autonomous Agents.
+149. No multi-chart functionality is introduced prematurely.
+150. No cross-chart synchronization is introduced prematurely.
+151. No cloud drawing persistence is introduced prematurely.
+152. No replay functionality is introduced prematurely.
+153. No chart-triggered trade execution is introduced.
+154. No drawing-triggered automated alerts are introduced.
+155. Stage 71 must pass coordinate correctness tests.
+156. Stage 71 must pass geometric hit-testing tests.
+157. Stage 71 must pass editing and undo/redo tests.
+158. Stage 71 must pass financial-unit tests.
+159. Stage 71 must pass accessibility tests.
+160. Stage 71 must pass Stage 66–70 regressions.
+161. Documentation must match implementation.
+162. Stage 72 is the next canonical stage.
+
 
 

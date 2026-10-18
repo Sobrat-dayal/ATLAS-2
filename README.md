@@ -603,6 +603,52 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `npm.cmd run build` in `apps/web` compiled with 0 errors across all 38 routes.
 - **Documentation**: See `docs/TECHNICAL_INDICATOR_INFRASTRUCTURE.md`
 
+## TA-Lib Technical Analysis Engine & Oscillator Panes (Stage 70)
+- **Institutional Technical Studies**: Extends the Stage 69 framework with the TA-Lib C-library computation backend and pure-Python reference implementations across 14 canonical studies:
+  - **Trend**: SMA, EMA, WMA, DEMA, TEMA, MACD (12, 26, 9)
+  - **Momentum**: RSI, Stochastic (14, 3, 3), ROC, CCI, Williams %R
+  - **Volatility**: Bollinger Bands (20, 2), ATR
+  - **Volume**: OBV
+- **Multi-Output Overlays & Subpanes**:
+  - Primary canvas multi-series overlays for Bollinger Bands (Upper, Middle, Lower).
+  - Dedicated Lightweight Charts subpanes for oscillators (RSI, MACD, Stochastic) with reference levels (e.g., 30/70 for RSI, 20/80 for Stochastic).
+  - Synchronized crosshair tracking across primary chart and all active oscillator subpanes.
+- **Testing & Verification**:
+  - Full parity with official TA-Lib reference values.
+  - Test suites: `apps/web/tests/charts-talib-indicators.test.ts` (10/10 pass).
+- **Documentation**: See `docs/TALIB_TECHNICAL_INDICATORS.md`
+
+## Professional Chart Drawing Tools V1 (Stage 71)
+- **Financial Coordinate Anchoring**: Every drawing is anchored strictly to canonical financial coordinates `{ time, price }`, never transient screen pixels or mutable bar indices. Dynamic re-projection maintains anchor stability during chart panning, zooming, and resizing.
+- **9 Canonical Interactive Drawing Tools**:
+  - `trendline`: 2-anchor directional segment with endpoint and whole-line dragging.
+  - `horizontal_line`: 1-anchor infinite price level across chart width with right price badge.
+  - `horizontal_ray`: 1-anchor level extending rightward from start coordinate.
+  - `vertical_line`: 1-anchor infinite vertical date/time marker with bottom timestamp badge.
+  - `rectangle`: 2-anchor zone highlighting price and time area with configurable fill opacity.
+  - `price_range`: 2-anchor vertical measurement ($\Delta P$, $\Delta P\%$, quotation units).
+  - `time_range`: 2-anchor horizontal measurement (elapsed calendar time, canonical bar count).
+  - `price_time_measure`: Combined vector and bounding box with price & time metrics.
+  - `fibonacci_retracement`: 2-anchor direction-preserving Fibonacci levels ($0\%, 23.6\%, 38.2\%, 50\%, 61.8\%, 78.6\%, 100\%$).
+- **Smart Snapping Engine**:
+  - Snaps to genuine canonical OHLC observations (`OFF`, `NEAREST_BAR`, `OHLC`).
+  - Screen-space pixel tolerance (15px) with `Shift`/`Alt` keyboard modifier override.
+- **Command-Based Undo / Redo**:
+  - 1 continuous pointer drag = 1 atomic history command.
+  - Immediate redo invalidation on new actions; bounded history (100 commands).
+  - Keyboard shortcuts: `Ctrl+Z` / `Cmd+Z` (Undo), `Ctrl+Shift+Z` / `Ctrl+Y` (Redo), `Del` / `Backspace` (Delete), `Esc` (Cancel / Deselect).
+- **Accessibility & Numerical Editing**:
+  - `DrawingManager`: Slide-out drawer listing all session drawings with type, anchors, lock, visibility, and delete actions.
+  - `DrawingCoordinateEditor`: Accessible numerical input dialog for precision financial price and timestamp editing.
+- **Session State Isolation**:
+  - Drawings are isolated by instrument context `[instrument_entity_id : price_basis]`.
+  - In-memory session preservation allows switching instruments and returning without losing drawings.
+  - Cloud layout persistence deferred to Stage 74.
+- **Testing & Verification**:
+  - `apps/web/tests/charts-drawing-tools.test.ts`: 10/10 tests pass (models, geometry, fibonacci, measurements, snapping, history, isolation).
+  - Full TypeScript typecheck and Next.js production build pass across all 38 routes with 0 errors.
+- **Documentation**: See `docs/CHART_DRAWING_TOOLS.md`
+
 ## The 20 Modules
 1. Home
 2. Markets

@@ -69,9 +69,19 @@ class ProviderHealthMonitor:
 
                 async def _check(provider_key: str):
                     async with sem:
-                        # Need to spawn a new session per check to avoid sharing/concurrency issues
                         try:
-                            async with self.session_factory() as session:
+                            import inspect
+                            from contextlib import asynccontextmanager
+                            raw_ctx = self.session_factory()
+                            if inspect.isasyncgen(raw_ctx):
+                                @asynccontextmanager
+                                async def _gen_wrap():
+                                    async for item in raw_ctx:
+                                        yield item
+                                ctx = _gen_wrap()
+                            else:
+                                ctx = raw_ctx
+                            async with ctx as session:
                                 service = self.service_factory(session)
                                 await service.execute_check(
                                     provider_key=provider_key,

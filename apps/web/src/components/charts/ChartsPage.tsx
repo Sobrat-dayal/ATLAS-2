@@ -142,18 +142,18 @@ function ChartsContent() {
                 CHARTS
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded">
-                STAGE 70
+                STAGE 71
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded flex items-center gap-1">
                 <Activity className="w-3 h-3 text-emerald-400" />
-                <span>PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB)</span>
+                <span>PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB) & DRAWING SUITE</span>
               </span>
               <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
-                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 70 TA-LIB STUDIES]
+                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 70 TA-LIB STUDIES | STAGE 71 DRAWINGS]
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Institutional technical analysis engine with TA-Lib integration, multi-output overlays, independent oscillator panes, volume analytics, and verified numerical precision.
+              Professional interactive technical drawing suite with trendlines, support & resistance levels, Fibonacci retracements, price & time measurements, smart OHLC snapping, and financial coordinate precision.
             </p>
           </div>
         </div>

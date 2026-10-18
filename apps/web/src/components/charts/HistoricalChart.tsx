@@ -15,7 +15,7 @@
  * - Strict resource cleanup and memory leak prevention.
  */
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   AreaData,
   AreaSeries,
@@ -46,6 +46,15 @@ import {
   IndicatorInstanceConfig,
   LiveQuoteDTO,
 } from "@/lib/charts";
+import { DrawingObject } from "@/lib/charts/drawings";
+import { useDrawingTools } from "@/hooks/charts";
+import {
+  DrawingCoordinateEditor,
+  DrawingLayer,
+  DrawingManager,
+  DrawingSettingsPanel,
+  DrawingToolbar,
+} from "./drawings";
 
 export interface HistoricalChartProps {
   bars: ChartBarDTO[];
@@ -99,6 +108,34 @@ export function HistoricalChart({
   const onHoverBarRef = useRef(onHoverBar);
   const onUserPanRef = useRef(onUserPan);
   const onAtLatestRef = useRef(onAtLatest);
+
+  // Drawing Tools Hook (Stage 71)
+  const {
+    drawings,
+    activeTool,
+    selectedDrawing,
+    selectedDrawingId,
+    snappingMode,
+    canUndo,
+    canRedo,
+    setActiveTool,
+    cycleSnappingMode,
+    selectDrawing,
+    updateDrawingStyle,
+    toggleLock,
+    toggleVisibility,
+    deleteDrawing,
+    clearDrawings,
+    undo,
+    redo,
+    commitDrawingAnchors,
+  } = useDrawingTools({ instrument });
+
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
+  const [editingCoordinatesDrawing, setEditingCoordinatesDrawing] = useState<DrawingObject | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 520 });
+  const [chartInstance, setChartInstance] = useState<IChartApi | null>(null);
+  const [mainSeriesInstance, setMainSeriesInstance] = useState<ISeriesApi<any> | null>(null);
 
   useEffect(() => {
     isBackfillingRef.current = !!isBackfilling;
@@ -166,6 +203,11 @@ export function HistoricalChart({
     });
 
     chartRef.current = chart;
+    setChartInstance(chart);
+    setDimensions({
+      width: container.clientWidth || 800,
+      height: container.clientHeight || 520,
+    });
 
     // Handle responsive resize with ResizeObserver
     const resizeObserver = new ResizeObserver((entries) => {
@@ -173,6 +215,7 @@ export function HistoricalChart({
       const { width, height } = entries[0].contentRect;
       if (width > 0 && height > 0) {
         chartRef.current.applyOptions({ width, height });
+        setDimensions({ width, height });
       }
     });
     resizeObserver.observe(container);
@@ -265,7 +308,9 @@ export function HistoricalChart({
       indicatorSeriesMapRef.current.clear();
       chart.remove();
       chartRef.current = null;
+      setChartInstance(null);
       mainSeriesRef.current = null;
+      setMainSeriesInstance(null);
       volumeSeriesRef.current = null;
       priceLineRef.current = null;
     };
@@ -392,6 +437,8 @@ export function HistoricalChart({
       areaSeries.setData(formattedArea);
       mainSeriesRef.current = areaSeries;
     }
+
+    setMainSeriesInstance(mainSeriesRef.current);
 
     // 2. Add volume histogram if instrument has volume
     const hasAnyVolume = bars.some((b) => b.volume !== null);
@@ -580,16 +627,87 @@ export function HistoricalChart({
   }, [indicatorResults, activeIndicators]);
 
   return (
-    <div className="relative w-full h-full min-h-[460px] flex flex-col bg-zinc-950 rounded border border-zinc-800/80 overflow-hidden">
-      {/* Canvas container */}
-      <div ref={containerRef} className="w-full flex-1" />
+    <div className="relative w-full h-full min-h-[460px] flex bg-zinc-950 rounded border border-zinc-800/80 overflow-hidden">
+      {/* Left Drawing Toolbar (Stage 71) */}
+      <DrawingToolbar
+        activeTool={activeTool}
+        snappingMode={snappingMode}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        drawingCount={drawings.length}
+        isManagerOpen={isManagerOpen}
+        onSelectTool={setActiveTool}
+        onCycleSnapping={cycleSnappingMode}
+        onUndo={undo}
+        onRedo={redo}
+        onToggleManager={() => setIsManagerOpen((prev) => !prev)}
+        onClearDrawings={clearDrawings}
+      />
 
-      {/* Backfill progress pill */}
-      {isBackfilling && (
-        <div className="absolute top-3 right-3 bg-zinc-900/90 border border-zinc-700/60 px-2.5 py-1 rounded text-xs text-zinc-300 flex items-center gap-2 backdrop-blur shadow-md pointer-events-none">
-          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-          <span>Loading historical bars...</span>
-        </div>
+      {/* Main Chart Viewport & Drawing Layer */}
+      <div className="relative flex-1 h-full min-w-0 overflow-hidden flex flex-col">
+        {/* Canvas container */}
+        <div ref={containerRef} className="w-full flex-1 h-full" />
+
+        {/* Interactive SVG Drawing Layer (Stage 71) */}
+        {chartInstance && mainSeriesInstance && (
+          <DrawingLayer
+            chart={chartInstance}
+            series={mainSeriesInstance}
+            bars={bars}
+            width={dimensions.width}
+            height={dimensions.height}
+            activeTool={activeTool}
+            snappingMode={snappingMode}
+            selectedDrawingId={selectedDrawingId}
+            onSelectDrawing={selectDrawing}
+          />
+        )}
+
+        {/* Floating Drawing Settings Panel (Stage 71) */}
+        {selectedDrawing && (
+          <DrawingSettingsPanel
+            drawing={selectedDrawing}
+            onUpdateStyle={updateDrawingStyle}
+            onToggleLock={toggleLock}
+            onToggleVisibility={toggleVisibility}
+            onDelete={deleteDrawing}
+            onOpenCoordinateEditor={(d) => setEditingCoordinatesDrawing(d)}
+            onClose={() => selectDrawing(null)}
+          />
+        )}
+
+        {/* Backfill progress pill */}
+        {isBackfilling && (
+          <div className="absolute top-3 right-3 bg-zinc-900/90 border border-zinc-700/60 px-2.5 py-1 rounded text-xs text-zinc-300 flex items-center gap-2 backdrop-blur shadow-md pointer-events-none z-20">
+            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <span>Loading historical bars...</span>
+          </div>
+        )}
+      </div>
+
+      {/* Accessible Drawing Manager Drawer (Stage 71) */}
+      <DrawingManager
+        isOpen={isManagerOpen}
+        drawings={drawings}
+        selectedDrawingId={selectedDrawingId}
+        onClose={() => setIsManagerOpen(false)}
+        onSelectDrawing={selectDrawing}
+        onToggleLock={toggleLock}
+        onToggleVisibility={toggleVisibility}
+        onDelete={deleteDrawing}
+        onClearAll={clearDrawings}
+        onOpenCoordinateEditor={(d) => setEditingCoordinatesDrawing(d)}
+      />
+
+      {/* Accessible Numerical Coordinate Editor Modal (Stage 71) */}
+      {editingCoordinatesDrawing && (
+        <DrawingCoordinateEditor
+          isOpen={!!editingCoordinatesDrawing}
+          drawing={editingCoordinatesDrawing}
+          onClose={() => setEditingCoordinatesDrawing(null)}
+          onSave={(id, updatedAnchors) => commitDrawingAnchors(id, updatedAnchors)}
+        />
       )}
     </div>
   );
