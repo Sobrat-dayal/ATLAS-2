@@ -730,6 +730,29 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Full TypeScript typecheck (`npx tsc --noEmit`) and Next.js production build (`npm run build`) pass across all 38 routes.
 - **Documentation**: See `docs/CHART_SYNCHRONIZATION.md` and `docs/DECISIONS.md`.
 
+## Saved Chart Layouts V1 (Stage 74)
+- **Persistent Professional Chart Workspaces**:
+  - Full multi-chart workspace serialization and hydration across `/charts`.
+  - Persists grid presets (`single`, `two-columns`, `two-rows`, `three-left-focus`, `three-top-focus`, `four-grid`), panel order, split ratios, canonical instrument UUIDs, intervals, chart types, TA-Lib indicator parameters, Stage 71 financial-coordinate drawings, and Stage 73 synchronization groups.
+- **PostgreSQL JSONB Layout Persistence**:
+  - Authoritative database storage in `chart_layouts` table via Alembic migration (`stage74_chart_layouts`).
+  - Owner-scoped tenant isolation (`owner_user_id`), unique case-insensitive normalized names, and optional default layout support.
+  - Strict payload size ceiling (< 512 KiB) and recursive scanning rejecting forbidden tokens/credentials or raw market data arrays.
+- **Optimistic Concurrency Control**:
+  - Monotonic revision incrementing on every document mutation.
+  - HTTP `ETag` and `If-Match` conditional updates via atomic compare-and-swap SQL operations.
+  - Interactive `<LayoutConflictDialog />` on 412 Precondition Failed, offering non-destructive recovery ("Save As New", "Reload Latest", "Cancel").
+- **Strict Serialization Allowlist**:
+  - Explicit serializer (`serializeChartWorkspace`) strictly excludes raw OHLCV arrays, live quotes, calculated indicator points, DOM objects, React refs, and WebSocket instances.
+  - Pure hydration pipeline (`hydrateChartWorkspace`) restores workspaces with an origin suppression token preventing cascade synchronization loops.
+- **Portable Import / Export**:
+  - Secure envelope format (`atlas_chart_layout` v1) with sanitized metadata, payload inspection, and owner reassignment.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_chart_layouts.py` (27/27 passed). All 97 backend tests across Stages 66 to 74 pass in ~10.7s.
+  - Frontend tests: `apps/web/tests/charts-saved-layouts.test.ts` (10/10 passed). All 90 frontend tests across Stages 66 to 74 pass.
+  - Quality gates: Ruff 0 errors, TypeScript typecheck 0 errors, Next.js build 100% successful.
+- **Documentation**: See `docs/SAVED_CHART_LAYOUTS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

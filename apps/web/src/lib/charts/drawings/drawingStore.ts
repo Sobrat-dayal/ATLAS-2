@@ -414,6 +414,19 @@ export class DrawingSessionStore {
     this.setDrawings([]);
   }
 
+  /**
+   * Replaces drawing collection for the current context during layout restoration.
+   */
+  public replaceAllDrawings(drawings: DrawingObject[]): void {
+    const key = this.getContextKey();
+    this.contextDrawingsMap.set(key, [...drawings]);
+    this.selectedDrawingId = null;
+    this.hoveredDrawingId = null;
+    this.transientPreviewAnchors = [];
+    this.interactionState = "IDLE";
+    this.notify();
+  }
+
   public undo(): boolean {
     const history = this.getHistory();
     const restored = history.undo();

@@ -31,6 +31,7 @@ import {
   MultiChartWorkspace,
 } from "./workspace";
 import { ChartSyncButton } from "./sync";
+import { SavedLayoutsMenu } from "./layouts";
 
 function ChartsContent() {
   const searchParams = useSearchParams();
@@ -112,31 +113,30 @@ function ChartsContent() {
                 CHARTS
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded">
-                STAGE 73
+                STAGE 74
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded flex items-center gap-1">
                 <Activity className="w-3 h-3 text-emerald-400" />
-                <span>PROFESSIONAL CHART SYNCHRONIZATION V1: LINKED CROSSHAIRS & TIME RANGES</span>
+                <span>SAVED CHART LAYOUTS V1: PERSISTENT PROFESSIONAL WORKSPACES</span>
               </span>
               <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
-                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 69 TECHNICAL INDICATOR INFRASTRUCTURE | STAGE 70 PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB) | STAGE 71 DRAWING SUITE | STAGE 72 MULTI-CHART | STAGE 73 SYNCHRONIZATION]
+                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 69 TECHNICAL INDICATOR INFRASTRUCTURE | STAGE 70 PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB) | STAGE 71 DRAWING SUITE | STAGE 72 MULTI-CHART | STAGE 73 SYNCHRONIZATION | STAGE 74 SAVED LAYOUTS]
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Institutional multi-chart financial workstation with linked crosshairs, synchronized time ranges, intelligent synchronization groups, multi-market calendar alignment and loop-free coordination.
+              Persistent professional chart workspaces with PostgreSQL-backed JSONB layout storage, multi-chart serialization, saved indicators and drawings, sync group persistence, versioned schemas, and conflict-safe management.
             </p>
           </div>
         </div>
 
-        {/* Top Controls: Active Panel Badge, Chart Sync Button & Layout Selector */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded text-xs font-mono">
-            <Layers className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-zinc-400">Active:</span>
-            <span className="font-semibold text-cyan-300">
-              P{activePanelDisplayIndex} ({activeSymbol})
-            </span>
-          </div>
+        {/* Top Controls: Arrangement Selector, Saved Layouts Menu, Chart Sync Button & Active Panel Badge */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <ChartLayoutSelector
+            currentLayout={layoutId}
+            onSelectLayout={setLayoutId}
+          />
+
+          <SavedLayoutsMenu />
 
           <ChartSyncButton
             workspaceState={{
@@ -150,10 +150,13 @@ function ChartsContent() {
             }}
           />
 
-          <ChartLayoutSelector
-            currentLayout={layoutId}
-            onSelectLayout={setLayoutId}
-          />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded text-xs font-mono">
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-zinc-400">Active:</span>
+            <span className="font-semibold text-cyan-300">
+              P{activePanelDisplayIndex} ({activeSymbol})
+            </span>
+          </div>
         </div>
       </div>
 

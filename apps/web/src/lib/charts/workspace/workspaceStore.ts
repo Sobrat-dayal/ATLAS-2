@@ -243,6 +243,22 @@ export class MultiChartWorkspaceStore {
     });
   }
 
+  /**
+   * Atomically loads a validated workspace state from a saved chart layout.
+   */
+  public loadWorkspaceState(newState: MultiChartWorkspaceState): void {
+    this.state = {
+      layoutId: newState.layoutId,
+      panelIds: [...newState.panelIds],
+      activePanelId: newState.activePanelId,
+      splitRatios: { ...(newState.splitRatios || {}) },
+      panels: { ...newState.panels },
+      isMobileTabMode: newState.isMobileTabMode ?? false,
+      activeMobileTabId: newState.activeMobileTabId || newState.activePanelId,
+    };
+    this.notify();
+  }
+
   public reset(): void {
     this.state.panelIds = ["panel-1"];
     this.state.layoutId = "single";

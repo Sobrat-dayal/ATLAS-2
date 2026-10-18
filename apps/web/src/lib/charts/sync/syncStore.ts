@@ -216,6 +216,21 @@ export class ChartSyncStore {
   }
 
   /**
+   * Loads synchronization groups from a saved chart layout document without cascade.
+   */
+  public loadSyncGroups(groups: ChartSyncGroup[]): void {
+    this.groups.clear();
+    groups.forEach((g) => {
+      this.groups.set(g.id, {
+        ...g,
+        memberPanelIds: [...g.memberPanelIds],
+        settings: { ...g.settings },
+      });
+    });
+    this.notify();
+  }
+
+  /**
    * React subscriber listener pattern.
    */
   public subscribe(listener: () => void): () => void {

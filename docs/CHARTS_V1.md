@@ -202,3 +202,10 @@ Charts V1 provides validated historical chart data across 6 financial asset clas
 
 Stage 69 extends `HistoricalChart` with an indicator overlay layer (`LineSeries`) and attached subpane container adapter (`IndicatorSubpane`). Historical bars provide the qualified input series for deterministic indicator calculations (`atlas.sma` v1) with full lookback and warmup synchronization.
 
+---
+
+## 10. Stage 74 Extension: Saved Chart Layouts V1
+
+Stage 74 introduces persistent, PostgreSQL-backed chart workspace layouts for the Charts module. Multi-chart configurations (grid presets, panel identities, canonical instruments, intervals, chart types, TA-Lib indicators, Stage 71 drawings, Stage 73 sync groups) are serialized into versioned JSONB documents and stored under `chart_layouts` with optimistic concurrency control (`ETag` / `If-Match`). Detailed architectural documentation is provided in `docs/SAVED_CHART_LAYOUTS.md`.
+
+

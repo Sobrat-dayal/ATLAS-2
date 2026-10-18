@@ -5,3 +5,5 @@ export * from "./useIndicators";
 export * from "./useDrawingTools";
 export * from "./useMultiChartWorkspace";
 export * from "./useChartSync";
+export * from "./useSavedLayouts";
+export * from "./useLayoutDirtyState";

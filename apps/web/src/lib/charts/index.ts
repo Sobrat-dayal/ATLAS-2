@@ -6,3 +6,4 @@ export * from "./indicators";
 export * from "./drawings";
 export * from "./workspace";
 export * from "./sync";
+export * from "./layouts";

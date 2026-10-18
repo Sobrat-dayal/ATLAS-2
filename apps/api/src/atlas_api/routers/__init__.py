@@ -21,6 +21,7 @@ from ..authorization.router import router as authz_router
 from ..entities.router import router as entity_router
 from ..preferences.router import router as pref_router
 from .aliases import router as aliases_router
+from .chart_layouts import router as chart_layouts_router
 from .commands import router as commands_router
 from .companies import router as companies_router
 from .economics import router as economics_router
@@ -69,6 +70,7 @@ api_router.include_router(movers_router, prefix="")
 api_router.include_router(heatmaps_router, prefix="")
 api_router.include_router(cross_asset_router, prefix="")
 api_router.include_router(charts_router, prefix="")
+api_router.include_router(chart_layouts_router, prefix="")
 api_router.include_router(activity_router, prefix="")
 api_router.include_router(tasks_router, prefix="")
 api_router.include_router(approvals_router, prefix="")

@@ -5032,5 +5032,234 @@ This document records the major architectural and product decisions established.
 149. Documentation must match actual implementation.
 150. Stage 74 is the next canonical development stage.
 
+## Stage 74 — Build Saved Chart Layouts V1
+
+### Product
+1. Stage 74 implements Saved Chart Layouts V1.
+2. The canonical route remains `/charts`.
+3. No new global Sidebar module is introduced.
+4. Existing AppShell remains authoritative.
+5. Saved Layouts are distinct from arrangement presets.
+6. Saved Layouts are distinct from the global Saved module.
+7. Saved Layouts are distinct from broader Workspaces.
+8. Chart layouts are user-owned.
+9. Cross-device restoration is supported.
+10. Persistent configuration is separate from runtime market data.
+
+### Database
+11. PostgreSQL is the authoritative layout store.
+12. JSONB stores versioned configuration documents.
+13. Ownership metadata remains relational (`owner_user_id`).
+14. Layout IDs are canonical UUIDs.
+15. Normalized names follow a case-insensitive uniqueness policy per owner.
+16. Layout revisions are monotonic integers starting at 1.
+17. Document schema versions are explicit (`document_schema_version = 1`).
+18. Database migrations are versioned with Alembic (`stage74_chart_layouts`).
+19. Indexes serve actual queries (owner lookup, updated_at ordering, default uniqueness).
+20. No new MongoDB database is introduced.
+21. No duplicate financial-data database is introduced.
+22. Layout documents do not contain OHLCV arrays.
+
+### Versioning
+23. Layout record revision differs from document schema version.
+24. Indicator version differs from layout version.
+25. Drawing version differs from layout version.
+26. Old supported documents are migrated explicitly via `migrate_layout_document`.
+27. Unsupported future documents are not silently corrupted; rejected with clear error.
+28. Unknown-field handling is strictly validated against schemas.
+29. Normalization is deterministic.
+30. Layout schema validation is authoritative on the backend.
+
+### Saved Configuration
+31. Layout arrangement preset is saved (`single`, `two-columns`, `two-rows`, `three-left-focus`, `three-top-focus`, `four-grid`).
+32. Panel order is saved.
+33. Stable logical panel IDs are saved.
+34. Split ratios are saved.
+35. Active panel preference is saved.
+36. Canonical instruments are saved by UUID.
+37. Market-series identity dimensions (venue, basis, quotation unit) are preserved.
+38. Intervals are saved.
+39. Chart types are saved (`candlestick`, `bar`, `line`, `area`).
+40. Compatible price-scale settings are saved.
+41. Meaningful viewport state is saved (timestamps, following latest).
+42. Indicator definitions and parameters are saved.
+43. Calculated indicator output arrays are not saved.
+44. Drawing objects and financial coordinates are saved.
+45. Raw drawing screen pixels are not saved.
+46. Drawing Undo/Redo stacks are not saved.
+47. Synchronization group settings are saved.
+48. Pending sync events are not saved.
+49. Active WebSocket state is not saved.
+50. Provider credentials are not saved.
+51. Authentication tokens are not saved.
+52. Broker credentials are not saved.
+
+### Financial Identity
+53. Instrument UUID remains canonical.
+54. Ticker text is not a primary key.
+55. Exchange/venue identity is preserved.
+56. FX pair orientation is preserved.
+57. Cryptocurrency pair denomination is preserved.
+58. Futures expiration is preserved.
+59. Bond price/yield basis remains distinct.
+60. Raw/adjusted equity price bases remain distinct.
+61. Saved layouts do not establish live market-data availability.
+62. Saved layouts do not bypass licensing restrictions.
+63. Restricted series are not silently substituted.
+64. Delisted and expired securities may retain historical configurations.
+65. Missing data is never fabricated.
+
+### Indicators
+66. Stage 69 Registry remains authoritative.
+67. Stage 70 TA-Lib remains authoritative.
+68. Indicator instances preserve their configurations.
+69. Indicator outputs are recalculated after restoration.
+70. Missing indicator versions are reported.
+71. Insufficient history is reported.
+72. No artificial indicator values are created.
+
+### Drawings
+73. Stage 71 drawing model remains authoritative.
+74. Drawing anchors remain financial coordinates (`timestamp`, `price`).
+75. Drawing schema version is preserved.
+76. Drawing contexts are validated.
+77. Styles are persisted.
+78. Lock/visibility states are persisted.
+79. Unsupported drawings are not rendered unsafely.
+80. Drawing undo command history is not persisted.
+81. No hidden cross-instrument price conversion is performed.
+
+### Synchronization
+82. Stage 73 Sync Controller remains authoritative.
+83. Sync group definitions are serialized.
+84. Member panel references are validated.
+85. Property settings are persisted.
+86. Initial hydration does not trigger user-originated sync events.
+87. No synchronization cascade overwrites saved individual panel state.
+88. Unsupported sync capabilities are reported.
+89. No live collaboration system is introduced.
+
+### CRUD
+90. Users can create layouts.
+91. Users can list layouts.
+92. Users can open layouts.
+93. Users can update layouts.
+94. Users can rename layouts.
+95. Users can duplicate layouts.
+96. Users can delete layouts.
+97. Default layout selection is supported.
+98. Layout quotas are enforced (max 50 per user).
+99. Names are validated (max 100 chars, non-empty, NFKC normalized).
+100. Payload sizes are bounded (max 512 KiB).
+101. Server errors do not destroy unsaved work.
+
+### Concurrency
+102. Optimistic concurrency is required.
+103. Updates use an expected revision via `If-Match` headers.
+104. Database update checks are atomic compare-and-swap.
+105. Stale updates cannot silently overwrite newer revisions (412 Precondition Failed).
+106. Conflicts are reported clearly in the UI.
+107. Users may preserve conflicts through Save As New.
+108. No collaborative merge engine is required.
+109. Deletion conflicts are handled safely.
+110. Revision numbers are not document schema versions.
+
+### Frontend
+111. Working state is separate from saved state.
+112. Dirty-state detection uses persistent configuration comparisons.
+113. Latest Quote changes do not mark layouts dirty.
+114. Crosshair movement does not mark layouts dirty.
+115. Temporary drawing previews do not mark layouts dirty.
+116. Save confirmation follows server success.
+117. Failed saves preserve working state.
+118. Opening another layout warns about unsaved changes.
+119. Layout list contains actual user records only.
+120. No fake saved layouts are created.
+121. Light/dark themes remain supported.
+122. Responsive behavior is preserved.
+123. No purple gradients are introduced.
+124. No emoji icons are introduced.
+125. No oversized decorative UI is introduced.
+
+### Restoration
+126. Restoration validates before applying structural state.
+127. Supported older document schemas are migrated.
+128. Invalid documents are rejected.
+129. Current authorization is rechecked.
+130. Current entitlements are rechecked.
+131. Historical data is reloaded from existing services.
+132. Live subscriptions use existing shared infrastructure.
+133. Indicators are recalculated.
+134. Drawings are reconstructed from financial anchors.
+135. Sync groups are installed without feedback loops.
+136. Partial operational availability is reported.
+137. Structural load failures preserve prior workspace where practical.
+138. Restoring layouts does not create ingestion jobs.
+139. Restoring layouts does not fabricate market data.
+140. Device screen size does not overwrite the saved arrangement.
+
+### Import/Export
+141. Versioned JSON export is supported (`atlas_chart_layout` envelope).
+142. Only allowlisted configuration is exported.
+143. Credentials are excluded.
+144. Market-data caches are excluded.
+145. Import files are size-bounded (< 512 KiB).
+146. Import schemas are validated.
+147. Unknown future versions are rejected safely.
+148. Imported layouts receive the current authenticated owner.
+149. Import does not execute scripts.
+150. Import does not fetch arbitrary external URLs.
+151. Duplicate names do not cause silent overwrite.
+
+### Security
+152. Authentication is enforced.
+153. Ownership is enforced at both service and database layers.
+154. RLS is applied where appropriate.
+155. Elevated backend database roles still enforce ownership.
+156. Cross-user UUID guessing does not reveal layouts (404 Not Found).
+157. SQL queries are parameterized.
+158. Names and labels are rendered safely (HTML tags stripped).
+159. JSON payloads are treated as untrusted.
+160. Resource quotas prevent unbounded storage.
+161. Provider credentials remain server-side.
+162. Market-data entitlements are revalidated.
+163. No Trading orders are executed.
+164. No Portfolio holdings are modified.
+165. No Agents execute.
+166. No Workflows execute.
+167. No LLM calls are required.
+
+### Roadmap Boundaries
+168. Stage 75 owns Chart Replay.
+169. Stage 76 owns Watchlists.
+170. Stage 80 owns Alerts.
+171. Stage 94–98 own Screeners.
+172. Stage 110+ own Portfolios.
+173. Stage 115+ own Risk.
+174. Stage 119 owns the broader Saved module.
+175. Stage 120 owns broader Workspaces.
+176. Stage 143 owns Backtesting.
+177. Stage 144 owns Paper Trading.
+178. Stage 145 owns Broker Sandbox.
+179. Stage 146+ own Autonomous Agents.
+180. No replay engine is implemented.
+181. No generic Saved platform is rebuilt.
+182. No global Workspaces platform is rebuilt.
+183. No collaborative editing is implemented.
+184. No public layout marketplace is implemented.
+185. No strategy engine is introduced.
+186. No duplicate historical-data storage is introduced.
+187. No duplicate global WebSocket is introduced.
+188. Stage 74 must pass serialization round-trip tests.
+189. Stage 74 must pass owner-isolation tests.
+190. Stage 74 must pass concurrency tests.
+191. Stage 74 must pass drawing/indicator restoration tests.
+192. Stage 74 must pass sync hydration tests.
+193. Stage 74 must pass cross-device tests.
+194. Stage 74 must pass Stage 66–73 regressions.
+195. Documentation must reflect actual implementation.
+196. Stage 75 is the next canonical development stage.
+
+
 
 
