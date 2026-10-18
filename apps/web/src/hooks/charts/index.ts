@@ -7,3 +7,4 @@ export * from "./useMultiChartWorkspace";
 export * from "./useChartSync";
 export * from "./useSavedLayouts";
 export * from "./useLayoutDirtyState";
+export * from "./useChartReplay";

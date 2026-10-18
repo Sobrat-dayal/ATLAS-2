@@ -753,6 +753,38 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Quality gates: Ruff 0 errors, TypeScript typecheck 0 errors, Next.js build 100% successful.
 - **Documentation**: See `docs/SAVED_CHART_LAYOUTS.md` and `docs/DECISIONS.md`.
 
+## Historical Chart Replay V1 (Stage 75)
+- **Deterministic Historical Playback Engine**:
+  - Candle-by-candle historical playback inside `/charts` for studying real past market conditions.
+  - Ephemeral authenticated replay sessions bound to a single Stage 72 panel (`panel_id`).
+  - Monotonic playback speeds: 0.5x, 1.0x, 2.0x, 5.0x, 10.0x bars/sec.
+  - Play, Pause, Step Forward (+1 bar), Step Backward (-1 bar), Restart, Seek, and End-of-Data handling.
+- **Strict Future-Data Boundary Gating (No Look-Ahead)**:
+  - Visible data is physically bounded to observations $\le \text{cursor\_index}$.
+  - Bars $N+1$ and later are strictly excluded from the rendered chart, price autoscaling, candlestick geometries, volume histograms, indicator calculations, legends, tooltips, and crosshair inspection.
+  - Visual masking workarounds are prohibited; future data is physically gated.
+- **Replay-Aware Technical Indicators**:
+  - Reuses Stage 69 Indicator Registry and Stage 70 TA-Lib production calculators.
+  - Indicators (SMA, EMA, RSI, MACD, Bollinger Bands, ATR, OBV) calculate strictly over revealed history.
+  - Stepping backward removes future indicator points and deterministically restores prior cursor values.
+- **Live / Replay Separation**:
+  - Live quote overlays and current market ticks are strictly suppressed on the replayed panel.
+  - Non-replayed panels in multi-chart workspaces continue normal live streaming.
+  - Global WebSocket (Stage 43) is preserved and unharmed.
+  - Replayed panel displays an explicit `REPLAY` status badge with playback state and never displays `LIVE`.
+- **Multi-Chart & Sync Isolation**:
+  - Replay binds to one panel; other panels remain in normal mode.
+  - Stage 73 synchronization actions (instrument, interval) directed to the replayed panel are safely suppressed.
+  - Crosshair sync events with timestamps beyond the replay cursor are rejected to prevent future-data inspection leakage.
+- **Stage 74 Layout Persistence Invariance**:
+  - Ephemeral replay state is strictly excluded from Stage 74 layout serialization.
+  - Stepping replay does not alter workspace dirty state.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_chart_replay.py` (10/10 passed). All 107 backend chart tests across Stages 66 to 75 pass in 9.74s.
+  - Frontend tests: `apps/web/tests/charts-replay.test.ts` (10/10 passed). All 100 frontend chart tests across Stages 66 to 75 pass in 2.3s.
+  - Quality gates: Ruff 0 errors, TypeScript typecheck 0 errors, Next.js build 100% successful across all 38 routes.
+- **Documentation**: See `docs/CHART_REPLAY.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

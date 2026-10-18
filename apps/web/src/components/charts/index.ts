@@ -13,3 +13,7 @@ export * from "./ChartIntervalSelector";
 export * from "./ChartTypeSelector";
 export * from "./drawings";
 export * from "./workspace";
+export * from "./indicators";
+export * from "./sync";
+export * from "./layouts";
+export * from "./replay";

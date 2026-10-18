@@ -36,6 +36,8 @@ import {
 } from "@/lib/charts";
 import { ChartIntervalSelector } from "../ChartIntervalSelector";
 import { ChartTypeSelector } from "../ChartTypeSelector";
+import { ReplayStatusBadge } from "../replay";
+import { ReplaySessionStatus } from "@/lib/charts/replay";
 
 export interface ChartPanelHeaderProps {
   panelId: string;
@@ -49,6 +51,9 @@ export interface ChartPanelHeaderProps {
   liveQuote?: LiveQuoteDTO | null;
   availableInstruments: ChartInstrumentMetadata[];
   isLoading: boolean;
+  isReplaying?: boolean;
+  replayStatus?: ReplaySessionStatus;
+  playbackSpeed?: number;
   onActivate: () => void;
   onSelectInstrument: (symbol: string) => void;
   onSelectInterval: (interval: string) => void;
@@ -72,6 +77,9 @@ export function ChartPanelHeader({
   liveQuote,
   availableInstruments,
   isLoading,
+  isReplaying = false,
+  replayStatus,
+  playbackSpeed = 1,
   onActivate,
   onSelectInstrument,
   onSelectInterval,
@@ -271,10 +279,15 @@ export function ChartPanelHeader({
         )}
       </div>
 
-      {/* Right section: Live price badge & panel actions */}
+      {/* Right section: Live price badge / Replay badge & panel actions */}
       <div className="flex items-center gap-1.5 shrink-0">
-        {/* Real-time Last Price Mini-pill */}
-        {lastPrice !== null && (
+        {/* Real-time Last Price Mini-pill OR Replay Status Badge */}
+        {isReplaying ? (
+          <ReplayStatusBadge
+            status={replayStatus || "PAUSED"}
+            playbackSpeed={playbackSpeed}
+          />
+        ) : lastPrice !== null ? (
           <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-[11px] font-mono">
             <span className="text-zinc-100 font-semibold">{formatPrice(lastPrice)}</span>
             {isGenuineLast && (
@@ -283,7 +296,7 @@ export function ChartPanelHeader({
               </span>
             )}
           </div>
-        )}
+        ) : null}
 
         {onGoToLatest && (
           <button

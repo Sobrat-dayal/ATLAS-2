@@ -32,6 +32,7 @@ import {
 } from "./workspace";
 import { ChartSyncButton } from "./sync";
 import { SavedLayoutsMenu } from "./layouts";
+import { ReplayButton } from "./replay";
 
 function ChartsContent() {
   const searchParams = useSearchParams();
@@ -112,24 +113,24 @@ function ChartsContent() {
               <h1 className="text-xl font-bold tracking-tight text-zinc-100 font-mono">
                 CHARTS
               </h1>
-              <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded">
-                STAGE 74
+              <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded">
+                STAGE 75
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded flex items-center gap-1">
                 <Activity className="w-3 h-3 text-emerald-400" />
-                <span>SAVED CHART LAYOUTS V1: PERSISTENT PROFESSIONAL WORKSPACES</span>
+                <span>HISTORICAL CHART REPLAY V1: DETERMINISTIC CANDLE-BY-CANDLE PLAYBACK</span>
               </span>
               <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
-                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 69 TECHNICAL INDICATOR INFRASTRUCTURE | STAGE 70 PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB) | STAGE 71 DRAWING SUITE | STAGE 72 MULTI-CHART | STAGE 73 SYNCHRONIZATION | STAGE 74 SAVED LAYOUTS]
+                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 69 TECHNICAL INDICATOR INFRASTRUCTURE | STAGE 70 PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB) | STAGE 71 DRAWING SUITE | STAGE 72 MULTI-CHART | STAGE 73 SYNCHRONIZATION | STAGE 74 SAVED LAYOUTS | STAGE 75 HISTORICAL CHART REPLAY]
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Persistent professional chart workspaces with PostgreSQL-backed JSONB layout storage, multi-chart serialization, saved indicators and drawings, sync group persistence, versioned schemas, and conflict-safe management.
+              Deterministic historical chart replay with authenticated sessions, strict future-data boundary gating, candle-by-candle playback controls, replay-aware technical indicators, and reliable live/replay separation.
             </p>
           </div>
         </div>
 
-        {/* Top Controls: Arrangement Selector, Saved Layouts Menu, Chart Sync Button & Active Panel Badge */}
+        {/* Top Controls: Arrangement Selector, Saved Layouts Menu, Replay Button, Chart Sync Button & Active Panel Badge */}
         <div className="flex items-center gap-2 flex-wrap">
           <ChartLayoutSelector
             currentLayout={layoutId}
@@ -137,6 +138,12 @@ function ChartsContent() {
           />
 
           <SavedLayoutsMenu />
+
+          <ReplayButton
+            panelId={activePanelId}
+            symbol={activeSymbol}
+            interval={activeInterval}
+          />
 
           <ChartSyncButton
             workspaceState={{

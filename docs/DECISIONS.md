@@ -5260,6 +5260,75 @@ This document records the major architectural and product decisions established.
 195. Documentation must reflect actual implementation.
 196. Stage 75 is the next canonical development stage.
 
+## Stage 75: Historical Chart Replay V1
+
+### Product & Scope
+1. Stage 75 implements Historical Chart Replay V1 inside the existing `/charts` module.
+2. No 21st top-level navigation module or separate replay application is created.
+3. Stages 66–74 chart rendering, indicator, drawing, and multi-chart infrastructure are reused.
+4. Replay uses genuine qualified canonical OHLCV bars; no duplicate market data store is introduced.
+5. Historical replay is strictly distinct from realtime market streaming, backtesting, paper trading, and broker sandboxes.
+6. Replay does not generate AI trading predictions, buy/sell signals, or autonomous agent trades.
+7. V1 replay targets one chart panel at a time (`panel_id`); other workspace panels remain normal.
+8. Replay sessions are ephemeral; no permanent database tables or long-term replay checkpoints are introduced.
+9. Session lifetime is bounded by a 60-minute inactivity TTL.
+10. Session ownership is authenticated and strictly enforced.
+
+### Historical Data Semantics & Transparency
+11. Stage 33 canonical OHLCV and Stage 39 historical ingestion remain authoritative.
+12. ClickHouse remains the sole historical analytical datastore.
+13. Canonical instrument UUIDs and market-series identities are strictly preserved.
+14. Finalized bars only: V1 replays actual completed historical bars; it does not fabricate intraday price paths from daily OHLC.
+15. Legitimate trading calendar gaps (weekends, holidays, halts) are preserved; no artificial bars are created.
+16. Missing volume remains unavailable (`null`), never filled with zero.
+17. Historical playback uses the selected revised/adjusted dataset and explicitly discloses that it does not guarantee point-in-time information availability unless explicit vintage records exist.
+18. Source revision fingerprints are tracked to prevent mixing differing historical revisions.
+
+### Future-Data Isolation (No-Look-Ahead)
+19. Replay chart strictly gates visible history to observations up to and including the replay cursor ($[0 \dots \text{cursor\_index}]$).
+20. Future bars ($N+1 \dots$) are physically excluded from the data series; visual masking workarounds are strictly prohibited.
+21. Future bars never influence visible price scaling, zoom, or $Y$-axis autoscale bounds.
+22. Crosshair inspection and data inspector cannot query observations beyond the replay cursor.
+23. Tooltips never fabricate price values for future empty time coordinates.
+24. Preexisting drawings anchored to future historical prices are suppressed during replay.
+25. Replay-created annotations are scoped to the replay session and respect visible history.
+
+### Playback Controller & Scheduler
+26. Play, Pause, Step Forward (+1), Step Backward (-1), Restart, Seek, and Speed adjustments are supported.
+27. Speed is defined as monotonic bars-per-second (0.5x, 1x, 2x, 5x, 10x).
+28. Playback scheduler suppresses overlapping in-flight step requests to prevent race conditions and timer drift.
+29. Pausing halts scheduled advancement immediately without deleting revealed history.
+30. Reaching the final available historical bar halts playback and transitions to `END_OF_DATA`.
+31. Session cleanup on exit releases all timers, aborts pending requests, and disposes ephemeral state.
+
+### Replay-Aware Technical Indicators
+32. Stage 69 Indicator Registry and Stage 70 TA-Lib calculators are reused directly.
+33. All indicator calculations are cursor-bounded; inputs terminate exactly at the replay cursor.
+34. Indicator warmup uses qualified earlier historical bars only; future bars are never used.
+35. Stepping backward removes future indicator outputs and restores valid cursor-specific state.
+36. Indicator cache keys incorporate `replay_session_id` and `cursor_revision` to prevent sharing with normal mode.
+
+### Live Separation & Multi-Chart Compatibility
+37. Global market data WebSocket (Stage 43) is preserved and remains active for other panels.
+38. Live quote overlays and current market ticks are suppressed on the replayed panel.
+39. The replayed panel displays a prominent `REPLAY` badge and never displays `LIVE`.
+40. Non-replayed panels in multi-chart workspaces continue normal live operations.
+41. Stage 73 synchronization actions (instrument, interval) directed to the replayed panel are safely suppressed.
+42. Crosshair sync events with timestamps beyond the replay cursor are dropped to prevent look-ahead leakage.
+43. Removing the replayed panel terminates the replay session safely.
+
+### Stage 74 Saved Layout Compatibility
+44. Stage 74 persistent layout documents are preserved; replay state is never serialized into layouts.
+45. Replay progression does not mark saved layouts dirty.
+46. Switching or loading a saved layout safely exits replay mode.
+47. Normal pre-replay workspace configuration is cleanly restored on replay exit.
+
+### Security & Resource Governance
+48. Replay APIs require Stage 13 authentication and Stage 14 authorization.
+49. User quota: maximum 5 active replay sessions per user.
+50. Read-only operation: zero canonical OHLCV writes, zero database migrations, zero trading orders, zero LLM calls.
+51. Stage 76 is the next canonical development stage (Watchlists V1).
+
 
 
 

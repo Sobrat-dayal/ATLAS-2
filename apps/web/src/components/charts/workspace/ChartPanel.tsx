@@ -41,7 +41,9 @@ import {
   useChartIntervals,
   useChartSync,
   useIndicators,
+  useChartReplay,
 } from "@/hooks/charts";
+import { ReplayToolbar } from "../replay";
 import {
   HistoricalChart,
   ChartImperativeActions,
@@ -195,6 +197,18 @@ export function ChartPanel({
     };
   }, [panelId, selectedInstrument]);
 
+  // Stage 75 Historical Chart Replay Hook
+  const {
+    isPanelInReplay,
+    revealedBars,
+    cursorBar,
+    status: replayStatus,
+    playbackSpeed,
+  } = useChartReplay();
+  const inReplay = isPanelInReplay(panelId);
+  const effectiveBars = inReplay ? revealedBars : bars;
+  const effectiveLiveQuote = inReplay ? null : liveQuote;
+
   // 4. Independent TA-Lib indicators for this panel
   const [isIndicatorPickerOpen, setIsIndicatorPickerOpen] = useState(false);
   const [editingIndicator, setEditingIndicator] = useState<IndicatorInstanceConfig | null>(null);
@@ -211,7 +225,7 @@ export function ChartPanel({
   } = useIndicators({
     instrument: selectedInstrument,
     interval,
-    barsCount: bars.length,
+    barsCount: effectiveBars.length,
   });
 
   // 5. Stage 73 Panel Synchronization Adapter Registration
@@ -229,6 +243,15 @@ export function ChartPanel({
           setLinkedCrosshair(null);
           chartActionsRef.current?.clearCrosshairPosition();
           return { panelId, property: "crosshair", result: "APPLIED" };
+        }
+
+        // Future isolation: never allow crosshair from external panel to reveal beyond current replay cursor
+        if (inReplay && cursorBar) {
+          const cursorTimeSec =
+            cursorBar.time_unix || Math.floor(new Date(cursorBar.timestamp).getTime() / 1000);
+          if (payload.timestampSeconds > cursorTimeSec) {
+            return { panelId, property: "crosshair", result: "UNCHANGED", reason: "Replay future isolation" };
+          }
         }
 
         setLinkedCrosshair({
@@ -255,8 +278,8 @@ export function ChartPanel({
         if (!chartActionsRef.current) {
           return { panelId, property: "visibleTimeRange", result: "NOT_READY" };
         }
-        const minTime = bars.length > 0 ? bars[0].time_unix : null;
-        const maxTime = bars.length > 0 ? bars[bars.length - 1].time_unix : null;
+        const minTime = effectiveBars.length > 0 ? effectiveBars[0].time_unix : null;
+        const maxTime = effectiveBars.length > 0 ? effectiveBars[effectiveBars.length - 1].time_unix : null;
         const clamped = clampVisibleTimeRange(payload.from, payload.to, minTime, maxTime);
 
         const ok = chartActionsRef.current.setVisibleRange({
@@ -271,11 +294,19 @@ export function ChartPanel({
       },
 
       applyInstrument: async (payload) => {
+        if (inReplay) {
+          // Replay session is bound to its selected canonical instrument
+          return { panelId, property: "instrument", result: "UNCHANGED", reason: "Replay panel isolated" };
+        }
         selectInstrument(payload.symbol);
         return { panelId, property: "instrument", result: "APPLIED" };
       },
 
       applyInterval: async (payload) => {
+        if (inReplay) {
+          // Replay session is bound to its selected interval
+          return { panelId, property: "interval", result: "UNCHANGED", reason: "Replay panel isolated" };
+        }
         setInterval(payload.intervalId);
         return { panelId, property: "interval", result: "APPLIED" };
       },
@@ -434,9 +465,12 @@ export function ChartPanel({
           interval={interval}
           intervals={intervals}
           renderMode={renderMode}
-          liveQuote={liveQuote}
+          liveQuote={effectiveLiveQuote}
           availableInstruments={availableInstruments}
           isLoading={isLoading}
+          isReplaying={inReplay}
+          replayStatus={replayStatus}
+          playbackSpeed={playbackSpeed}
           onActivate={onActivate}
           onSelectInstrument={handleSelectInstrument}
           onSelectInterval={handleSelectInterval}
@@ -447,6 +481,9 @@ export function ChartPanel({
           onOpenIndicators={() => setIsIndicatorPickerOpen(true)}
           activeIndicatorCount={activeInstances.length}
         />
+
+        {/* Stage 75: Institutional Replay Playback Toolbar when panel is in replay mode */}
+        {inReplay && <ReplayToolbar />}
 
         {/* Dynamic Crosshair Details Strip */}
         <ChartCrosshairDetails
@@ -470,26 +507,26 @@ export function ChartPanel({
 
         {/* Primary Chart Viewport (with panelId passed for Drawing Isolation & Sync) */}
         <div className="w-full flex-1 min-h-[180px] relative p-1 bg-black">
-          {isLoading && bars.length === 0 ? (
+          {isLoading && effectiveBars.length === 0 ? (
             <ChartLoadingSkeleton />
-          ) : error && bars.length === 0 ? (
+          ) : error && effectiveBars.length === 0 ? (
             <ChartErrorState error={error} onRetry={refreshHistory} />
-          ) : bars.length === 0 ? (
+          ) : effectiveBars.length === 0 ? (
             <ChartEmptyState onSelectDefault={() => selectInstrument("SPY")} />
           ) : (
             <HistoricalChart
-              bars={bars}
+              bars={effectiveBars}
               renderMode={renderMode}
               instrument={selectedInstrument}
-              liveQuote={liveQuote}
+              liveQuote={effectiveLiveQuote}
               indicatorResults={indicatorResults}
               activeIndicators={activeInstances}
               onHoverBar={handleHoverBar}
               onCrosshairLeave={handleCrosshairLeave}
               onVisibleTimeRangeChange={handleVisibleTimeRangeChange}
               synchronizedCrosshair={linkedCrosshair}
-              onBackfill={loadOlderHistory}
-              hasMore={pagination?.has_more}
+              onBackfill={inReplay ? undefined : loadOlderHistory}
+              hasMore={inReplay ? false : pagination?.has_more}
               isBackfilling={isBackfilling}
               onUserPan={handleUserPan}
               onAtLatest={handleAtLatest}
