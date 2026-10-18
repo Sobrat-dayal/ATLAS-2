@@ -92,6 +92,7 @@ export const DEFAULT_DRAWING_STYLES: Record<DrawingType, DrawingStyle> = {
 
 export class DrawingSessionStore {
   private static instance: DrawingSessionStore;
+  private static panelInstances: Map<string, DrawingSessionStore> = new Map();
 
   // Map of contextKey -> DrawingObject[]
   private contextDrawingsMap: Map<string, DrawingObject[]> = new Map();
@@ -114,13 +115,29 @@ export class DrawingSessionStore {
   private listeners: Set<DrawingStoreListener> = new Set();
   private maxDrawingsPerContext = 250;
 
-  private constructor() {}
+  public constructor() {}
 
   public static getInstance(): DrawingSessionStore {
     if (!DrawingSessionStore.instance) {
       DrawingSessionStore.instance = new DrawingSessionStore();
     }
     return DrawingSessionStore.instance;
+  }
+
+  public static getForPanel(panelId?: string): DrawingSessionStore {
+    if (!panelId) {
+      return DrawingSessionStore.getInstance();
+    }
+    let store = DrawingSessionStore.panelInstances.get(panelId);
+    if (!store) {
+      store = new DrawingSessionStore();
+      DrawingSessionStore.panelInstances.set(panelId, store);
+    }
+    return store;
+  }
+
+  public static disposePanel(panelId: string): void {
+    DrawingSessionStore.panelInstances.delete(panelId);
   }
 
   private getContextKey(context: DrawingChartContext = this.currentContext): string {

@@ -70,6 +70,7 @@ export interface HistoricalChartProps {
   onUserPan?: () => void;
   onAtLatest?: () => void;
   chartActionsRef?: React.MutableRefObject<{ goToLatest: () => void } | null>;
+  panelId?: string;
 }
 
 export function HistoricalChart({
@@ -86,6 +87,7 @@ export function HistoricalChart({
   onUserPan,
   onAtLatest,
   chartActionsRef,
+  panelId,
 }: HistoricalChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -109,7 +111,7 @@ export function HistoricalChart({
   const onUserPanRef = useRef(onUserPan);
   const onAtLatestRef = useRef(onAtLatest);
 
-  // Drawing Tools Hook (Stage 71)
+  // Drawing Tools Hook (Stage 71 & 72 panel isolation)
   const {
     drawings,
     activeTool,
@@ -129,7 +131,7 @@ export function HistoricalChart({
     undo,
     redo,
     commitDrawingAnchors,
-  } = useDrawingTools({ instrument });
+  } = useDrawingTools({ instrument, panelId });
 
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [editingCoordinatesDrawing, setEditingCoordinatesDrawing] = useState<DrawingObject | null>(null);

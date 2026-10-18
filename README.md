@@ -649,6 +649,41 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Full TypeScript typecheck and Next.js production build pass across all 38 routes with 0 errors.
 - **Documentation**: See `docs/CHART_DRAWING_TOOLS.md`
 
+## Professional Multi-Chart Layouts V1 (Stage 72)
+- **Multi-Chart Workspace Architecture**:
+  - Transforms `/charts` into an institutional multi-chart financial workstation supporting up to 4 simultaneous independently configured chart panels.
+  - **6 Canonical Layout Presets**:
+    - `single`: 1 full workspace chart
+    - `two-columns`: 2 side-by-side charts (horizontal split)
+    - `two-rows`: 2 vertically stacked charts (vertical split)
+    - `three-left-focus`: 1 large primary chart left (60%), 2 stacked on right (40%)
+    - `three-top-focus`: 1 large primary chart top (60%), 2 side-by-side below (40%)
+    - `four-grid`: 2x2 grid of 4 independent charts
+  - **Layout Selector Component**: Compact dropdown in toolbar featuring SVG mini-diagrams for all 6 presets, accessible hotkeys, and tooltips.
+- **Strict Panel Independence**:
+  - Independent instruments and market series per panel (e.g. Panel 1: SPY, Panel 2: BTCUSDT, Panel 3: EURUSD, Panel 4: AAPL).
+  - Independent intervals (`1m`, `5m`, `15m`, `1h`, `1D`, `1W`).
+  - Independent chart types (`candlestick`, `bar`, `line`, `area`).
+  - Independent viewports, zoom, pan, and crosshair inspection.
+  - Independent TA-Lib indicators and attached oscillator subpanes.
+  - Independent drawing sessions (`DrawingSessionStore.getForPanel(panelId)`) with isolated undo/redo stacks.
+- **Active Panel Management**:
+  - Explicit active panel state (`activePanelId`) with visual cyan outline (`border-cyan-500/80 ring-1 ring-cyan-500/40`) and header badge.
+  - Toolbar controls and Global Search target the active panel without modifying inactive panels.
+  - Synchronizes active panel entity to global `SelectedEntity` without circular feedback loops.
+- **Shared Market Data Infrastructure**:
+  - `ChartQueryCache`: Centralized query cache deduplicating identical historical OHLCV requests across panels with in-flight request merging and bounded LRU eviction.
+  - `SharedChartSubscriptionManager`: Central WebSocket subscription manager reference-counting active series across panels. When multiple panels display the same series, 1 shared connection is reused; pausing one panel does not pause others.
+- **Resizable Splitters & Responsive Design**:
+  - `AtlasSplit` / `react-resizable-panels` integration with horizontal and vertical drag handles and keyboard arrow resizing.
+  - Minimum panel constraints enforced (~320px width, ~220px height) preventing collapsed panels.
+  - Responsive mobile tab fallback (`[P1 SPY] [P2 BTCUSDT] [P3 EURUSD] [P4 AAPL]`) for screens <768px, preserving underlying multi-chart layout state.
+- **Testing & Verification**:
+  - `apps/web/tests/charts-multi-layout.test.ts`: 10/10 tests pass (layout registry, panel stability, active panel focus, instrument/interval isolation, drawing isolation, shared caching, reference counting, responsive modes, security).
+  - All Stage 66-71 regression test suites pass with 0 regressions.
+  - Full TypeScript typecheck (`npx tsc --noEmit`) and Next.js production build (`npm run build`) pass across all 38 routes.
+- **Documentation**: See `docs/MULTI_CHART_LAYOUTS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

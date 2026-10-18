@@ -45,6 +45,7 @@ export interface ChartToolbarProps {
   liveControls?: React.ReactNode;
   onOpenIndicators?: () => void;
   activeIndicatorCount?: number;
+  layoutSelector?: React.ReactNode;
 }
 
 export function ChartToolbar({
@@ -63,6 +64,7 @@ export function ChartToolbar({
   liveControls,
   onOpenIndicators,
   activeIndicatorCount = 0,
+  layoutSelector,
 }: ChartToolbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
@@ -191,8 +193,10 @@ export function ChartToolbar({
       {/* Middle/Live Controls Slot */}
       {liveControls && <div className="flex items-center">{liveControls}</div>}
 
-      {/* Right controls: Viewport & Refresh */}
+      {/* Right controls: Layout Selector, Viewport & Refresh */}
       <div className="flex items-center gap-2">
+        {layoutSelector && <div className="flex items-center">{layoutSelector}</div>}
+
         {onResetView && (
           <button
             type="button"

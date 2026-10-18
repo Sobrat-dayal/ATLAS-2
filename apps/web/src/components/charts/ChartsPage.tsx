@@ -1,39 +1,35 @@
 "use client";
 
 /**
- * Master Charts Workspace Page for ATLAS (Stage 67).
+ * Master Charts Workspace Page for ATLAS (Stage 72).
  *
- * Implements the institutional Bloomberg/TradingView-inspired workspace at /charts,
- * integrating Stage 66 historical OHLCV candles with Stage 67 live market data
- * streaming, genuine Last-price overlay, transport/freshness status, and controls.
+ * Implements the institutional Bloomberg/TradingView-inspired multi-chart workspace at /charts,
+ * integrating Stage 72 independent financial chart panels, resizable chart grids,
+ * multi-instrument market analysis, per-panel technical indicators, drawing isolation,
+ * shared live market data and high-performance chart workspace management.
  */
 
-import React, { Suspense, useRef, useState } from "react";
+import React, { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, CandlestickChart } from "lucide-react";
-import { useChartHistory, useChartIntervals, useIndicators, useLiveChart } from "@/hooks/charts";
-import { IndicatorInstanceConfig } from "@/lib/charts";
+import { Activity, CandlestickChart, Layers } from "lucide-react";
+import { useChartHistory, useChartIntervals, useIndicators, useLiveChart, useMultiChartWorkspace } from "@/hooks/charts";
 import { ChartInstrumentHeader } from "./ChartInstrumentHeader";
-import { ChartToolbar } from "./ChartToolbar";
-import { ChartCrosshairDetails } from "./ChartCrosshairDetails";
-import { HistoricalChart } from "./HistoricalChart";
 import { ChartDataStatus } from "./ChartDataStatus";
 import { HistoricalDataTable } from "./HistoricalDataTable";
 import { LiveMarketDataStatus } from "./LiveMarketDataStatus";
-import { LiveChartControls } from "./LiveChartControls";
-import { LatestQuoteDetails } from "./LatestQuoteDetails";
 import {
   ActiveIndicators,
   IndicatorInspectorTable,
-  IndicatorParameterEditor,
   IndicatorPicker,
   IndicatorSubpane,
 } from "./indicators";
 import {
-  ChartEmptyState,
-  ChartErrorState,
   ChartLoadingSkeleton,
 } from "./ChartEmptyErrorStates";
+import {
+  ChartLayoutSelector,
+  MultiChartWorkspace,
+} from "./workspace";
 
 function ChartsContent() {
   const searchParams = useSearchParams();
@@ -41,92 +37,65 @@ function ChartsContent() {
   const urlInstrumentId = searchParams.get("instrument_id") || searchParams.get("id");
   const initialParam = urlInstrumentId || urlSymbol || "SPY";
 
+  // Stage 72 Multi-Chart Workspace State Hook
   const {
-    selectedSymbol,
+    layoutId,
+    panelIds,
+    activePanelId,
+    activePanel,
+    panels,
+    setLayoutId,
+    setActivePanelId,
+    updatePanel,
+  } = useMultiChartWorkspace();
+
+  // Sync initial URL param to active panel on mount
+  useEffect(() => {
+    if (initialParam && activePanel && activePanel.symbol !== initialParam) {
+      updatePanel(activePanelId, { symbol: initialParam });
+    }
+  }, [initialParam]);
+
+  // Active panel data resolution (powered by shared chartQueryCache)
+  const activeSymbol = activePanel?.symbol || "SPY";
+  const activeInterval = activePanel?.interval || "1d";
+
+  const {
     selectedInstrument,
     interval,
-    setInterval,
-    renderMode,
-    setRenderMode,
     intervalSourceKind,
     derivedSourceInterval,
     bars,
     coverage,
-    pagination,
-    isLoading,
-    isBackfilling,
-    error,
-    hoveredBar,
-    selectInstrument,
-    loadOlderHistory,
     refreshHistory,
-    setHoveredBar,
-    availableInstruments,
-  } = useChartHistory(initialParam);
+  } = useChartHistory(activeSymbol, activeInterval, { syncGlobalEntity: true });
 
-  const { intervals } = useChartIntervals(selectedInstrument?.entity_id || selectedSymbol);
+  const { intervals } = useChartIntervals(selectedInstrument?.entity_id || activeSymbol);
 
+  // Active panel live stream status (powered by sharedSubscriptionManager)
   const {
     quote: liveQuote,
     connectionState,
     freshnessStatus,
     delayStatus,
     liveCapability,
-    isPaused,
-    isFollowingLatest,
     provider: liveProvider,
     venue: liveVenue,
-    togglePause,
-    setFollowingLatest,
   } = useLiveChart(selectedInstrument);
 
-  const chartActionsRef = useRef<{ goToLatest: () => void } | null>(null);
-
-  // Stage 69 Technical Indicator State & Calculations
-  const [isIndicatorPickerOpen, setIsIndicatorPickerOpen] = useState(false);
-  const [editingIndicator, setEditingIndicator] = useState<IndicatorInstanceConfig | null>(null);
-
+  // Active panel indicators (for numerical inspection table)
   const {
     catalog,
-    isLoadingCatalog,
     activeInstances,
     results: indicatorResults,
-    isCalculating: isIndicatorsCalculating,
-    calculationError: indicatorsError,
-    addIndicator,
-    updateInstance,
-    toggleVisibility,
-    removeInstance,
   } = useIndicators({
     instrument: selectedInstrument,
-    interval,
+    interval: activeInterval,
     barsCount: bars.length,
   });
 
-  const handleUserPan = React.useCallback(() => {
-    setFollowingLatest(false);
-  }, [setFollowingLatest]);
-
-  const handleAtLatest = React.useCallback(() => {
-    setFollowingLatest(true);
-  }, [setFollowingLatest]);
-
-  const handleGoToLatest = () => {
-    if (chartActionsRef.current) {
-      chartActionsRef.current.goToLatest();
-    }
-    setFollowingLatest(true);
-  };
-
-  const liveControls = (
-    <LiveChartControls
-      isPaused={isPaused}
-      isFollowingLatest={isFollowingLatest}
-      liveCapability={liveCapability}
-      onTogglePause={togglePause}
-      onGoToLatest={handleGoToLatest}
-    />
-  );
+  const activePanelIndex = panelIds.indexOf(activePanelId);
+  const activePanelDisplayIndex = activePanelIndex >= 0 ? activePanelIndex + 1 : 1;
 
   return (
     <div className="w-full flex flex-col gap-3 p-4 md:p-6 min-h-screen bg-black text-zinc-100 font-sans">
@@ -137,180 +106,100 @@ function ChartsContent() {
             <CandlestickChart className="w-5 h-5 text-cyan-400" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold tracking-tight text-zinc-100 font-mono">
                 CHARTS
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 rounded">
-                STAGE 71
+                STAGE 72
               </span>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded flex items-center gap-1">
                 <Activity className="w-3 h-3 text-emerald-400" />
-                <span>PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB) & DRAWING SUITE</span>
+                <span>PROFESSIONAL MULTI-CHART WORKSPACE & INDEPENDENT PANELS</span>
               </span>
               <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
-                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 70 TA-LIB STUDIES | STAGE 71 DRAWINGS]
+                [STAGE 68 MULTI-TIMEFRAME & ADVANCED TYPES | STAGE 70 PRODUCTION TECHNICAL ANALYSIS ENGINE (TA-LIB) | STAGE 71 DRAWING SUITE | STAGE 72 MULTI-CHART]
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Professional interactive technical drawing suite with trendlines, support & resistance levels, Fibonacci retracements, price & time measurements, smart OHLC snapping, and financial coordinate precision.
+              Institutional multi-chart financial workstation with independent financial chart panels, resizable splitters, per-panel TA-Lib indicators and drawings, shared live market streaming, and bounded resource budgets.
             </p>
           </div>
         </div>
+
+        {/* Top Controls: Layout Selector & Active Panel Badge */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded text-xs font-mono">
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-zinc-400">Active:</span>
+            <span className="font-semibold text-cyan-300">
+              P{activePanelDisplayIndex} ({activeSymbol})
+            </span>
+          </div>
+
+          <ChartLayoutSelector
+            currentLayout={layoutId}
+            onSelectLayout={setLayoutId}
+          />
+        </div>
       </div>
 
-      {/* Instrument Overview Header */}
+      {/* Active Instrument Overview Header */}
       <ChartInstrumentHeader instrument={selectedInstrument} />
 
-      {/* Main Chart Card */}
-      <div className="flex flex-col bg-zinc-950/90 border border-zinc-800/80 rounded overflow-hidden shadow-2xl">
-        {/* Toolbar with Interval & Chart Type Selectors, Indicators & Live Controls */}
-        <ChartToolbar
-          selectedSymbol={selectedSymbol}
-          availableInstruments={availableInstruments}
-          interval={interval}
-          onSelectInterval={setInterval}
-          intervals={intervals}
-          renderMode={renderMode}
-          isLoading={isLoading}
-          onSelectInstrument={selectInstrument}
-          onSelectRenderMode={setRenderMode}
-          onRefresh={refreshHistory}
-          liveControls={liveControls}
-          onOpenIndicators={() => setIsIndicatorPickerOpen(true)}
-          activeIndicatorCount={activeInstances.length}
-        />
+      {/* Master Multi-Chart Workspace Container (Single, 2-Columns, 2-Rows, 3-Focus, 4-Grid) */}
+      <MultiChartWorkspace
+        layoutId={layoutId}
+        panelIds={panelIds}
+        activePanelId={activePanelId}
+        panels={panels}
+        onActivatePanel={setActivePanelId}
+        onUpdatePanelState={updatePanel}
+      />
 
-        {/* Detailed Live Quote Metrics Strip */}
-        <LatestQuoteDetails quote={liveQuote} instrument={selectedInstrument} />
-
-        {/* Dynamic Crosshair Details Bar (with real-time indicator inspection) */}
-        <ChartCrosshairDetails
-          hoveredBar={hoveredBar}
-          instrument={selectedInstrument}
-          indicatorResults={indicatorResults}
-          activeIndicators={activeInstances}
-        />
-
-        {/* Active Indicators Legend Strip */}
-        {activeInstances.length > 0 && (
-          <ActiveIndicators
-            instances={activeInstances}
-            catalog={catalog}
-            results={indicatorResults}
-            onToggleVisibility={toggleVisibility}
-            onConfigure={(inst) => setEditingIndicator(inst)}
-            onRemove={removeInstance}
-          />
-        )}
-
-        {/* Primary Chart Viewport */}
-        <div className="w-full h-[540px] relative p-1">
-          {isLoading && bars.length === 0 ? (
-            <ChartLoadingSkeleton />
-          ) : error && bars.length === 0 ? (
-            <ChartErrorState error={error} onRetry={refreshHistory} />
-          ) : bars.length === 0 ? (
-            <ChartEmptyState onSelectDefault={() => selectInstrument("SPY")} />
-          ) : (
-            <HistoricalChart
-              bars={bars}
-              renderMode={renderMode}
-              instrument={selectedInstrument}
-              liveQuote={liveQuote}
-              indicatorResults={indicatorResults}
-              activeIndicators={activeInstances}
-              onHoverBar={setHoveredBar}
-              onBackfill={loadOlderHistory}
-              hasMore={pagination?.has_more}
-              isBackfilling={isBackfilling}
-              onUserPan={handleUserPan}
-              onAtLatest={handleAtLatest}
-              chartActionsRef={chartActionsRef}
-            />
-          )}
+      {/* Active Chart Provenance & Market Data Freshness Footer Strip */}
+      <div className="p-3 border border-zinc-800/80 rounded bg-zinc-950/90 flex flex-col gap-2">
+        <div className="flex items-center justify-between pb-1 border-b border-zinc-900 text-xs font-mono">
+          <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[11px]">
+            Active Panel Status: Panel {activePanelDisplayIndex} ({activeSymbol})
+          </span>
+          <span className="text-[10px] text-zinc-500">
+            Independent per-panel data quality, coverage provenance & entitlements
+          </span>
         </div>
 
-        {/* Stage 70 Independent Indicator Subpanes (Oscillators, Momentum, Volume) */}
-        {activeInstances.map((inst) => {
-          const defn = catalog.find((d) => d.indicator_id === inst.indicator_id);
-          const res = indicatorResults.find((r) => r.instance_id === inst.instance_id);
-          if (res?.rendering_target !== "INDICATOR_PANE" && defn?.rendering_target !== "INDICATOR_PANE") {
-            return null;
-          }
-          return (
-            <IndicatorSubpane
-              key={inst.instance_id}
-              instance={inst}
-              definition={defn}
-              result={res}
-              hoveredBar={hoveredBar}
-              onToggleVisibility={() => toggleVisibility(inst.instance_id)}
-              onConfigure={() => setEditingIndicator(inst)}
-              onRemove={() => removeInstance(inst.instance_id)}
-            />
-          );
-        })}
+        <LiveMarketDataStatus
+          connectionState={connectionState}
+          freshnessStatus={freshnessStatus}
+          delayStatus={delayStatus}
+          liveCapability={liveCapability}
+          quote={liveQuote}
+          instrument={selectedInstrument}
+          provider={liveProvider}
+          venue={liveVenue}
+        />
 
-        {/* Live Market Data Status & Coverage Provenance Footer */}
-        <div className="p-2 border-t border-zinc-800/80 bg-zinc-950 flex flex-col gap-2">
-          <LiveMarketDataStatus
-            connectionState={connectionState}
-            freshnessStatus={freshnessStatus}
-            delayStatus={delayStatus}
-            liveCapability={liveCapability}
-            quote={liveQuote}
+        <div className="border-t border-zinc-900 pt-2">
+          <ChartDataStatus
+            coverage={coverage}
             instrument={selectedInstrument}
-            provider={liveProvider}
-            venue={liveVenue}
+            interval={interval}
+            intervalSourceKind={intervalSourceKind}
+            derivedSourceInterval={derivedSourceInterval}
           />
-          <div className="border-t border-zinc-900 pt-2">
-            <ChartDataStatus
-              coverage={coverage}
-              instrument={selectedInstrument}
-              interval={interval}
-              intervalSourceKind={intervalSourceKind}
-              derivedSourceInterval={derivedSourceInterval}
-            />
-          </div>
         </div>
       </div>
 
-      {/* Accessible Historical Data Table */}
+      {/* Accessible Historical Data Table for Active Panel */}
       <HistoricalDataTable bars={bars} instrument={selectedInstrument} />
 
-      {/* Stage 70 Accessible Technical Indicator Numerical Inspector Table */}
+      {/* Stage 70 Accessible Technical Indicator Numerical Inspector Table for Active Panel */}
       <IndicatorInspectorTable
         bars={bars}
         catalog={catalog}
         instances={activeInstances}
         results={indicatorResults}
       />
-
-      {/* Stage 69 Indicator Modals */}
-      <IndicatorPicker
-        isOpen={isIndicatorPickerOpen}
-        catalog={catalog}
-        isLoading={isLoadingCatalog}
-        activeCount={activeInstances.length}
-        onClose={() => setIsIndicatorPickerOpen(false)}
-        onSelect={(indicatorId: string) => {
-          addIndicator(indicatorId);
-        }}
-      />
-
-      {editingIndicator && (
-        <IndicatorParameterEditor
-          isOpen={!!editingIndicator}
-          instance={editingIndicator}
-          definition={catalog.find((d) => d.indicator_id === editingIndicator.indicator_id)}
-          onClose={() => setEditingIndicator(null)}
-          onSave={(instanceId, updates) => {
-            updateInstance(instanceId, updates);
-            setEditingIndicator(null);
-          }}
-        />
-      )}
     </div>
   );
 }

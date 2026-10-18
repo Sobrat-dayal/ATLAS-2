@@ -4,3 +4,4 @@ export * from "./formatting";
 export * from "./live-controller";
 export * from "./indicators";
 export * from "./drawings";
+export * from "./workspace";

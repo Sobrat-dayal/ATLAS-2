@@ -12,3 +12,4 @@ export * from "./LatestQuoteDetails";
 export * from "./ChartIntervalSelector";
 export * from "./ChartTypeSelector";
 export * from "./drawings";
+export * from "./workspace";

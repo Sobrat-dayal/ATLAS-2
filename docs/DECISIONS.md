@@ -4666,5 +4666,197 @@ This document records the major architectural and product decisions established.
 161. Documentation must match implementation.
 162. Stage 72 is the next canonical stage.
 
+## Stage 72: Multi-Chart Layouts V1
+
+### Product
+1. Stage 72 implements Multi-Chart Layouts V1.
+2. The canonical route remains `/charts`.
+3. No new global Sidebar module is created.
+4. Existing AppShell remains authoritative.
+5. Existing Agent Dock is preserved.
+6. Existing Bottom Taskbar is preserved.
+7. Existing design tokens are reused.
+8. Multi-chart layouts are desktop-first and responsive.
+9. No fake market data is introduced.
+10. No Trading or Agent execution is introduced.
+
+### Layouts
+11. Single-chart layout is preserved.
+12. Two-column layout is supported.
+13. Two-row layout is supported.
+14. Three-chart left-focus layout is supported.
+15. Three-chart top-focus layout is supported.
+16. Four-chart grid is supported.
+17. Layout definitions are centralized in `CHART_LAYOUTS`.
+18. Panel count is bounded (maximum 4 visible panels).
+19. Layout changes preserve compatible panel state.
+20. Layout resizing is functional with `AtlasSplit` / `react-resizable-panels`.
+21. Minimum panel sizes are enforced (width >= 320px, height >= 220px).
+22. Nested splitters remain within valid bounds.
+23. Responsive presentation is separate from selected layout identity.
+24. Mobile uses a usable reduced-visible-panel tabbed presentation.
+
+### Panel Identity
+25. Every chart panel has a stable ID (`panel-1`, `panel-2`, etc.).
+26. Panel ID is distinct from instrument UUID.
+27. React keys use stable panel identity.
+28. Each panel owns its chart renderer instance.
+29. Each panel owns its viewport.
+30. Each panel owns its selected instrument and series.
+31. Each panel owns interval and chart type.
+32. Each panel owns its indicator instance state.
+33. Each panel owns drawing interaction state.
+34. Each panel owns its loading/error state.
+35. No mutable global chart instance is reused by unrelated panels.
+
+### Active Panel
+36. One panel is designated active (`activePanelId`).
+37. Active panel selection is explicit (clicking header/chart or keyboard focus).
+38. Global Search targets the active panel under documented policy.
+39. Inactive panels are not automatically overwritten.
+40. Global Selected Entity integration avoids feedback loops.
+41. Command Palette actions target the active panel.
+42. Keyboard focus follows accessible active-panel semantics.
+
+### Market Data
+43. Stage 33 canonical Market Data remains authoritative.
+44. Stage 39 historical ingestion remains authoritative.
+45. Stage 41 latest Quote remains authoritative.
+46. Stage 42 Market Events are reused.
+47. Stage 43 global WebSocket is reused.
+48. Stage 44 freshness remains authoritative.
+49. Historical read APIs are reused.
+50. No duplicate Provider router is introduced.
+51. No duplicate historical database is introduced.
+52. No duplicate Quote cache is introduced.
+53. No duplicate event bus is introduced.
+54. No Provider calls occur directly from chart layouts.
+55. No ingestion jobs are created by layout changes.
+56. No fake OHLCV is generated for empty panels.
+
+### Caching
+57. Historical data is shared through authorized immutable cache entries via `ChartQueryCache`.
+58. Cache keys preserve instrument UUID / canonical symbol.
+59. Cache keys preserve series/venue.
+60. Cache keys preserve interval.
+61. Cache keys preserve adjustment basis.
+62. Cache keys preserve price basis.
+63. Cache keys respect entitlements.
+64. No mutable cross-panel bar contamination occurs (deep cloning / immutability).
+65. Historical pagination remains panel-specific.
+66. Identical authorized reads are deduplicated via in-flight request coalescing.
+
+### Live Subscriptions
+67. One existing global WebSocket infrastructure is used.
+68. Subscription reference counting is managed by `SharedChartSubscriptionManager`.
+69. Identical compatible series share one underlying subscription.
+70. Different venues and expirations remain distinct.
+71. Pausing one panel does not pause other consumers.
+72. Closing one panel does not close shared transport.
+73. Final consumer release cleanly disposes stream controllers.
+74. Reconnect reconciles each active panel.
+75. Duplicate/older events are rejected.
+76. Quote snapshots do not fabricate candles.
+77. Last-price and freshness semantics remain correct.
+78. Live subscription quotas (max 10) are respected.
+
+### Indicators
+79. Stage 69 Indicator Registry remains shared.
+80. Stage 70 TA-Lib calculation services remain shared.
+81. Indicator instances are panel-specific.
+82. Indicator visibility is panel-specific.
+83. Indicator parameters are panel-specific.
+84. Indicator panes belong to their owning primary chart.
+85. Compatible immutable calculation results may be cached.
+86. One panel's indicator settings do not mutate another's.
+
+### Drawings
+87. Stage 71 drawing engine is reused.
+88. Drawing controllers are panel-specific via `DrawingSessionStore.getForPanel(panelId)`.
+89. Financial anchors are preserved across resizes.
+90. Drawing selection is panel-specific.
+91. Undo/Redo is panel-specific.
+92. Drawing state is not automatically copied between panels.
+93. Panel resizing does not corrupt drawing anchors.
+94. Session-only drawing storage is preserved.
+95. No persistent drawing database is introduced.
+
+### Resource Management
+96. Maximum visible chart count is bounded (4 visible panels).
+97. Mounted renderers are bounded (max 4).
+98. Historical memory is bounded via LRU query cache.
+99. Indicator workload is bounded (max 12 per panel).
+100. Drawing workload is bounded (max 250 per panel).
+101. Live subscriptions are bounded (max 10).
+102. Visible panels are prioritized.
+103. Hidden panels are suspended.
+104. Suspended panels reconcile on resume.
+105. No unbounded hidden event queue is maintained.
+106. Layout resizing does not remount all charts unnecessarily.
+107. Error isolation is enforced via `ChartPanelErrorBoundary`.
+108. Cleanup prevents resource leaks.
+109. Performance metrics avoid high-cardinality labels.
+
+### Responsive and Accessibility
+110. Desktop supports full grid layouts.
+111. Tablet presentation remains usable.
+112. Mobile avoids microscopic four-chart grids.
+113. Panel tabs are supported on narrow viewports (<768px).
+114. Layout resize handles are keyboard accessible.
+115. Active panel state is accessible.
+116. Focus management is explicit.
+117. Chart controls remain accessible.
+118. Agent Dock interactions are supported.
+119. Bottom Taskbar interactions are supported.
+120. Light/dark themes are supported.
+121. No purple gradients are introduced.
+122. No emoji icons are introduced.
+123. No decorative fake charts are introduced.
+
+### Security
+124. Authentication is reused.
+125. Authorization is reused.
+126. Each panel enforces market-data entitlements.
+127. Shared caches do not leak restricted data.
+128. Provider credentials remain server-side.
+129. Arbitrary Provider URLs are rejected.
+130. No arbitrary SQL is executed.
+131. No canonical financial-data writes occur from layout changes.
+132. No Trading orders are placed.
+133. No Portfolio modifications occur.
+134. No Agents execute.
+135. No Workflows execute.
+136. No LLM calls are required.
+
+### Roadmap Boundaries
+137. Stage 73 owns cross-chart synchronization.
+138. Stage 74 owns saved chart layouts.
+139. Stage 75 owns chart replay.
+140. Stage 76 owns Watchlists.
+141. Stage 80 owns Alerts.
+142. Stage 94–98 own Screeners.
+143. Stage 110+ own Portfolios.
+144. Stage 115+ own Risk.
+145. Stage 143 owns Backtesting.
+146. Stage 144 owns Paper Trading.
+147. Stage 145 owns Broker Sandbox.
+148. Stage 146+ own Autonomous Agents.
+149. No linked crosshairs are implemented prematurely.
+150. No linked chart intervals are implemented prematurely.
+151. No synchronized pan/zoom is implemented prematurely.
+152. No automatic drawing synchronization is implemented prematurely.
+153. No cloud-saved chart layouts are implemented prematurely.
+154. No replay engine is implemented prematurely.
+155. No chart-triggered trading strategy is implemented.
+156. No duplicated market-data infrastructure is introduced.
+157. Stage 72 must pass panel isolation tests.
+158. Stage 72 must pass shared subscription tests.
+159. Stage 72 must pass resource lifecycle tests.
+160. Stage 72 must pass layout-resize tests.
+161. Stage 72 must pass responsive/accessibility tests.
+162. Stage 72 must pass Stage 66–71 regressions.
+163. Documentation must match actual implementation.
+164. Stage 73 is the next canonical development stage.
+
 
 

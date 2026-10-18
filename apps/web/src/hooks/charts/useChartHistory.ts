@@ -14,10 +14,15 @@ import {
   ChartPaginationDTO,
   ChartRenderMode,
   HoveredBarData,
+  chartQueryCache,
   fetchChartHistory,
   fetchChartInstruments,
 } from "@/lib/charts";
 import { useSelectedEntity } from "@/hooks/entity";
+
+export interface UseChartHistoryOptions {
+  syncGlobalEntity?: boolean;
+}
 
 export interface UseChartHistoryReturn {
   selectedSymbol: string;
@@ -45,7 +50,8 @@ export interface UseChartHistoryReturn {
 
 export function useChartHistory(
   initialSymbol: string = "SPY",
-  initialInterval: string = "1d"
+  initialInterval: string = "1d",
+  options?: UseChartHistoryOptions
 ): UseChartHistoryReturn {
   const [selectedSymbol, setSelectedSymbol] = useState<string>(initialSymbol);
   const [selectedInstrument, setSelectedInstrument] = useState<ChartInstrumentMetadata | null>(null);
@@ -101,7 +107,7 @@ export function useChartHistory(
 
   // Fetch history when selected symbol or interval changes
   const fetchHistory = useCallback(
-    async (symbolOrId: string, targetInterval: string) => {
+    async (symbolOrId: string, targetInterval: string, forceRefresh = false) => {
       // Abort previous in-flight request to prevent race conditions during rapid switching
       if (activeAbortRef.current) {
         activeAbortRef.current.abort();
@@ -117,12 +123,15 @@ export function useChartHistory(
       const limit = isIntraday ? 500 : 250;
 
       try {
-        const data: ChartHistoryResponse = await fetchChartHistory({
-          symbol: symbolOrId,
-          interval: targetInterval,
-          limit,
-          signal: ac.signal,
-        });
+        const data: ChartHistoryResponse = await chartQueryCache.fetch(
+          {
+            symbol: symbolOrId,
+            interval: targetInterval,
+            limit,
+            signal: ac.signal,
+          },
+          { forceRefresh }
+        );
 
         setSelectedInstrument(data.instrument);
         setSelectedSymbol(data.instrument.display_symbol);
@@ -132,8 +141,8 @@ export function useChartHistory(
         setIntervalSourceKind(data.interval_source_kind || "NATIVE");
         setDerivedSourceInterval(data.derived_source_interval || null);
 
-        // Inform global context of selected entity
-        if (selectEntity && data.instrument.entity_id) {
+        // Inform global context of selected entity only if requested (default true)
+        if (options?.syncGlobalEntity !== false && selectEntity && data.instrument.entity_id) {
           selectEntity(data.instrument.entity_id);
         }
 
@@ -246,7 +255,7 @@ export function useChartHistory(
   }, [pagination, selectedSymbol, interval]);
 
   const refreshHistory = useCallback(async () => {
-    await fetchHistory(selectedSymbol, interval);
+    await fetchHistory(selectedSymbol, interval, true);
   }, [fetchHistory, selectedSymbol, interval]);
 
   return {

@@ -17,14 +17,17 @@ import {
   DrawingType,
   SnappingMode,
 } from "@/lib/charts/drawings/types";
-import { drawingStore } from "@/lib/charts/drawings/drawingStore";
+import { DrawingSessionStore, drawingStore } from "@/lib/charts/drawings/drawingStore";
 
 export interface UseDrawingToolsProps {
   instrument: ChartInstrumentMetadata | null;
   priceBasis?: "raw" | "adjusted";
+  panelId?: string;
 }
 
-export function useDrawingTools({ instrument, priceBasis = "raw" }: UseDrawingToolsProps) {
+export function useDrawingTools({ instrument, priceBasis = "raw", panelId }: UseDrawingToolsProps) {
+  const store = DrawingSessionStore.getForPanel(panelId);
+
   // Sync instrument context
   useEffect(() => {
     if (instrument) {
@@ -34,39 +37,39 @@ export function useDrawingTools({ instrument, priceBasis = "raw" }: UseDrawingTo
         price_basis: priceBasis,
         quotation_unit: instrument.quotation_unit || instrument.price_currency || "USD",
       };
-      drawingStore.setContext(context);
+      store.setContext(context);
     }
-  }, [instrument, priceBasis]);
+  }, [instrument, priceBasis, store]);
 
-  const [drawings, setDrawings] = useState<DrawingObject[]>(() => drawingStore.getDrawings());
-  const [activeTool, setActiveToolState] = useState<DrawingType | null>(() => drawingStore.getActiveTool());
+  const [drawings, setDrawings] = useState<DrawingObject[]>(() => store.getDrawings());
+  const [activeTool, setActiveToolState] = useState<DrawingType | null>(() => store.getActiveTool());
   const [selectedDrawingId, setSelectedDrawingIdState] = useState<string | null>(() =>
-    drawingStore.getSelectedDrawingId()
+    store.getSelectedDrawingId()
   );
   const [hoveredDrawingId, setHoveredDrawingIdState] = useState<string | null>(() =>
-    drawingStore.getHoveredDrawingId()
+    store.getHoveredDrawingId()
   );
-  const [snappingMode, setSnappingModeState] = useState<SnappingMode>(() => drawingStore.getSnappingMode());
-  const [canUndo, setCanUndoState] = useState<boolean>(() => drawingStore.canUndo());
-  const [canRedo, setCanRedoState] = useState<boolean>(() => drawingStore.canRedo());
+  const [snappingMode, setSnappingModeState] = useState<SnappingMode>(() => store.getSnappingMode());
+  const [canUndo, setCanUndoState] = useState<boolean>(() => store.canUndo());
+  const [canRedo, setCanRedoState] = useState<boolean>(() => store.canRedo());
 
   // Subscribe to drawing store notifications
   useEffect(() => {
     const updateState = () => {
-      setDrawings([...drawingStore.getDrawings()]);
-      setActiveToolState(drawingStore.getActiveTool());
-      setSelectedDrawingIdState(drawingStore.getSelectedDrawingId());
-      setHoveredDrawingIdState(drawingStore.getHoveredDrawingId());
-      setSnappingModeState(drawingStore.getSnappingMode());
-      setCanUndoState(drawingStore.canUndo());
-      setCanRedoState(drawingStore.canRedo());
+      setDrawings([...store.getDrawings()]);
+      setActiveToolState(store.getActiveTool());
+      setSelectedDrawingIdState(store.getSelectedDrawingId());
+      setHoveredDrawingIdState(store.getHoveredDrawingId());
+      setSnappingModeState(store.getSnappingMode());
+      setCanUndoState(store.canUndo());
+      setCanRedoState(store.canRedo());
     };
 
-    const unsubscribe = drawingStore.subscribe(updateState);
+    const unsubscribe = store.subscribe(updateState);
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [store]);
 
   const selectedDrawing = drawings.find((d) => d.id === selectedDrawingId) || null;
 
@@ -79,22 +82,22 @@ export function useDrawingTools({ instrument, priceBasis = "raw" }: UseDrawingTo
     snappingMode,
     canUndo,
     canRedo,
-    setActiveTool: (tool: DrawingType | null) => drawingStore.setActiveTool(tool),
-    setSnappingMode: (mode: SnappingMode) => drawingStore.setSnappingMode(mode),
-    cycleSnappingMode: () => drawingStore.cycleSnappingMode(),
-    selectDrawing: (id: string | null) => drawingStore.setSelectedDrawingId(id),
-    setHoveredDrawing: (id: string | null) => drawingStore.setHoveredDrawingId(id),
+    setActiveTool: (tool: DrawingType | null) => store.setActiveTool(tool),
+    setSnappingMode: (mode: SnappingMode) => store.setSnappingMode(mode),
+    cycleSnappingMode: () => store.cycleSnappingMode(),
+    selectDrawing: (id: string | null) => store.setSelectedDrawingId(id),
+    setHoveredDrawing: (id: string | null) => store.setHoveredDrawingId(id),
     addDrawing: (type: DrawingType, anchors: DrawingAnchor[], style?: Partial<DrawingStyle>) =>
-      drawingStore.addDrawing(type, anchors, style),
+      store.addDrawing(type, anchors, style),
     commitDrawingAnchors: (id: string, anchors: DrawingAnchor[]) =>
-      drawingStore.commitDrawingAnchors(id, anchors),
+      store.commitDrawingAnchors(id, anchors),
     updateDrawingStyle: (id: string, style: Partial<DrawingStyle>) =>
-      drawingStore.updateDrawingStyle(id, style),
-    toggleLock: (id: string) => drawingStore.toggleLock(id),
-    toggleVisibility: (id: string) => drawingStore.toggleVisibility(id),
-    deleteDrawing: (id: string) => drawingStore.deleteDrawing(id),
-    clearDrawings: () => drawingStore.clearDrawings(),
-    undo: () => drawingStore.undo(),
-    redo: () => drawingStore.redo(),
+      store.updateDrawingStyle(id, style),
+    toggleLock: (id: string) => store.toggleLock(id),
+    toggleVisibility: (id: string) => store.toggleVisibility(id),
+    deleteDrawing: (id: string) => store.deleteDrawing(id),
+    clearDrawings: () => store.clearDrawings(),
+    undo: () => store.undo(),
+    redo: () => store.redo(),
   };
 }
