@@ -37,6 +37,7 @@ from .relationships import router as relationships_router
 from .research import router as research_router
 from .resolution import router as resolution_router
 from .search import router as search_router
+from .watchlists import router as watchlists_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -73,6 +74,7 @@ api_router.include_router(cross_asset_router, prefix="")
 api_router.include_router(charts_router, prefix="")
 api_router.include_router(chart_layouts_router, prefix="")
 api_router.include_router(chart_replay_router, prefix="")
+api_router.include_router(watchlists_router, prefix="")
 api_router.include_router(activity_router, prefix="")
 api_router.include_router(tasks_router, prefix="")
 api_router.include_router(approvals_router, prefix="")

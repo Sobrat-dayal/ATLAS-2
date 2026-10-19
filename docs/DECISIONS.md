@@ -5329,6 +5329,209 @@ This document records the major architectural and product decisions established.
 50. Read-only operation: zero canonical OHLCV writes, zero database migrations, zero trading orders, zero LLM calls.
 51. Stage 76 is the next canonical development stage (Watchlists V1).
 
+## Stage 76: Watchlists V1: Persistent Multi-Asset Watchlists
+
+### Product
+1. Stage 76 implements Watchlists V1.
+2. The canonical route is `/watchlists`.
+3. Watchlists are user-owned collections.
+4. Watchlists are not Portfolios.
+5. Watchlists are not Trading orders.
+6. Watchlists are not Screeners.
+7. Watchlists are not data Providers.
+8. Watchlists support multiple asset classes.
+9. Existing AppShell remains authoritative.
+10. Existing design tokens are reused.
+
+### Identity
+11. Watchlist IDs are stable UUIDs.
+12. Membership item IDs are stable UUIDs.
+13. Instrument UUIDs remain canonical.
+14. Ticker text is not a primary key.
+15. Company and Financial Instrument identities remain distinct.
+16. Listing/venue distinctions are preserved.
+17. Share classes remain distinct.
+18. Depositary receipts remain distinct where canonically defined.
+19. FX orientation is preserved.
+20. Crypto quote-asset denomination is preserved.
+21. Futures expiration is preserved.
+22. Bond price/yield semantics remain distinct.
+23. Fund NAV and exchange-traded price remain distinct.
+24. Missing/deactivated instruments are not silently replaced.
+
+### Database
+25. PostgreSQL stores watchlist definitions.
+26. PostgreSQL stores membership and order.
+27. Canonical instruments remain in existing tables.
+28. No duplicate instrument catalog is created.
+29. Watchlist name normalization is defined.
+30. Per-user name uniqueness is enforced where selected.
+31. Foreign keys are used where appropriate.
+32. Membership uniqueness is enforced.
+33. Ordered positions are stored explicitly.
+34. Reorder updates are transactional.
+35. Deleting a Watchlist does not delete Instruments.
+36. Database migrations are versioned.
+37. Ownership indexes support efficient reads.
+38. No market-price values are duplicated into membership records.
+
+### Ownership
+39. Authentication is required for mutations.
+40. Owner user ID is server-derived.
+41. Ownership is checked on every read/mutation.
+42. Membership access is scoped through parent ownership.
+43. Cross-user Watchlist access is forbidden.
+44. UUID guessing cannot leak Watchlist metadata.
+45. RLS is applied where appropriate.
+46. Privileged backend roles still enforce ownership in service code.
+47. SQL queries are parameterized.
+
+### Watchlist CRUD
+48. Create is supported.
+49. List is supported.
+50. Read is supported.
+51. Rename is supported.
+52. Delete is supported.
+53. Multiple Watchlists are supported.
+54. Empty Watchlists are supported.
+55. Quotas are enforced.
+56. Names are validated.
+57. Deletion requires confirmation.
+58. Successful mutations are confirmed by the backend.
+
+### Membership
+59. Add Instrument is supported.
+60. Remove Instrument is supported.
+61. Canonical search is reused.
+62. Duplicate entries are prevented according to canonical series identity.
+63. One Instrument may belong to multiple Watchlists.
+64. Selected listing/series identity is preserved.
+65. Membership quotas are enforced.
+66. Invalid instrument IDs are rejected.
+67. Unsupported Quote coverage does not require fabricated data.
+68. Membership changes are transactional.
+
+### Ordering
+69. Manual ordering is the V1 default.
+70. Positions are explicit.
+71. Drag-and-drop is supported.
+72. Keyboard reorder is supported.
+73. Reorder is persisted.
+74. Invalid reorder payloads are rejected.
+75. Revisions prevent stale overwrites.
+76. Duplicate row positions are prevented.
+77. Optimistic frontend updates roll back on failure.
+
+### Market Data
+78. Existing canonical latest Quote service is reused.
+79. Market snapshots are read-only.
+80. No Watchlist-specific realtime streaming is added in Stage 76.
+81. No new Provider subscription is created merely by membership.
+82. No market-data ingestion job is triggered.
+83. No upstream per-row Provider fanout occurs.
+84. Snapshot reads are bounded/batched.
+85. Instrument/series identity is validated.
+86. Quote basis is preserved.
+87. Quote currency/units are preserved.
+88. Freshness uses Stage 44.
+89. Delayed Quotes are labeled accurately.
+90. Stale observations are labeled accurately.
+91. Missing Quotes are unavailable, not zero.
+92. Valid negative Futures prices remain supported.
+93. Change percentages require qualified reference observations.
+94. Equity previous-close rules are not blindly applied across all assets.
+95. Crypto rolling 24-hour changes are not UTC-day changes.
+96. Bond price and yield changes are not interchangeable.
+97. Mutual fund NAV is not a live traded Last price.
+98. No synthetic price changes are created.
+
+### UI
+99. A compact Watchlist table is provided.
+100. Baseline columns are fixed in V1.
+101. Instrument names are genuine.
+102. Venue context is visible where relevant.
+103. Quote units are accurate.
+104. Row actions are functional.
+105. No-Watchlists empty state is supported.
+106. Empty Watchlist state is supported.
+107. Loading/error states are supported.
+108. Search and Add are functional.
+109. Create/Rename/Delete dialogs are functional.
+110. Row reorder is accessible.
+111. Desktop/tablet/mobile layouts are supported.
+112. Agent Dock compatibility is preserved.
+113. Bottom Taskbar compatibility is preserved.
+114. Light/dark themes are supported.
+115. No purple gradients are introduced.
+116. No emoji icons are introduced.
+117. No fake financial metrics are introduced.
+118. No artificial financial table records are seeded.
+
+### Navigation
+119. Global Search is reused.
+120. Charts navigation uses canonical instrument/series identity.
+121. Markets navigation uses actual existing routes.
+122. Company navigation requires verified relationships.
+123. Symbol matching alone does not establish issuer identity.
+124. Unsupported destinations are not invented.
+125. Global Selected Entity behavior follows existing context policy.
+
+### Performance and Security
+126. Watchlist reads are paginated.
+127. Instrument metadata is batched.
+128. Latest Quote retrieval is batched.
+129. Query cache remains entitlement-aware.
+130. No cross-user state leakage occurs.
+131. No new global WebSocket is created.
+132. No duplicate Provider abstraction is introduced.
+133. No new historical market-data database is created.
+134. No arbitrary Provider URL is accepted.
+135. No arbitrary SQL is executed.
+136. Names/descriptions are rendered safely.
+137. Resource quotas are enforced.
+138. No Trading orders are placed.
+139. No Portfolio changes occur.
+140. No Agent execution occurs.
+141. No Workflow execution occurs.
+142. No LLM calls are required.
+
+### Roadmap Boundaries
+143. Stage 77 owns advanced Watchlist Columns.
+144. Stage 78 owns Live Watchlist Updates.
+145. Stage 79 owns Watchlist Enrichment.
+146. Stage 80 owns Watchlist Alerts.
+147. Stage 81–88 own Companies.
+148. Stage 89–93 own Economics.
+149. Stage 94–98 own Screeners.
+150. Stage 99–103 own News.
+151. Stage 104–109 own Research.
+152. Stage 110–114 own Portfolios.
+153. Stage 115–118 own Risk.
+154. Stage 119 owns the broader Saved module.
+155. Stage 120 owns broader Workspaces.
+156. Stage 143 owns Backtesting.
+157. Stage 144 owns Paper Trading.
+158. Stage 145 owns Broker Sandbox.
+159. Stage 146+ own Agents.
+160. No configurable column engine is implemented.
+161. No Watchlist streaming subscriber is implemented.
+162. No fundamentals enrichment engine is implemented.
+163. No technical indicator Watchlist columns are implemented.
+164. No News/event enrichment is implemented.
+165. No Watchlist alert scheduler is implemented.
+166. No broker/order action is implemented.
+167. No autonomous monitoring is implemented.
+168. Stage 76 must pass ownership tests.
+169. Stage 76 must pass canonical identity tests.
+170. Stage 76 must pass CRUD/membership tests.
+171. Stage 76 must pass ordering/concurrency tests.
+172. Stage 76 must pass Quote semantics tests.
+173. Stage 76 must pass accessibility/responsive tests.
+174. Stage 76 must pass relevant previous-stage regressions.
+175. Documentation must match implementation.
+176. Stage 77 is the next canonical stage.
+
+
 
 
 

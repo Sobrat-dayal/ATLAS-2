@@ -785,6 +785,30 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Quality gates: Ruff 0 errors, TypeScript typecheck 0 errors, Next.js build 100% successful across all 38 routes.
 - **Documentation**: See `docs/CHART_REPLAY.md` and `docs/DECISIONS.md`.
 
+## Watchlists V1 (Stage 76)
+- **Persistent Multi-Asset Financial Instrument Watchlists**:
+  - Fully functional `/watchlists` module transforming the placeholder into an institutional-grade workspace.
+  - PostgreSQL-backed persistent storage with versioned Alembic migration (`apps/api/migrations/versions/stage76_watchlists.py`).
+  - User ownership isolation (`owner_user_id`), per-user name normalization and uniqueness, and atomic cascade deletions.
+  - Strict server-side resource quotas: 50 watchlists/user, 250 items/list, 100-char names, 500-char descriptions.
+- **Canonical Membership & Reordering**:
+  - References canonical financial instrument UUIDs and market-series identities across Equities, ETFs, Funds, FX, Cryptocurrencies, Bonds, and Futures.
+  - Duplicate prevention within watchlists via unique composite constraint `(watchlist_id, instrument_entity_id, market_series_id)`.
+  - Dense position tracking (`0 ... N-1`) with drag-and-drop row reordering and keyboard-accessible Move Up / Move Down controls.
+  - Optimistic concurrency control using monotonic integer `revision` counters and `expected_revision` / `If-Match` checks.
+- **Qualified Market Quote Snapshots**:
+  - Single batched query lookup from existing cached quote infrastructure; strictly **zero upstream provider fanout**.
+  - Read-only snapshot display with valid quotation units (`USD`, `INR`, `USD/bbl`, `% of par`, `Yield %`).
+  - Transparent freshness labels (`FRESH`, `DELAYED`, `STALE`, `UNAVAILABLE`) — zero fabricated prices, zero fake 0% changes.
+- **Verified Cross-Navigation**:
+  - One-click context preservation into `/charts` and canonical `/markets/*` hubs.
+  - One-click navigation to verified issuing `/companies` only when a verified relationship (`issued_by`) exists.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_watchlists.py` (27/27 passed in 4.05s).
+  - Frontend tests: `apps/web/tests/watchlists.test.ts` (11/11 passed in 1.0s).
+  - Quality gates: Ruff 0 errors, TypeScript typecheck 0 errors, Next.js build 100% successful across all 38 routes.
+- **Documentation**: See `docs/WATCHLISTS_V1.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

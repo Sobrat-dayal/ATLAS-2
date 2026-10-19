@@ -1,13 +1,14 @@
-import { ATLAS_MODULES } from "@/config/atlas-modules";
-import { ModuleFoundation } from "@/components/modules/ModuleFoundation";
 import { Metadata } from "next";
+import { WatchlistsWorkspace } from "@/components/watchlists/WatchlistsWorkspace";
 
 export function generateMetadata(): Metadata {
   return {
-    title: `${ATLAS_MODULES.watchlists.label} | ATLAS`
+    title: "Watchlists | ATLAS Financial Terminal",
+    description:
+      "Persistent multi-asset financial instrument watchlists, canonical tracking, drag-and-drop reordering, and authorized market quote snapshots.",
   };
 }
 
 export default function WatchlistsPage() {
-  return <ModuleFoundation module={ATLAS_MODULES.watchlists} />;
+  return <WatchlistsWorkspace />;
 }

@@ -1,0 +1,360 @@
+"""FastAPI Router for Watchlists V1 (Stage 76).
+
+Exposes authenticated REST endpoints under `/watchlists`:
+- GET /watchlists: List user's saved watchlists with pagination
+- POST /watchlists: Create a new watchlist
+- GET /watchlists/{id}: Retrieve watchlist metadata and membership items with qualified snapshots
+- PATCH /watchlists/{id}: Rename/update metadata with optimistic revision protection
+- DELETE /watchlists/{id}: Delete a watchlist
+- POST /watchlists/{id}/items: Add a canonical financial instrument
+- DELETE /watchlists/{id}/items/{item_id}: Remove a membership item
+- PUT /watchlists/{id}/items/order: Atomically reorder items with revision check
+"""
+
+import logging
+import uuid
+from typing import Annotated, Optional
+
+from atlas.auth import AuthPrincipal
+from atlas.market_data.live.service import LiveQuoteService
+from atlas.market_data.live.store import LiveQuoteStateStore
+from atlas.watchlists import (
+    AddWatchlistItemRequest,
+    DuplicateWatchlistItemError,
+    InstrumentNotFoundError,
+    InvalidReorderRequestError,
+    InvalidWatchlistNameError,
+    ReorderWatchlistItemsRequest,
+    ReorderWatchlistItemsResponse,
+    WatchlistCreateRequest,
+    WatchlistDetailResponse,
+    WatchlistItemNotFoundError,
+    WatchlistItemQuotaExceededError,
+    WatchlistItemResponse,
+    WatchlistListResponse,
+    WatchlistNameConflictError,
+    WatchlistNotFoundError,
+    WatchlistQuotaExceededError,
+    WatchlistRepository,
+    WatchlistRevisionConflictError,
+    WatchlistService,
+    WatchlistSummaryResponse,
+    WatchlistUpdateRequest,
+)
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from atlas_api.auth.dependencies import get_current_user
+from atlas_api.dependencies import get_db_session
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/watchlists", tags=["Watchlists"])
+
+
+def get_watchlist_service(
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> WatchlistService:
+    quote_service = None
+    redis_client = getattr(request.app.state, "redis", None)
+    if redis_client is not None:
+        try:
+            quote_store = LiveQuoteStateStore(redis_client)
+            quote_service = LiveQuoteService(quote_store)
+        except Exception as e:
+            logger.warning("Could not instantiate LiveQuoteService from redis: %s", e)
+
+    repository = WatchlistRepository(session)
+    return WatchlistService(
+        repository=repository,
+        quote_service=quote_service,
+        db_session=session,
+    )
+
+
+def _parse_etag(if_match: Optional[str]) -> Optional[int]:
+    """Parses numeric revision from ETag header format (e.g. W/"3" or "3")."""
+    if not if_match:
+        return None
+    cleaned = if_match.strip()
+    if cleaned.startswith('W/"') and cleaned.endswith('"'):
+        cleaned = cleaned[3:-1]
+    elif cleaned.startswith('"') and cleaned.endswith('"'):
+        cleaned = cleaned[1:-1]
+    try:
+        return int(cleaned)
+    except ValueError:
+        return None
+
+
+@router.get(
+    "",
+    response_model=WatchlistListResponse,
+    summary="List user's watchlists",
+    description="Lists summary metadata for watchlists owned by the authenticated user.",
+)
+async def list_watchlists(
+    response: Response,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistService, Depends(get_watchlist_service)],
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+) -> WatchlistListResponse:
+    response.headers["Cache-Control"] = "private, no-store"
+    user_id = uuid.UUID(principal.user_id)
+    return await service.list_watchlists(owner_user_id=user_id, page=page, page_size=page_size)
+
+
+@router.post(
+    "",
+    response_model=WatchlistSummaryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new watchlist",
+    description="Creates a new persistent watchlist owned by the authenticated user.",
+)
+async def create_watchlist(
+    request: WatchlistCreateRequest,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistService, Depends(get_watchlist_service)],
+) -> WatchlistSummaryResponse:
+    user_id = uuid.UUID(principal.user_id)
+    try:
+        return await service.create_watchlist(owner_user_id=user_id, request=request)
+    except WatchlistQuotaExceededError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": e.code, "message": e.message},
+        )
+    except WatchlistNameConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": e.code, "message": e.message},
+        )
+    except InvalidWatchlistNameError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": e.code, "message": e.message},
+        )
+
+
+@router.get(
+    "/{id}",
+    response_model=WatchlistDetailResponse,
+    summary="Get watchlist details and items",
+    description=(
+        "Retrieves a watchlist with its ordered canonical financial instrument items "
+        "and latest qualified quote snapshots."
+    ),
+)
+async def get_watchlist(
+    id: uuid.UUID,
+    response: Response,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistService, Depends(get_watchlist_service)],
+    page: int = Query(1, ge=1, description="Items page number"),
+    page_size: int = Query(50, ge=1, le=100, description="Items per page"),
+) -> WatchlistDetailResponse:
+    user_id = uuid.UUID(principal.user_id)
+    try:
+        detail = await service.get_watchlist(
+            watchlist_id=id, owner_user_id=user_id, page=page, page_size=page_size
+        )
+        response.headers["Cache-Control"] = "private, no-store"
+        response.headers["ETag"] = f'W/"{detail.revision}"'
+        return detail
+    except WatchlistNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+
+
+@router.patch(
+    "/{id}",
+    response_model=WatchlistSummaryResponse,
+    summary="Update watchlist metadata",
+    description="Updates display name or description with optimistic concurrency protection.",
+)
+async def update_watchlist(
+    id: uuid.UUID,
+    request: WatchlistUpdateRequest,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistService, Depends(get_watchlist_service)],
+    if_match: Optional[str] = Header(
+        None, description="Optional If-Match header with expected revision"
+    ),
+) -> WatchlistSummaryResponse:
+    user_id = uuid.UUID(principal.user_id)
+    expected_rev = _parse_etag(if_match)
+    try:
+        return await service.update_watchlist(
+            watchlist_id=id,
+            owner_user_id=user_id,
+            request=request,
+            expected_revision=expected_rev,
+        )
+    except WatchlistNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+    except WatchlistRevisionConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED
+            if if_match
+            else status.HTTP_409_CONFLICT,
+            detail={"code": e.code, "message": e.message},
+        )
+    except WatchlistNameConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": e.code, "message": e.message},
+        )
+    except InvalidWatchlistNameError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": e.code, "message": e.message},
+        )
+
+
+@router.delete(
+    "/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a watchlist",
+    description="Deletes a watchlist and all of its membership records atomically.",
+)
+async def delete_watchlist(
+    id: uuid.UUID,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistService, Depends(get_watchlist_service)],
+) -> None:
+    user_id = uuid.UUID(principal.user_id)
+    try:
+        await service.delete_watchlist(watchlist_id=id, owner_user_id=user_id)
+    except WatchlistNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+
+
+@router.post(
+    "/{id}/items",
+    response_model=WatchlistItemResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add an instrument to a watchlist",
+    description="Adds a canonical financial instrument to the watchlist.",
+)
+async def add_watchlist_item(
+    id: uuid.UUID,
+    request: AddWatchlistItemRequest,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistService, Depends(get_watchlist_service)],
+) -> WatchlistItemResponse:
+    user_id = uuid.UUID(principal.user_id)
+    try:
+        return await service.add_item(watchlist_id=id, owner_user_id=user_id, request=request)
+    except WatchlistNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+    except InstrumentNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+    except DuplicateWatchlistItemError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": e.code, "message": e.message},
+        )
+    except WatchlistItemQuotaExceededError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": e.code, "message": e.message},
+        )
+
+
+@router.delete(
+    "/{id}/items/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove an item from a watchlist",
+    description=(
+        "Removes an instrument membership entry and reindexes positions to maintain dense ordering."
+    ),
+)
+async def remove_watchlist_item(
+    id: uuid.UUID,
+    item_id: uuid.UUID,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistService, Depends(get_watchlist_service)],
+) -> None:
+    user_id = uuid.UUID(principal.user_id)
+    try:
+        await service.remove_item(watchlist_id=id, item_id=item_id, owner_user_id=user_id)
+    except WatchlistNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+    except WatchlistItemNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+
+
+@router.put(
+    "/{id}/items/order",
+    response_model=ReorderWatchlistItemsResponse,
+    summary="Reorder watchlist items",
+    description=(
+        "Persists dense reordered positions for all items with revision concurrency control."
+    ),
+)
+async def reorder_watchlist_items(
+    id: uuid.UUID,
+    request: ReorderWatchlistItemsRequest,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistService, Depends(get_watchlist_service)],
+    if_match: Optional[str] = Header(
+        None, description="Optional If-Match header with expected revision"
+    ),
+) -> ReorderWatchlistItemsResponse:
+    user_id = uuid.UUID(principal.user_id)
+    # If If-Match header provided, override or verify with request body expected_revision
+    if if_match:
+        parsed_header_rev = _parse_etag(if_match)
+        if parsed_header_rev is not None and parsed_header_rev != request.expected_revision:
+            raise HTTPException(
+                status_code=status.HTTP_412_PRECONDITION_FAILED,
+                detail={
+                    "code": "REVISION_CONFLICT",
+                    "message": (
+                        f"If-Match revision ({parsed_header_rev}) conflicts with "
+                        f"payload revision ({request.expected_revision})"
+                    ),
+                },
+            )
+
+    try:
+        return await service.reorder_items(watchlist_id=id, owner_user_id=user_id, request=request)
+    except WatchlistNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+    except WatchlistRevisionConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED
+            if if_match
+            else status.HTTP_409_CONFLICT,
+            detail={"code": e.code, "message": e.message},
+        )
+    except InvalidReorderRequestError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": e.code, "message": e.message},
+        )
