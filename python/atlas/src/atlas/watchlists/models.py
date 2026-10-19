@@ -15,6 +15,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,6 +52,14 @@ class Watchlist(Base):
         back_populates="watchlist",
         cascade="all, delete-orphan",
         order_by="WatchlistItem.position",
+        lazy="selectin",
+    )
+
+    column_preference: Mapped[Optional["WatchlistColumnPreference"]] = relationship(
+        "WatchlistColumnPreference",
+        back_populates="watchlist",
+        cascade="all, delete-orphan",
+        uselist=False,
         lazy="selectin",
     )
 
@@ -104,3 +113,35 @@ class WatchlistItem(Base):
             name="uq_watchlist_items_membership",
         ),
     )
+
+
+class WatchlistColumnPreference(Base):
+    """
+    Authoritative database table storing per-watchlist column configuration preferences.
+    """
+
+    __tablename__ = "watchlist_column_preferences"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    watchlist_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("watchlists.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    configuration_schema_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
+    revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1, server_default="1")
+    configuration_jsonb: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    watchlist: Mapped["Watchlist"] = relationship("Watchlist", back_populates="column_preference")

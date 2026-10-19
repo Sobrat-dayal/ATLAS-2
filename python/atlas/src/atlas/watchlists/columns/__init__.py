@@ -1,0 +1,75 @@
+"""Watchlist Columns and Preferences submodule (Stage 77)."""
+
+from .errors import (
+    ColumnConfigRevisionConflictError,
+    ColumnLimitExceededError,
+    ColumnNotFoundError,
+    ColumnNotSortableError,
+    IncompatibleSortUnitsError,
+    InvalidColumnOrderError,
+    InvalidColumnWidthError,
+    InvalidPinConfigurationError,
+    RequiredColumnHiddenError,
+    UnsupportedConfigVersionError,
+    WatchlistColumnError,
+)
+from .registry import (
+    COLUMN_CATALOG,
+    COLUMN_MAP,
+    COLUMN_REGISTRY,
+    WatchlistColumnCategory,
+    WatchlistColumnDefinition,
+    WatchlistColumnValueType,
+    get_column_definition,
+    get_default_column_config,
+    list_all_column_definitions,
+    normalize_and_validate_column_config,
+)
+from .repository import WatchlistColumnPreferenceRepository
+from .schemas import (
+    WatchlistColumnConfigV1,
+    WatchlistColumnDefinitionResponse,
+    WatchlistColumnPreferencesResponse,
+    WatchlistColumnPreferencesUpdateRequest,
+    WatchlistColumnSortConfig,
+    WatchlistRowCellValue,
+    WatchlistRowProjection,
+    WatchlistRowsResponse,
+)
+from .service import WatchlistColumnService
+from .sorting import WatchlistSortingEngine
+
+__all__ = [
+    "COLUMN_CATALOG",
+    "COLUMN_MAP",
+    "COLUMN_REGISTRY",
+    "WatchlistColumnCategory",
+    "WatchlistColumnDefinition",
+    "WatchlistColumnValueType",
+    "get_column_definition",
+    "get_default_column_config",
+    "list_all_column_definitions",
+    "normalize_and_validate_column_config",
+    "WatchlistColumnPreferenceRepository",
+    "WatchlistColumnService",
+    "WatchlistSortingEngine",
+    "WatchlistColumnConfigV1",
+    "WatchlistColumnDefinitionResponse",
+    "WatchlistColumnPreferencesResponse",
+    "WatchlistColumnPreferencesUpdateRequest",
+    "WatchlistColumnSortConfig",
+    "WatchlistRowCellValue",
+    "WatchlistRowProjection",
+    "WatchlistRowsResponse",
+    "WatchlistColumnError",
+    "ColumnNotFoundError",
+    "ColumnNotSortableError",
+    "IncompatibleSortUnitsError",
+    "RequiredColumnHiddenError",
+    "InvalidColumnOrderError",
+    "InvalidColumnWidthError",
+    "InvalidPinConfigurationError",
+    "ColumnLimitExceededError",
+    "UnsupportedConfigVersionError",
+    "ColumnConfigRevisionConflictError",
+]

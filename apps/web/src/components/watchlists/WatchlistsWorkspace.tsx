@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   WatchlistSummary,
   WatchlistDetail,
@@ -16,8 +16,20 @@ import {
   removeWatchlistItem,
   reorderWatchlistItems,
 } from "@/lib/watchlists/api";
+import {
+  WatchlistColumnConfigV1,
+} from "@/lib/watchlists/columns/types";
+import {
+  getDefaultColumnConfig,
+} from "@/lib/watchlists/columns/registry";
+import {
+  getWatchlistColumnPreferences,
+  updateWatchlistColumnPreferences,
+  resetWatchlistColumnPreferences,
+} from "@/lib/watchlists/columns/api";
 import { WatchlistHeader } from "./WatchlistHeader";
 import { WatchlistTable } from "./WatchlistTable";
+import { WatchlistColumnManager } from "./WatchlistColumnManager";
 import { WatchlistSelectedInspector } from "./WatchlistSelectedInspector";
 import { WatchlistEmptyState } from "./WatchlistEmptyState";
 import { WatchlistErrorState } from "./WatchlistErrorState";
@@ -32,6 +44,12 @@ export function WatchlistsWorkspace() {
   const [activeWatchlistId, setActiveWatchlistId] = useState<string | null>(null);
   const [activeWatchlist, setActiveWatchlist] = useState<WatchlistDetail | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+
+  // Column preferences state (Stage 77)
+  const [columnConfig, setColumnConfig] = useState<WatchlistColumnConfigV1>(getDefaultColumnConfig());
+  const [columnRevision, setColumnRevision] = useState<number>(0);
+  const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState<boolean>(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
@@ -74,7 +92,7 @@ export function WatchlistsWorkspace() {
     fetchWatchlists();
   }, [fetchWatchlists]);
 
-  // 2. Load active watchlist detail when activeWatchlistId changes
+  // 2. Load active watchlist detail and column preferences when activeWatchlistId changes
   const fetchWatchlistDetail = useCallback(async (id: string, isRefresh: boolean = false) => {
     try {
       if (isRefresh) {
@@ -83,13 +101,33 @@ export function WatchlistsWorkspace() {
         setLoadingDetail(true);
       }
       setMutationError(null);
-      const detail = await getWatchlist(id);
-      setActiveWatchlist(detail);
-      // Auto-select first item if current selection invalid
-      if (detail.items.length > 0) {
-        setSelectedItemId((prev) => (detail.items.some((it) => it.id === prev) ? prev : detail.items[0].id));
+
+      // Concurrently fetch watchlist membership detail and column preferences
+      const [detail, prefRes] = await Promise.allSettled([
+        getWatchlist(id),
+        getWatchlistColumnPreferences(id),
+      ]);
+
+      if (detail.status === "fulfilled") {
+        setActiveWatchlist(detail.value);
+        if (detail.value.items.length > 0) {
+          setSelectedItemId((prev) =>
+            detail.value.items.some((it) => it.id === prev) ? prev : detail.value.items[0].id
+          );
+        } else {
+          setSelectedItemId(null);
+        }
       } else {
-        setSelectedItemId(null);
+        throw detail.reason;
+      }
+
+      if (prefRes.status === "fulfilled") {
+        setColumnConfig(prefRes.value.configuration);
+        setColumnRevision(prefRes.value.revision);
+      } else {
+        // Fall back to canonical default layout
+        setColumnConfig(getDefaultColumnConfig());
+        setColumnRevision(0);
       }
     } catch (err: unknown) {
       setMutationError(err instanceof Error ? err.message : "Failed to load watchlist details.");
@@ -105,6 +143,7 @@ export function WatchlistsWorkspace() {
     } else {
       setActiveWatchlist(null);
       setSelectedItemId(null);
+      setColumnConfig(getDefaultColumnConfig());
     }
   }, [activeWatchlistId, fetchWatchlistDetail]);
 
@@ -119,6 +158,55 @@ export function WatchlistsWorkspace() {
     if (!activeWatchlist || !selectedItemId) return null;
     return activeWatchlist.items.find((i) => i.id === selectedItemId) || null;
   }, [activeWatchlist, selectedItemId]);
+
+  // Handler: Update Column Configuration with Debounced Persistence
+  const handleUpdateColumnConfig = (newConfig: WatchlistColumnConfigV1) => {
+    setColumnConfig(newConfig);
+
+    if (!activeWatchlistId) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await updateWatchlistColumnPreferences(
+          activeWatchlistId,
+          newConfig,
+          columnRevision > 0 ? columnRevision : undefined
+        );
+        setColumnRevision(res.revision);
+      } catch (err: unknown) {
+        const isConflict =
+          err && typeof err === "object" && "status" in err && (err.status === 409 || err.status === 412);
+        if (isConflict) {
+          setMutationError(
+            "Column preferences conflict: a newer configuration was saved on another session. Reloading latest preferences..."
+          );
+          try {
+            const latest = await getWatchlistColumnPreferences(activeWatchlistId);
+            setColumnConfig(latest.configuration);
+            setColumnRevision(latest.revision);
+          } catch {
+            // keep current local state
+          }
+        }
+      }
+    }, 400); // 400ms debounce
+  };
+
+  // Handler: Reset Column Configuration to Defaults
+  const handleResetColumnConfigDefaults = async () => {
+    if (!activeWatchlistId) return;
+    try {
+      const res = await resetWatchlistColumnPreferences(activeWatchlistId);
+      setColumnConfig(res.configuration);
+      setColumnRevision(res.revision);
+    } catch {
+      setColumnConfig(getDefaultColumnConfig());
+    }
+  };
 
   // Handler: Create Watchlist
   const handleCreateWatchlist = async (data: { name: string; description?: string }) => {
@@ -278,6 +366,8 @@ export function WatchlistsWorkspace() {
         activeWatchlist={activeWatchlist}
         activeWatchlistId={activeWatchlistId}
         isRefreshing={isRefreshing}
+        visibleColumnCount={columnConfig.visible_column_ids.length}
+        activeSort={columnConfig.sort}
         onSelectWatchlist={(id) => setActiveWatchlistId(id)}
         onCreateNew={() => setIsCreateOpen(true)}
         onAddInstrument={() => setIsAddOpen(true)}
@@ -286,6 +376,13 @@ export function WatchlistsWorkspace() {
         onRefresh={() => {
           if (activeWatchlistId) fetchWatchlistDetail(activeWatchlistId, true);
         }}
+        onOpenColumns={() => setIsColumnsManagerOpen(true)}
+        onClearSort={() =>
+          handleUpdateColumnConfig({
+            ...columnConfig,
+            sort: { column_id: null, direction: null },
+          })
+        }
       />
 
       {/* Mutation error banner */}
@@ -320,6 +417,8 @@ export function WatchlistsWorkspace() {
         <>
           <WatchlistTable
             items={activeWatchlist.items}
+            config={columnConfig}
+            onUpdateConfig={handleUpdateColumnConfig}
             selectedItemId={selectedItemId}
             onSelectItem={(item) => setSelectedItemId(item.id)}
             onRemoveItem={handleRemoveInstrument}
@@ -334,7 +433,16 @@ export function WatchlistsWorkspace() {
         </>
       ) : null}
 
-      {/* Dialogs */}
+      {/* Column Manager Dialog (Stage 77) */}
+      <WatchlistColumnManager
+        isOpen={isColumnsManagerOpen}
+        config={columnConfig}
+        onClose={() => setIsColumnsManagerOpen(false)}
+        onUpdateConfig={handleUpdateColumnConfig}
+        onResetDefaults={handleResetColumnConfigDefaults}
+      />
+
+      {/* Existing Dialogs */}
       <CreateWatchlistDialog
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}

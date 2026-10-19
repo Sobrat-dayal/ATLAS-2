@@ -809,6 +809,33 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Quality gates: Ruff 0 errors, TypeScript typecheck 0 errors, Next.js build 100% successful across all 38 routes.
 - **Documentation**: See `docs/WATCHLISTS_V1.md` and `docs/DECISIONS.md`.
 
+## Watchlists V1 — Advanced Columns (Stage 77)
+- **Central Typed Column Registry**:
+  - 14 operational columns across 4 categories: `identity`, `market`, `quote`, `quality`.
+  - Typed values (`TEXT`, `IDENTIFIER`, `ENUM`, `MONETARY`, `PERCENTAGE`, `TIMESTAMP`, `STATUS`).
+  - Mandatory Symbol column (`instrument.symbol`) enforced; cannot be hidden.
+- **Customizable Financial Monitoring Table**:
+  - Dynamic Show/Hide column selector modal (`WatchlistColumnManager`) with search and category grouping.
+  - Drag-and-drop & keyboard accessible column reordering.
+  - Smooth column resizing clamped between `min_width` and `max_width`.
+  - Multi-column left pinning with pixel-accurate sticky offset calculations.
+- **Financially Correct Sorting**:
+  - 3-state cycling: Ascending → Descending → Manual default.
+  - Deterministic tie-breaking: `manual_position`, then `item_id`.
+  - Missing-values-last semantics on both ascending and descending.
+  - Multi-currency / unit protection against false monetary ranking.
+  - Entire dataset sorted before pagination slicing (100% correct global order).
+- **PostgreSQL Persistence & Concurrency**:
+  - Per-watchlist column preferences stored in `watchlist_column_preferences` with JSONB schema v1.
+  - Monotonic `revision` concurrency protection (ETag / `If-Match`, returns 412/409 on conflict).
+  - Reset to Defaults restoration.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_watchlist_columns.py` (21/21 passed).
+  - Frontend tests: `apps/web/tests/watchlist-columns.test.ts` (7/7 passed).
+  - Stage 76 regressions: `apps/api/tests/test_watchlists.py` (27/27 passed) and `apps/web/tests/watchlists.test.ts` (11/11 passed).
+  - Production build: Next.js 16.3.8 Turbopack build 100% successful.
+- **Documentation**: See `docs/WATCHLIST_COLUMNS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

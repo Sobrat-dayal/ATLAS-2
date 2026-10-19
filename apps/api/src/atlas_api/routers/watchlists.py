@@ -41,6 +41,24 @@ from atlas.watchlists import (
     WatchlistSummaryResponse,
     WatchlistUpdateRequest,
 )
+from atlas.watchlists.columns import (
+    ColumnConfigRevisionConflictError,
+    ColumnLimitExceededError,
+    ColumnNotFoundError,
+    ColumnNotSortableError,
+    IncompatibleSortUnitsError,
+    InvalidColumnOrderError,
+    InvalidColumnWidthError,
+    InvalidPinConfigurationError,
+    RequiredColumnHiddenError,
+    UnsupportedConfigVersionError,
+    WatchlistColumnDefinitionResponse,
+    WatchlistColumnPreferenceRepository,
+    WatchlistColumnPreferencesResponse,
+    WatchlistColumnPreferencesUpdateRequest,
+    WatchlistColumnService,
+    WatchlistRowsResponse,
+)
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,6 +89,31 @@ def get_watchlist_service(
         quote_service=quote_service,
         db_session=session,
     )
+
+
+def get_watchlist_column_service(
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> WatchlistColumnService:
+    watchlist_service = get_watchlist_service(request, session)
+    pref_repo = WatchlistColumnPreferenceRepository(session)
+    return WatchlistColumnService(
+        preference_repository=pref_repo,
+        watchlist_repository=watchlist_service.repository,
+        watchlist_service=watchlist_service,
+    )
+
+
+@router.get(
+    "/columns",
+    response_model=list[WatchlistColumnDefinitionResponse],
+    summary="List available watchlist columns",
+    description="Returns the approved catalog of typed watchlist column definitions.",
+)
+async def list_column_definitions(
+    service: Annotated[WatchlistColumnService, Depends(get_watchlist_column_service)],
+) -> list[WatchlistColumnDefinitionResponse]:
+    return service.list_column_definitions()
 
 
 def _parse_etag(if_match: Optional[str]) -> Optional[int]:
@@ -354,6 +397,162 @@ async def reorder_watchlist_items(
             detail={"code": e.code, "message": e.message},
         )
     except InvalidReorderRequestError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": e.code, "message": e.message},
+        )
+
+
+# =============================================================================
+# Stage 77: Watchlist Columns & Preferences Endpoints
+# =============================================================================
+
+
+@router.get(
+    "/{id}/columns",
+    response_model=WatchlistColumnPreferencesResponse,
+    summary="Get watchlist column preferences",
+    description="Retrieves the column configuration and revision for the owned watchlist.",
+)
+async def get_watchlist_column_preferences(
+    id: uuid.UUID,
+    response: Response,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistColumnService, Depends(get_watchlist_column_service)],
+) -> WatchlistColumnPreferencesResponse:
+    user_id = uuid.UUID(principal.user_id)
+    try:
+        prefs = await service.get_preferences(watchlist_id=id, owner_user_id=user_id)
+        response.headers["ETag"] = f'W/"{prefs.revision}"'
+        response.headers["Cache-Control"] = "private, no-cache"
+        return prefs
+    except WatchlistNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+
+
+@router.put(
+    "/{id}/columns",
+    response_model=WatchlistColumnPreferencesResponse,
+    summary="Update watchlist column preferences",
+    description="Saves normalized column configuration with optimistic concurrency protection.",
+)
+async def update_watchlist_column_preferences(
+    id: uuid.UUID,
+    request: WatchlistColumnPreferencesUpdateRequest,
+    response: Response,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistColumnService, Depends(get_watchlist_column_service)],
+    if_match: Optional[str] = Header(
+        None, description="Optional If-Match header with expected revision"
+    ),
+) -> WatchlistColumnPreferencesResponse:
+    user_id = uuid.UUID(principal.user_id)
+    expected_rev = request.expected_revision
+    if if_match:
+        parsed_header_rev = _parse_etag(if_match)
+        if parsed_header_rev is not None:
+            expected_rev = parsed_header_rev
+
+    req_with_rev = WatchlistColumnPreferencesUpdateRequest(
+        configuration=request.configuration,
+        expected_revision=expected_rev,
+    )
+
+    try:
+        updated = await service.update_preferences(
+            watchlist_id=id, owner_user_id=user_id, request=req_with_rev
+        )
+        response.headers["ETag"] = f'W/"{updated.revision}"'
+        return updated
+    except WatchlistNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+    except ColumnConfigRevisionConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED
+            if if_match
+            else status.HTTP_409_CONFLICT,
+            detail={"code": e.code, "message": e.message},
+        )
+    except (
+        RequiredColumnHiddenError,
+        InvalidColumnOrderError,
+        InvalidColumnWidthError,
+        InvalidPinConfigurationError,
+        ColumnLimitExceededError,
+        ColumnNotFoundError,
+        UnsupportedConfigVersionError,
+    ) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": e.code, "message": e.message},
+        )
+
+
+@router.post(
+    "/{id}/columns/reset",
+    response_model=WatchlistColumnPreferencesResponse,
+    summary="Reset watchlist column preferences",
+    description="Resets the watchlist table configuration back to canonical default.",
+)
+async def reset_watchlist_column_preferences(
+    id: uuid.UUID,
+    response: Response,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistColumnService, Depends(get_watchlist_column_service)],
+) -> WatchlistColumnPreferencesResponse:
+    user_id = uuid.UUID(principal.user_id)
+    try:
+        res = await service.reset_preferences(watchlist_id=id, owner_user_id=user_id)
+        response.headers["ETag"] = f'W/"{res.revision}"'
+        return res
+    except WatchlistNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+
+
+@router.get(
+    "/{id}/rows",
+    response_model=WatchlistRowsResponse,
+    summary="Get projected watchlist rows",
+    description=(
+        "Projects watchlist rows into typed cell values across columns with global sorting."
+    ),
+)
+async def get_projected_watchlist_rows(
+    id: uuid.UUID,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[WatchlistColumnService, Depends(get_watchlist_column_service)],
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(50, ge=1, le=100, description="Items per page"),
+    sort_column_id: Optional[str] = Query(None, description="Optional column ID to sort by"),
+    sort_direction: Optional[str] = Query(
+        None, pattern="^(asc|desc)$", description="Sort direction"
+    ),
+) -> WatchlistRowsResponse:
+    user_id = uuid.UUID(principal.user_id)
+    try:
+        return await service.get_projected_rows(
+            watchlist_id=id,
+            owner_user_id=user_id,
+            page=page,
+            page_size=page_size,
+            sort_column_id=sort_column_id,
+            sort_direction=sort_direction,
+        )
+    except WatchlistNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": e.code, "message": e.message},
+        )
+    except (ColumnNotSortableError, IncompatibleSortUnitsError, ColumnNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": e.code, "message": e.message},

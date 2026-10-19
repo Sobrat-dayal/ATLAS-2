@@ -1,6 +1,7 @@
 import React from "react";
-import { Plus, Edit3, Trash2, Clock, RefreshCw } from "lucide-react";
+import { Plus, Edit3, Trash2, Clock, RefreshCw, SlidersHorizontal, ArrowUpDown, X } from "lucide-react";
 import { WatchlistDetail, WatchlistSummary } from "@/lib/watchlists/types";
+import { COLUMN_MAP } from "@/lib/watchlists/columns/registry";
 import { WatchlistSelector } from "./WatchlistSelector";
 
 interface WatchlistHeaderProps {
@@ -8,12 +9,16 @@ interface WatchlistHeaderProps {
   activeWatchlist: WatchlistDetail | null;
   activeWatchlistId: string | null;
   isRefreshing?: boolean;
+  visibleColumnCount?: number;
+  activeSort?: { column_id: string | null; direction: "asc" | "desc" | null };
   onSelectWatchlist: (id: string) => void;
   onCreateNew: () => void;
   onAddInstrument: () => void;
   onRename: () => void;
   onDelete: () => void;
   onRefresh: () => void;
+  onOpenColumns?: () => void;
+  onClearSort?: () => void;
 }
 
 export function WatchlistHeader({
@@ -21,12 +26,16 @@ export function WatchlistHeader({
   activeWatchlist,
   activeWatchlistId,
   isRefreshing,
+  visibleColumnCount = 7,
+  activeSort,
   onSelectWatchlist,
   onCreateNew,
   onAddInstrument,
   onRename,
   onDelete,
   onRefresh,
+  onOpenColumns,
+  onClearSort,
 }: WatchlistHeaderProps) {
   const formattedUpdated = activeWatchlist?.updated_at
     ? new Date(activeWatchlist.updated_at).toLocaleTimeString([], {
@@ -35,6 +44,8 @@ export function WatchlistHeader({
         second: "2-digit",
       })
     : null;
+
+  const sortedColName = activeSort?.column_id ? COLUMN_MAP.get(activeSort.column_id)?.label || activeSort.column_id : null;
 
   return (
     <div className="flex flex-col gap-3 pb-3 border-b border-zinc-800">
@@ -52,6 +63,21 @@ export function WatchlistHeader({
         <div className="flex items-center gap-2">
           {activeWatchlist && (
             <>
+              {onOpenColumns && (
+                <button
+                  type="button"
+                  onClick={onOpenColumns}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-medium transition-colors"
+                  title="Configure Columns"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Columns</span>
+                  <span className="text-[10px] font-mono px-1 rounded bg-zinc-800 text-zinc-400">
+                    {visibleColumnCount}
+                  </span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={onRefresh}
@@ -107,10 +133,10 @@ export function WatchlistHeader({
         </div>
       </div>
 
-      {/* Sub-header: Active list title, revision, item count, and description */}
+      {/* Sub-header: Active list title, revision, item count, sort indicator, and description */}
       {activeWatchlist && (
         <div className="flex flex-wrap items-baseline justify-between gap-2 pt-1">
-          <div>
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <h1 className="text-base font-bold text-zinc-100 tracking-tight">
                 {activeWatchlist.name}
@@ -121,6 +147,24 @@ export function WatchlistHeader({
               <span className="text-xs text-zinc-400 font-mono">
                 {activeWatchlist.total_items} {activeWatchlist.total_items === 1 ? "instrument" : "instruments"}
               </span>
+
+              {/* Active Sort Indicator Badge */}
+              {sortedColName && activeSort?.direction && (
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-700/80 text-[11px] font-mono text-zinc-300">
+                  <ArrowUpDown className="w-3 h-3 text-zinc-400" />
+                  <span>Sorted by {sortedColName} · {activeSort.direction === "asc" ? "Asc" : "Desc"}</span>
+                  {onClearSort && (
+                    <button
+                      type="button"
+                      onClick={onClearSort}
+                      className="text-zinc-500 hover:text-zinc-200"
+                      title="Clear sort and restore manual order"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             {activeWatchlist.description && (
               <p className="text-xs text-zinc-400 mt-0.5 max-w-xl">

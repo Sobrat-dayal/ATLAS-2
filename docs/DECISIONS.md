@@ -5531,6 +5531,220 @@ This document records the major architectural and product decisions established.
 175. Documentation must match implementation.
 176. Stage 77 is the next canonical stage.
 
+---
+
+# STAGE 77 — ADVANCED WATCHLIST COLUMNS V1
+
+### Product
+1. Stage 77 implements Advanced Watchlist Columns.
+2. The route remains `/watchlists`.
+3. Stage 76 Watchlist membership remains authoritative.
+4. Stage 76 row ordering remains authoritative.
+5. Column ordering is separate from membership ordering.
+6. Existing AppShell is preserved.
+7. Existing design system is reused.
+8. No new global Sidebar module is created.
+9. No synthetic market data is introduced.
+10. No Trading/Agent functionality is introduced.
+
+### Column Registry
+11. All columns have stable IDs.
+12. Column definitions are typed.
+13. Column definitions are versioned.
+14. Column categories are explicit (`identity`, `market`, `quote`, `quality`).
+15. Data-source capabilities are explicit.
+16. Supported asset classes are explicit.
+17. Formatting behavior is explicit.
+18. Sorting policies are explicit.
+19. Visibility policies are explicit.
+20. Width constraints are explicit.
+21. Pin capabilities are explicit.
+22. Registry IDs are validated on backend.
+23. Display labels are not column identities.
+24. Arbitrary executable columns are rejected.
+25. Unsupported future columns are not falsely advertised.
+
+### Column Values
+26. Values retain canonical types.
+27. Display formatting is separate from source data.
+28. Missing does not equal zero.
+29. Valid negative values are preserved.
+30. Currency units are explicit.
+31. Quote kinds are preserved.
+32. Source provenance is preserved.
+33. Observation timestamps are preserved.
+34. NAV valuation dates remain distinct from Last trades.
+35. Bond price and yield remain distinct.
+36. FX indicative Quotes are not exchange Last trades.
+37. Crypto change windows remain explicit.
+38. Unsupported assets show qualified unavailable states.
+39. Entitlements are enforced independently of column visibility.
+40. No fabricated numerical values are generated.
+
+### Visibility and Ordering
+41. Optional columns can be shown.
+42. Optional columns can be hidden.
+43. Instrument identity remains visible (`instrument.symbol` is mandatory).
+44. Column order is configurable.
+45. Drag-and-drop is supported.
+46. Keyboard ordering is supported.
+47. Unknown IDs are rejected.
+48. Duplicate IDs are rejected.
+49. Column ordering never changes Watchlist membership order.
+50. Reset Defaults restores canonical configuration.
+
+### Resizing and Pinning
+51. Column resizing is supported.
+52. Widths are bounded by `min_width` and `max_width`.
+53. Widths are persisted.
+54. Resize persistence occurs on commit/debounce.
+55. Left pinning is supported.
+56. Pinned offsets use actual cumulative widths.
+57. Pinned columns do not overlap.
+58. Excessive pinning is limited to 5 columns.
+59. Keyboard pin/resize alternatives are available.
+60. Responsive presentation does not corrupt saved widths.
+
+### Sorting
+61. Ascending sorting is supported for qualified columns.
+62. Descending sorting is supported for qualified columns.
+63. Manual row order remains the default.
+64. Sorting does not modify membership positions.
+65. Sorting uses stable tie breakers (manual position, then UUID item ID).
+66. Missing values sort last on both ascending and descending.
+67. Numeric values are not sorted as formatted strings.
+68. Dates are sorted chronologically.
+69. Financial sorts require compatible units.
+70. Incompatible currencies are not blindly ranked.
+71. Incompatible bond yield/price values are not ranked together.
+72. Percentage comparisons require compatible methodologies.
+73. Sorting scope matches the actual full authorized list (up to 250 items).
+74. Partial-page sorting is not mislabeled as full-list sorting.
+75. Mutable market snapshot sorting uses a coherent snapshot policy.
+76. Unsupported sorts are disabled honestly.
+
+### Persistence
+77. Column preferences are saved per Watchlist.
+78. PostgreSQL remains the authoritative preference store (`watchlist_column_preferences`).
+79. JSONB stores versioned presentation configuration.
+80. The schema includes version 1.
+81. Preference revision protects updates independently of membership revisions.
+82. Parent Watchlist ownership is enforced.
+83. Deleting a Watchlist cascades and removes associated preferences.
+84. Default configuration works without an explicit saved record.
+85. Cross-device restoration is supported.
+86. No localStorage-only persistence is claimed.
+87. No market observations are persisted in preferences.
+88. No Provider credentials are persisted.
+89. No runtime DOM objects are persisted.
+
+### Concurrency
+90. Updates use an expected revision.
+91. Atomic updates prevent lost writes.
+92. Stale changes are rejected with 412/409.
+93. Save failures preserve working state.
+94. Conflicts are visible to users.
+95. Preference revision is independent from membership revision.
+96. Resizing does not create hundreds of writes per second (400ms debounce).
+
+### Data Projection
+97. Existing canonical metadata is reused.
+98. Existing latest Quote service is reused.
+99. Existing freshness service is reused.
+100. Existing Provider routing remains authoritative.
+101. Selected fields are projected through allowlisted definitions.
+102. Source reads are batched.
+103. Hidden columns do not cause unnecessary reads.
+104. No per-cell Provider fanout occurs.
+105. No new historical ingestion is triggered.
+106. No new Watchlist live subscriptions are created.
+107. Shared cache remains entitlement-aware.
+108. Canonical market-data observations are not duplicated.
+
+### UI and Accessibility
+109. A Column Manager is provided.
+110. Column descriptions are accessible.
+111. Show/Hide controls function.
+112. Header reorder functions.
+113. Width resizing functions.
+114. Pin/Unpin functions.
+115. Sorting functions.
+116. Reset Defaults functions.
+117. Sticky headers are supported.
+118. Horizontal scrolling is supported.
+119. Numeric alignment follows financial conventions.
+120. Tabular numerals are used where appropriate.
+121. Keyboard configuration is supported.
+122. Screen-reader labels and live announcements are supported.
+123. Status is not color-only.
+124. Mobile presentation remains usable with horizontal scroll.
+125. Agent Dock compatibility is preserved.
+126. Bottom Taskbar compatibility is preserved.
+127. Light/dark themes are preserved.
+128. No purple gradients are introduced.
+129. No emoji icons are introduced.
+130. No fake financial metrics are introduced.
+
+### Security and Performance
+131. Authentication is required.
+132. Watchlist ownership is required.
+133. Data entitlements are enforced.
+134. Column IDs are allowlisted.
+135. No arbitrary SQL expressions are executed.
+136. No user-provided scripts are executed.
+137. No arbitrary Provider URLs are fetched.
+138. No Provider secrets are exposed.
+139. No XSS is introduced.
+140. Column limits are enforced (max 20 visible).
+141. Width limits are enforced ([min, max]).
+142. Request limits are enforced.
+143. Table rendering is bounded.
+144. Query caching is reused.
+145. No new global WebSocket is created.
+146. No Trading orders are placed.
+147. No Portfolio changes occur.
+148. No Agents execute.
+149. No Workflows execute.
+150. No LLM calls are required.
+
+### Roadmap Boundaries
+151. Stage 78 owns Live Watchlist Updates.
+152. Stage 79 owns Watchlist Enrichment.
+153. Stage 80 owns Watchlist Alerts.
+154. Stage 81–88 own Companies.
+155. Stage 89–93 own Economics.
+156. Stage 94–98 own Screeners.
+157. Stage 99–103 own News.
+158. Stage 104–109 own Research.
+159. Stage 110–114 own Portfolios.
+160. Stage 115–118 own Risk.
+161. Stage 119 owns the global Saved module.
+162. Stage 120 owns broader Workspaces.
+163. Stage 143 owns Backtesting.
+164. Stage 144 owns Paper Trading.
+165. Stage 145 owns Broker Sandbox.
+166. Stage 146+ own Agents.
+167. No realtime Watchlist streaming is implemented.
+168. No Watchlist indicator calculation engine is implemented.
+169. No fundamentals enrichment engine is implemented.
+170. No News or event enrichment engine is implemented.
+171. No alert scheduler is implemented.
+172. No arbitrary formula engine is implemented.
+173. No full Screener system is implemented.
+174. No duplicate financial-data store is implemented.
+175. No duplicate Provider router is implemented.
+176. No duplicate WebSocket infrastructure is implemented.
+177. Stage 77 must pass Column Registry tests.
+178. Stage 77 must pass value-formatting tests.
+179. Stage 77 must pass sort compatibility tests.
+180. Stage 77 must pass preference persistence tests.
+181. Stage 77 must pass concurrency tests.
+182. Stage 77 must pass ownership/entitlement tests.
+183. Stage 77 must pass Stage 76 regressions.
+184. Documentation must match actual implementation.
+185. Stage 78 is the next canonical development stage.
+
+
 
 
 

@@ -219,8 +219,7 @@ class WatchlistRepository:
         """
         if watchlist.revision != expected_revision:
             raise WatchlistRevisionConflictError(
-                f"Revision conflict: expected {expected_revision}, "
-                f"current is {watchlist.revision}"
+                f"Revision conflict: expected {expected_revision}, current is {watchlist.revision}"
             )
 
         # Load all items for this watchlist

@@ -2,6 +2,8 @@ export * from "./AddInstrumentDialog";
 export * from "./CreateWatchlistDialog";
 export * from "./DeleteWatchlistDialog";
 export * from "./RenameWatchlistDialog";
+export * from "./WatchlistColumnHeader";
+export * from "./WatchlistColumnManager";
 export * from "./WatchlistEmptyState";
 export * from "./WatchlistErrorState";
 export * from "./WatchlistHeader";
