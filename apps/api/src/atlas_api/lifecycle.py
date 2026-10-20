@@ -37,12 +37,12 @@ async def lifespan(app: FastAPI):
     app.state.db = db_manager
 
     # Stage 31: Provider Health Monitor
-    from atlas.providers.bootstrap import build_provider_registry, build_provider_health_registry
-    from atlas.providers.health.monitor import ProviderHealthMonitor
-    from atlas.providers.health.service import ProviderHealthService
-    from atlas.providers.health.repository import ProviderHealthRepository
+    from atlas.providers.bootstrap import build_provider_health_registry, build_provider_registry
     from atlas.providers.configuration.service import ProviderConfigurationService
     from atlas.providers.configuration.vault import SupabaseVaultSecretStore
+    from atlas.providers.health.monitor import ProviderHealthMonitor
+    from atlas.providers.health.repository import ProviderHealthRepository
+    from atlas.providers.health.service import ProviderHealthService
 
     provider_registry = build_provider_registry()
     health_registry = build_provider_health_registry(provider_registry)
@@ -58,48 +58,50 @@ async def lifespan(app: FastAPI):
         session_factory=db_manager.session,
         service_factory=service_factory,
         enabled=True,
-        interval_seconds=300
+        interval_seconds=300,
     )
     app.state.health_monitor = monitor
     monitor.start()
 
     from redis.asyncio import Redis
-    
+
     redis_client = Redis.from_url(settings.redis_url, decode_responses=False)
     app.state.redis = redis_client
-    
+
     # Stage 43: Websocket Gateway
+    from atlas.realtime.settings import LiveEventPipelineSettings
     from atlas.realtime.websocket.gateway import RealtimeGateway
     from atlas.realtime.websocket.settings import RealtimeWebSocketSettings
-    from atlas.realtime.settings import LiveEventPipelineSettings
-    
+
     ws_settings = RealtimeWebSocketSettings()
     pipeline_settings = LiveEventPipelineSettings()
     gateway = RealtimeGateway(redis_client, ws_settings, pipeline_settings)
-    
-    from atlas.market_data.live.store import LiveQuoteStateStore
+
+    from atlas.market_data.entitlements import MarketDataEntitlementService
     from atlas.market_data.freshness import (
+        MarketDataFreshnessPolicyResolver,
+        MarketDataFreshnessQueryService,
         MarketDataFreshnessSettings,
         MarketDataFreshnessStateStore,
-        MarketDataFreshnessPolicyResolver,
-        MarketDataFreshnessQueryService
     )
-    
+    from atlas.market_data.live.store import LiveQuoteStateStore
+
     freshness_settings = MarketDataFreshnessSettings()
     freshness_state_store = MarketDataFreshnessStateStore(redis_client)
     # Mocking config service as we haven't integrated the full provider setup everywhere
     freshness_policy_resolver = MarketDataFreshnessPolicyResolver(freshness_settings, None)
-    
+
     quote_store = LiveQuoteStateStore(redis_client)
-    
+
     freshness_query_service = MarketDataFreshnessQueryService(
         state_store=freshness_state_store,
         quote_store=quote_store,
-        policy_resolver=freshness_policy_resolver
+        policy_resolver=freshness_policy_resolver,
     )
-    
+
     gateway.freshness_query_service = freshness_query_service
-    
+    gateway.entitlement_service = MarketDataEntitlementService()
+
     app.state.realtime_gateway = gateway
     await gateway.start()
 
@@ -113,7 +115,7 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, "health_monitor"):
         await app.state.health_monitor.stop()
-        
+
     if hasattr(app.state, "realtime_gateway"):
         await app.state.realtime_gateway.stop()
 

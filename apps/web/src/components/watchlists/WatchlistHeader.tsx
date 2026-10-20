@@ -1,8 +1,12 @@
 import React from "react";
-import { Plus, Edit3, Trash2, Clock, RefreshCw, SlidersHorizontal, ArrowUpDown, X } from "lucide-react";
+import { Plus, Edit3, Trash2, Clock, RefreshCw, SlidersHorizontal, ArrowUpDown, X, RotateCw } from "lucide-react";
 import { WatchlistDetail, WatchlistSummary } from "@/lib/watchlists/types";
 import { COLUMN_MAP } from "@/lib/watchlists/columns/registry";
+import { RealtimeConnectionState } from "@/lib/realtime/types";
+import { LiveDataQuality } from "@/lib/watchlists/live";
 import { WatchlistSelector } from "./WatchlistSelector";
+import { WatchlistConnectionStatus } from "./WatchlistConnectionStatus";
+import { WatchlistDataQuality } from "./WatchlistDataQuality";
 
 interface WatchlistHeaderProps {
   watchlists: WatchlistSummary[];
@@ -11,12 +15,17 @@ interface WatchlistHeaderProps {
   isRefreshing?: boolean;
   visibleColumnCount?: number;
   activeSort?: { column_id: string | null; direction: "asc" | "desc" | null };
+  connectionState?: RealtimeConnectionState;
+  dataQuality?: LiveDataQuality;
+  activeSubscribedCount?: number;
   onSelectWatchlist: (id: string) => void;
   onCreateNew: () => void;
   onAddInstrument: () => void;
   onRename: () => void;
   onDelete: () => void;
   onRefresh: () => void;
+  onReconnect?: () => void;
+  onRefreshSort?: () => void;
   onOpenColumns?: () => void;
   onClearSort?: () => void;
 }
@@ -28,12 +37,17 @@ export function WatchlistHeader({
   isRefreshing,
   visibleColumnCount = 7,
   activeSort,
+  connectionState,
+  dataQuality,
+  activeSubscribedCount = 0,
   onSelectWatchlist,
   onCreateNew,
   onAddInstrument,
   onRename,
   onDelete,
   onRefresh,
+  onReconnect,
+  onRefreshSort,
   onOpenColumns,
   onClearSort,
 }: WatchlistHeaderProps) {
@@ -49,7 +63,7 @@ export function WatchlistHeader({
 
   return (
     <div className="flex flex-col gap-3 pb-3 border-b border-zinc-800">
-      {/* Top Row: Watchlist Selector & Primary Actions */}
+      {/* Top Row: Watchlist Selector, Live Indicators & Primary Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <WatchlistSelector
@@ -58,6 +72,21 @@ export function WatchlistHeader({
             onSelectWatchlist={onSelectWatchlist}
             onCreateNew={onCreateNew}
           />
+
+          {/* Realtime Live Indicators */}
+          {activeWatchlist && (
+            <div className="hidden md:flex items-center gap-2">
+              <WatchlistConnectionStatus
+                connectionState={connectionState || "DISCONNECTED"}
+                onReconnect={onReconnect}
+              />
+              <WatchlistDataQuality
+                dataQuality={dataQuality || "realtime"}
+                activeCount={activeSubscribedCount}
+                totalCount={activeWatchlist.total_items}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -137,7 +166,7 @@ export function WatchlistHeader({
       {activeWatchlist && (
         <div className="flex flex-wrap items-baseline justify-between gap-2 pt-1">
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-base font-bold text-zinc-100 tracking-tight">
                 {activeWatchlist.name}
               </h1>
@@ -153,11 +182,22 @@ export function WatchlistHeader({
                 <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-700/80 text-[11px] font-mono text-zinc-300">
                   <ArrowUpDown className="w-3 h-3 text-zinc-400" />
                   <span>Sorted by {sortedColName} · {activeSort.direction === "asc" ? "Asc" : "Desc"}</span>
+                  {onRefreshSort && (
+                    <button
+                      type="button"
+                      onClick={onRefreshSort}
+                      className="ml-1 text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-0.5"
+                      title="Re-apply sort order over latest live quote values"
+                    >
+                      <RotateCw className="w-2.5 h-2.5" />
+                      <span className="text-[10px]">Re-sort</span>
+                    </button>
+                  )}
                   {onClearSort && (
                     <button
                       type="button"
                       onClick={onClearSort}
-                      className="text-zinc-500 hover:text-zinc-200"
+                      className="text-zinc-500 hover:text-zinc-200 ml-0.5"
                       title="Clear sort and restore manual order"
                     >
                       <X className="w-3 h-3" />
@@ -173,12 +213,22 @@ export function WatchlistHeader({
             )}
           </div>
 
-          {formattedUpdated && (
-            <div className="flex items-center gap-1 text-[10px] font-mono text-zinc-500">
-              <Clock className="w-3 h-3 text-zinc-500" />
-              <span>Updated {formattedUpdated}</span>
+          <div className="flex items-center gap-3">
+            {/* Mobile-only live indicators */}
+            <div className="flex md:hidden items-center gap-2">
+              <WatchlistConnectionStatus
+                connectionState={connectionState || "DISCONNECTED"}
+                onReconnect={onReconnect}
+              />
             </div>
-          )}
+
+            {formattedUpdated && (
+              <div className="flex items-center gap-1 text-[10px] font-mono text-zinc-500">
+                <Clock className="w-3 h-3 text-zinc-500" />
+                <span>Updated {formattedUpdated}</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

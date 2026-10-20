@@ -836,6 +836,32 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: Next.js 16.3.8 Turbopack build 100% successful.
 - **Documentation**: See `docs/WATCHLIST_COLUMNS.md` and `docs/DECISIONS.md`.
 
+## Watchlists V1 — Live Updates (Stage 78)
+- **Shared WebSocket Streaming Infrastructure**:
+  - Reuses Stage 43 shared WebSocket (`SharedWebSocketClient`) with zero duplicate sockets.
+  - Multi-consumer reference counting across watchlists and active Charts views.
+  - Viewport-aware subscription planning with bounded 10-row overscan and background tab suspension.
+- **Canonical Event Validation & Reconciliation**:
+  - `validateCanonicalQuoteEvent`: schema v1 enforcement, canonical UUID check, finite decimals, genuine zero handling, and conditional negative price tolerance (CLZ26).
+  - `EventOrderingTracker`: monotonic source-scoped ordering, duplicate event ID rejection, and sequence gap detection.
+  - `SnapshotStreamReconciler`: solves startup race condition so older HTTP snapshots cannot overwrite newer streamed quotes.
+  - `RenderBatcher`: coalesces high-frequency market event streams into batched 80ms animation frames.
+- **Server-Side Entitlement Validation**:
+  - `MarketDataEntitlementService` validates user tier, delayed-only roles, and restricted Level 2 instruments.
+  - Typed `subscription.ack` messages with explicitly accepted and rejected series keys.
+- **Institutional Financial Table UI**:
+  - Directional movement cues (`▲`, `▼`, `―`) and subtle background highlights (`bg-emerald-500/10`, `bg-rose-500/10`).
+  - Accessible connection status and realtime vs. delayed stream data quality badges (`Live: X/Y`).
+  - Dedicated "Re-sort" action to reapply multi-column sorts against current live prices without disruptive row jumping.
+  - Strict compliance with institutional design standards: zero purple gradients, zero cartoon chrome, zero LLM calls, zero autonomous trading.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_watchlist_live.py` (9/9 passed).
+  - All 57 backend watchlist tests passed (`test_watchlists.py`, `test_watchlist_columns.py`, `test_watchlist_live.py`).
+  - Frontend tests: `apps/web/tests/watchlist-live.test.ts` (7/7 passed).
+  - All 25 frontend watchlist tests passed (`watchlists.test.ts`, `watchlist-columns.test.ts`, `watchlist-live.test.ts`).
+  - Quality gates: Ruff 0 errors, TypeScript typecheck 0 errors.
+- **Documentation**: See `docs/LIVE_WATCHLIST_UPDATES.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

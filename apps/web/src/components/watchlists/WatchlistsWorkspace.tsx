@@ -37,6 +37,7 @@ import { CreateWatchlistDialog } from "./CreateWatchlistDialog";
 import { RenameWatchlistDialog } from "./RenameWatchlistDialog";
 import { DeleteWatchlistDialog } from "./DeleteWatchlistDialog";
 import { AddInstrumentDialog } from "./AddInstrumentDialog";
+import { useWatchlistLive } from "@/hooks/watchlists/useWatchlistLive";
 import { Loader2 } from "lucide-react";
 
 export function WatchlistsWorkspace() {
@@ -44,6 +45,9 @@ export function WatchlistsWorkspace() {
   const [activeWatchlistId, setActiveWatchlistId] = useState<string | null>(null);
   const [activeWatchlist, setActiveWatchlist] = useState<WatchlistDetail | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+
+  // Live streaming state (Stage 78)
+  const { liveQuotes, status: liveStatus, reconnect: reconnectLive } = useWatchlistLive(activeWatchlist);
 
   // Column preferences state (Stage 77)
   const [columnConfig, setColumnConfig] = useState<WatchlistColumnConfigV1>(getDefaultColumnConfig());
@@ -153,11 +157,28 @@ export function WatchlistsWorkspace() {
     return new Set(activeWatchlist.items.map((i) => i.instrument_entity_id));
   }, [activeWatchlist]);
 
-  // Selected item object for inspector
+  // Selected item object for inspector enhanced with live streaming values
   const selectedItem = useMemo(() => {
     if (!activeWatchlist || !selectedItemId) return null;
-    return activeWatchlist.items.find((i) => i.id === selectedItemId) || null;
-  }, [activeWatchlist, selectedItemId]);
+    const base = activeWatchlist.items.find((i) => i.id === selectedItemId);
+    if (!base) return null;
+    const lq = liveQuotes.get(base.instrument_entity_id?.toLowerCase());
+    if (!lq) return base;
+    return {
+      ...base,
+      last_price: lq.last_price ?? base.last_price,
+      bid_price: lq.bid_price ?? base.bid_price,
+      ask_price: lq.ask_price ?? base.ask_price,
+      absolute_change: lq.absolute_change ?? base.absolute_change,
+      percentage_change: lq.percentage_change ?? base.percentage_change,
+      change_direction: lq.change_direction ?? base.change_direction,
+      freshness_status: lq.freshness_status ?? base.freshness_status,
+      delivery_delay_status: lq.delivery_delay_status ?? base.delivery_delay_status,
+      source_timestamp: lq.source_timestamp ?? base.source_timestamp,
+      quote_measure: lq.quote_measure ?? base.quote_measure,
+      provider: lq.provider ?? base.provider,
+    };
+  }, [activeWatchlist, selectedItemId, liveQuotes]);
 
   // Handler: Update Column Configuration with Debounced Persistence
   const handleUpdateColumnConfig = (newConfig: WatchlistColumnConfigV1) => {
@@ -368,6 +389,9 @@ export function WatchlistsWorkspace() {
         isRefreshing={isRefreshing}
         visibleColumnCount={columnConfig.visible_column_ids.length}
         activeSort={columnConfig.sort}
+        connectionState={liveStatus.connection}
+        dataQuality={liveStatus.dataQuality}
+        activeSubscribedCount={liveStatus.activeSubscriptionsCount}
         onSelectWatchlist={(id) => setActiveWatchlistId(id)}
         onCreateNew={() => setIsCreateOpen(true)}
         onAddInstrument={() => setIsAddOpen(true)}
@@ -375,6 +399,10 @@ export function WatchlistsWorkspace() {
         onDelete={() => setIsDeleteOpen(true)}
         onRefresh={() => {
           if (activeWatchlistId) fetchWatchlistDetail(activeWatchlistId, true);
+        }}
+        onReconnect={reconnectLive}
+        onRefreshSort={() => {
+          handleUpdateColumnConfig({ ...columnConfig });
         }}
         onOpenColumns={() => setIsColumnsManagerOpen(true)}
         onClearSort={() =>
@@ -417,6 +445,7 @@ export function WatchlistsWorkspace() {
         <>
           <WatchlistTable
             items={activeWatchlist.items}
+            liveQuotes={liveQuotes}
             config={columnConfig}
             onUpdateConfig={handleUpdateColumnConfig}
             selectedItemId={selectedItemId}

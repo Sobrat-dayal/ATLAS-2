@@ -7,11 +7,13 @@ import {
   getAssetClassBadge,
 } from "@/lib/watchlists/formatting";
 import { WatchlistColumnDefinition } from "@/lib/watchlists/columns/types";
+import { CanonicalLiveQuote } from "@/lib/watchlists/live";
 import { WatchlistStatusBadge } from "./WatchlistStatusBadge";
 import { WatchlistRowActions } from "./WatchlistRowActions";
 
 interface WatchlistRowProps {
   item: WatchlistItem;
+  liveQuote?: CanonicalLiveQuote | null;
   index: number;
   totalCount: number;
   visibleColumns: WatchlistColumnDefinition[];
@@ -34,6 +36,7 @@ interface WatchlistRowProps {
 
 export function WatchlistRow({
   item,
+  liveQuote,
   index,
   totalCount,
   visibleColumns,
@@ -54,16 +57,44 @@ export function WatchlistRow({
   onRemove,
 }: WatchlistRowProps) {
   const badge = getAssetClassBadge(item.asset_class);
-  const formattedPrice = formatPrice(item.last_price, item.asset_class, item.quote_currency);
-  const changeData = formatChange(item.absolute_change, item.percentage_change);
+
+  // Resolve effective values with live quote precedence
+  const effectiveLastPrice = liveQuote?.last_price ?? item.last_price;
+  const effectiveAbsoluteChange = liveQuote?.absolute_change ?? item.absolute_change;
+  const effectivePercentageChange = liveQuote?.percentage_change ?? item.percentage_change;
+  const effectiveFreshness = liveQuote?.freshness_status ?? item.freshness_status;
+  const effectiveDelay = liveQuote?.delivery_delay_status ?? item.delivery_delay_status;
+  const effectiveTimestamp = liveQuote?.source_timestamp ?? item.source_timestamp;
+  const effectiveQuoteMeasure = liveQuote?.quote_measure ?? item.quote_measure ?? "Last";
+  const effectiveProvider = liveQuote?.provider ?? item.provider;
+  const isAvailable = item.is_quote_available || effectiveLastPrice !== null;
+
+  const formattedPrice = formatPrice(effectiveLastPrice, item.asset_class, item.quote_currency);
+  const changeData = formatChange(effectiveAbsoluteChange, effectivePercentageChange);
 
   let changeColor = "text-zinc-500";
+  let directionArrow = "";
   if (changeData.direction === "up") {
     changeColor = "text-emerald-400";
+    directionArrow = "▲ ";
   } else if (changeData.direction === "down") {
     changeColor = "text-rose-400";
+    directionArrow = "▼ ";
   } else if (changeData.direction === "flat") {
     changeColor = "text-zinc-400";
+    directionArrow = "― ";
+  }
+
+  // Subtle directional update cue (active for ~1.2s after tick)
+  const isRecentMovement =
+    liveQuote?.movement_timestamp && Date.now() - liveQuote.movement_timestamp < 1200;
+  const movementCue = isRecentMovement ? liveQuote?.last_movement_cue : null;
+
+  let rowFlashClass = "";
+  if (movementCue === "up") {
+    rowFlashClass = "bg-emerald-500/10";
+  } else if (movementCue === "down") {
+    rowFlashClass = "bg-rose-500/10";
   }
 
   const isNameColumnVisible = visibleColumns.some((c) => c.id === "instrument.name");
@@ -77,11 +108,11 @@ export function WatchlistRow({
       onDrop={(e) => onDrop(e, index)}
       onDragEnd={onDragEnd}
       onClick={onSelect}
-      className={`border-b border-zinc-800/60 transition-colors cursor-pointer select-none text-xs group ${
+      className={`border-b border-zinc-800/60 transition-colors duration-500 motion-reduce:transition-none cursor-pointer select-none text-xs group ${
         isSelected
           ? "bg-zinc-800/80 border-l-2 border-l-sky-500"
           : "hover:bg-zinc-900/70 bg-zinc-950"
-      } ${isDragging ? "opacity-40 bg-zinc-800" : ""} ${
+      } ${rowFlashClass} ${isDragging ? "opacity-40 bg-zinc-800" : ""} ${
         isDragOver ? "border-t-2 border-t-sky-400" : ""
       }`}
     >
@@ -233,13 +264,13 @@ export function WatchlistRow({
                 style={cellStyle}
                 className={`px-3 py-2 text-right whitespace-nowrap font-mono ${pinnedBorder}`}
               >
-                {item.is_quote_available ? (
+                {isAvailable ? (
                   <>
                     <div className="text-zinc-100 font-semibold text-xs tabular-nums">
                       {formattedPrice}
                     </div>
                     <div className="text-[10px] text-zinc-400 uppercase tracking-wider">
-                      {item.quote_measure || "Last"} {item.quote_currency || ""}
+                      {effectiveQuoteMeasure} {item.quote_currency || ""}
                     </div>
                   </>
                 ) : (
@@ -257,7 +288,7 @@ export function WatchlistRow({
                 style={cellStyle}
                 className={`px-3 py-2 text-right whitespace-nowrap font-mono text-xs font-medium tabular-nums ${changeColor} ${pinnedBorder}`}
               >
-                {item.is_quote_available ? changeData.text : "—"}
+                {isAvailable ? `${directionArrow}${changeData.text}` : "—"}
               </td>
             );
 
@@ -269,7 +300,7 @@ export function WatchlistRow({
                 className={`px-2.5 py-2 whitespace-nowrap ${pinnedBorder}`}
               >
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800">
-                  {item.quote_measure || "Last"}
+                  {effectiveQuoteMeasure}
                 </span>
               </td>
             );
@@ -281,10 +312,11 @@ export function WatchlistRow({
                 style={cellStyle}
                 className={`px-2.5 py-2 font-mono text-[10px] text-zinc-400 whitespace-nowrap ${pinnedBorder}`}
               >
-                {item.source_timestamp
-                  ? new Date(item.source_timestamp).toLocaleTimeString([], {
+                {effectiveTimestamp
+                  ? new Date(effectiveTimestamp).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
+                      second: "2-digit",
                     })
                   : "—"}
               </td>
@@ -298,8 +330,8 @@ export function WatchlistRow({
                 className={`px-2.5 py-2 whitespace-nowrap text-center ${pinnedBorder}`}
               >
                 <WatchlistStatusBadge
-                  freshnessStatus={item.freshness_status}
-                  deliveryDelayStatus={item.delivery_delay_status}
+                  freshnessStatus={effectiveFreshness}
+                  deliveryDelayStatus={effectiveDelay}
                   delaySeconds={item.delay_seconds}
                 />
               </td>
@@ -312,7 +344,7 @@ export function WatchlistRow({
                 style={cellStyle}
                 className={`px-2.5 py-2 font-mono text-[10px] text-zinc-400 truncate ${pinnedBorder}`}
               >
-                {item.provider || "CANONICAL"}
+                {effectiveProvider || "CANONICAL"}
               </td>
             );
 

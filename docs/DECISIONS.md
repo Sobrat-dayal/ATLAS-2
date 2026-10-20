@@ -5744,6 +5744,217 @@ This document records the major architectural and product decisions established.
 184. Documentation must match actual implementation.
 185. Stage 78 is the next canonical development stage.
 
+## Stage 78: Live Watchlist Updates V1
+
+### Product
+1. Stage 78 implements Live Watchlist Updates V1.
+2. The route remains `/watchlists`.
+3. Stage 76 membership remains authoritative.
+4. Stage 77 Column Registry remains authoritative.
+5. Existing AppShell is preserved.
+6. Live data originates from verified ATLAS market-data services.
+7. No synthetic production market data is introduced.
+8. No new global Sidebar module is created.
+9. Watchlists remain different from Portfolios.
+10. Watchlist streaming does not imply trading.
+
+### Streaming Architecture
+11. Stage 41 Quote ingestion remains authoritative.
+12. Stage 42 Market Event Pipeline remains authoritative.
+13. Stage 43 shared WebSocket remains authoritative.
+14. Stage 44 freshness remains authoritative.
+15. No second frontend global WebSocket is created.
+16. No per-row WebSocket is created.
+17. No browser-to-Provider credential connection is created.
+18. No second market event bus is created.
+19. No duplicate latest Quote store is created.
+20. No historical data store is introduced.
+
+### Subscriptions
+21. Subscriptions use canonical market-series identity.
+22. Ticker text is not the subscription key.
+23. Venue distinctions are preserved.
+24. FX orientation is preserved.
+25. Crypto quote-asset identity is preserved.
+26. Futures expiration is preserved.
+27. Financial measure basis is preserved.
+28. Subscriptions use the shared registry.
+29. Reference counting is preserved.
+30. Multiple consumers share eligible subscriptions.
+31. Unsubscribe does not affect remaining consumers.
+32. Subscribe acknowledgments are validated.
+33. Server-side entitlement checks are mandatory.
+34. Subscription limits are enforced.
+35. Unauthorized subscriptions are rejected.
+36. Delayed-only entitlements remain delayed.
+37. Active Watchlist visibility informs desired subscriptions.
+38. Visible rows are prioritized.
+39. Overscan is bounded.
+40. Subscription churn is coalesced.
+41. Background views release unnecessary references.
+42. Charts consumers remain unaffected.
+
+### Events
+43. Existing event schemas are reused.
+44. Event versions are validated.
+45. Canonical instrument IDs are checked.
+46. Market-series identity is checked.
+47. Quote measures are checked.
+48. Source identity is preserved.
+49. Observation timestamps are preserved.
+50. Receipt timestamps remain distinct.
+51. Duplicate events are rejected.
+52. Older events cannot overwrite newer valid state.
+53. Sequence scope is source-specific.
+54. No fictional global sequence is assumed.
+55. Sequence gaps trigger appropriate reconciliation.
+56. Source changes use canonical merge policy.
+57. Malformed events are isolated.
+58. Events for unsubscribed series are ignored appropriately.
+59. No OHLC candles are derived from sparse Quote events.
+
+### Financial Semantics
+60. Last is distinct from Bid.
+61. Last is distinct from Ask.
+62. Mid is distinct from executed Last.
+63. Fixing is distinct from live trade.
+64. Futures settlement is distinct from Last.
+65. Fund NAV is distinct from market price.
+66. Bond price is distinct from yield.
+67. Currency pairs retain orientation.
+68. Crypto quote assets retain denomination.
+69. Numerical precision is preserved.
+70. Valid zero is not treated as missing.
+71. Valid negative Futures prices remain supported.
+72. Missing Volume is not fabricated.
+73. Price changes require valid comparable references.
+74. Tick-direction cues do not masquerade as official session changes.
+75. No fake Volume/market cap data is generated.
+
+### Reconciliation
+76. Initial latest snapshots are qualified.
+77. Startup snapshot/stream races are handled.
+78. Older snapshots cannot revert newer state.
+79. Buffer sizes are bounded.
+80. Watermarks are used only where supported.
+81. Missing event continuity is not fabricated.
+82. Reconnect triggers valid subscription reconciliation.
+83. Latest-state resync uses existing services.
+84. Stale async responses are rejected.
+85. Source revisions are handled through canonical policy.
+
+### Freshness
+86. WebSocket connection status differs from market-data freshness.
+87. Realtime entitlement differs from delivery cadence.
+88. Delayed observations are labeled.
+89. Stale observations are labeled.
+90. Duplicate delivery does not refresh observation time.
+91. Provider outage is represented accurately.
+92. Market closure is based on verified schedules.
+93. Mixed-quality Watchlists are supported.
+94. No false uniform realtime badge is shown.
+
+### Frontend Rendering
+95. Existing Stage 77 table is reused.
+96. Stable Watchlist item IDs are preserved.
+97. Stable Column IDs are preserved.
+98. Only compatible cells update.
+99. UI updates are batched.
+100. High-frequency events do not rerender the whole AppShell.
+101. Row layout remains stable.
+102. Pinned columns remain functional.
+103. Column visibility remains functional.
+104. Manual membership order is preserved.
+105. Sorting behavior follows Stage 77 policy.
+106. No partial-page global ranking claims are introduced.
+107. Update highlighting is restrained.
+108. Color is not the only direction indicator.
+109. Reduced-motion preferences are respected.
+110. No market alert is created from a visual highlight.
+
+### Security
+111. Authentication is required.
+112. Subscription authorization is server-side.
+113. Entitlement revocation is enforced.
+114. User/tenant data scope is preserved.
+115. Arbitrary topic subscription is rejected.
+116. Provider secrets remain server-side.
+117. No arbitrary SQL is permitted.
+118. Resource limits prevent subscription abuse.
+119. No canonical market-data writes originate from table rendering.
+120. No Trading orders are placed.
+121. No Portfolio changes occur.
+122. No Agents execute.
+123. No Workflows execute.
+124. No LLM calls are required.
+
+### Performance
+125. Visible-row subscription budgets are enforced.
+126. Overscan is bounded.
+127. Pending event buffers are bounded.
+128. Event deduplication state is bounded.
+129. UI rendering is coalesced.
+130. Network subscriptions are reference counted.
+131. Reconnect attempts use shared backoff.
+132. Repeated fast scrolling does not create subscription storms.
+133. Multiple Watchlists do not create unnecessary simultaneous subscriptions.
+134. No per-cell Provider fanout occurs.
+135. Existing caches are reused.
+136. Observability is low-cardinality.
+137. Performance tests measure actual behavior.
+
+### UI and Accessibility
+138. Live connection status is visible.
+139. Data freshness is separate from connection status.
+140. Delayed/stale states are visible.
+141. Source details are accessible.
+142. Actual observation timestamps are available.
+143. Keyboard navigation is preserved.
+144. Screen-reader announcements are rate-limited.
+145. Reduced-motion settings are supported.
+146. Mobile responsive behavior is preserved.
+147. Agent Dock compatibility is preserved.
+148. Bottom Taskbar compatibility is preserved.
+149. Existing ATLAS design tokens are reused.
+150. No purple gradients are introduced.
+151. No emoji icons are introduced.
+152. No fabricated market prices are displayed.
+
+### Roadmap Boundaries
+153. Stage 79 owns Watchlist Enrichment.
+154. Stage 80 owns Watchlist Alerts.
+155. Stage 81–88 own Companies.
+156. Stage 89–93 own Economics.
+157. Stage 94–98 own Screeners.
+158. Stage 99–103 own News.
+159. Stage 104–109 own Research.
+160. Stage 110–114 own Portfolios.
+161. Stage 115–118 own Risk.
+162. Stage 119–120 own Saved/Workspaces.
+163. Stage 121–128 own Terminal/AI.
+164. Stage 129–140 own Maps/Intelligence.
+165. Stage 141–142 own Options/Quant pricing.
+166. Stage 143 owns Backtesting.
+167. Stage 144 owns Paper Trading.
+168. Stage 145 owns Broker Sandbox.
+169. Stage 146+ own Agents.
+170. No Watchlist fundamentals engine is introduced.
+171. No Watchlist technical indicator engine is introduced.
+172. No Watchlist News/event enrichment is introduced.
+173. No market-alert evaluation worker is introduced.
+174. No threshold notification scheduler is introduced.
+175. No automated trading logic is introduced.
+176. No duplicate streaming infrastructure is introduced.
+177. Stage 78 must pass entitlement tests.
+178. Stage 78 must pass subscription reference-counting tests.
+179. Stage 78 must pass event-ordering tests.
+180. Stage 78 must pass snapshot/reconciliation tests.
+181. Stage 78 must pass freshness tests.
+182. Stage 78 must pass rendering/performance tests.
+183. Stage 78 must pass Stage 76–77 regressions.
+184. Documentation must reflect the implementation.
+185. Stage 79 is the next canonical development stage.
+
 
 
 

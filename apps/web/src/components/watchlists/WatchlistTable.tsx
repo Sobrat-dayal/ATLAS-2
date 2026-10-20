@@ -5,15 +5,14 @@ import {
   REQUIRED_COLUMN_ID,
   calculateStickyLeftOffsets,
 } from "@/lib/watchlists/columns/registry";
-import {
-  WatchlistColumnConfigV1,
-  WatchlistColumnDefinition,
-} from "@/lib/watchlists/columns/types";
+import { WatchlistColumnConfigV1, WatchlistColumnDefinition } from "@/lib/watchlists/columns/types";
+import { CanonicalLiveQuote } from "@/lib/watchlists/live";
 import { WatchlistColumnHeader } from "./WatchlistColumnHeader";
 import { WatchlistRow } from "./WatchlistRow";
 
 interface WatchlistTableProps {
   items: WatchlistItem[];
+  liveQuotes?: Map<string, CanonicalLiveQuote>;
   config: WatchlistColumnConfigV1;
   onUpdateConfig: (newConfig: WatchlistColumnConfigV1) => void;
   selectedItemId: string | null;
@@ -24,6 +23,7 @@ interface WatchlistTableProps {
 
 export function WatchlistTable({
   items,
+  liveQuotes,
   config,
   onUpdateConfig,
   selectedItemId,
@@ -87,6 +87,7 @@ export function WatchlistTable({
     const isDesc = direction === "desc";
 
     const getRawValue = (item: WatchlistItem): unknown => {
+      const lq = liveQuotes?.get(item.instrument_entity_id?.toLowerCase());
       switch (column_id) {
         case "instrument.symbol":
           return item.symbol;
@@ -97,17 +98,17 @@ export function WatchlistTable({
         case "market.venue":
           return item.venue;
         case "quote.latest_measure":
-          return item.is_quote_available ? item.last_price : null;
+          return lq?.last_price ?? (item.is_quote_available ? item.last_price : null);
         case "quote.change":
-          return item.is_quote_available ? item.percentage_change : null;
+          return lq?.percentage_change ?? (item.is_quote_available ? item.percentage_change : null);
         case "quote.kind":
-          return item.is_quote_available ? item.quote_measure : null;
+          return lq?.quote_measure ?? (item.is_quote_available ? item.quote_measure : null);
         case "quote.as_of":
-          return item.is_quote_available ? item.source_timestamp : null;
+          return lq?.source_timestamp ?? (item.is_quote_available ? item.source_timestamp : null);
         case "quality.freshness":
-          return item.freshness_status;
+          return lq?.freshness_status ?? item.freshness_status;
         case "quality.source":
-          return item.provider;
+          return lq?.provider ?? item.provider;
         default:
           return null;
       }
@@ -396,6 +397,7 @@ export function WatchlistTable({
             <WatchlistRow
               key={item.id}
               item={item}
+              liveQuote={liveQuotes?.get(item.instrument_entity_id?.toLowerCase())}
               index={index}
               totalCount={sortedItems.length}
               visibleColumns={visibleColumns}
