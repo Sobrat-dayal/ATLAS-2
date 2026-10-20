@@ -41,8 +41,8 @@ export function CreateWatchlistDialog({
       setName("");
       setDescription("");
       onClose();
-    } catch (err: any) {
-      setError(err?.message || "Failed to create watchlist.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create watchlist.");
     } finally {
       setLoading(false);
     }

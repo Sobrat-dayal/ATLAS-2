@@ -27,8 +27,8 @@ export function DeleteWatchlistDialog({
       setError(null);
       await onConfirm();
       onClose();
-    } catch (err: any) {
-      setError(err?.message || "Failed to delete watchlist.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to delete watchlist.");
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ export function DeleteWatchlistDialog({
 
           <p className="text-xs text-zinc-300 leading-relaxed">
             Are you sure you want to permanently delete the watchlist{" "}
-            <span className="font-semibold text-zinc-100 font-mono">"{watchlistName}"</span>?
+            <span className="font-semibold text-zinc-100 font-mono">&ldquo;{watchlistName}&rdquo;</span>?
           </p>
 
           <div className="p-2.5 rounded bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-400 space-y-1">

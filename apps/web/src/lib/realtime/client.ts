@@ -339,7 +339,7 @@ export class SharedWebSocketClient {
           this.scheduleReconnect();
         }
       };
-    } catch (err) {
+    } catch {
       this.setState("ERROR");
       this.scheduleReconnect();
     }
@@ -414,7 +414,7 @@ export class SharedWebSocketClient {
         if (!entityId) return;
 
         // Route to matching series
-        for (const [key, record] of this.subscriptions.entries()) {
+        for (const record of this.subscriptions.values()) {
           if (record.series.instrument_entity_id.toLowerCase() === entityId.toLowerCase()) {
             record.lastEvent = msg;
             record.callbacksByConsumer.forEach((cb) => {

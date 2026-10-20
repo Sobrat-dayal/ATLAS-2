@@ -29,10 +29,10 @@ class WebSocketTicketStore:
         # Using a cryptographically secure random string for the ticket
         ticket = secrets.token_urlsafe(32)
         key = self._key(ticket)
-        
+
         # Store full AuthPrincipal claims
         payload = json.dumps({"claims": principal.raw_claims})
-        
+
         await self.redis.setex(key, self.ttl, payload)
         return ticket
 
@@ -42,13 +42,14 @@ class WebSocketTicketStore:
         Returns the AuthPrincipal if valid, None if invalid or expired.
         """
         from atlas.auth.principal import AuthPrincipal
+
         key = self._key(ticket)
-        
+
         # Atomically GET and DELETE the ticket
         raw = await self.redis.getdel(key)
-        
+
         if not raw:
             return None
-            
+
         data = json.loads(raw)
         return AuthPrincipal.from_claims(data["claims"])

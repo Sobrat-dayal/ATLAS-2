@@ -49,15 +49,11 @@ export function WatchlistColumnHeader({
   isDragTarget,
 }: WatchlistColumnHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [currentWidth, setCurrentWidth] = useState(width);
+  const [resizingWidth, setResizingWidth] = useState<number | null>(null);
   const [isResizing, setIsResizing] = useState(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(width);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setCurrentWidth(width);
-  }, [width]);
 
   // Click outside to close context menu
   useEffect(() => {
@@ -90,17 +86,19 @@ export function WatchlistColumnHeader({
     e.stopPropagation();
     setIsResizing(true);
     startXRef.current = e.clientX;
-    startWidthRef.current = currentWidth;
+    startWidthRef.current = width;
+    setResizingWidth(width);
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startXRef.current;
       const unclamped = startWidthRef.current + delta;
       const clamped = Math.max(column.min_width, Math.min(column.max_width, unclamped));
-      setCurrentWidth(clamped);
+      setResizingWidth(clamped);
     };
 
     const handleMouseUp = (upEvent: MouseEvent) => {
       setIsResizing(false);
+      setResizingWidth(null);
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
       const delta = upEvent.clientX - startXRef.current;
@@ -118,6 +116,8 @@ export function WatchlistColumnHeader({
   const isNumeric = column.value_type === "MONETARY" || column.value_type === "PERCENTAGE";
   const alignClass = isNumeric ? "text-right justify-end" : "text-left justify-start";
 
+  const effectiveWidth = isResizing && resizingWidth !== null ? resizingWidth : width;
+
   const pinnedStyles: React.CSSProperties = isPinned
     ? {
         position: "sticky",
@@ -130,7 +130,7 @@ export function WatchlistColumnHeader({
     <th
       scope="col"
       style={{
-        width: `${currentWidth}px`,
+        width: `${effectiveWidth}px`,
         minWidth: `${column.min_width}px`,
         maxWidth: `${column.max_width}px`,
         ...pinnedStyles,

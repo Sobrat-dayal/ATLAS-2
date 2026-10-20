@@ -190,10 +190,10 @@ All endpoints are mounted under `/api/v1/watchlists`:
 
 ## 10. Roadmap Scope Boundaries
 
-| Stage | Feature Area | Status in Stage 76 |
+| Stage | Feature Area | Status in Stage 78 |
 |---|---|---|
 | **Stage 76** | Watchlists V1: Persistent Multi-Asset Watchlists, CRUD, Drag-and-Drop, Snapshots | **COMPLETE** |
-| **Stage 77** | Advanced Configurable Watchlist Columns (Custom columns, presets, formulas) | **DEFERRED** |
-| **Stage 78** | Live Watchlist Updates (Streaming WebSockets, per-row tick flashing) | **DEFERRED** |
+| **Stage 77** | Advanced Configurable Watchlist Columns (Custom columns, presets, formulas) | **COMPLETE** |
+| **Stage 78** | Live Watchlist Updates (Streaming WebSockets, per-row tick flashing, reconciliation) | **COMPLETE** |
 | **Stage 79** | Fundamental, Technical, Event and News Watchlist Enrichment | **DEFERRED** |
 | **Stage 80** | Watchlist Alerts (Price thresholds, volume spikes, push alerts) | **DEFERRED** |

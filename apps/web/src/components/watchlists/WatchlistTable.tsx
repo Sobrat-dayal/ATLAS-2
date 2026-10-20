@@ -147,6 +147,7 @@ export function WatchlistTable({
     missing.sort((a, b) => a.manualPos - b.manualPos);
 
     return [...valid.map((v) => v.item), ...missing.map((m) => m.item)];
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Preserves active order between explicit refreshes to prevent disruptive row jumping (Stage 78 Requirement 120)
   }, [items, config.sort]);
 
   // =========================================================================

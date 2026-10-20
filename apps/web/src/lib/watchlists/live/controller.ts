@@ -14,10 +14,8 @@
  */
 
 import {
-  QuoteSubscriptionKeyDTO,
   RealtimeConnectionState,
   RealtimeSubscriptionState,
-  ServerMessage,
   LiveEventMessageOut,
   QuoteSnapshotMessage,
 } from "@/lib/realtime/types";
@@ -237,7 +235,7 @@ export class WatchlistLiveController {
     this.wsClient.reconcileConsumerSubscriptions(this.consumerId, plan, {
       onSnapshot: (snap) => this.handleIncomingSnapshot(snap),
       onLiveEvent: (event) => this.handleIncomingLiveEvent(event),
-      onStatusChange: (state, reason) => {
+      onStatusChange: () => {
         // Track subscription status
         this.emitStatus();
       },
@@ -263,7 +261,7 @@ export class WatchlistLiveController {
     );
 
     if (applySnapshot) {
-      this.applyQuoteData(entityId, snap, "snapshot");
+      this.applyQuoteData(entityId, snap);
     }
   }
 
@@ -276,7 +274,8 @@ export class WatchlistLiveController {
     this.lastEventTime = new Date().toISOString();
 
     const rawEvent = (msg.event || msg) as IncomingQuoteEvent;
-    const entityId = (rawEvent.instrument_entity_id || (rawEvent as any).instrument_id || "").toLowerCase();
+    const legacyInstId = (rawEvent as IncomingQuoteEvent & { instrument_id?: string }).instrument_id;
+    const entityId = (rawEvent.instrument_entity_id || legacyInstId || "").toLowerCase();
 
     // 1. Validate event schema & data
     const allowsNegative = !!this.allowsNegativePriceMap[entityId];
@@ -319,7 +318,7 @@ export class WatchlistLiveController {
     // 4. Apply qualified quote update
     this.eventsAppliedCount++;
     this.lastObservationTime = sourceTs;
-    this.applyQuoteData(validation.instrumentEntityId, quotePayload, "stream");
+    this.applyQuoteData(validation.instrumentEntityId, quotePayload);
 
     return true;
   }
@@ -329,8 +328,7 @@ export class WatchlistLiveController {
    */
   private applyQuoteData(
     entityId: string,
-    raw: RawMarketQuotePayload,
-    origin: "stream" | "snapshot"
+    raw: RawMarketQuotePayload
   ): void {
     const existing = this.currentQuotes.get(entityId);
     const item = this.items.find((i) => i.instrument_entity_id?.toLowerCase() === entityId);

@@ -27,6 +27,7 @@ export function AddInstrumentDialog({
 
   useEffect(() => {
     if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset search modal state on close
       setQuery("");
       setResults([]);
       setError(null);
@@ -40,6 +41,7 @@ export function AddInstrumentDialog({
   useEffect(() => {
     const trimmed = query.trim();
     if (!trimmed) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset results on empty query
       setResults([]);
       setLoading(false);
       return;
@@ -61,8 +63,8 @@ export function AddInstrumentDialog({
           signal: controller.signal,
         });
         setResults(res.results || []);
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
+      } catch (err: unknown) {
+        if ((err as Error)?.name !== "AbortError") {
           setError("Failed to query canonical financial instruments.");
         }
       } finally {
@@ -86,8 +88,8 @@ export function AddInstrumentDialog({
         instrument_entity_id: result.entity_id,
         market_series_id: result.scope_display_name || undefined,
       });
-    } catch (err: any) {
-      setError(err?.message || "Failed to add instrument to watchlist.");
+    } catch (err: unknown) {
+      setError((err as Error)?.message || "Failed to add instrument to watchlist.");
     } finally {
       setAddingId(null);
     }
@@ -106,7 +108,7 @@ export function AddInstrumentDialog({
           <div>
             <h2 id="add-instrument-title" className="text-xs font-semibold uppercase tracking-wider text-zinc-100 flex items-center gap-2">
               <Search className="w-3.5 h-3.5 text-zinc-400" />
-              Add Instrument to "{watchlistName}"
+              Add Instrument to &ldquo;{watchlistName}&rdquo;
             </h2>
             <p className="text-[10px] text-zinc-400 mt-0.5">
               Search canonical financial catalog by ticker, ISIN, or company name
@@ -161,7 +163,7 @@ export function AddInstrumentDialog({
             </div>
           ) : results.length === 0 ? (
             <div className="py-12 text-center text-xs text-zinc-400">
-              No matching financial instruments found for "{query}".
+              No matching financial instruments found for &ldquo;{query}&rdquo;.
             </div>
           ) : (
             results.map((item) => {

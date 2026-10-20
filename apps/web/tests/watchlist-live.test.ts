@@ -333,13 +333,11 @@ describe("Stage 78 - Live Watchlist Updates V1 Tests", () => {
       },
     ];
 
-    let emittedQuotes: Map<string, CanonicalLiveQuote> | null = null;
-
     const controller = new WatchlistLiveController({
       watchlistId: "w-1",
       items,
       onQuoteBatch: (batch) => {
-        emittedQuotes = batch;
+        void batch;
       },
     });
 

@@ -178,3 +178,15 @@ All endpoints require authentication and enforce watchlist ownership:
 - `PUT /api/v1/watchlists/{id}/columns`: Persist normalized configuration with revision check.
 - `POST /api/v1/watchlists/{id}/columns/reset`: Revert watchlist columns to canonical default layout.
 - `GET /api/v1/watchlists/{id}/rows`: Query projected rows with typed cell values and global sorting.
+
+---
+
+## 9. Roadmap Scope Boundaries
+
+| Stage | Feature Area | Status in Stage 78 |
+|---|---|---|
+| **Stage 76** | Watchlists V1: Persistent Multi-Asset Watchlists, CRUD, Drag-and-Drop, Snapshots | **COMPLETE** |
+| **Stage 77** | Advanced Configurable Watchlist Columns (Custom columns, presets, formulas) | **COMPLETE** |
+| **Stage 78** | Live Watchlist Updates (Streaming WebSockets, per-row tick flashing, reconciliation) | **COMPLETE** |
+| **Stage 79** | Fundamental, Technical, Event and News Watchlist Enrichment | **DEFERRED** |
+| **Stage 80** | Watchlist Alerts (Price thresholds, volume spikes, push alerts) | **DEFERRED** |

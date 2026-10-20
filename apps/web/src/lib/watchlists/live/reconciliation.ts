@@ -74,7 +74,8 @@ export class SnapshotStreamReconciler {
 
     // Filter events for this instrument in the buffer
     const instrumentEvents = this.buffer.filter((e) => {
-      const eid = (e.instrument_entity_id || (e as any).instrument_id || "").toLowerCase();
+      const legacyId = (e as IncomingQuoteEvent & { instrument_id?: string }).instrument_id;
+      const eid = (e.instrument_entity_id || legacyId || "").toLowerCase();
       return eid === instrumentId.toLowerCase();
     });
 

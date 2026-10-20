@@ -86,9 +86,20 @@ export function WatchlistRow({
   }
 
   // Subtle directional update cue (active for ~1.2s after tick)
-  const isRecentMovement =
-    liveQuote?.movement_timestamp && Date.now() - liveQuote.movement_timestamp < 1200;
-  const movementCue = isRecentMovement ? liveQuote?.last_movement_cue : null;
+  const [movementCue, setMovementCue] = React.useState<"up" | "down" | "flat" | null>(null);
+
+  React.useEffect(() => {
+    if (!liveQuote?.movement_timestamp || !liveQuote?.last_movement_cue) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize movement cue decay timer on incoming tick
+      setMovementCue(null);
+      return;
+    }
+    setMovementCue(liveQuote.last_movement_cue);
+    const timer = setTimeout(() => {
+      setMovementCue(null);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [liveQuote?.movement_timestamp, liveQuote?.last_movement_cue]);
 
   let rowFlashClass = "";
   if (movementCue === "up") {

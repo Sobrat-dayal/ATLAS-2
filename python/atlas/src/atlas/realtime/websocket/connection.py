@@ -10,7 +10,13 @@ from atlas.realtime.websocket.models import QuoteSubscriptionKey
 
 
 class RealtimeConnection:
-    def __init__(self, connection_id: UUID, websocket: WebSocket, principal: AuthPrincipal, max_control_messages: int = 256):
+    def __init__(
+        self,
+        connection_id: UUID,
+        websocket: WebSocket,
+        principal: AuthPrincipal,
+        max_control_messages: int = 256,
+    ):
         self.connection_id = connection_id
         self.websocket = websocket
         self.principal = principal

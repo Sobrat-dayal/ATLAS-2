@@ -93,6 +93,7 @@ export function WatchlistsWorkspace() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Asynchronous initial load of user watchlists
     fetchWatchlists();
   }, [fetchWatchlists]);
 
@@ -143,6 +144,7 @@ export function WatchlistsWorkspace() {
 
   useEffect(() => {
     if (activeWatchlistId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Asynchronous watchlist detail fetch on active ID change
       fetchWatchlistDetail(activeWatchlistId);
     } else {
       setActiveWatchlist(null);

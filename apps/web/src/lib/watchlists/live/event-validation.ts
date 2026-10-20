@@ -76,7 +76,8 @@ export function validateCanonicalQuoteEvent(
   }
 
   // 3. Instrument Entity ID
-  const entityId = (event.instrument_entity_id || (event as any).instrument_id || "").toLowerCase();
+  const legacyInstId = (event as IncomingQuoteEvent & { instrument_id?: string }).instrument_id;
+  const entityId = (event.instrument_entity_id || legacyInstId || "").toLowerCase();
   if (!entityId || !UUID_REGEX.test(entityId)) {
     return {
       accepted: false,

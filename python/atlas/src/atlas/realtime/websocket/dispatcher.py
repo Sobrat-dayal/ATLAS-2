@@ -12,11 +12,12 @@ from atlas.realtime.websocket.registry import RealtimeConnectionRegistry
 
 logger = logging.getLogger("atlas.realtime.websocket.dispatcher")
 
+
 class RealtimeEventDispatcher:
     def __init__(
-        self, 
-        reader: LiveEventReader, 
-        registry: RealtimeConnectionRegistry, 
+        self,
+        reader: LiveEventReader,
+        registry: RealtimeConnectionRegistry,
         grace_seconds: int = 10,
     ):
         self.reader = reader
@@ -26,16 +27,16 @@ class RealtimeEventDispatcher:
         self._task: Optional[asyncio.Task] = None
         self.last_cursor: Optional[str] = None
         self._gateway = None  # To call resync, or we can just send the event to a channel
-        
+
     def set_gateway(self, gateway):
         self._gateway = gateway
-        
+
     def start(self):
         if self.running:
             return
         self.running = True
         self._task = asyncio.create_task(self._loop())
-        
+
     async def stop(self):
         self.running = False
         if self._task:
@@ -44,7 +45,7 @@ class RealtimeEventDispatcher:
                 await self._task
             except asyncio.CancelledError:
                 pass
-            
+
     async def _loop(self):
         while self.running:
             try:
@@ -53,8 +54,9 @@ class RealtimeEventDispatcher:
             except Exception as e:
                 logger.error("Failed to get initial tail cursor: %s", e)
                 await asyncio.sleep(self.grace_seconds)
-                if not self.running: return
-                
+                if not self.running:
+                    return
+
         while self.running:
             try:
                 if not await self.reader.is_cursor_available(self.last_cursor):
@@ -62,7 +64,7 @@ class RealtimeEventDispatcher:
                         await self._gateway.resync_all("EVENT_CURSOR_EXPIRED")
                     self.last_cursor = await self.reader.get_tail_cursor()
                     continue
-                    
+
                 messages = await self.reader.read_after(self.last_cursor, count=100, block_ms=5000)
                 if messages:
                     for msg in messages:
@@ -83,10 +85,14 @@ class RealtimeEventDispatcher:
             # Extract QuoteSubscriptionKey
             payload = env.payload or {}
             variant = payload.get("variant")
-            series = QuoteSubscriptionKey(instrument_entity_id=env.instrument_entity_id, variant=variant)
-            
+            series = QuoteSubscriptionKey(
+                instrument_entity_id=env.instrument_entity_id, variant=variant
+            )
+
             # Need to create the output model.
             # Using model_dump to serialize UUIDs properly
-            out_msg = LiveEventMessageOut(stream_id=msg.stream_id, event=env.model_dump(mode="json"))
+            out_msg = LiveEventMessageOut(
+                stream_id=msg.stream_id, event=env.model_dump(mode="json")
+            )
             for conn in self.registry.get_subscribers(series):
                 conn.outbound.enqueue_quote(series, out_msg)

@@ -169,10 +169,55 @@ When opening a watchlist, two asynchronous flows race:
 
 ---
 
-## 10. Verification & Quality Gates
+## 10. Security & Entitlement Architecture
+
+- **Authenticated Subscriptions:** Subscriptions reuse Stage 13 authentication tokens exchanged for ephemeral connection tickets (`/api/v1/realtime/websocket-ticket`).
+- **Server-Side Entitlement Checks:** Every requested series key is checked against the user's licensing profile (`MarketDataEntitlementService`). Guessed topics or unauthorized Level 2 instruments return typed rejection records.
+- **Realtime vs. Delayed Licensing:** Users on standard tiers receive delayed market data (`delivery_delay_status: "delayed"`). Realtime feeds are only streamed to entitled professional accounts.
+- **Zero Client Credential Leakage:** Upstream provider API keys and authorization headers remain exclusively server-side.
+- **Resource Limits:** Connection budgets (max 10 series per subscribe message, max 25-50 series per connection) prevent subscription flood abuse.
+- **Zero Financial Side-Effects:** Live quote delivery never places trading orders, creates portfolio transactions, triggers background workflows, or initiates LLM calls.
+
+---
+
+## 11. Freshness & Data Quality Classification
+
+ATLAS keeps WebSocket connection state and market-data freshness strictly orthogonal:
+- **Connected Socket $\neq$ Realtime Data:** A green WebSocket connection indicator reflects active network transport, not fresh exchange prints.
+- **Observation Time vs. Receipt Time:** The observation timestamp (`source_timestamp` / `as_of`) records when the trade/quote occurred at the exchange/venue. Ingestion receipt time (`received_at`) is logged independently and never replaces market observation time.
+- **Duplicate Ticks:** Duplicate deliveries do not refresh observation timestamps or transform stale observations into fresh data.
+- **Verified Market Closure:** Markets are marked Closed only using verified exchange calendar sessions, never guessed from event silence.
+- **Mixed-Quality Watchlists:** When a watchlist contains both realtime and delayed series, the aggregate status reflects `Mixed Quality`, while individual row badges display exact per-series freshness.
+
+---
+
+## 12. Accessibility, Responsiveness & Visual Restraint
+
+- **Keyboard Usability:** All table headers, sort toggles, row actions, dialogs, and reconnect buttons remain completely accessible via keyboard navigation.
+- **Screen-Reader Throttling:** Screen-reader live regions (`aria-live="polite"`) announce intentional user actions (e.g., row reordering, sort changes) while suppressing high-frequency price tick announcements.
+- **Reduced Motion Support:** Respects `prefers-reduced-motion: reduce` by disabling row background highlight pulses and animation transitions.
+- **Responsive Layout:** Compatible with screen viewports from 320px mobile devices to 1920px+ institutional widescreen workstations, coexisting cleanly with the Agent Dock and Bottom Taskbar.
+- **Institutional Visual Language:** Reuses ATLAS design tokens with zero purple gradients, zero cartoon emojis, zero fake stock tickers, and zero artificial price animations.
+
+---
+
+## 13. Roadmap Scope Boundaries
+
+| Stage | Feature Area | Status in Stage 78 |
+|---|---|---|
+| **Stage 76** | Watchlists V1: Persistent Multi-Asset Watchlists, Membership, CRUD, Snapshots | **COMPLETE** |
+| **Stage 77** | Advanced Watchlist Columns: Column Registry, Width Resizing, Pinning, Multi-Column Sort | **COMPLETE** |
+| **Stage 78** | Live Watchlist Updates: Realtime Streaming, Reference Counting, Reconciliation, Freshness | **COMPLETE** |
+| **Stage 79** | Fundamental, Technical, Event and News Watchlist Enrichment | **DEFERRED** |
+| **Stage 80** | Watchlist Alerts (Price thresholds, volume spikes, push notifications) | **DEFERRED** |
+
+---
+
+## 14. Verification & Quality Gates
 
 All automated quality gates pass cleanly:
 - **Backend Tests:** 57 passing pytest suites (`test_watchlists.py`, `test_watchlist_columns.py`, `test_watchlist_live.py`).
 - **Frontend Tests:** 25 passing Node.js/tsx tests (`watchlist-live.test.ts`, `watchlists.test.ts`, `watchlist-columns.test.ts`).
 - **Type Checking:** TypeScript typecheck (`tsc --noEmit`) passes with 0 errors.
-- **Lint & Format:** Python Ruff check and format pass cleanly with 0 errors.
+- **Lint & Format:** Python Ruff check and format pass cleanly with 0 errors; ESLint on target watchlist/realtime modules passes with 0 errors and 0 warnings.
+- **Production Build:** Next.js production build (`next build`) passes cleanly with all 38 application routes statically/dynamically generated.

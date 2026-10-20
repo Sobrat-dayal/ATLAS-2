@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { X, Search, RotateCcw, ArrowUp, ArrowDown, Pin, Eye, EyeOff } from "lucide-react";
+import { X, Search, RotateCcw, ArrowUp, ArrowDown, Pin } from "lucide-react";
 import {
   COLUMN_CATALOG,
   MAX_VISIBLE_COLUMNS,
