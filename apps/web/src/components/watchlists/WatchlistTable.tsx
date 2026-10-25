@@ -17,6 +17,8 @@ interface WatchlistTableProps {
   config: WatchlistColumnConfigV1;
   onUpdateConfig: (newConfig: WatchlistColumnConfigV1) => void;
   selectedItemId: string | null;
+  itemAlertCounts?: Record<string, number>;
+  onCreateAlert?: (item: WatchlistItem) => void;
   onSelectItem: (item: WatchlistItem) => void;
   onRemoveItem: (item: WatchlistItem) => void;
   onReorder: (newOrderedItems: WatchlistItem[]) => void;
@@ -29,6 +31,8 @@ export function WatchlistTable({
   config,
   onUpdateConfig,
   selectedItemId,
+  itemAlertCounts,
+  onCreateAlert,
   onSelectItem,
   onRemoveItem,
   onReorder,
@@ -411,6 +415,8 @@ export function WatchlistTable({
               isSelected={item.id === selectedItemId}
               isDragging={draggedRowIndex === index}
               isDragOver={dragOverRowIndex === index}
+              alertCount={itemAlertCounts?.[item.id] || 0}
+              onCreateAlert={onCreateAlert}
               onSelect={() => onSelectItem(item)}
               onDragStart={handleRowDragStart}
               onDragOver={handleRowDragOver}

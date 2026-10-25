@@ -7,6 +7,7 @@ import {
   Trash2,
   ArrowUp,
   ArrowDown,
+  Bell,
 } from "lucide-react";
 import { WatchlistItem } from "@/lib/watchlists/types";
 import { getMarketRouteForAssetClass } from "@/lib/watchlists/formatting";
@@ -18,6 +19,7 @@ interface WatchlistRowActionsProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRemove: () => void;
+  onCreateAlert?: (item: WatchlistItem) => void;
 }
 
 export function WatchlistRowActions({
@@ -27,6 +29,7 @@ export function WatchlistRowActions({
   onMoveUp,
   onMoveDown,
   onRemove,
+  onCreateAlert,
 }: WatchlistRowActionsProps) {
   const router = useRouter();
 
@@ -113,6 +116,22 @@ export function WatchlistRowActions({
           <Building2 className="w-3.5 h-3.5" />
         </button>
       ) : null}
+
+      {/* Create Alert */}
+      {onCreateAlert && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCreateAlert(item);
+          }}
+          className="p-1 rounded text-zinc-400 hover:text-sky-300 hover:bg-sky-950/40 transition-colors"
+          title="Create Alert for Instrument"
+          aria-label={`Create alert for ${item.symbol}`}
+        >
+          <Bell className="w-3.5 h-3.5" />
+        </button>
+      )}
 
       {/* Remove from Watchlist */}
       <button

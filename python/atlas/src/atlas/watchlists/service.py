@@ -233,6 +233,14 @@ class WatchlistService:
         if watchlist is None:
             raise WatchlistNotFoundError(f"Watchlist {watchlist_id} not found.")
 
+        # Stage 80 Lifecycle policy: disable active alerts before cascade (Requirement 16)
+        try:
+            from atlas.watchlists.alerts.repository import WatchlistAlertRepository
+            alerts_repo = WatchlistAlertRepository(self.repository.session)
+            await alerts_repo.disable_alerts_for_watchlist(watchlist_id)
+        except Exception as e:
+            logger.warning("Could not disable alerts for watchlist %s: %s", watchlist_id, e)
+
         await self.repository.delete_watchlist(watchlist)
 
     # =========================================================================
@@ -315,6 +323,14 @@ class WatchlistService:
             raise WatchlistItemNotFoundError(
                 f"Membership item {item_id} not found in watchlist {watchlist_id}."
             )
+
+        # Stage 80 Lifecycle policy: disable active alerts associated with removed item (Requirement 15)
+        try:
+            from atlas.watchlists.alerts.repository import WatchlistAlertRepository
+            alerts_repo = WatchlistAlertRepository(self.repository.session)
+            await alerts_repo.disable_alerts_for_item(item_id)
+        except Exception as e:
+            logger.warning("Could not disable alerts for item %s: %s", item_id, e)
 
         await self.repository.remove_item(watchlist, item)
 

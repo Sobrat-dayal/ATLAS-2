@@ -11,6 +11,7 @@ import { CanonicalLiveQuote } from "@/lib/watchlists/live";
 import { EnrichmentCell } from "./enrichment";
 import { WatchlistStatusBadge } from "./WatchlistStatusBadge";
 import { WatchlistRowActions } from "./WatchlistRowActions";
+import { AlertBadge } from "./alerts/AlertBadge";
 
 interface WatchlistRowProps {
   item: WatchlistItem;
@@ -25,6 +26,8 @@ interface WatchlistRowProps {
   isSelected: boolean;
   isDragging: boolean;
   isDragOver: boolean;
+  alertCount?: number;
+  onCreateAlert?: (item: WatchlistItem) => void;
   onSelect: () => void;
   onDragStart: (e: React.DragEvent<HTMLTableRowElement>, index: number) => void;
   onDragOver: (e: React.DragEvent<HTMLTableRowElement>, index: number) => void;
@@ -49,6 +52,8 @@ export function WatchlistRow({
   isSelected,
   isDragging,
   isDragOver,
+  alertCount,
+  onCreateAlert,
   onSelect,
   onDragStart,
   onDragOver,
@@ -178,8 +183,19 @@ export function WatchlistRow({
                 style={cellStyle}
                 className={`px-3 py-2 ${pinnedBorder}`}
               >
-                <div className="font-mono font-bold text-zinc-100 tracking-wide text-xs truncate">
-                  {item.symbol}
+                <div className="flex items-center gap-1.5">
+                  <div className="font-mono font-bold text-zinc-100 tracking-wide text-xs truncate">
+                    {item.symbol}
+                  </div>
+                  {alertCount && alertCount > 0 ? (
+                    <AlertBadge
+                      count={alertCount}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCreateAlert?.(item);
+                      }}
+                    />
+                  ) : null}
                 </div>
                 {!isNameColumnVisible && (
                   <div className="text-[10px] text-zinc-400 truncate">
@@ -404,6 +420,7 @@ export function WatchlistRow({
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
           onRemove={onRemove}
+          onCreateAlert={onCreateAlert}
         />
       </td>
     </tr>

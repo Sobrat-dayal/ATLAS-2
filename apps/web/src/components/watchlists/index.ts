@@ -16,3 +16,4 @@ export * from "./WatchlistTable";
 export * from "./WatchlistsWorkspace";
 export * from "./WatchlistConnectionStatus";
 export * from "./WatchlistDataQuality";
+export * from "./alerts";

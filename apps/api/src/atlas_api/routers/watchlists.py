@@ -42,6 +42,7 @@ from atlas.watchlists import (
     WatchlistSummaryResponse,
     WatchlistUpdateRequest,
 )
+from atlas.watchlists.alerts import alerts_router
 from atlas.watchlists.columns import (
     ColumnConfigRevisionConflictError,
     ColumnLimitExceededError,
@@ -646,3 +647,8 @@ async def query_watchlist_enrichment(
         request=request,
         quotes_map=quotes_map,
     )
+
+
+# Mount Watchlist Alerts V1 subrouter (Stage 80)
+router.include_router(alerts_router)
+

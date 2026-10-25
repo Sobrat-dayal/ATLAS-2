@@ -37,7 +37,8 @@ import { CreateWatchlistDialog } from "./CreateWatchlistDialog";
 import { RenameWatchlistDialog } from "./RenameWatchlistDialog";
 import { DeleteWatchlistDialog } from "./DeleteWatchlistDialog";
 import { AddInstrumentDialog } from "./AddInstrumentDialog";
-import { useWatchlistLive, useWatchlistEnrichment } from "@/hooks/watchlists";
+import { WatchlistAlertsPanel } from "./alerts/WatchlistAlertsPanel";
+import { useWatchlistLive, useWatchlistEnrichment, useWatchlistAlerts } from "@/hooks/watchlists";
 import { Loader2 } from "lucide-react";
 
 export function WatchlistsWorkspace() {
@@ -57,6 +58,26 @@ export function WatchlistsWorkspace() {
 
   // Enrichment state (Stage 79)
   const { enrichmentData } = useWatchlistEnrichment(activeWatchlist, columnConfig, liveQuotes);
+
+  // Watchlist Alerts state (Stage 80)
+  const {
+    alerts,
+    activeAlerts,
+    pausedAlerts,
+    itemAlertCounts,
+    capabilities: alertCaps,
+    health: alertHealth,
+    loading: alertsLoading,
+    error: alertsError,
+    createAlert,
+    updateAlert,
+    deleteAlert,
+    pauseAlert,
+    resumeAlert,
+    fetchHistory: fetchAlertHistory,
+  } = useWatchlistAlerts({ watchlistId: activeWatchlistId });
+
+  const [preselectedItemForAlert, setPreselectedItemForAlert] = useState<WatchlistItem | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
@@ -455,6 +476,8 @@ export function WatchlistsWorkspace() {
             config={columnConfig}
             onUpdateConfig={handleUpdateColumnConfig}
             selectedItemId={selectedItemId}
+            itemAlertCounts={itemAlertCounts}
+            onCreateAlert={(item) => setPreselectedItemForAlert(item)}
             onSelectItem={(item) => setSelectedItemId(item.id)}
             onRemoveItem={handleRemoveInstrument}
             onReorder={handleReorder}
@@ -465,6 +488,29 @@ export function WatchlistsWorkspace() {
             item={selectedItem}
             onClose={() => setSelectedItemId(null)}
           />
+
+          {/* Watchlist Alerts Management Panel (Stage 80) */}
+          <div className="mt-4">
+            <WatchlistAlertsPanel
+              watchlistId={activeWatchlistId}
+              items={activeWatchlist.items}
+              alerts={alerts}
+              activeAlerts={activeAlerts}
+              pausedAlerts={pausedAlerts}
+              capabilities={alertCaps}
+              health={alertHealth}
+              loading={alertsLoading}
+              error={alertsError}
+              createAlert={createAlert}
+              updateAlert={updateAlert}
+              deleteAlert={deleteAlert}
+              pauseAlert={pauseAlert}
+              resumeAlert={resumeAlert}
+              fetchHistory={fetchAlertHistory}
+              preselectedItem={preselectedItemForAlert}
+              onClearPreselectedItem={() => setPreselectedItemForAlert(null)}
+            />
+          </div>
         </>
       ) : null}
 
