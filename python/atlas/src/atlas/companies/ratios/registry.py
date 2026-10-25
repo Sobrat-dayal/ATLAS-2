@@ -1,0 +1,756 @@
+"""Versioned Financial Ratio Registry & Definitions (Stage 83).
+
+Every ratio has:
+- A stable, canonical identifier (e.g., 'profitability.roe')
+- An explicit methodology version
+- Mathematical formula descriptions
+- Defined statement input dependencies
+- Numerical formatting & unit metadata
+- Strict policies for zero and negative denominators
+"""
+
+from typing import Dict, List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from atlas.companies.ratios.enums import (
+    DenominatorPolicy,
+    NegativePolicy,
+    RatioCategory,
+    RatioPeriodType,
+    UnitKind,
+)
+from atlas.companies.ratios.errors import RatioNotFoundError
+
+
+class FinancialRatioDefinition(BaseModel):
+    """Canonical, versioned definition of a single financial ratio."""
+
+    id: str
+    name: str
+    description: str
+    category: RatioCategory
+    methodology_version: int = 1
+    methodology_id: str
+    formula_display: str
+    numerator_definition: str
+    denominator_definition: str
+    required_inputs: List[str]
+    supported_periods: List[RatioPeriodType] = Field(
+        default_factory=lambda: [RatioPeriodType.ANNUAL, RatioPeriodType.QUARTERLY, RatioPeriodType.TTM]
+    )
+    unit_kind: UnitKind
+    output_format: str = "{:.2f}"
+    denominator_policy: DenominatorPolicy = DenominatorPolicy.NON_ZERO
+    negative_policy: NegativePolicy = NegativePolicy.VALID_NEGATIVE
+    requires_market_data: bool = False
+    requires_balance_sheet_average: bool = False
+    supported_industries: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
+# =============================================================================
+# Canonical Ratio Registry Catalog
+# =============================================================================
+
+CANONICAL_RATIO_DEFINITIONS: List[FinancialRatioDefinition] = [
+    # -------------------------------------------------------------------------
+    # 1. Profitability Ratios
+    # -------------------------------------------------------------------------
+    FinancialRatioDefinition(
+        id="profitability.gross_margin",
+        name="Gross Profit Margin",
+        description="Percentage of revenue retained after deducting cost of revenue (COGS).",
+        category=RatioCategory.PROFITABILITY,
+        methodology_id="gross_profit_over_revenue",
+        formula_display="Gross Profit / Revenue × 100",
+        numerator_definition="Gross Profit reported on the Income Statement",
+        denominator_definition="Total Revenue reported on the Income Statement",
+        required_inputs=["gross_profit", "revenue"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="profitability.operating_margin",
+        name="Operating Profit Margin",
+        description="Operating income (EBIT) as a percentage of total revenue.",
+        category=RatioCategory.PROFITABILITY,
+        methodology_id="operating_income_over_revenue",
+        formula_display="Operating Income / Revenue × 100",
+        numerator_definition="Operating Income reported on the Income Statement",
+        denominator_definition="Total Revenue reported on the Income Statement",
+        required_inputs=["operating_income", "revenue"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="profitability.ebitda_margin",
+        name="EBITDA Margin",
+        description="Earnings Before Interest, Taxes, Depreciation, and Amortization relative to revenue.",
+        category=RatioCategory.PROFITABILITY,
+        methodology_id="ebitda_over_revenue",
+        formula_display="EBITDA / Revenue × 100",
+        numerator_definition="Operating Income + Depreciation & Amortization",
+        denominator_definition="Total Revenue reported on the Income Statement",
+        required_inputs=["operating_income", "depreciation_and_amortization", "revenue"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="profitability.net_margin",
+        name="Net Profit Margin",
+        description="Net income attributable to ordinary shareholders as a percentage of total revenue.",
+        category=RatioCategory.PROFITABILITY,
+        methodology_id="net_income_over_revenue",
+        formula_display="Net Income / Revenue × 100",
+        numerator_definition="Net Income reported on the Income Statement",
+        denominator_definition="Total Revenue reported on the Income Statement",
+        required_inputs=["net_income", "revenue"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="profitability.roe",
+        name="Return on Equity (ROE)",
+        description="Measure of financial performance calculated by dividing net income by shareholders' average equity.",
+        category=RatioCategory.PROFITABILITY,
+        methodology_id="net_income_over_average_equity",
+        formula_display="Net Income / Average Shareholders' Equity × 100",
+        numerator_definition="Net Income reported on the Income Statement",
+        denominator_definition="Average of beginning and ending Total Shareholders' Equity",
+        required_inputs=["net_income", "total_equity"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.AVERAGE_BALANCE,
+        negative_policy=NegativePolicy.NOT_MEANINGFUL,
+        requires_balance_sheet_average=True,
+    ),
+    FinancialRatioDefinition(
+        id="profitability.roa",
+        name="Return on Assets (ROA)",
+        description="Efficiency of management at using assets to generate earnings.",
+        category=RatioCategory.PROFITABILITY,
+        methodology_id="net_income_over_average_assets",
+        formula_display="Net Income / Average Total Assets × 100",
+        numerator_definition="Net Income reported on the Income Statement",
+        denominator_definition="Average of beginning and ending Total Assets",
+        required_inputs=["net_income", "total_assets"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.AVERAGE_BALANCE,
+        requires_balance_sheet_average=True,
+    ),
+    FinancialRatioDefinition(
+        id="profitability.roic",
+        name="Return on Invested Capital (ROIC)",
+        description="Net Operating Profit After Tax (NOPAT) divided by average invested capital.",
+        category=RatioCategory.PROFITABILITY,
+        methodology_id="nopat_over_average_invested_capital",
+        formula_display="NOPAT / Average Invested Capital × 100",
+        numerator_definition="Operating Income × (1 - Effective Tax Rate)",
+        denominator_definition="Average of (Total Debt + Total Equity - Cash & Equivalents)",
+        required_inputs=["operating_income", "income_tax_expense", "income_before_tax", "total_debt", "total_equity", "cash_and_cash_equivalents"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.AVERAGE_BALANCE,
+        requires_balance_sheet_average=True,
+    ),
+    FinancialRatioDefinition(
+        id="profitability.roce",
+        name="Return on Capital Employed (ROCE)",
+        description="Operating profit relative to total capital employed (Total Assets minus Current Liabilities).",
+        category=RatioCategory.PROFITABILITY,
+        methodology_id="ebit_over_average_capital_employed",
+        formula_display="Operating Income (EBIT) / Average Capital Employed × 100",
+        numerator_definition="Operating Income (EBIT)",
+        denominator_definition="Average of (Total Assets - Current Liabilities)",
+        required_inputs=["operating_income", "total_assets", "current_liabilities"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.AVERAGE_BALANCE,
+        requires_balance_sheet_average=True,
+    ),
+
+    # -------------------------------------------------------------------------
+    # 2. Liquidity Ratios
+    # -------------------------------------------------------------------------
+    FinancialRatioDefinition(
+        id="liquidity.current_ratio",
+        name="Current Ratio",
+        description="Ability of a company to cover its short-term obligations with its current assets.",
+        category=RatioCategory.LIQUIDITY,
+        methodology_id="current_assets_over_current_liabilities",
+        formula_display="Current Assets / Current Liabilities",
+        numerator_definition="Total Current Assets on Balance Sheet",
+        denominator_definition="Total Current Liabilities on Balance Sheet",
+        required_inputs=["current_assets", "current_liabilities"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="liquidity.quick_ratio",
+        name="Quick Ratio (Acid-Test)",
+        description="Capacity to pay short-term obligations without relying on the sale of inventory.",
+        category=RatioCategory.LIQUIDITY,
+        methodology_id="liquid_assets_over_current_liabilities",
+        formula_display="(Cash + Marketable Securities + Receivables) / Current Liabilities",
+        numerator_definition="Cash & Equivalents + Short-term Investments + Accounts Receivable",
+        denominator_definition="Total Current Liabilities on Balance Sheet",
+        required_inputs=["cash_and_cash_equivalents", "short_term_investments", "accounts_receivable", "current_liabilities"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="liquidity.cash_ratio",
+        name="Cash Ratio",
+        description="Most conservative liquidity metric, measuring cash and marketable securities against current liabilities.",
+        category=RatioCategory.LIQUIDITY,
+        methodology_id="cash_assets_over_current_liabilities",
+        formula_display="(Cash & Equivalents + Short-term Investments) / Current Liabilities",
+        numerator_definition="Cash & Cash Equivalents + Short-term Marketable Investments",
+        denominator_definition="Total Current Liabilities on Balance Sheet",
+        required_inputs=["cash_and_cash_equivalents", "short_term_investments", "current_liabilities"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="liquidity.operating_cash_flow_ratio",
+        name="Operating Cash Flow Ratio",
+        description="Number of times short-term liabilities are covered by cash generated from normal operations.",
+        category=RatioCategory.LIQUIDITY,
+        methodology_id="operating_cash_flow_over_current_liabilities",
+        formula_display="Operating Cash Flow / Current Liabilities",
+        numerator_definition="Operating Cash Flow for the period",
+        denominator_definition="Total Current Liabilities at period end",
+        required_inputs=["operating_cash_flow", "current_liabilities"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+
+    # -------------------------------------------------------------------------
+    # 3. Solvency & Leverage Ratios
+    # -------------------------------------------------------------------------
+    FinancialRatioDefinition(
+        id="solvency.debt_to_equity",
+        name="Debt-to-Equity (D/E)",
+        description="Relative proportion of shareholders' equity and debt used to finance a company's assets.",
+        category=RatioCategory.SOLVENCY,
+        methodology_id="total_debt_over_equity",
+        formula_display="Total Debt / Total Shareholders' Equity",
+        numerator_definition="Short-Term Debt + Long-Term Debt",
+        denominator_definition="Total Shareholders' Equity on Balance Sheet",
+        required_inputs=["short_term_debt", "long_term_debt", "total_equity"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.NON_ZERO,
+        negative_policy=NegativePolicy.NOT_MEANINGFUL,
+    ),
+    FinancialRatioDefinition(
+        id="solvency.debt_to_assets",
+        name="Debt-to-Assets",
+        description="Proportion of a company's total assets financed by interest-bearing debt.",
+        category=RatioCategory.SOLVENCY,
+        methodology_id="total_debt_over_assets",
+        formula_display="Total Debt / Total Assets",
+        numerator_definition="Short-Term Debt + Long-Term Debt",
+        denominator_definition="Total Assets on Balance Sheet",
+        required_inputs=["short_term_debt", "long_term_debt", "total_assets"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="solvency.debt_to_capital",
+        name="Debt-to-Capital",
+        description="Total debt relative to total capital (debt plus shareholders' equity).",
+        category=RatioCategory.SOLVENCY,
+        methodology_id="total_debt_over_total_capital",
+        formula_display="Total Debt / (Total Debt + Shareholders' Equity)",
+        numerator_definition="Short-Term Debt + Long-Term Debt",
+        denominator_definition="Total Debt + Total Shareholders' Equity",
+        required_inputs=["short_term_debt", "long_term_debt", "total_equity"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="solvency.net_debt",
+        name="Net Debt",
+        description="Total debt minus cash and liquid short-term investments.",
+        category=RatioCategory.SOLVENCY,
+        methodology_id="total_debt_minus_liquid_cash",
+        formula_display="Total Debt - (Cash & Equivalents + Short-term Investments)",
+        numerator_definition="Short-Term Debt + Long-Term Debt",
+        denominator_definition="Cash & Equivalents + Short-term Marketable Investments",
+        required_inputs=["short_term_debt", "long_term_debt", "cash_and_cash_equivalents", "short_term_investments"],
+        unit_kind=UnitKind.MONETARY,
+        output_format="{:.2f}",
+    ),
+    FinancialRatioDefinition(
+        id="solvency.interest_coverage",
+        name="Interest Coverage Ratio",
+        description="How easily a company can pay interest on its outstanding debt with operating profits.",
+        category=RatioCategory.SOLVENCY,
+        methodology_id="ebit_over_interest_expense",
+        formula_display="Operating Income (EBIT) / Interest Expense",
+        numerator_definition="Operating Income on Income Statement",
+        denominator_definition="Interest Expense on Income Statement",
+        required_inputs=["operating_income", "interest_expense"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="solvency.debt_to_ebitda",
+        name="Debt / EBITDA",
+        description="Measurement of leverage indicating how many years of operating earnings are needed to pay off debt.",
+        category=RatioCategory.SOLVENCY,
+        methodology_id="total_debt_over_ebitda",
+        formula_display="Total Debt / EBITDA",
+        numerator_definition="Total Debt (Short-Term + Long-Term)",
+        denominator_definition="Operating Income + Depreciation & Amortization",
+        required_inputs=["short_term_debt", "long_term_debt", "operating_income", "depreciation_and_amortization"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="solvency.net_debt_to_ebitda",
+        name="Net Debt / EBITDA",
+        description="Net debt relative to EBITDA, factoring in cash reserves available to pay down obligations.",
+        category=RatioCategory.SOLVENCY,
+        methodology_id="net_debt_over_ebitda",
+        formula_display="Net Debt / EBITDA",
+        numerator_definition="Total Debt - (Cash + Short-term Investments)",
+        denominator_definition="Operating Income + Depreciation & Amortization",
+        required_inputs=["short_term_debt", "long_term_debt", "cash_and_cash_equivalents", "short_term_investments", "operating_income", "depreciation_and_amortization"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+
+    # -------------------------------------------------------------------------
+    # 4. Efficiency Ratios
+    # -------------------------------------------------------------------------
+    FinancialRatioDefinition(
+        id="efficiency.asset_turnover",
+        name="Asset Turnover",
+        description="Efficiency with which a company deploys its assets to generate revenue.",
+        category=RatioCategory.EFFICIENCY,
+        methodology_id="revenue_over_average_assets",
+        formula_display="Revenue / Average Total Assets",
+        numerator_definition="Total Revenue for period",
+        denominator_definition="Average of beginning and ending Total Assets",
+        required_inputs=["revenue", "total_assets"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.AVERAGE_BALANCE,
+        requires_balance_sheet_average=True,
+    ),
+    FinancialRatioDefinition(
+        id="efficiency.inventory_turnover",
+        name="Inventory Turnover",
+        description="How many times a company has sold and replaced inventory during a period.",
+        category=RatioCategory.EFFICIENCY,
+        methodology_id="cogs_over_average_inventory",
+        formula_display="Cost of Revenue / Average Inventory",
+        numerator_definition="Cost of Revenue (COGS)",
+        denominator_definition="Average of beginning and ending Inventory",
+        required_inputs=["cost_of_revenue", "inventory"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.AVERAGE_BALANCE,
+        requires_balance_sheet_average=True,
+    ),
+    FinancialRatioDefinition(
+        id="efficiency.receivables_turnover",
+        name="Receivables Turnover",
+        description="Effectiveness in extending credit and collecting debts on that credit.",
+        category=RatioCategory.EFFICIENCY,
+        methodology_id="revenue_over_average_receivables",
+        formula_display="Revenue / Average Accounts Receivable",
+        numerator_definition="Total Revenue (or Net Credit Sales)",
+        denominator_definition="Average of beginning and ending Accounts Receivable",
+        required_inputs=["revenue", "accounts_receivable"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.AVERAGE_BALANCE,
+        requires_balance_sheet_average=True,
+    ),
+    FinancialRatioDefinition(
+        id="efficiency.payables_turnover",
+        name="Payables Turnover",
+        description="Rate at which a company pays off suppliers and vendors.",
+        category=RatioCategory.EFFICIENCY,
+        methodology_id="cogs_over_average_payables",
+        formula_display="Cost of Revenue / Average Accounts Payable",
+        numerator_definition="Cost of Revenue (Purchases proxy)",
+        denominator_definition="Average of beginning and ending Accounts Payable",
+        required_inputs=["cost_of_revenue", "accounts_payable"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.AVERAGE_BALANCE,
+        requires_balance_sheet_average=True,
+    ),
+    FinancialRatioDefinition(
+        id="efficiency.dso",
+        name="Days Sales Outstanding (DSO)",
+        description="Average number of days that it takes to collect payment after a sale has been made.",
+        category=RatioCategory.EFFICIENCY,
+        methodology_id="average_receivables_over_revenue_times_days",
+        formula_display="(Average Accounts Receivable / Revenue) × Period Days",
+        numerator_definition="Average Accounts Receivable × Period Days",
+        denominator_definition="Total Revenue",
+        required_inputs=["accounts_receivable", "revenue"],
+        unit_kind=UnitKind.DAYS,
+        output_format="{:.1f} days",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+        requires_balance_sheet_average=True,
+    ),
+    FinancialRatioDefinition(
+        id="efficiency.dio",
+        name="Days Inventory Outstanding (DIO)",
+        description="Average number of days a company holds its inventory before selling it.",
+        category=RatioCategory.EFFICIENCY,
+        methodology_id="average_inventory_over_cogs_times_days",
+        formula_display="(Average Inventory / Cost of Revenue) × Period Days",
+        numerator_definition="Average Inventory × Period Days",
+        denominator_definition="Cost of Revenue (COGS)",
+        required_inputs=["inventory", "cost_of_revenue"],
+        unit_kind=UnitKind.DAYS,
+        output_format="{:.1f} days",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+        requires_balance_sheet_average=True,
+    ),
+    FinancialRatioDefinition(
+        id="efficiency.dpo",
+        name="Days Payables Outstanding (DPO)",
+        description="Average number of days a company takes to pay its suppliers.",
+        category=RatioCategory.EFFICIENCY,
+        methodology_id="average_payables_over_cogs_times_days",
+        formula_display="(Average Accounts Payable / Cost of Revenue) × Period Days",
+        numerator_definition="Average Accounts Payable × Period Days",
+        denominator_definition="Cost of Revenue (Purchases proxy)",
+        required_inputs=["accounts_payable", "cost_of_revenue"],
+        unit_kind=UnitKind.DAYS,
+        output_format="{:.1f} days",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+        requires_balance_sheet_average=True,
+    ),
+    FinancialRatioDefinition(
+        id="efficiency.cash_conversion_cycle",
+        name="Cash Conversion Cycle (CCC)",
+        description="Time (in days) it takes for a company to convert investments in inventory into cash inflows.",
+        category=RatioCategory.EFFICIENCY,
+        methodology_id="dso_plus_dio_minus_dpo",
+        formula_display="DSO + DIO - DPO",
+        numerator_definition="Combined working capital day balances",
+        denominator_definition="None (additive combination of DSO, DIO, DPO)",
+        required_inputs=["accounts_receivable", "inventory", "accounts_payable", "revenue", "cost_of_revenue"],
+        unit_kind=UnitKind.DAYS,
+        output_format="{:.1f} days",
+        requires_balance_sheet_average=True,
+    ),
+
+    # -------------------------------------------------------------------------
+    # 5. Cash Flow Metrics
+    # -------------------------------------------------------------------------
+    FinancialRatioDefinition(
+        id="cashflow.free_cash_flow",
+        name="Free Cash Flow (FCF)",
+        description="Cash generated from normal operations minus capital expenditures.",
+        category=RatioCategory.CASH_FLOW,
+        methodology_id="operating_cash_flow_minus_capex",
+        formula_display="Operating Cash Flow - Capital Expenditures",
+        numerator_definition="Operating Cash Flow - Abs(Capital Expenditures)",
+        denominator_definition="None",
+        required_inputs=["operating_cash_flow", "capital_expenditures"],
+        unit_kind=UnitKind.MONETARY,
+        output_format="{:.2f}",
+    ),
+    FinancialRatioDefinition(
+        id="cashflow.free_cash_flow_margin",
+        name="Free Cash Flow Margin",
+        description="Percentage of revenue turned into free cash flow.",
+        category=RatioCategory.CASH_FLOW,
+        methodology_id="free_cash_flow_over_revenue",
+        formula_display="Free Cash Flow / Revenue × 100",
+        numerator_definition="Free Cash Flow",
+        denominator_definition="Total Revenue",
+        required_inputs=["operating_cash_flow", "capital_expenditures", "revenue"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="cashflow.operating_cash_flow_margin",
+        name="Operating Cash Flow Margin",
+        description="Cash from operating activities as a proportion of total revenue.",
+        category=RatioCategory.CASH_FLOW,
+        methodology_id="operating_cash_flow_over_revenue",
+        formula_display="Operating Cash Flow / Revenue × 100",
+        numerator_definition="Operating Cash Flow",
+        denominator_definition="Total Revenue",
+        required_inputs=["operating_cash_flow", "revenue"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="cashflow.cash_conversion",
+        name="Cash Flow Conversion",
+        description="Operating cash flow generated per unit of reported net income.",
+        category=RatioCategory.CASH_FLOW,
+        methodology_id="operating_cash_flow_over_net_income",
+        formula_display="Operating Cash Flow / Net Income",
+        numerator_definition="Operating Cash Flow",
+        denominator_definition="Net Income reported on the Income Statement",
+        required_inputs=["operating_cash_flow", "net_income"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        denominator_policy=DenominatorPolicy.NON_ZERO,
+        negative_policy=NegativePolicy.NOT_MEANINGFUL,
+    ),
+    FinancialRatioDefinition(
+        id="cashflow.capex_to_revenue",
+        name="CapEx to Revenue",
+        description="Capital expenditure intensity relative to total revenue.",
+        category=RatioCategory.CASH_FLOW,
+        methodology_id="capex_over_revenue",
+        formula_display="Abs(Capital Expenditures) / Revenue × 100",
+        numerator_definition="Abs(Capital Expenditures)",
+        denominator_definition="Total Revenue",
+        required_inputs=["capital_expenditures", "revenue"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="cashflow.free_cash_flow_yield",
+        name="Free Cash Flow Yield",
+        description="Free cash flow relative to market capitalization.",
+        category=RatioCategory.CASH_FLOW,
+        methodology_id="free_cash_flow_over_market_cap",
+        formula_display="Free Cash Flow / Market Capitalization × 100",
+        numerator_definition="Free Cash Flow for period / annualized",
+        denominator_definition="Company Market Capitalization",
+        required_inputs=["operating_cash_flow", "capital_expenditures", "market_cap"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+
+    # -------------------------------------------------------------------------
+    # 6. Valuation Ratios
+    # -------------------------------------------------------------------------
+    FinancialRatioDefinition(
+        id="valuation.pe",
+        name="Price-to-Earnings (P/E)",
+        description="Ratio of market value per share to earnings per share.",
+        category=RatioCategory.VALUATION,
+        methodology_id="market_cap_over_net_income",
+        formula_display="Market Capitalization / Net Income (or Price / Diluted EPS)",
+        numerator_definition="Company Market Capitalization (or Share Price)",
+        denominator_definition="Trailing Net Income (or Diluted EPS)",
+        required_inputs=["market_cap", "net_income"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+        negative_policy=NegativePolicy.NOT_MEANINGFUL,
+    ),
+    FinancialRatioDefinition(
+        id="valuation.forward_pe",
+        name="Forward P/E",
+        description="Price-to-Earnings based on authorized consensus forward earnings estimates.",
+        category=RatioCategory.VALUATION,
+        methodology_id="price_over_forward_eps",
+        formula_display="Market Price / Forward Estimated EPS",
+        numerator_definition="Current Market Price",
+        denominator_definition="Consensus Forward 12M EPS Estimate",
+        required_inputs=["market_price", "forward_eps"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+        negative_policy=NegativePolicy.NOT_MEANINGFUL,
+    ),
+    FinancialRatioDefinition(
+        id="valuation.pb",
+        name="Price-to-Book (P/B)",
+        description="Market capitalization relative to book value of total equity.",
+        category=RatioCategory.VALUATION,
+        methodology_id="market_cap_over_total_equity",
+        formula_display="Market Capitalization / Total Shareholders' Equity",
+        numerator_definition="Company Market Capitalization",
+        denominator_definition="Total Equity on Balance Sheet",
+        required_inputs=["market_cap", "total_equity"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.NON_ZERO,
+        negative_policy=NegativePolicy.NOT_MEANINGFUL,
+    ),
+    FinancialRatioDefinition(
+        id="valuation.ps",
+        name="Price-to-Sales (P/S)",
+        description="Market capitalization divided by total revenue over the period.",
+        category=RatioCategory.VALUATION,
+        methodology_id="market_cap_over_revenue",
+        formula_display="Market Capitalization / Revenue",
+        numerator_definition="Company Market Capitalization",
+        denominator_definition="Total Revenue for the period",
+        required_inputs=["market_cap", "revenue"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="valuation.price_to_cash_flow",
+        name="Price-to-Cash-Flow (P/CF)",
+        description="Market value relative to operating cash flow generated.",
+        category=RatioCategory.VALUATION,
+        methodology_id="market_cap_over_operating_cash_flow",
+        formula_display="Market Capitalization / Operating Cash Flow",
+        numerator_definition="Company Market Capitalization",
+        denominator_definition="Operating Cash Flow for the period",
+        required_inputs=["market_cap", "operating_cash_flow"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+        negative_policy=NegativePolicy.NOT_MEANINGFUL,
+    ),
+    FinancialRatioDefinition(
+        id="valuation.price_to_free_cash_flow",
+        name="Price-to-Free-Cash-Flow (P/FCF)",
+        description="Market value relative to free cash flow generated.",
+        category=RatioCategory.VALUATION,
+        methodology_id="market_cap_over_free_cash_flow",
+        formula_display="Market Capitalization / Free Cash Flow",
+        numerator_definition="Company Market Capitalization",
+        denominator_definition="Free Cash Flow (Operating Cash Flow - CapEx)",
+        required_inputs=["market_cap", "operating_cash_flow", "capital_expenditures"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+        negative_policy=NegativePolicy.NOT_MEANINGFUL,
+    ),
+    FinancialRatioDefinition(
+        id="valuation.enterprise_value",
+        name="Enterprise Value (EV)",
+        description="Theoretical takeover price: Market Cap + Total Debt - Liquid Cash & Investments.",
+        category=RatioCategory.VALUATION,
+        methodology_id="market_cap_plus_debt_minus_cash",
+        formula_display="Market Cap + Total Debt - Cash & Cash Equivalents",
+        numerator_definition="Market Cap + Short-Term Debt + Long-Term Debt - Cash & Equivalents",
+        denominator_definition="None",
+        required_inputs=["market_cap", "short_term_debt", "long_term_debt", "cash_and_cash_equivalents"],
+        unit_kind=UnitKind.MONETARY,
+        output_format="{:.2f}",
+        requires_market_data=True,
+    ),
+    FinancialRatioDefinition(
+        id="valuation.ev_to_ebitda",
+        name="EV / EBITDA",
+        description="Enterprise Value relative to operational EBITDA.",
+        category=RatioCategory.VALUATION,
+        methodology_id="enterprise_value_over_ebitda",
+        formula_display="Enterprise Value / EBITDA",
+        numerator_definition="Enterprise Value",
+        denominator_definition="Operating Income + Depreciation & Amortization",
+        required_inputs=["market_cap", "short_term_debt", "long_term_debt", "cash_and_cash_equivalents", "operating_income", "depreciation_and_amortization"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+        negative_policy=NegativePolicy.NOT_MEANINGFUL,
+    ),
+    FinancialRatioDefinition(
+        id="valuation.ev_to_revenue",
+        name="EV / Revenue",
+        description="Enterprise Value relative to total revenue.",
+        category=RatioCategory.VALUATION,
+        methodology_id="enterprise_value_over_revenue",
+        formula_display="Enterprise Value / Revenue",
+        numerator_definition="Enterprise Value",
+        denominator_definition="Total Revenue for the period",
+        required_inputs=["market_cap", "short_term_debt", "long_term_debt", "cash_and_cash_equivalents", "revenue"],
+        unit_kind=UnitKind.MULTIPLE,
+        output_format="{:.2f}x",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="valuation.dividend_yield",
+        name="Dividend Yield",
+        description="Annual dividend payout relative to market value.",
+        category=RatioCategory.VALUATION,
+        methodology_id="dividends_over_market_cap",
+        formula_display="Abs(Dividends Paid) / Market Capitalization × 100",
+        numerator_definition="Total Dividends Paid (or Annual Dividend Per Share)",
+        denominator_definition="Market Capitalization (or Share Price)",
+        required_inputs=["dividends_paid", "market_cap"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+    FinancialRatioDefinition(
+        id="valuation.earnings_yield",
+        name="Earnings Yield",
+        description="Percentage of each dollar invested in the stock that was earned by the company (inverse of P/E).",
+        category=RatioCategory.VALUATION,
+        methodology_id="net_income_over_market_cap",
+        formula_display="Net Income / Market Capitalization × 100",
+        numerator_definition="Net Income reported for the period",
+        denominator_definition="Company Market Capitalization",
+        required_inputs=["net_income", "market_cap"],
+        unit_kind=UnitKind.PERCENT,
+        output_format="{:.2f}%",
+        requires_market_data=True,
+        denominator_policy=DenominatorPolicy.STRICT_POSITIVE,
+    ),
+]
+
+
+class FinancialRatioRegistry:
+    """In-memory canonical catalog and registry for financial ratios."""
+
+    def __init__(self, definitions: Optional[List[FinancialRatioDefinition]] = None):
+        self._definitions: Dict[str, FinancialRatioDefinition] = {}
+        for item in definitions or CANONICAL_RATIO_DEFINITIONS:
+            self._definitions[item.id] = item
+
+    def get_ratio(self, ratio_id: str) -> FinancialRatioDefinition:
+        if ratio_id not in self._definitions:
+            raise RatioNotFoundError(ratio_id)
+        return self._definitions[ratio_id]
+
+    def list_ratios(self, category: Optional[RatioCategory] = None) -> List[FinancialRatioDefinition]:
+        ratios = list(self._definitions.values())
+        if category is not None:
+            ratios = [r for r in ratios if r.category == category]
+        return ratios
+
+    def get_ratio_ids_for_category(self, category: RatioCategory) -> List[str]:
+        return [r.id for r in self._definitions.values() if r.category == category]
+
+    def has_ratio(self, ratio_id: str) -> bool:
+        return ratio_id in self._definitions
+
+
+# Global default ratio registry instance
+default_ratio_registry = FinancialRatioRegistry()

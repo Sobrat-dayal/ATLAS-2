@@ -8,3 +8,4 @@ export * from "./CompanyEmptyState";
 export * from "./CompanyErrorState";
 export * from "./AddToWatchlistModal";
 export * from "./statements/FinancialStatementsWorkspace";
+export * from "./ratios/FinancialRatiosWorkspace";

@@ -24,6 +24,7 @@ import { CompanyHeader } from "./CompanyHeader";
 import { CompanyNewsDocsTab } from "./CompanyNewsDocsTab";
 import { CompanyOverviewTab } from "./CompanyOverviewTab";
 import { CompanySecuritiesTab } from "./CompanySecuritiesTab";
+import { FinancialRatiosWorkspace } from "./ratios/FinancialRatiosWorkspace";
 import {
   ArrowLeft,
   Building2,
@@ -31,6 +32,7 @@ import {
   FileText,
   Layers,
   Loader2,
+  Percent,
   Search,
 } from "lucide-react";
 
@@ -151,6 +153,11 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           <span>Financial Statements</span>
                         </TabsTrigger>
 
+                        <TabsTrigger value="ratios" className="gap-1.5 text-xs">
+                          <Percent className="w-3.5 h-3.5" />
+                          <span>Financial Ratios</span>
+                        </TabsTrigger>
+
                         <TabsTrigger value="news" className="gap-1.5 text-xs">
                           <FileText className="w-3.5 h-3.5" />
                           <span>News & Docs ({overview.recent_news.length + overview.documents.length})</span>
@@ -168,6 +175,13 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                       <TabsContent value="financials">
                         <CompanyFinancialsTab
                           financialSummary={overview.financial_summary}
+                          companyId={overview.company_entity_id}
+                          companyName={overview.identity.display_name}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="ratios">
+                        <FinancialRatiosWorkspace
                           companyId={overview.company_entity_id}
                           companyName={overview.identity.display_name}
                         />

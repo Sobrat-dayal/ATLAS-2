@@ -570,6 +570,22 @@ class CompanyStatementsRepository:
     def __init__(self, session: Optional[Any] = None) -> None:
         self.session = session
 
+    def get_statement(
+        self,
+        company_id: uuid.UUID,
+        statement_type: StatementType,
+        period_id: str,
+        consolidation_scope: ConsolidationScope = ConsolidationScope.CONSOLIDATED,
+    ) -> Optional[Dict[str, Any]]:
+        """Retrieves a single statement record by period and statement type."""
+        key = (company_id, statement_type, period_id, consolidation_scope)
+        if key in _STATEMENT_PERIODS_STORE:
+            return _STATEMENT_PERIODS_STORE[key]
+        for (cid, st, pid, _), data in _STATEMENT_PERIODS_STORE.items():
+            if cid == company_id and st == statement_type and pid == period_id:
+                return data
+        return None
+
     def get_statement_catalog(
         self,
         company_id: uuid.UUID,

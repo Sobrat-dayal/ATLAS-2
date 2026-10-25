@@ -6614,6 +6614,222 @@ This document records the major architectural and product decisions established.
 171. Documentation must match implementation.
 172. Stage 83 is the next canonical stage.
 
+## Stage 83: Company Financial Ratios & Fundamental Analysis
+
+### Product
+1. Stage 83 implements Financial Ratios and institutional Fundamental Analysis.
+2. Financial Ratios belongs strictly within the `/companies` module under a dedicated workspace tab.
+3. Stage 81 canonical Company identity is reused without modification.
+4. Stage 82 Financial Statements are reused as the primary authoritative accounting fact store.
+5. Stage 34 canonical Fundamentals remain authoritative.
+6. No duplicate accounting-data platform or fact store is introduced.
+7. Ratios are read-only derived analytical observations.
+8. No arbitrary investment recommendations (e.g. "Strong Buy") are generated.
+9. No Trading or broker interactions are introduced.
+10. No fabricated or simulated financial values are permitted.
+
+### Formula Registry
+11. Ratios have stable, canonical identifiers across all ATLAS modules.
+12. Ratio definitions are explicitly versioned (v1.0.0 baseline).
+13. Methodologies are explicit and documented.
+14. Input dependencies are declared and validated before calculation.
+15. Output units (PERCENT, MULTIPLE, DAYS, MONETARY) are explicit.
+16. Entity and industry applicability rules are explicitly declared.
+17. Denominator policies are explicit (e.g., non-zero, average balance).
+18. Negative-value policies are explicit (e.g., negative equity returns NOT_MEANINGFUL).
+19. Source fact lineage and provenance records are preserved.
+20. Arbitrary user-authored formulas or code execution (eval, exec, arbitrary SQL) are prohibited.
+21. Trusted formula functions are tested with comprehensive deterministic fixtures.
+22. Existing Watchlist ratio logic is reused or consolidated where appropriate.
+
+### Financial Inputs
+23. Stage 82 canonical statement facts are used for input resolution.
+24. Original source revisions and restatements are preserved in calculation lineage.
+25. Consolidation scope (CONSOLIDATED vs STANDALONE) is validated.
+26. Reporting currency is validated; cross-currency operations without qualified conversion are rejected.
+27. Accounting framework (GAAP, IFRS) is tracked and qualified.
+28. Fiscal periods are validated for temporal alignment.
+29. Flow versus stock distinctions are respected via opening/closing balance sheet averages.
+30. TTM is used only when qualified from verified quarterly statements.
+31. Missing accounting facts are not fabricated or replaced with arbitrary zeroes.
+32. Source/provider routing remains authoritative.
+33. No unqualified taxonomy mapping is permitted.
+
+### Profitability
+34. Gross Margin is implemented using compatible Gross Profit and Revenue.
+35. Operating Margin is implemented using Operating Income and Revenue.
+36. EBITDA Margin has an explicit methodology (Operating Income + D&A).
+37. Net Margin has explicit net income scope.
+38. ROE uses qualified average stockholders' equity.
+39. ROA uses qualified average total assets.
+40. ROIC uses versioned NOPAT and invested capital definitions.
+41. ROCE uses versioned capital employed definition (Assets - Current Liabilities).
+42. Negative equity interpretation is qualified as NOT_MEANINGFUL (N/M).
+43. Missing balance sheet periods do not result in guessed returns.
+
+### Liquidity and Leverage
+44. Current Ratio uses compatible current assets and current liabilities.
+45. Quick Ratio methodology subtracts inventories from current assets.
+46. Cash Ratio cash scope includes cash and cash equivalents.
+47. OCF Ratio period alignment qualifies operating cash flow against current liabilities.
+48. Total Debt is distinguished from Total Liabilities.
+49. Debt/Equity is qualified with interest-bearing debt and equity.
+50. Debt/Assets is qualified with total debt and total assets.
+51. Debt/Capital is qualified with total debt and capital.
+52. Net Debt definition is explicit (Total Debt - Cash & Equivalents).
+53. Interest Coverage denominator is qualified; zero interest expense yields UNAVAILABLE rather than Infinity.
+54. Zero interest expense does not create Infinity or NaN.
+55. Debt/EBITDA source basis is explicit.
+56. Negative EBITDA yields NOT_MEANINGFUL.
+57. Bank/insurance applicability is constrained.
+
+### Efficiency
+58. Asset Turnover uses qualified average total assets.
+59. Inventory Turnover uses COGS and average inventory.
+60. Receivables Turnover uses qualified revenue and average receivables.
+61. Payables Turnover uses COGS and average payables.
+62. DSO methodology uses 365-day annual basis.
+63. DIO methodology uses 365-day annual basis.
+64. DPO methodology uses 365-day annual basis.
+65. Cash Conversion Cycle uses compatible component days (DIO + DSO - DPO).
+66. Period days are explicit and documented.
+67. 52/53-week calendar differences are handled gracefully.
+
+### Cash Flow
+68. Free Cash Flow methodology is explicit (Operating Cash Flow - CapEx).
+69. CapEx sign handling correctly normalizes positive spending or signed negative outflows.
+70. FCF Margin is qualified against revenue.
+71. OCF Margin is qualified against revenue.
+72. Cash Conversion ratio is distinguished from Cash Conversion Cycle.
+73. CapEx intensity is qualified as CapEx to Revenue.
+74. Missing Cash Flow facts remain typed UNAVAILABLE.
+
+### Valuation
+75. Market-price identity is explicit and sourced from canonical market data.
+76. Canonical security context is required for market multiples.
+77. Multiple share classes are handled without double counting.
+78. ADR conversion ratios are validated and not guessed.
+79. Multiple listings of the same underlying instrument are excluded from duplicate summing.
+80. Market capitalization is qualified and validated.
+81. P/E numerator and denominator bases are compatible.
+82. Forward P/E requires actual verified analyst consensus estimates (Stage 84 preview).
+83. P/B is qualified against stockholders' equity.
+84. P/S is qualified against revenue.
+85. P/CF is qualified against operating cash flow.
+86. P/FCF is qualified against free cash flow.
+87. Enterprise Value component scope is explicit (Market Cap + Debt - Cash).
+88. Incomplete EV is not mislabeled as complete EV.
+89. EV/EBITDA is qualified against EBITDA.
+90. EV/Revenue is qualified against revenue.
+91. Dividend Yield methodology is explicit against dividends paid.
+92. Earnings Yield is qualified against net income and market cap.
+93. Negative denominators are qualified as NOT_MEANINGFUL.
+94. Price timestamps remain distinct from financial reporting periods.
+
+### Historical Integrity
+95. Historical ratio series use qualified financial periods.
+96. Quarterly and annual values remain distinguishable and unmixed.
+97. TTM observations use verified TTM inputs from Stage 82.
+98. Historical valuation prices use valid historical observation dates.
+99. Current price is not reused to fake historical multiples.
+100. Restatement basis is visible in input fact lineage.
+101. Point-in-time claims require historical publication vintages.
+102. Future financial publications do not leak backward.
+103. Missing ratio observations remain missing gaps in history.
+104. Methodology version consistency is preserved across series.
+
+### Caching and Performance
+105. Ratio inputs are batched in a single pass.
+106. Shared statement dependencies are deduplicated.
+107. Existing cache infrastructure is reused.
+108. Cache keys include methodology version.
+109. Cache keys include financial source revisions.
+110. Cache keys include reporting consolidation scope.
+111. Valuation cache keys include market context.
+112. Entitlements scope derived caches.
+113. Financial restatements invalidate affected caches.
+114. Live market ticks do not recalculate all company ratios.
+115. No per-ratio Provider fanout is permitted on read requests.
+116. Resource limits on ratios and periods are enforced.
+117. No redundant canonical financial store is introduced.
+
+### API and UI
+118. Ratio APIs are typed with Pydantic schemas.
+119. Ratio catalog is discoverable via `/catalog`.
+120. Formula details are inspectable via `/{ratio_id}/methodology`.
+121. Source lineage is inspectable via `/{ratio_id}/lineage`.
+122. Annual ratio views are supported.
+123. Quarterly ratio views are supported.
+124. TTM ratio views are supported where valid.
+125. Historical charts use SVG rendering with interactive hover tooltips.
+126. Company financial statement navigation is preserved.
+127. Valuation security selection is explicit.
+128. Missing-value explanations are visible in tooltips and badges.
+129. Financial units are explicitly formatted (%, x, days, USD).
+130. Responsive layouts are supported on desktop, tablet, and mobile.
+131. Dark/light mode theme tokens are preserved.
+132. Agent Dock compatibility is preserved.
+133. Bottom Taskbar compatibility is preserved.
+134. Keyboard accessibility is supported.
+135. Screen-reader accessibility is supported.
+136. No purple gradients are introduced.
+137. No emoji icons are introduced.
+138. No fake financial data or rankings are introduced.
+
+### Security
+139. Authentication is required (`PermissionCode.ATLAS_ACCESS`).
+140. Source entitlements are enforced for all underlying statement facts.
+141. Historical market data access is validated.
+142. Derived ratios do not leak restricted financial facts.
+143. Cache isolation is maintained across tenant contexts.
+144. Arbitrary SQL injection is prevented through parameterized lookups.
+145. Arbitrary user formulas or script execution are prohibited.
+146. Provider credentials remain secure server-side.
+147. Resource quotas on batch queries are enforced.
+148. Canonical financial facts remain unmodified (read-only).
+149. No Broker actions occur.
+150. No Portfolio mutations occur.
+151. No Agents execute during ratio calculations.
+152. No Workflows execute during ratio calculations.
+153. No LLM calls are required (zero LLM calls).
+
+### Roadmap Boundaries
+154. Stage 84 owns Earnings.
+155. Stage 85 owns Ownership.
+156. Stage 86 owns Filings.
+157. Stage 87 owns Peers.
+158. Stage 88 owns Supply Chains.
+159. Stages 89–93 own Economics.
+160. Stages 94–98 own Screeners.
+161. Stages 99–103 own News.
+162. Stages 104–109 own Research.
+163. Stages 110–114 own Portfolios.
+164. Stages 115–118 own Risk.
+165. Stages 119–120 own Saved/Workspaces.
+166. Stages 121–128 own Terminal/AI.
+167. Stages 129–140 own Maps/Intelligence.
+168. Stages 141–142 own Options/Quant pricing.
+169. Stage 143 owns Backtesting.
+170. Stage 144 owns Paper Trading.
+171. Stage 145 owns Broker Sandbox.
+172. Stages 146+ own Agents.
+173. No Earnings estimates pipeline is implemented.
+174. No Ownership analytics is implemented.
+175. No new Filings parser is implemented.
+176. No Peer ranking system is implemented.
+177. No Supply Chain network is implemented.
+178. No universe-wide Screener is implemented.
+179. No trading strategy engine is implemented.
+180. No duplicate Fundamental Data engine is implemented.
+181. Stage 83 passes formula correctness tests.
+182. Stage 83 passes financial period tests.
+183. Stage 83 passes valuation identity tests.
+184. Stage 83 passes historical point-in-time tests.
+185. Stage 83 passes entitlement tests.
+186. Stage 83 passes Stage 82 regressions.
+187. Documentation matches actual code.
+188. Stage 84 is the next canonical stage.
+
 
 
 
