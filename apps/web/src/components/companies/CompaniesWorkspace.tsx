@@ -148,7 +148,7 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
 
                         <TabsTrigger value="financials" className="gap-1.5 text-xs">
                           <DollarSign className="w-3.5 h-3.5" />
-                          <span>Financial Summary</span>
+                          <span>Financial Statements</span>
                         </TabsTrigger>
 
                         <TabsTrigger value="news" className="gap-1.5 text-xs">
@@ -166,7 +166,11 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                       </TabsContent>
 
                       <TabsContent value="financials">
-                        <CompanyFinancialsTab financialSummary={overview.financial_summary} />
+                        <CompanyFinancialsTab
+                          financialSummary={overview.financial_summary}
+                          companyId={overview.company_entity_id}
+                          companyName={overview.identity.display_name}
+                        />
                       </TabsContent>
 
                       <TabsContent value="news">

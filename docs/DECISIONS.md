@@ -6412,6 +6412,208 @@ This document records the major architectural and product decisions established.
 191. Documentation must match the actual implementation.
 192. Stage 82 is the next canonical stage.
 
+## Stage 82: Institutional Company Financial Statements
+
+### Product and Scope
+1. Stage 82 implements Company Financial Statements.
+2. The module remains `/companies`.
+3. Stage 81 Company identity remains authoritative.
+4. Stage 34 Fundamental Data remains authoritative.
+5. Stage 82 is read-only with respect to canonical accounting facts.
+6. The three statement types (Income Statement, Balance Sheet, Cash Flow Statement) are supported.
+7. Annual and quarterly periods are supported.
+8. TTM is supported only where valid.
+9. No fabricated financial statements are permitted.
+10. No duplicate fundamental-data warehouse is created.
+
+### Statement Identity
+11. Canonical Company UUID is preserved.
+12. Reporting Entity identity is explicit.
+13. Consolidated group and legal entity scope are distinct.
+14. Statement type is explicit.
+15. Fiscal period identity is explicit.
+16. Reporting currency is explicit.
+17. Accounting framework is explicit.
+18. Source document identity is preserved.
+19. Statement revision is preserved.
+20. Company ticker text is not statement identity.
+
+### Accounting Taxonomies
+21. Original source concepts are preserved.
+22. Normalized concepts use stable IDs.
+23. Mapping versions are explicit.
+24. Unsupported mappings remain unmapped.
+25. US GAAP/IFRS/Ind AS differences are respected.
+26. Source accounting dimensions are preserved.
+27. Specialized financial institutions are handled appropriately.
+28. Original fact values are not overwritten.
+29. Hierarchical statement rows use stable concept IDs.
+30. Reported totals and derived totals are distinguished.
+
+### Period Semantics
+31. Flow facts are distinct from instant facts.
+32. Fiscal years are not assumed calendar years.
+33. Quarterly standalone and YTD are distinct.
+34. 52/53-week calendars are supported where represented.
+35. YTD subtraction requires compatible periods.
+36. Q4 derivation requires qualified FY and 9M observations.
+37. Balance Sheets are never derived by subtracting periods.
+38. EPS is not naively derived by subtracting per-share figures.
+39. Missing periods remain unavailable.
+40. Derived periods preserve source lineage.
+
+### TTM
+41. TTM requires compatible trailing flow periods.
+42. TTM is not latest quarter times four.
+43. TTM may use valid annual/YTD bridges.
+44. TTM Balance Sheet summation is prohibited.
+45. TTM EPS requires verified methodology.
+46. TTM source facts and revisions are traceable.
+47. Insufficient history results in unavailable state.
+
+### Currency and Precision
+48. Source reporting currency is preserved.
+49. No silent FX conversion is performed.
+50. Decimal-safe numerical representation is used.
+51. Presentation scale does not modify source facts.
+52. EPS/share counts use appropriate units.
+53. Accounting sign conventions are explicit.
+54. Genuine zero differs from missing.
+55. Negative financial amounts are supported.
+56. NaN/Infinity are never returned as facts.
+
+### Scope and Consolidation
+57. Consolidated/standalone values remain distinct.
+58. Source scope is visible.
+59. Comparisons enforce scope consistency.
+60. Parent/subsidiary statements are not silently substituted.
+61. Missing consolidation coverage is not fabricated.
+
+### Restatements and Time
+62. Original and revised facts are distinguished.
+63. Source revision metadata is retained.
+64. Publication dates are distinct from period ends.
+65. Latest statements follow canonical source policy.
+66. Point-in-time claims require actual historical vintages.
+67. Later restatements do not leak into earlier as-known-at views.
+68. Latest-only sources cannot claim historical reconstruction.
+69. Derived values inherit qualified revision context.
+
+### Comparisons
+70. Annual YoY requires compatible annual periods.
+71. Quarterly YoY requires compatible quarters.
+72. QoQ requires qualified period definitions.
+73. Stock and flow facts are compared appropriately.
+74. Mixed currency comparisons are restricted.
+75. Mixed consolidation comparisons are restricted.
+76. Zero denominator is handled.
+77. Negative base percentage comparisons use explicit policy.
+78. Missing comparisons remain unavailable.
+79. Common-size Income Statement uses qualified Revenue.
+80. Common-size Balance Sheet uses qualified Total Assets.
+81. Unsupported common-size calculations are disabled.
+
+### Accounting Reconciliation
+82. Balance Sheet equation is diagnostic.
+83. Cash Flow reconciliation is accounting-aware.
+84. Rounding tolerances are explicit.
+85. Incomplete source facts do not imply false errors.
+86. Diagnostics never mutate canonical facts.
+
+### APIs and Performance
+87. FastAPI contracts are typed.
+88. Period catalog uses actual source coverage.
+89. Statement history queries are bounded.
+90. Fact retrieval is batched.
+91. No per-cell Provider fanout is permitted.
+92. Source entitlements are enforced.
+93. Caches include statement identity and revision.
+94. Restatements invalidate derived caches.
+95. Stale responses do not override newer selections.
+96. No external ingestion starts from table navigation.
+
+### UI and Accessibility
+97. Income Statement tab is functional.
+98. Balance Sheet tab is functional.
+99. Cash Flow tab is functional.
+100. Annual/Quarterly selection is functional.
+101. TTM selection is qualified.
+102. Consolidation selection is accurate.
+103. Scale selection changes display only.
+104. Multi-period tables are supported.
+105. Expand/collapse is functional.
+106. Source detail is inspectable.
+107. Restatement status is visible.
+108. Missing values are explained.
+109. Financial numerals are aligned.
+110. Sticky headers and labels are supported.
+111. Responsive layouts are supported.
+112. Keyboard navigation is supported.
+113. Screen-reader semantics are supported.
+114. Dark/light mode is preserved.
+115. Agent Dock compatibility is preserved.
+116. Bottom Taskbar compatibility is preserved.
+117. No purple gradients are introduced.
+118. No emoji icons are introduced.
+119. No fake figures are displayed.
+
+### Security
+120. Authentication policies are reused.
+121. Financial data entitlements are enforced.
+122. Historical revisions are access-controlled.
+123. Derived outputs cannot reveal restricted facts.
+124. Arbitrary SQL is rejected.
+125. Arbitrary user formulas are rejected.
+126. Unsafe external URLs are rejected.
+127. Provider credentials remain server-side.
+128. Resource limits are enforced.
+129. No canonical fact writes occur during reads.
+130. No Trading orders are placed.
+131. No Portfolio changes occur.
+132. No Agents execute.
+133. No Workflows execute.
+134. No LLM calls are required.
+
+### Roadmap Boundaries
+135. Stage 83 owns Financial Ratios.
+136. Stage 84 owns Earnings.
+137. Stage 85 owns Ownership.
+138. Stage 86 owns Filings.
+139. Stage 87 owns Peers.
+140. Stage 88 owns Supply Chains.
+141. Stages 89–93 own Economics.
+142. Stages 94–98 own Screeners.
+143. Stages 99–103 own News.
+144. Stages 104–109 own Research.
+145. Stages 110–114 own Portfolios.
+146. Stages 115–118 own Risk.
+147. Stages 119–120 own Saved/Workspaces.
+148. Stages 121–128 own Terminal/AI.
+149. Stages 129–140 own Maps/Intelligence.
+150. Stages 141–142 own Options/Quant pricing.
+151. Stage 143 owns Backtesting.
+152. Stage 144 owns Paper Trading.
+153. Stage 145 owns Broker Sandbox.
+154. Stages 146+ own Agents.
+155. No comprehensive valuation-ratio engine is implemented.
+156. No earnings prediction engine is implemented.
+157. No ownership analysis is implemented.
+158. No filings ingestion/parser is implemented.
+159. No peer comparison engine is implemented.
+160. No supply-chain intelligence is implemented.
+161. No duplicate accounting-data pipeline is implemented.
+162. Stage 82 must pass statement identity tests.
+163. Stage 82 must pass accounting taxonomy tests.
+164. Stage 82 must pass period derivation tests.
+165. Stage 82 must pass TTM tests.
+166. Stage 82 must pass financial precision tests.
+167. Stage 82 must pass restatement tests.
+168. Stage 82 must pass point-in-time tests.
+169. Stage 82 must pass entitlement tests.
+170. Stage 82 must pass Stage 81 regressions.
+171. Documentation must match implementation.
+172. Stage 83 is the next canonical stage.
+
 
 
 
