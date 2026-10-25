@@ -6,14 +6,16 @@ import {
   formatPrice,
   getAssetClassBadge,
 } from "@/lib/watchlists/formatting";
-import { WatchlistColumnDefinition } from "@/lib/watchlists/columns/types";
+import { WatchlistColumnDefinition, WatchlistRowCellValue } from "@/lib/watchlists/columns/types";
 import { CanonicalLiveQuote } from "@/lib/watchlists/live";
+import { EnrichmentCell } from "./enrichment";
 import { WatchlistStatusBadge } from "./WatchlistStatusBadge";
 import { WatchlistRowActions } from "./WatchlistRowActions";
 
 interface WatchlistRowProps {
   item: WatchlistItem;
   liveQuote?: CanonicalLiveQuote | null;
+  enrichmentValues?: Record<string, WatchlistRowCellValue>;
   index: number;
   totalCount: number;
   visibleColumns: WatchlistColumnDefinition[];
@@ -37,6 +39,7 @@ interface WatchlistRowProps {
 export function WatchlistRow({
   item,
   liveQuote,
+  enrichmentValues,
   index,
   totalCount,
   visibleColumns,
@@ -359,12 +362,36 @@ export function WatchlistRow({
               </td>
             );
 
-          default:
+          default: {
+            const isEnrichment = [
+              "fundamentals",
+              "valuation",
+              "technical",
+              "events",
+              "earnings",
+              "news",
+            ].includes(col.category);
+
+            if (isEnrichment) {
+              const cellValue = enrichmentValues?.[col.id];
+              return (
+                <EnrichmentCell
+                  key={col.id}
+                  columnId={col.id}
+                  label={col.label}
+                  cell={cellValue}
+                  cellStyle={cellStyle}
+                  pinnedBorder={pinnedBorder}
+                />
+              );
+            }
+
             return (
               <td key={col.id} style={cellStyle} className={`px-2.5 py-2 text-zinc-400 ${pinnedBorder}`}>
                 —
               </td>
             );
+          }
         }
       })}
 

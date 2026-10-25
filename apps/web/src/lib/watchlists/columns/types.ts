@@ -2,7 +2,17 @@
  * TypeScript types for Watchlist Columns and Preferences (Stage 77).
  */
 
-export type WatchlistColumnCategory = "identity" | "market" | "quote" | "quality";
+export type WatchlistColumnCategory =
+  | "identity"
+  | "market"
+  | "quote"
+  | "quality"
+  | "fundamentals"
+  | "valuation"
+  | "technical"
+  | "events"
+  | "earnings"
+  | "news";
 
 export type WatchlistColumnValueType =
   | "TEXT"
@@ -11,7 +21,8 @@ export type WatchlistColumnValueType =
   | "MONETARY"
   | "PERCENTAGE"
   | "TIMESTAMP"
-  | "STATUS";
+  | "STATUS"
+  | "NUMBER";
 
 export type ColumnSortPolicy = "alpha" | "numeric" | "chronological" | "none";
 
@@ -66,14 +77,35 @@ export interface WatchlistColumnPreferencesUpdateRequest {
 }
 
 export interface WatchlistRowCellValue {
-  status: "AVAILABLE" | "UNAVAILABLE" | "NOT_APPLICABLE" | "NOT_ENTITLED" | "STALE";
+  status:
+    | "AVAILABLE"
+    | "UNAVAILABLE"
+    | "NOT_APPLICABLE"
+    | "NOT_ENTITLED"
+    | "INSUFFICIENT_HISTORY"
+    | "ERROR"
+    | "STALE";
   value?: unknown;
   unit?: string | null;
+  currency?: string | null;
   measure_kind?: string | null;
   observed_at?: string | null;
   source?: string | null;
   freshness?: string | null;
   reason?: string | null;
+  fiscal_period?: string | null;
+  fiscal_year?: number | null;
+  period_end_date?: string | null;
+  observation_time?: string | null;
+  publication_time?: string | null;
+  as_of?: string | null;
+  source_id?: string | null;
+  methodology?: string | null;
+  methodology_id?: string | null;
+  url?: string | null;
+  headline?: string | null;
+  publisher?: string | null;
+  event_status?: string | null;
 }
 
 export interface WatchlistRowProjection {

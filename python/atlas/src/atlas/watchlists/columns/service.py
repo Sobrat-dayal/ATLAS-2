@@ -10,9 +10,12 @@ Orchestrates:
 
 import datetime
 import logging
+from decimal import Decimal
 from typing import Dict, List, Optional
 from uuid import UUID
 
+from atlas.watchlists.enrichment import WatchlistEnrichmentService, is_enrichment_column
+from atlas.watchlists.enrichment.planner import EnrichmentItemContext
 from atlas.watchlists.models import WatchlistItem
 from atlas.watchlists.repository import WatchlistRepository
 from atlas.watchlists.service import WatchlistService
@@ -360,6 +363,50 @@ class WatchlistColumnService:
                 issuer_id=item_resp.issuer_entity_id,
             )
             projections.append(proj)
+
+        # Stage 79: Batch Enrich Projected Rows
+        enrichment_cols_needed = [
+            c
+            for c in (
+                set(selected_columns)
+                | ({effective_sort_col} if effective_sort_col else set())
+            )
+            if is_enrichment_column(c)
+        ]
+        if enrichment_cols_needed and all_items:
+            session = getattr(self.watchlist_repo, "session", None)
+            enrichment_service = WatchlistEnrichmentService(session=session)
+
+            enrich_items = []
+            quotes_map = {}
+            for item_resp in resolved_items:
+                inst_id = item_resp.instrument_entity_id
+                if item_resp.last_price is not None:
+                    try:
+                        quotes_map[inst_id] = Decimal(str(item_resp.last_price))
+                    except Exception:
+                        pass
+                enrich_items.append(
+                    EnrichmentItemContext(
+                        item_id=item_resp.id,
+                        instrument_id=inst_id,
+                        market_series_id=item_resp.market_series_id,
+                        asset_class=item_resp.asset_class or "equity",
+                        quote_currency=item_resp.quote_currency or "USD",
+                        company_id=item_resp.issuer_entity_id,
+                    )
+                )
+
+            enrich_results = await enrichment_service.batch_enrich_items(
+                items=enrich_items,
+                requested_column_ids=enrichment_cols_needed,
+                quotes_map=quotes_map,
+            )
+
+            for proj in projections:
+                item_enriched = enrich_results.get(proj.item_id, {})
+                for col_id, enrich_val in item_enriched.items():
+                    proj.values[col_id] = WatchlistRowCellValue(**enrich_val.to_row_cell_dict())
 
         # 5. Apply sorting across full dataset if sort is requested
         incompatible_detected = False

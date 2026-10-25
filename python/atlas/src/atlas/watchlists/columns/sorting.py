@@ -36,9 +36,18 @@ class WatchlistSortingEngine:
 
         is_desc = direction == "desc"
 
-        # Check for mixed currencies or quote measures on numeric market quotes
+        from .registry import get_column_definition
+
+        col_def = get_column_definition(sort_column_id)
+        is_numeric = (col_def and col_def.sort_policy == "numeric") or sort_column_id in (
+            "quote.latest_measure",
+            "quote.change",
+        )
+        is_monetary = col_def and col_def.value_type == "MONETARY"
+
+        # Check for mixed currencies on monetary columns or market quotes
         incompatible_units = False
-        if sort_column_id == "quote.latest_measure":
+        if sort_column_id == "quote.latest_measure" or is_monetary:
             currencies = set()
             measure_kinds = set()
             for r in rows:
@@ -46,6 +55,8 @@ class WatchlistSortingEngine:
                 if cell and cell.status == "AVAILABLE" and cell.value is not None:
                     if cell.unit:
                         currencies.add(cell.unit.upper())
+                    if cell.currency:
+                        currencies.add(cell.currency.upper())
                     if cell.measure_kind:
                         measure_kinds.add(cell.measure_kind.lower())
             if len(currencies) > 1 or len(measure_kinds) > 1:
@@ -70,16 +81,13 @@ class WatchlistSortingEngine:
 
             # Primary key: 0 if valid value, 1 if missing.
             # This ensures missing values ALWAYS sort last regardless of direction!
-            # For ASC: (0, val) < (1, None) -> val comes first, missing last.
-            # For DESC: we reverse the value or sort list with key transformation.
             if not has_val:
                 return (1, 0, row.manual_position, str(row.item_id))
 
             # Parse value according to type
             parsed_val: Any = raw_val
-            if sort_column_id in ("quote.latest_measure", "quote.change"):
+            if is_numeric:
                 try:
-                    # Clean potential +, % or currency prefixes
                     cleaned = (
                         str(raw_val).replace("%", "").replace("+", "").replace(",", "").strip()
                     )
@@ -90,8 +98,9 @@ class WatchlistSortingEngine:
                 parsed_val = raw_val.lower()
 
             # If incompatible units, prepend unit so like-currencies group together cleanly
-            if incompatible_units and cell and cell.unit:
-                parsed_val = (cell.unit.upper(), parsed_val)
+            unit_val = (cell.currency or cell.unit or "").upper() if cell else ""
+            if incompatible_units and unit_val:
+                parsed_val = (unit_val, parsed_val)
 
             return (0, parsed_val, row.manual_position, str(row.item_id))
 

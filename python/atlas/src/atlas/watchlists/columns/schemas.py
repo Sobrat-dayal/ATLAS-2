@@ -79,6 +79,16 @@ class WatchlistRowCellValue(BaseModel):
     source: Optional[str] = None
     freshness: Optional[str] = None
     reason: Optional[str] = None
+    currency: Optional[str] = None
+    fiscal_period: Optional[str] = None
+    period_end_date: Optional[str] = None
+    publication_time: Optional[datetime.datetime] = None
+    as_of: Optional[str] = None
+    methodology: Optional[str] = None
+    url: Optional[str] = None
+    headline: Optional[str] = None
+    publisher: Optional[str] = None
+    event_status: Optional[str] = None
 
 
 class WatchlistRowProjection(BaseModel):

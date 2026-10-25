@@ -5,7 +5,7 @@ import {
   REQUIRED_COLUMN_ID,
   calculateStickyLeftOffsets,
 } from "@/lib/watchlists/columns/registry";
-import { WatchlistColumnConfigV1, WatchlistColumnDefinition } from "@/lib/watchlists/columns/types";
+import { WatchlistColumnConfigV1, WatchlistColumnDefinition, WatchlistRowCellValue } from "@/lib/watchlists/columns/types";
 import { CanonicalLiveQuote } from "@/lib/watchlists/live";
 import { WatchlistColumnHeader } from "./WatchlistColumnHeader";
 import { WatchlistRow } from "./WatchlistRow";
@@ -13,6 +13,7 @@ import { WatchlistRow } from "./WatchlistRow";
 interface WatchlistTableProps {
   items: WatchlistItem[];
   liveQuotes?: Map<string, CanonicalLiveQuote>;
+  enrichmentData?: Map<string, Record<string, WatchlistRowCellValue>>;
   config: WatchlistColumnConfigV1;
   onUpdateConfig: (newConfig: WatchlistColumnConfigV1) => void;
   selectedItemId: string | null;
@@ -24,6 +25,7 @@ interface WatchlistTableProps {
 export function WatchlistTable({
   items,
   liveQuotes,
+  enrichmentData,
   config,
   onUpdateConfig,
   selectedItemId,
@@ -399,6 +401,7 @@ export function WatchlistTable({
               key={item.id}
               item={item}
               liveQuote={liveQuotes?.get(item.instrument_entity_id?.toLowerCase())}
+              enrichmentValues={enrichmentData?.get(item.id)}
               index={index}
               totalCount={sortedItems.length}
               visibleColumns={visibleColumns}

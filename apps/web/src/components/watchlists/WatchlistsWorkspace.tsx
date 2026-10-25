@@ -37,7 +37,7 @@ import { CreateWatchlistDialog } from "./CreateWatchlistDialog";
 import { RenameWatchlistDialog } from "./RenameWatchlistDialog";
 import { DeleteWatchlistDialog } from "./DeleteWatchlistDialog";
 import { AddInstrumentDialog } from "./AddInstrumentDialog";
-import { useWatchlistLive } from "@/hooks/watchlists/useWatchlistLive";
+import { useWatchlistLive, useWatchlistEnrichment } from "@/hooks/watchlists";
 import { Loader2 } from "lucide-react";
 
 export function WatchlistsWorkspace() {
@@ -54,6 +54,9 @@ export function WatchlistsWorkspace() {
   const [columnRevision, setColumnRevision] = useState<number>(0);
   const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState<boolean>(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Enrichment state (Stage 79)
+  const { enrichmentData } = useWatchlistEnrichment(activeWatchlist, columnConfig, liveQuotes);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
@@ -448,6 +451,7 @@ export function WatchlistsWorkspace() {
           <WatchlistTable
             items={activeWatchlist.items}
             liveQuotes={liveQuotes}
+            enrichmentData={enrichmentData}
             config={columnConfig}
             onUpdateConfig={handleUpdateColumnConfig}
             selectedItemId={selectedItemId}

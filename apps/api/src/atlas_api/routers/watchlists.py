@@ -13,6 +13,7 @@ Exposes authenticated REST endpoints under `/watchlists`:
 
 import logging
 import uuid
+from decimal import Decimal
 from typing import Annotated, Optional
 
 from atlas.auth import AuthPrincipal
@@ -59,6 +60,15 @@ from atlas.watchlists.columns import (
     WatchlistColumnService,
     WatchlistRowsResponse,
 )
+from atlas.watchlists.enrichment import (
+    EnrichmentCategory,
+    EnrichmentColumnMetadata,
+    WatchlistEnrichmentRequest,
+    WatchlistEnrichmentResponse,
+    WatchlistEnrichmentService,
+    list_enrichment_columns,
+)
+from atlas.watchlists.enrichment.planner import EnrichmentItemContext
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -557,3 +567,82 @@ async def get_projected_watchlist_rows(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": e.code, "message": e.message},
         )
+
+
+# =============================================================================
+# Stage 79: Enrichment Endpoints
+# =============================================================================
+
+
+@router.get(
+    "/enrichment/capabilities",
+    response_model=list[EnrichmentColumnMetadata],
+    summary="List enrichment capabilities",
+    description="Returns the full catalog of registered financial enrichment column definitions.",
+)
+async def get_enrichment_capabilities(
+    category: Optional[EnrichmentCategory] = Query(None, description="Optional category filter"),
+) -> list[EnrichmentColumnMetadata]:
+    """Returns supported enrichment column specifications."""
+    return list_enrichment_columns(category=category)
+
+
+@router.post(
+    "/{id}/enrichment/query",
+    response_model=WatchlistEnrichmentResponse,
+    summary="Query watchlist enrichment",
+    description="Batch resolves company fundamentals, ratios, technicals, events, and news for watchlist items.",
+)
+async def query_watchlist_enrichment(
+    id: uuid.UUID,
+    request: WatchlistEnrichmentRequest,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    watchlist_service: Annotated[WatchlistService, Depends(get_watchlist_service)],
+) -> WatchlistEnrichmentResponse:
+    user_id = uuid.UUID(principal.user_id)
+    repo = WatchlistRepository(session)
+    watchlist = await repo.get_by_id(id, owner_user_id=user_id)
+    if watchlist is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "WATCHLIST_NOT_FOUND", "message": f"Watchlist {id} not found."},
+        )
+
+    # Resolve items with latest quotes and metadata
+    all_items = watchlist.items
+    resolved_items = await watchlist_service._resolve_items_metadata_and_quotes(all_items)
+
+    items_context: list[EnrichmentItemContext] = []
+    quotes_map: dict[uuid.UUID, Decimal] = {}
+
+    for item_resp in resolved_items:
+        if request.item_ids and item_resp.id not in request.item_ids:
+            continue
+
+        inst_id = item_resp.instrument_entity_id
+        if item_resp.last_price is not None:
+            try:
+                quotes_map[inst_id] = Decimal(str(item_resp.last_price))
+            except Exception:
+                pass
+
+        items_context.append(
+            EnrichmentItemContext(
+                item_id=item_resp.id,
+                instrument_id=inst_id,
+                market_series_id=item_resp.market_series_id,
+                asset_class=item_resp.asset_class or "equity",
+                quote_currency=item_resp.quote_currency or "USD",
+                company_id=item_resp.issuer_entity_id,
+            )
+        )
+
+    service = WatchlistEnrichmentService(session=session)
+    return await service.execute_enrichment_query(
+        watchlist_id=id,
+        membership_revision=watchlist.revision,
+        items=items_context,
+        request=request,
+        quotes_map=quotes_map,
+    )

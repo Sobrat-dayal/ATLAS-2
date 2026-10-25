@@ -108,6 +108,12 @@ export function WatchlistColumnManager({
     { key: "market", label: "Trading Market" },
     { key: "quote", label: "Available Quote Snapshot" },
     { key: "quality", label: "Source & Data Quality" },
+    { key: "fundamentals", label: "Company Fundamentals" },
+    { key: "valuation", label: "Valuation Ratios" },
+    { key: "technical", label: "Technical Indicators (1D)" },
+    { key: "events", label: "Corporate Events" },
+    { key: "earnings", label: "Earnings Intelligence" },
+    { key: "news", label: "Relevant News References" },
   ];
 
   return (

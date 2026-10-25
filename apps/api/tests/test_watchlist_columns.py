@@ -106,10 +106,10 @@ def test_stage77_migration_file():
 class TestColumnRegistry:
     def test_catalog_size_and_uniqueness(self):
         defs = list_all_column_definitions()
-        assert len(defs) == 14
-        assert len(COLUMN_MAP) == 14
+        assert len(defs) == 48
+        assert len(COLUMN_MAP) == 48
         ids = [d.id for d in defs]
-        assert len(set(ids)) == 14
+        assert len(set(ids)) == 48
 
     def test_required_column_properties(self):
         col = get_column_definition("instrument.symbol")
@@ -120,7 +120,18 @@ class TestColumnRegistry:
         assert col.id == "instrument.symbol"
 
     def test_valid_categories_and_types(self):
-        valid_cats = {"identity", "market", "quote", "quality"}
+        valid_cats = {
+            "identity",
+            "market",
+            "quote",
+            "quality",
+            "fundamentals",
+            "valuation",
+            "technical",
+            "events",
+            "earnings",
+            "news",
+        }
         valid_types = {
             "TEXT",
             "IDENTIFIER",
@@ -129,6 +140,7 @@ class TestColumnRegistry:
             "PERCENTAGE",
             "TIMESTAMP",
             "STATUS",
+            "NUMBER",
         }
         for col in COLUMN_CATALOG:
             assert col.category in valid_cats
@@ -600,10 +612,12 @@ class TestWatchlistColumnHttpEndpoints:
             assert resp.status_code == 200
             data = resp.json()
             assert isinstance(data, list)
-            assert len(data) == 14
+            assert len(data) == 48
             col_ids = [c["id"] for c in data]
             assert "instrument.symbol" in col_ids
             assert "quote.latest_measure" in col_ids
+            assert "fundamentals.revenue" in col_ids
+            assert "technical.rsi_14_1d" in col_ids
 
     async def test_get_and_update_preferences_flow(self):
         watchlist_id = uuid.uuid4()
