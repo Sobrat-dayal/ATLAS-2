@@ -5955,6 +5955,465 @@ This document records the major architectural and product decisions established.
 184. Documentation must reflect the implementation.
 185. Stage 79 is the next canonical development stage.
 
+## Stage 79 Decisions — Build Advanced Watchlist Enrichment V1: Company Fundamentals, Financial Ratios, Technical Indicator Snapshots, Corporate Events, Earnings Information, Relevant News, Multi-Source Data Qualification, Provenance-Aware Column Registry Integration and High-Performance Financial Intelligence Tables
+
+### Product
+1. Stage 79 implements Watchlist Enrichment V1.
+2. The module remains `/watchlists`.
+3. The Stage 77 Column Registry is extended.
+4. No separate twenty-first global module is created.
+5. No automated trading, order generation, or portfolio mutations are executed.
+6. Financial intelligence tables maintain dense institutional terminal styling.
+
+### Roadmap Boundaries
+7. Stage 80 owns Watchlist Alerts V1.
+8. Stage 81 owns Companies V1.
+
+---
+
+## Stage 80 Decisions — Build Watchlist Alerts V1: Persistent Financial Monitoring Rules, Realtime Price Thresholds, Qualified Percentage-Change Conditions, Event-Driven Alert Evaluation, Durable Notification Delivery, Trigger History, Cooldowns, Deduplication, Entitlement Enforcement and Production-Grade Alert Lifecycle Management
+
+### Product
+1. Stage 80 implements Watchlist Alerts V1.
+2. The module remains `/watchlists`.
+3. Stage 49 Notification Center is reused.
+4. Alerts are user-owned persistent rules.
+5. Alerts are not orders.
+6. Alerts are not Portfolios.
+7. Alerts are not Trading strategies.
+8. No new global navigation module is created.
+9. The ATLAS design system is reused.
+10. No fake financial conditions or notifications are generated.
+
+### Identity
+11. Alert IDs are UUIDs.
+12. User ownership is explicit.
+13. Watchlist/item relationships are validated.
+14. Canonical Instrument identity is preserved.
+15. Market-series identity is preserved.
+16. Ticker is not an authoritative key.
+17. Venue distinctions are preserved.
+18. FX orientation is preserved.
+19. Crypto quote denomination is preserved.
+20. Futures expiration is preserved.
+21. Bond measure basis is preserved.
+22. Fund NAV and market price remain distinct.
+
+### Conditions
+23. Price-above is supported.
+24. Price-below is supported.
+25. Crossing-above is supported.
+26. Crossing-below is supported.
+27. Qualified percentage-change alerts are supported.
+28. Above/below and crossing have separate semantics.
+29. Crossing requires valid previous/current observations.
+30. First snapshot does not imply crossing.
+31. Equality behavior is defined.
+32. Repeat crossings require re-arming.
+33. Cooldowns do not replace re-arming.
+34. Rule inputs are typed and validated.
+35. Unsupported measures are rejected.
+36. No arbitrary user scripts are executed.
+
+### Financial Correctness
+37. Source identity is validated.
+38. Venue identity is validated.
+39. Quote measure is validated.
+40. Currency/units are validated.
+41. Numerical comparisons use decimal-safe semantics.
+42. Genuine zero is handled correctly.
+43. Genuine negative Futures prices are supported.
+44. Price and yield are distinct.
+45. Indicative Quotes are not relabeled Last.
+46. Percentage changes require compatible references.
+47. Zero denominators are rejected.
+48. Crypto rolling 24-hour reference is distinguished.
+49. Session reference changes are handled.
+50. No invented previous close is permitted.
+
+### Freshness and Entitlements
+51. Stage 44 freshness remains authoritative.
+52. Delayed feeds remain labeled delayed.
+53. Stale movement observations do not trigger.
+54. Duplicate delivery does not create new observation time.
+55. Market closure uses verified metadata.
+56. Feed degradation is visible.
+57. Creation checks entitlement.
+58. Activation checks entitlement.
+59. Evaluation checks entitlement.
+60. Entitlement revocation stops unauthorized evaluation.
+
+### Evaluation
+61. Evaluation runs server-side.
+62. Browser visibility is not required.
+63. Stage 42 Market Events are reused.
+64. Stage 41 latest Quote state is reused.
+65. No per-alert upstream Provider connection is created.
+66. No second global WebSocket is created.
+67. Active-rule lookup is indexed.
+68. Rule evaluation is bounded.
+69. Event schema is validated.
+70. Event IDs are deduplicated.
+71. Source sequences are scoped correctly.
+72. Out-of-order observations do not regress state.
+73. Gaps cause safe uncertainty/rebaseline.
+74. Reconnection does not invent missed crossings.
+75. Provider changes do not silently create crossings.
+76. Multiple workers coordinate safely.
+77. Worker restart restores durable state.
+78. Worker health is observable.
+79. Backend deployment requirements are documented.
+
+### Lifecycle
+80. Create is supported.
+81. Read is supported.
+82. Update is supported.
+83. Delete is supported.
+84. Pause is supported.
+85. Resume is supported.
+86. One-shot is supported.
+87. Recurring is supported.
+88. Expiration is supported.
+89. Cooldowns are supported.
+90. Re-arming is supported.
+91. Rule revisions protect concurrent updates.
+92. Editing may reset evaluator baselines.
+93. Removing a Watchlist item follows an explicit alert policy.
+94. Deleting a Watchlist follows an explicit alert policy.
+95. Trigger history retention is defined.
+
+### Persistence
+96. PostgreSQL stores alert rules.
+97. PostgreSQL stores durable evaluation state.
+98. PostgreSQL stores trigger history.
+99. Versioned migrations are used.
+100. Foreign keys and indexes are defined.
+101. Owner-scoped queries are mandatory.
+102. RLS is applied where appropriate.
+103. Trigger deduplication is atomic.
+104. No canonical Quote values are duplicated as a new financial-history store.
+105. No arbitrary unbounded event history is retained.
+
+### Notifications
+106. Stage 49 is authoritative.
+107. A trigger record is separate from delivery.
+108. Durable notification handoff is used.
+109. Outbox is transactional where applicable.
+110. Delivery retries are bounded.
+111. Notification records are deduplicated.
+112. Failed delivery does not erase trigger history.
+113. Market observation time is preserved.
+114. Evaluation time is preserved.
+115. Delayed-feed context is disclosed.
+116. Deep links use canonical identity.
+117. Notification ownership is enforced.
+118. Exactly-once external delivery is not falsely guaranteed.
+
+### Resource Protection
+119. Alert quotas are enforced.
+120. Per-series concentration is bounded.
+121. Notification rates are bounded.
+122. Concurrent evaluation is bounded.
+123. Rule lookups are indexed.
+124. Event buffers are bounded.
+125. Feed consumption is shared.
+126. No full-rule scan per tick is permitted.
+127. Expired rules stop evaluating.
+128. Inactive rules release unnecessary work.
+129. Observability is low-cardinality.
+
+### Security
+130. Authentication is required.
+131. Alert ownership is enforced.
+132. Cross-user data is isolated.
+133. Source licensing is enforced.
+134. Subscription authorization is enforced.
+135. No arbitrary SQL is allowed.
+136. No executable custom scripts are allowed.
+137. Provider credentials remain server-side.
+138. External delivery channels require approval.
+139. No Trading orders are placed.
+140. No Portfolio changes occur.
+141. No Broker actions occur.
+142. No Agents execute.
+143. No Workflows execute.
+144. No LLM calls are required.
+
+### UI and Accessibility
+145. Create Alert is functional.
+146. Edit Alert is functional.
+147. Pause/Resume is functional.
+148. Delete is functional.
+149. Alert List is functional.
+150. Trigger History is functional.
+151. Source/freshness status is visible.
+152. Realtime/delayed distinction is visible.
+153. Alert evaluation health is visible.
+154. Threshold units are displayed.
+155. Keyboard navigation is supported.
+156. Screen-reader status is supported.
+157. Responsive layout is supported.
+158. Agent Dock compatibility is preserved.
+159. Bottom Taskbar compatibility is preserved.
+160. No purple gradients are introduced.
+161. No emoji icons are introduced.
+162. No fake alert records are introduced.
+
+### Roadmap Boundaries
+163. Stage 81–88 own Companies.
+164. Stage 89–93 own Economics.
+165. Stage 94–98 own Screeners.
+166. Stage 99–103 own News.
+167. Stage 104–109 own Research.
+168. Stage 110–114 own Portfolios.
+169. Stage 115–118 own Risk.
+170. Stage 119–120 own Saved/Workspaces.
+171. Stage 121–128 own Terminal/AI.
+172. Stage 129–140 own Maps/Intelligence.
+173. Stage 141–142 own Options/Quant pricing.
+174. Stage 143 owns Backtesting.
+175. Stage 144 owns Paper Trading.
+176. Stage 145 owns Broker Sandbox.
+177. Stage 146+ own Agents.
+178. No trading-order automation is implemented.
+179. No full workflow engine is implemented.
+180. No independent external communications platform is implemented.
+181. No new market-data Provider router is implemented.
+182. No duplicate market-data database is implemented.
+183. Stage 80 must pass rule tests.
+184. Stage 80 must pass crossing tests.
+185. Stage 80 must pass deduplication tests.
+186. Stage 80 must pass crash recovery tests.
+187. Stage 80 must pass entitlement tests.
+188. Stage 80 must pass notification tests.
+189. Stage 80 must pass Stage 76–79 regressions.
+190. Documentation must reflect actual behavior.
+191. Stage 81 is the next canonical stage.
+
+## Stage 81 — Build Companies V1
+
+### Product
+1. Stage 81 implements Companies V1.
+2. The route remains `/companies`.
+3. No new global Sidebar module is introduced.
+4. The existing AppShell is preserved.
+5. Company Overview is professional and data-driven.
+6. No fictional Company profiles are seeded.
+7. No duplicate Company master is created.
+8. No new Provider ingestion system is introduced.
+9. No trading action is introduced.
+10. No AI-generated Company facts are introduced.
+
+### Identity
+11. Stage 18 Company Entities remain authoritative.
+12. Stage 16 Universal Entity identity is reused.
+13. Company UUIDs are stable.
+14. Ticker text is not a Company primary key.
+15. Legal name and display name are separate.
+16. Company aliases use Stage 22.
+17. Brand and legal corporation are distinct.
+18. Parent and subsidiary are distinct.
+19. Public and private companies are supported where canonically represented.
+20. Inactive and dissolved entities retain lifecycle context.
+21. Company mergers do not automatically merge historical identities.
+
+### Identifiers
+22. Stage 21 identifier infrastructure is reused.
+23. LEI/CIK are scoped correctly.
+24. Security ISINs are not treated as legal-company IDs.
+25. Security FIGIs are not treated as Company IDs.
+26. Identifier source and verification are preserved.
+27. Missing identifiers are not fabricated.
+28. Identifier conflicts are handled through canonical policy.
+
+### Sector and Industry
+29. Industry taxonomy identity is explicit.
+30. Taxonomy version is preserved where available.
+31. Sector and industry hierarchy are distinct.
+32. Source provenance is preserved.
+33. Missing classification remains unavailable.
+34. No sector is inferred merely from a Company name.
+35. Sector sharing does not automatically establish Peer relationships.
+
+### Geography
+36. Stage 19 Geographic Entities are reused.
+37. Headquarters and incorporation are distinct.
+38. Domicile and exchange country are distinct.
+39. Company addresses are not guessed.
+40. Location metadata has source/as-of context.
+41. No facility-level geospatial system is built.
+
+### Relationships
+42. Stage 23 Relationship Graph remains authoritative.
+43. Company and Financial Instrument identities are distinct.
+44. Security and listing identities are distinct.
+45. Multiple share classes are preserved.
+46. Cross-listings are preserved.
+47. Depositary receipts are distinct instruments where modeled.
+48. Corporate bond issuers are verified.
+49. Subsidiary/guarantor roles are not guessed.
+50. ETF/fund manager relationships remain distinct.
+51. Ticker matching alone is not a valid issuer join.
+52. Relationship source and validity are preserved.
+53. Missing verified relationships are not fabricated.
+
+### Market Data
+54. Stage 33 remains authoritative.
+55. Stage 41 latest Quote state is reused.
+56. Stage 44 freshness is reused.
+57. Company market data is qualified through securities.
+58. A Company is not assigned one universal Last price.
+59. Venue and source are preserved.
+60. Quotation currency is preserved.
+61. Quote measures remain distinct.
+62. Fund NAV and market price remain distinct.
+63. Bond price and yield remain distinct.
+64. Valid zero and negative prices are not incorrectly rejected.
+65. Missing Quotes remain unavailable.
+66. Market cap is not invented from incompatible share counts.
+67. Duplicate cross-listings are not double-counted.
+68. Opening a Company does not create Provider fanout.
+69. No new market streaming subsystem is introduced.
+
+### Financial Summary
+70. Stage 34 Fundamentals remains authoritative.
+71. Stage 81 displays only high-level verified summary metrics.
+72. Reporting period is preserved.
+73. Reporting currency is preserved.
+74. Publication date is preserved.
+75. Statement scope is preserved.
+76. Restatement context is preserved.
+77. Quarterly and annual data remain distinct.
+78. TTM is not guessed.
+79. Unsupported financial metrics remain unavailable.
+80. No new detailed Statements engine is introduced.
+81. No comprehensive Ratio engine is introduced.
+
+### News and Documents
+82. Stage 36 canonical references are reused.
+83. News association must be verified.
+84. Ticker text alone is insufficient.
+85. Actual headlines and sources are displayed.
+86. Publication timestamps are preserved.
+87. Article/document licensing is enforced.
+88. No new News crawler is introduced.
+89. No News clustering or sentiment engine is introduced.
+90. No full filing parser is introduced.
+
+### APIs and Data
+91. Company read APIs are typed.
+92. Existing FastAPI architecture is reused.
+93. Company UUID validation is enforced.
+94. Related securities are paginated.
+95. News/documents are paginated.
+96. Section-level partial availability is supported.
+97. Source qualification is preserved.
+98. No canonical Company writes occur during profile reads.
+99. No autonomous ingestion occurs on page load.
+100. No duplicate financial datasets are persisted.
+
+### Search and Navigation
+101. Stage 45 Global Search is reused.
+102. Legal names and aliases are supported according to actual search capabilities.
+103. Company search results use canonical identity.
+104. Ambiguous Company names remain distinguishable.
+105. Unlisted companies may appear where authorized.
+106. Global Selected Entity type remains correct.
+107. Markets navigation uses actual Financial Instruments.
+108. Charts navigation uses actual market-series identity.
+109. Watchlist actions reuse Stage 76.
+110. Company UUID is not submitted as a Watchlist Financial Instrument UUID.
+111. Company News/Document links are verified.
+112. Unsupported routes are not invented.
+
+### UI
+113. Companies uses professional high-density design.
+114. Company search is functional.
+115. Company selection is functional.
+116. Company Header is functional.
+117. Corporate Profile is functional.
+118. Classification section is functional.
+119. Geography section is functional.
+120. Identifier section is functional.
+121. Related Securities table is functional.
+122. Market Context is qualified.
+123. Financial Summary is qualified.
+124. News/Document references are genuine.
+125. Partial loading and errors are supported.
+126. Dark/light mode is preserved.
+127. Agent Dock compatibility is preserved.
+128. Bottom Taskbar compatibility is preserved.
+129. Responsive layouts are supported.
+130. Keyboard accessibility is supported.
+131. Screen-reader accessibility is supported.
+132. No purple gradients are introduced.
+133. No emoji icons are introduced.
+134. No fake Company metrics are introduced.
+
+### Security and Performance
+135. Authentication is respected.
+136. Source entitlements are enforced.
+137. Restricted company records are protected.
+138. SQL queries are parameterized.
+139. External URLs are validated.
+140. Provider credentials are never exposed.
+141. Pagination is enforced.
+142. Query budgets are enforced.
+143. Cache isolation respects entitlements.
+144. Related metadata is batched.
+145. Market snapshots are batched.
+146. No Provider fanout occurs per listing.
+147. No market-data writes occur during Company reads.
+148. No Trading orders are placed.
+149. No Portfolio changes occur.
+150. No Agents execute.
+151. No Workflows execute.
+152. No LLM calls are required.
+
+### Roadmap Boundaries
+153. Stage 82 owns Financial Statements.
+154. Stage 83 owns Financial Ratios.
+155. Stage 84 owns Earnings.
+156. Stage 85 owns Ownership.
+157. Stage 86 owns Filings.
+158. Stage 87 owns Peers.
+159. Stage 88 owns Supply Chains.
+160. Stages 89–93 own Economics.
+161. Stages 94–98 own Screeners.
+162. Stages 99–103 own News.
+163. Stages 104–109 own Research.
+164. Stages 110–114 own Portfolios.
+165. Stages 115–118 own Risk.
+166. Stages 119–120 own Saved/Workspaces.
+167. Stages 121–128 own Terminal/AI.
+168. Stages 129–140 own Maps/Intelligence.
+169. Stages 141–142 own Options/Quant pricing.
+170. Stage 143 owns Backtesting.
+171. Stage 144 owns Paper Trading.
+172. Stage 145 owns Broker Sandbox.
+173. Stages 146+ own Agents.
+174. No full financial statement analysis is implemented.
+175. No new ratio calculation platform is implemented.
+176. No earnings forecast platform is implemented.
+177. No ownership graph is implemented.
+178. No filings ingestion/parser is implemented.
+179. No automated peer-discovery engine is implemented.
+180. No supply-chain graph is implemented.
+181. No duplicated Company database is implemented.
+182. No duplicated market-data pipeline is implemented.
+183. Stage 81 must pass identity tests.
+184. Stage 81 must pass relationship tests.
+185. Stage 81 must pass financial-data qualification tests.
+186. Stage 81 must pass provenance tests.
+187. Stage 81 must pass entitlement tests.
+188. Stage 81 must pass cross-navigation tests.
+189. Stage 81 must pass responsive/accessibility tests.
+190. Stage 81 must pass relevant previous-stage regressions.
+191. Documentation must match the actual implementation.
+192. Stage 82 is the next canonical stage.
+
+
+
 
 
 

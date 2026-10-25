@@ -1,21 +1,35 @@
 import uuid
 from datetime import date
-from typing import Any, Optional
+from typing import Any, List, Optional
 from urllib.parse import urlparse
 
 from atlas.entities.models import Entity
 from atlas.entities.service import EntityService
+from atlas.market_data.live.service import LiveQuoteService
 
 from .errors import (
-    CompanyDataInconsistentError,
     CompanyNotFoundError,
     InvalidCompanyCountryError,
+    InvalidCompanyEntityError,
     InvalidCompanyStatusError,
     InvalidCompanyURLError,
     InvalidOrganizationTypeError,
+    InvalidPaginationError,
 )
 from .models import Company
 from .repository import CompanyRepository
+from .schemas import (
+    CompanyFinancialSummary,
+    CompanyIdentity,
+    CompanyMarketSummary,
+    CompanyOverviewResponse,
+    CompanySearchResponse,
+    PaginatedDocumentsResponse,
+    PaginatedNewsResponse,
+    PaginatedSecuritiesResponse,
+    RelatedSecurityItem,
+    SectionAvailability,
+)
 from .types import CompanyStatus, OrganizationType
 
 
@@ -55,7 +69,6 @@ class CompanyService:
         if not country_id:
             return
 
-        # We must get the entity and ensure it is a "country".
         try:
             entity = await self.entity_service.get_entity(country_id)
             if entity.entity_type != "country":
@@ -71,11 +84,11 @@ class CompanyService:
         """
         entity = await self.entity_service.get_entity(entity_id)
         if entity.entity_type != "company":
-            raise CompanyNotFoundError(str(entity_id))
+            raise InvalidCompanyEntityError(str(entity_id))
 
         company = await self.repository.get_company(entity_id)
         if not company:
-            raise CompanyDataInconsistentError(str(entity_id))
+            raise CompanyNotFoundError(str(entity_id))
 
         return entity, company
 
@@ -93,10 +106,6 @@ class CompanyService:
         primary_country_entity_id: Optional[uuid.UUID] = None,
         force_entity_id: Optional[uuid.UUID] = None,
     ) -> tuple[Entity, Company]:
-        """
-        Atomically creates base Entity and Company specialization.
-        Does not commit. Caller is responsible for transaction.
-        """
         if organization_type and organization_type not in OrganizationType:
             raise InvalidOrganizationTypeError(organization_type)
 
@@ -143,16 +152,8 @@ class CompanyService:
         website_url: Any = None,
         primary_country_entity_id: Any = None,
     ) -> tuple[Entity, Company]:
-        """
-        Updates Company and base Entity fields.
-        Use `None` for UNCHANGED. Pass explicit values to update.
-        Note: to unset a nullable field, use a sentinel or pass the empty string/None and handle it appropriately.
-        For Stage 18, we will treat None as UNCHANGED for base entity fields per the signature,
-        and handle kwargs for company fields explicitly.
-        """
         entity, company = await self.get_company(entity_id)
 
-        # Base entity update
         await self.entity_service.update_base_entity(
             entity_id=entity_id,
             canonical_name=canonical_name,
@@ -160,7 +161,6 @@ class CompanyService:
             description=description,
         )
 
-        # Update Company fields
         if legal_name is not None:
             company.legal_name = self._normalize_string(legal_name)
         if short_name is not None:
@@ -181,8 +181,263 @@ class CompanyService:
             await self._validate_country(primary_country_entity_id)
             company.primary_country_entity_id = primary_country_entity_id
 
-        # Assuming entity_service.update_base_entity doesn't explicitly refresh updated_at if not flushed,
-        # but SQLAlchemy will handle updated_at automatically on flush due to the onupdate server_default.
-        # So we don't need to manually touch entities.updated_at here.
-
         return entity, company
+
+    # -----------------------------------------------------------------------
+    # Stage 81: High-Performance Canonical Company Overview Service
+    # -----------------------------------------------------------------------
+    async def get_company_overview(
+        self,
+        entity_id: uuid.UUID,
+        quote_service: Optional[LiveQuoteService] = None,
+        is_financial_entitled: bool = True,
+        is_news_entitled: bool = True,
+        is_doc_entitled: bool = True,
+    ) -> CompanyOverviewResponse:
+        """
+        Builds the unified, source-qualified Company Overview model.
+        Aggregates identity, classifications, geography, identifiers,
+        related securities, qualified market context, financial summary, and references.
+        Guarantees zero upstream provider fanout on read.
+        """
+        entity, company = await self.get_company(entity_id)
+
+        # 1. Aliases & Identifiers
+        aliases = await self.repository.get_company_aliases(entity_id)
+        identifiers = await self.repository.get_company_identifiers(entity_id)
+
+        # 2. Geography & Classification
+        geography = await self.repository.get_company_geography(company, entity)
+        primary_ticker = await self.repository._resolve_primary_ticker(entity_id)
+        classification = self.repository.get_company_classification(company, entity, primary_ticker)
+
+        # 3. Related Securities & Quotes
+        securities, total_sec = await self.repository.get_related_securities(entity_id, page=1, page_size=25)
+        if quote_service is not None and securities:
+            await self._overlay_live_quotes(securities, quote_service)
+
+        # 4. Market Summary
+        market_summary = self.repository.get_company_market_summary(entity_id, securities, primary_ticker)
+
+        # 5. Financial Summary (Entitlement checked)
+        if is_financial_entitled:
+            financial_summary = self.repository.get_company_financial_summary(entity_id)
+        else:
+            financial_summary = CompanyFinancialSummary(
+                reporting_currency="USD",
+                metrics=[],
+                status="NOT_ENTITLED",
+            )
+
+        # 6. News References (Entitlement checked)
+        if is_news_entitled:
+            recent_news, _ = self.repository.get_company_news(entity_id, securities, page=1, page_size=10)
+            news_status = "AVAILABLE" if recent_news else "UNAVAILABLE"
+        else:
+            recent_news = []
+            news_status = "NOT_ENTITLED"
+
+        # 7. Document References (Entitlement checked)
+        if is_doc_entitled:
+            documents, _ = await self.repository.get_company_documents(entity_id, page=1, page_size=10)
+            doc_status = "AVAILABLE" if documents else "UNAVAILABLE"
+        else:
+            documents = []
+            doc_status = "NOT_ENTITLED"
+
+        # Section availability
+        availability = SectionAvailability(
+            identity="AVAILABLE",
+            profile="AVAILABLE" if entity.description else "UNAVAILABLE",
+            classification=classification.status,
+            geography=geography.status,
+            identifiers="AVAILABLE" if identifiers else "UNAVAILABLE",
+            securities="AVAILABLE" if securities else "UNAVAILABLE",
+            market_summary=market_summary.status,
+            financial_summary=financial_summary.status,
+            news=news_status,
+            documents=doc_status,
+        )
+
+        identity = CompanyIdentity(
+            company_entity_id=company.entity_id,
+            canonical_name=entity.canonical_name,
+            display_name=entity.display_name,
+            legal_name=company.legal_name,
+            short_name=company.short_name,
+            organization_type=company.organization_type,
+            status=company.status,
+            founded_date=company.founded_date,
+            website_url=company.website_url,
+            aliases=aliases,
+        )
+
+        return CompanyOverviewResponse(
+            company_entity_id=company.entity_id,
+            identity=identity,
+            description=entity.description,
+            classification=classification,
+            geography=geography,
+            identifiers=identifiers,
+            related_securities=securities,
+            market_summary=market_summary,
+            financial_summary=financial_summary,
+            recent_news=recent_news,
+            documents=documents,
+            section_availability=availability,
+            created_at=entity.created_at,
+            updated_at=entity.updated_at,
+        )
+
+    async def search_companies(
+        self,
+        query: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20,
+        organization_type: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> CompanySearchResponse:
+        if page < 1 or page_size < 1 or page_size > 100:
+            raise InvalidPaginationError("Page must be >= 1 and page_size between 1 and 100")
+
+        results, total = await self.repository.search_companies(
+            query=query,
+            page=page,
+            page_size=page_size,
+            organization_type=organization_type,
+            status=status,
+        )
+
+        return CompanySearchResponse(
+            results=results,
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+
+    async def get_securities(
+        self,
+        entity_id: uuid.UUID,
+        page: int = 1,
+        page_size: int = 25,
+        quote_service: Optional[LiveQuoteService] = None,
+    ) -> PaginatedSecuritiesResponse:
+        if page < 1 or page_size < 1 or page_size > 100:
+            raise InvalidPaginationError("Page must be >= 1 and page_size between 1 and 100")
+
+        await self.get_company(entity_id)
+
+        items, total = await self.repository.get_related_securities(
+            company_id=entity_id,
+            page=page,
+            page_size=page_size,
+        )
+        if quote_service is not None and items:
+            await self._overlay_live_quotes(items, quote_service)
+
+        return PaginatedSecuritiesResponse(
+            results=items,
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+
+    async def get_market_summary(
+        self,
+        entity_id: uuid.UUID,
+        quote_service: Optional[LiveQuoteService] = None,
+    ) -> CompanyMarketSummary:
+        await self.get_company(entity_id)
+        securities, _ = await self.repository.get_related_securities(entity_id, page=1, page_size=25)
+        if quote_service is not None and securities:
+            await self._overlay_live_quotes(securities, quote_service)
+
+        primary_ticker = await self.repository._resolve_primary_ticker(entity_id)
+        return self.repository.get_company_market_summary(entity_id, securities, primary_ticker)
+
+    async def get_financial_summary(
+        self,
+        entity_id: uuid.UUID,
+        is_entitled: bool = True,
+    ) -> CompanyFinancialSummary:
+        await self.get_company(entity_id)
+        if not is_entitled:
+            return CompanyFinancialSummary(
+                reporting_currency="USD",
+                metrics=[],
+                status="NOT_ENTITLED",
+            )
+        return self.repository.get_company_financial_summary(entity_id)
+
+    async def get_news(
+        self,
+        entity_id: uuid.UUID,
+        page: int = 1,
+        page_size: int = 10,
+        is_entitled: bool = True,
+    ) -> PaginatedNewsResponse:
+        if page < 1 or page_size < 1 or page_size > 100:
+            raise InvalidPaginationError("Page must be >= 1 and page_size between 1 and 100")
+
+        await self.get_company(entity_id)
+        if not is_entitled:
+            return PaginatedNewsResponse(results=[], total=0, page=page, page_size=page_size)
+
+        securities, _ = await self.repository.get_related_securities(entity_id, page=1, page_size=25)
+        items, total = self.repository.get_company_news(entity_id, securities, page=page, page_size=page_size)
+        return PaginatedNewsResponse(results=items, total=total, page=page, page_size=page_size)
+
+    async def get_documents(
+        self,
+        entity_id: uuid.UUID,
+        page: int = 1,
+        page_size: int = 10,
+        is_entitled: bool = True,
+    ) -> PaginatedDocumentsResponse:
+        if page < 1 or page_size < 1 or page_size > 100:
+            raise InvalidPaginationError("Page must be >= 1 and page_size between 1 and 100")
+
+        await self.get_company(entity_id)
+        if not is_entitled:
+            return PaginatedDocumentsResponse(results=[], total=0, page=page, page_size=page_size)
+
+        items, total = await self.repository.get_company_documents(entity_id, page=page, page_size=page_size)
+        return PaginatedDocumentsResponse(results=items, total=total, page=page, page_size=page_size)
+
+    # --- Live Quote Overlay Helper (0 Provider Fanout) ---
+
+    async def _overlay_live_quotes(
+        self,
+        securities: List[RelatedSecurityItem],
+        quote_service: LiveQuoteService,
+    ) -> None:
+        inst_ids = [s.instrument_entity_id for s in securities]
+        try:
+            records = await quote_service.get_latest_quotes(inst_ids)
+            for s in securities:
+                rec = records.get(s.instrument_entity_id)
+                if rec is not None and rec.quote is not None:
+                    q = rec.quote
+                    s.is_quote_available = True
+                    s.latest_price = f"{q.price:.2f}"
+                    if q.bid is not None:
+                        s.bid_price = f"{q.bid:.2f}"
+                    if q.ask is not None:
+                        s.ask_price = f"{q.ask:.2f}"
+                    if q.net_change is not None:
+                        s.absolute_change = f"{q.net_change:+.2f}"
+                        if q.net_change > 0:
+                            s.change_direction = "up"
+                        elif q.net_change < 0:
+                            s.change_direction = "down"
+                        else:
+                            s.change_direction = "flat"
+                    if q.percentage_change is not None:
+                        s.percentage_change = f"{q.percentage_change:+.2f}%"
+                    s.source_timestamp = q.source_timestamp
+                    s.provider = q.provider or "canonical"
+                    s.freshness_status = "live"
+                    s.delay_status = "realtime"
+        except Exception:
+            # Live quote overlay failure does not block the company overview
+            pass

@@ -13,6 +13,24 @@ class CompanyNotFoundError(CompanyError):
         )
 
 
+class CompanyIdentityAmbiguousError(CompanyError):
+    def __init__(self, query: str):
+        super().__init__(
+            f"Company identity ambiguous for query: {query}",
+            code="COMPANY_IDENTITY_AMBIGUOUS",
+            status_code=400,
+        )
+
+
+class InvalidCompanyEntityError(CompanyError):
+    def __init__(self, entity_id: str):
+        super().__init__(
+            f"Entity {entity_id} is not a valid company entity",
+            code="INVALID_COMPANY_ENTITY",
+            status_code=400,
+        )
+
+
 class CompanyDataInconsistentError(CompanyError):
     def __init__(self, entity_id: str):
         super().__init__(
@@ -51,4 +69,22 @@ class InvalidCompanyURLError(CompanyError):
     def __init__(self, url: str):
         super().__init__(
             f"Invalid company website URL: {url}", code="INVALID_COMPANY_URL", status_code=400
+        )
+
+
+class CompanyNotEntitledError(CompanyError):
+    def __init__(self, section: str):
+        super().__init__(
+            f"User is not entitled to access company section: {section}",
+            code="NOT_ENTITLED",
+            status_code=403,
+        )
+
+
+class InvalidPaginationError(CompanyError):
+    def __init__(self, detail: str = "Invalid pagination parameters"):
+        super().__init__(
+            detail,
+            code="INVALID_PAGINATION",
+            status_code=400,
         )
