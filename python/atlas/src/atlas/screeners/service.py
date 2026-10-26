@@ -1,6 +1,7 @@
 """ScreenerService: Query planning, validation, server-side filtering, sorting, pagination, and provenance enrichment (Stage 94)."""
 
 import base64
+import functools
 import json
 import math
 import time
@@ -8,6 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Set, Tuple
+from uuid import UUID
 
 from atlas.screeners.enums import (
     FilterCategory,
@@ -16,6 +18,7 @@ from atlas.screeners.enums import (
     MetricAvailabilityStatus,
     SecurityType,
     SortDirection,
+    SortNullOrder,
     UnitKind,
     ValueType,
 )
@@ -25,6 +28,7 @@ from atlas.screeners.errors import (
     ScreenerOperatorNotSupportedError,
     ScreenerQueryLimitExceededError,
     ScreenerRangeInvalidError,
+    ScreenerSortLimitExceededError,
     ScreenerSortUnsupportedError,
     ScreenerUniverseNotFoundError,
     ScreenerValueTypeInvalidError,
@@ -35,6 +39,7 @@ from atlas.screeners.models import (
     ScreenerObservationRecord,
     ScreenerUniverseDefinition,
 )
+from atlas.screeners.ranking import FactorRankingEngine
 from atlas.screeners.repository import ScreenerRepository
 from atlas.screeners.schemas import (
     ConditionValidationIssueDTO,
@@ -624,8 +629,59 @@ class ScreenerService:
             if self._satisfies_all_filters(rec, request.filters):
                 matching_records.append(rec)
 
+        # Ranking evaluation if requested (Stage 97)
+        ranking_eval = None
+        ranking_row_map: Dict[UUID, Any] = {}
+        ranking_summary = None
+
+        if request.ranking:
+            # Build candidate list for ranking based on cohort policy
+            ranking_targets = candidates if request.ranking.cohort_policy == "all_eligible_universe" else matching_records
+            cand_dicts = [
+                {
+                    "instrument_entity_id": rec.instrument_entity_id,
+                    "ticker": rec.ticker,
+                    "canonical_security_name": rec.canonical_security_name,
+                    "record": rec,
+                }
+                for rec in ranking_targets
+            ]
+            if len(cand_dicts) >= 2:
+                def metric_extractor(cand: Dict[str, Any], factor_id: str) -> Optional[float]:
+                    rec = cand["record"]
+                    val = getattr(rec, factor_id, None)
+                    if val is not None:
+                        try:
+                            return float(val)
+                        except (ValueError, TypeError):
+                            return None
+                    return None
+
+                ranking_eval = FactorRankingEngine.evaluate(cand_dicts, request.ranking, metric_extractor)
+                for r_row in ranking_eval.results:
+                    ranking_row_map[r_row.instrument_entity_id] = r_row
+
+                ranking_summary = {
+                    "mode": ranking_eval.mode.value,
+                    "method": ranking_eval.method.value,
+                    "cohort_policy": ranking_eval.cohort_policy,
+                    "eligible_count": ranking_eval.eligible_count,
+                    "excluded_count": ranking_eval.excluded_count,
+                    "methodology_version": ranking_eval.methodology_version,
+                }
+
         # 4. Sorting with deterministic tie-breaker
-        sorted_records = self._sort_records(matching_records, request.sort)
+        sort_criteria = request.multi_sort if request.multi_sort is not None else request.sort
+        if not sort_criteria and request.ranking and ranking_row_map:
+            # If ranking was computed and no explicit sort provided, sort by rank ascending
+            def _rank_sort_key(r: ScreenerObservationRecord):
+                r_dto = ranking_row_map.get(r.instrument_entity_id)
+                rank_val = r_dto.rank if r_dto else 999999
+                return (rank_val, str(r.instrument_entity_id))
+
+            sorted_records = sorted(matching_records, key=_rank_sort_key)
+        else:
+            sorted_records = self._sort_records(matching_records, sort_criteria)
 
         # 5. Bounded Pagination
         page_size = min(max(1, request.page_size), MAX_PAGE_SIZE)
@@ -653,7 +709,8 @@ class ScreenerService:
         active_columns = self._resolve_columns(request.columns, filter_ids=filter_ids)
         result_rows: List[ScreenerResultRowDTO] = []
         for r in page_records:
-            row_dto = self._build_result_row(r, active_columns)
+            ranking_row = ranking_row_map.get(r.instrument_entity_id)
+            row_dto = self._build_result_row(r, active_columns, ranking_row=ranking_row)
             result_rows.append(row_dto)
 
         # 8. Source coverage statistics for response
@@ -685,6 +742,8 @@ class ScreenerService:
             source_coverage=source_cov,
             execution_duration_ms=round(duration_ms, 2),
             warnings=[],
+            ranking_evaluation_id=ranking_eval.ranking_evaluation_id if ranking_eval else None,
+            ranking_summary=ranking_summary,
         )
 
     # =========================================================================
@@ -880,46 +939,77 @@ class ScreenerService:
         self, records: List[ScreenerObservationRecord], sort_criteria: List[SortCriterionDTO]
     ) -> List[ScreenerObservationRecord]:
         """
-        Sorts candidates deterministically.
-        Uses primary requested field (with NULLS LAST policy) and guarantees
-        stable tie-breaker ordering on (instrument_entity_id, listing_id).
+        Sorts candidates deterministically using an ordered array of typed sort keys.
+        Supports up to 5 sort keys, explicit NULLS_LAST or NULLS_FIRST ordering,
+        and guarantees stable tie-breaker ordering on (instrument_entity_id, listing_id).
         """
         if not sort_criteria:
-            # Default sorting: Market Cap DESC, tie-breaker instrument UUID ASC
-            sort_criteria = [SortCriterionDTO(field_id="market_cap", direction=SortDirection.DESC)]
+            # Default sorting: Market Cap DESC, NULLS LAST
+            sort_criteria = [
+                SortCriterionDTO(
+                    field_id="market_cap",
+                    direction=SortDirection.DESC,
+                    null_order=SortNullOrder.NULLS_LAST,
+                )
+            ]
 
-        primary_sort = sort_criteria[0]
-        field_id = primary_sort.field_id
-        is_desc = primary_sort.direction == SortDirection.DESC
+        if len(sort_criteria) > 5:
+            raise ScreenerSortLimitExceededError(limit=5)
 
-        # Verify field is sortable
-        col_def = self._repo.get_column(field_id)
-        if not col_def and not hasattr(ScreenerObservationRecord, field_id):
-            raise ScreenerSortUnsupportedError(field_id)
+        # Verify all fields are sortable
+        for crit in sort_criteria:
+            col_def = self._repo.get_column(crit.field_id)
+            if not col_def and not hasattr(ScreenerObservationRecord, crit.field_id):
+                raise ScreenerSortUnsupportedError(crit.field_id)
 
-        def sort_key(r: ScreenerObservationRecord):
-            raw_val = getattr(r, field_id, None)
+        def _compare_records(r1: ScreenerObservationRecord, r2: ScreenerObservationRecord) -> int:
+            for crit in sort_criteria:
+                field_id = crit.field_id
+                val1 = getattr(r1, field_id, None)
+                val2 = getattr(r2, field_id, None)
+                is_desc = (crit.direction == SortDirection.DESC)
+                null_order = crit.null_order
 
-            # NULLS LAST policy:
-            # In ascending: non-nulls first (0), nulls last (1)
-            # In descending: non-nulls first (0), nulls last (1)
-            is_null = 1 if raw_val is None else 0
+                # Handle null values
+                if val1 is None and val2 is not None:
+                    return 1 if null_order == SortNullOrder.NULLS_LAST else -1
+                if val1 is not None and val2 is None:
+                    return -1 if null_order == SortNullOrder.NULLS_LAST else 1
+                if val1 is None and val2 is None:
+                    continue
 
-            # Normalization for numeric vs string
-            if raw_val is None:
-                norm_val = Decimal("-Infinity") if is_desc else Decimal("Infinity")
-            elif isinstance(raw_val, (Decimal, int, float)):
-                norm_val = Decimal(str(raw_val))
-            else:
-                norm_val = str(raw_val).lower()
+                # Both non-null: compare values
+                if isinstance(val1, (Decimal, int, float)) and isinstance(val2, (Decimal, int, float)):
+                    d1 = Decimal(str(val1))
+                    d2 = Decimal(str(val2))
+                    if d1 != d2:
+                        if is_desc:
+                            return -1 if d1 > d2 else 1
+                        else:
+                            return -1 if d1 < d2 else 1
+                else:
+                    s1 = str(val1).lower()
+                    s2 = str(val2).lower()
+                    if s1 != s2:
+                        if is_desc:
+                            return -1 if s1 > s2 else 1
+                        else:
+                            return -1 if s1 < s2 else 1
 
-            # Tie-breakers: stable instrument UUID and listing UUID
-            tie_breaker_1 = str(r.instrument_entity_id)
-            tie_breaker_2 = str(r.listing_id)
+            # Deterministic final tie-breakers (always ascending)
+            id1 = str(r1.instrument_entity_id)
+            id2 = str(r2.instrument_entity_id)
+            if id1 != id2:
+                return -1 if id1 < id2 else 1
 
-            return (is_null, norm_val, tie_breaker_1, tie_breaker_2)
+            lid1 = str(r1.listing_id)
+            lid2 = str(r2.listing_id)
+            if lid1 != lid2:
+                return -1 if lid1 < lid2 else 1
 
-        return sorted(records, key=sort_key, reverse=is_desc)
+            return 0
+
+        return sorted(records, key=functools.cmp_to_key(_compare_records))
 
     def _encode_cursor(self, page: int, page_size: int) -> str:
         payload = {"p": page, "s": page_size, "t": int(time.time())}
@@ -962,9 +1052,12 @@ class ScreenerService:
         return resolved
 
     def _build_result_row(
-        self, record: ScreenerObservationRecord, columns: List[ScreenerColumnDefinition]
+        self,
+        record: ScreenerObservationRecord,
+        columns: List[ScreenerColumnDefinition],
+        ranking_row: Optional[Any] = None,
     ) -> ScreenerResultRowDTO:
-        """Assembles a high-density institutional row DTO with cell-level provenance."""
+        """Assembles a high-density institutional row DTO with cell-level provenance and factor ranking."""
         metrics: Dict[str, ScreenerMetricCellDTO] = {}
 
         for col in columns:
@@ -1010,6 +1103,10 @@ class ScreenerService:
             sector=record.sector,
             industry=record.industry,
             metrics=metrics,
+            rank=ranking_row.rank if ranking_row else None,
+            composite_score=ranking_row.composite_score if ranking_row else None,
+            percentile=ranking_row.percentile if ranking_row else None,
+            z_score=ranking_row.z_score if ranking_row else None,
         )
 
     def _format_cell(

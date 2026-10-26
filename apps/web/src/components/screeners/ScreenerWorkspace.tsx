@@ -13,6 +13,11 @@ import { ScreenerSourceInspector } from "./ScreenerSourceInspector";
 import { ScreenerCoveragePanel } from "./ScreenerCoveragePanel";
 import { ScreenerEmptyState } from "./ScreenerEmptyState";
 import { ScreenerErrorState } from "./ScreenerErrorState";
+import { SavedScreensLibraryModal } from "./saved/SavedScreensLibraryModal";
+import { SaveScreenDialog } from "./saved/SaveScreenDialog";
+import { AdvancedSortModal } from "./sorting/AdvancedSortModal";
+import { RankingConfigModal } from "./ranking/RankingConfigModal";
+import { ExportDialog } from "./exports/ExportDialog";
 
 export function ScreenerWorkspace() {
   const {
@@ -38,6 +43,15 @@ export function ScreenerWorkspace() {
     selectedRow,
     isCoverageOpen,
     isColumnManagerOpen,
+    rankingSpec,
+    currentSavedScreen,
+    isDirtyFromSaved,
+    isSavedScreensOpen,
+    isSaveDialogOpen,
+    isSaveAs,
+    isRankingModalOpen,
+    isExportDialogOpen,
+    isAdvancedSortOpen,
     setUniverse,
     toggleExchange,
     toggleCountry,
@@ -47,6 +61,11 @@ export function ScreenerWorkspace() {
     removeFilter,
     clearFilters,
     setSorting,
+    setMultiSort,
+    applyRanking,
+    loadSavedScreen,
+    clearSavedScreen,
+    onSavedScreenSaved,
     toggleColumn,
     resetColumns,
     goToPage,
@@ -54,6 +73,12 @@ export function ScreenerWorkspace() {
     selectRow,
     setIsCoverageOpen,
     setIsColumnManagerOpen,
+    setIsSavedScreensOpen,
+    setIsSaveDialogOpen,
+    setIsSaveAs,
+    setIsRankingModalOpen,
+    setIsExportDialogOpen,
+    setIsAdvancedSortOpen,
     runScreener,
   } = useScreener();
 
@@ -82,6 +107,18 @@ export function ScreenerWorkspace() {
         onToggleColumns={() => setIsColumnManagerOpen(true)}
         onToggleCoverage={() => setIsCoverageOpen(!isCoverageOpen)}
         isCoverageOpen={isCoverageOpen}
+        currentSavedScreen={currentSavedScreen}
+        isDirtyFromSaved={isDirtyFromSaved}
+        onOpenSavedScreens={() => setIsSavedScreensOpen(true)}
+        onOpenSaveDialog={() => {
+          setIsSaveAs(false);
+          setIsSaveDialogOpen(true);
+        }}
+        onOpenAdvancedSort={() => setIsAdvancedSortOpen(true)}
+        sortCount={sortCriteria.length}
+        onOpenRanking={() => setIsRankingModalOpen(true)}
+        isRankingActive={rankingSpec !== null}
+        onOpenExport={() => setIsExportDialogOpen(true)}
       />
 
       {/* 2. Collapsible Data Coverage & Provenance Audit Panel */}
@@ -116,7 +153,6 @@ export function ScreenerWorkspace() {
         onApplyFilters={setFilters}
         isLoading={loading}
       />
-
 
       {/* 5. Active Filter Badges with Quick Removal */}
       <ScreenerActiveFilters
@@ -172,6 +208,73 @@ export function ScreenerWorkspace() {
       <ScreenerSourceInspector
         row={selectedRow}
         onClose={() => selectRow(null)}
+      />
+
+      {/* 10. Stage 97: Saved Screens Library Modal */}
+      <SavedScreensLibraryModal
+        isOpen={isSavedScreensOpen}
+        onClose={() => setIsSavedScreensOpen(false)}
+        onLoadScreen={loadSavedScreen}
+        onOpenSaveDialog={() => {
+          setIsSavedScreensOpen(false);
+          setIsSaveAs(false);
+          setIsSaveDialogOpen(true);
+        }}
+        currentScreenId={currentSavedScreen?.saved_screen_id}
+      />
+
+      {/* 11. Stage 97: Save Screen Dialog */}
+      <SaveScreenDialog
+        isOpen={isSaveDialogOpen}
+        onClose={() => setIsSaveDialogOpen(false)}
+        isSaveAs={isSaveAs}
+        currentSavedScreen={currentSavedScreen}
+        selectedUniverseId={selectedUniverseId}
+        selectedExchanges={selectedExchanges}
+        selectedCountries={selectedCountries}
+        selectedSectors={selectedSectors}
+        activeFilters={activeFilters}
+        sortCriteria={sortCriteria}
+        rankingSpec={rankingSpec}
+        visibleColumnIds={visibleColumnIds}
+        onSaved={onSavedScreenSaved}
+      />
+
+      {/* 12. Stage 97: Advanced Multi-Column Sort Modal */}
+      <AdvancedSortModal
+        isOpen={isAdvancedSortOpen}
+        onClose={() => setIsAdvancedSortOpen(false)}
+        sortCriteria={sortCriteria}
+        columnsRegistry={columnsRegistry}
+        onApplySort={setMultiSort}
+      />
+
+      {/* 13. Stage 97: Quantitative Ranking Configuration Modal */}
+      <RankingConfigModal
+        isOpen={isRankingModalOpen}
+        onClose={() => setIsRankingModalOpen(false)}
+        rankingSpec={rankingSpec}
+        columnsRegistry={columnsRegistry}
+        onApplyRanking={applyRanking}
+      />
+
+      {/* 14. Stage 97: Export Dialog */}
+      <ExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        selectedUniverseId={selectedUniverseId}
+        selectedExchanges={selectedExchanges}
+        selectedCountries={selectedCountries}
+        selectedSectors={selectedSectors}
+        activeFilters={activeFilters}
+        sortCriteria={sortCriteria}
+        rankingSpec={rankingSpec}
+        columnsRegistry={columnsRegistry}
+        visibleColumnIds={visibleColumnIds}
+        totalMatchingCount={totalMatching}
+        currentPage={page}
+        pageSize={pageSize}
+        currentSavedScreenId={currentSavedScreen?.saved_screen_id}
       />
     </div>
   );

@@ -182,3 +182,139 @@ class ScreenerCursorInvalidError(ScreenerError):
             code="SCREENER_CURSOR_INVALID",
             status_code=400,
         )
+
+
+class SavedScreenerNotFoundError(ScreenerError):
+    def __init__(self, screen_id: str):
+        super().__init__(
+            f"Saved screen '{screen_id}' was not found.",
+            code="SAVED_SCREENER_NOT_FOUND",
+            status_code=404,
+        )
+
+
+class SavedScreenerNotAuthorizedError(ScreenerError):
+    def __init__(self, screen_id: str):
+        super().__init__(
+            f"Unauthorized access to private saved screen '{screen_id}'.",
+            code="SAVED_SCREENER_NOT_AUTHORIZED",
+            status_code=403,
+        )
+
+
+class SavedScreenerConflictError(ScreenerError):
+    def __init__(self, expected_revision: int, actual_revision: int):
+        super().__init__(
+            f"Revision conflict: expected revision {expected_revision}, but current revision is {actual_revision}.",
+            code="SAVED_SCREENER_REVISION_CONFLICT",
+            status_code=409,
+        )
+
+
+class SavedScreenerQuotaExceededError(ScreenerError):
+    def __init__(self, limit: int = 100):
+        super().__init__(
+            f"Saved screens quota exceeded (maximum {limit} saved screens per user).",
+            code="SAVED_SCREENER_QUOTA_EXCEEDED",
+            status_code=422,
+        )
+
+
+class SavedScreenerNameInvalidError(ScreenerError):
+    def __init__(self, message: str):
+        super().__init__(
+            f"Invalid saved screen name: {message}",
+            code="SAVED_SCREENER_NAME_INVALID",
+            status_code=400,
+        )
+
+
+class SavedScreenerQueryUnsupportedError(ScreenerError):
+    def __init__(self, message: str):
+        super().__init__(
+            f"Saved screener query is unsupported or requires migration: {message}",
+            code="SAVED_SCREENER_QUERY_SCHEMA_UNSUPPORTED",
+            status_code=400,
+        )
+
+
+class ScreenerSortLimitExceededError(ScreenerError):
+    def __init__(self, limit: int = 5):
+        super().__init__(
+            f"Maximum sort fields limit exceeded (maximum {limit} sort fields permitted).",
+            code="SCREENER_SORT_LIMIT_EXCEEDED",
+            status_code=400,
+        )
+
+
+class ScreenerRankingFactorInvalidError(ScreenerError):
+    def __init__(self, factor_id: str, message: str):
+        super().__init__(
+            f"Ranking factor '{factor_id}' is invalid: {message}",
+            code="SCREENER_RANKING_FACTOR_INVALID",
+            status_code=400,
+        )
+
+
+class ScreenerRankingWeightInvalidError(ScreenerError):
+    def __init__(self, message: str):
+        super().__init__(
+            f"Ranking weights configuration is invalid: {message}",
+            code="SCREENER_RANKING_WEIGHT_INVALID",
+            status_code=400,
+        )
+
+
+class ScreenerRankingInsufficientSampleError(ScreenerError):
+    def __init__(self, eligible_count: int, min_required: int = 2):
+        super().__init__(
+            f"Insufficient eligible sample for ranking: cohort has {eligible_count} securities, minimum required is {min_required}.",
+            code="SCREENER_RANKING_INSUFFICIENT_SAMPLE",
+            status_code=400,
+        )
+
+
+class ScreenerExportNotFoundError(ScreenerError):
+    def __init__(self, export_id: str):
+        super().__init__(
+            f"Export job or artifact '{export_id}' was not found.",
+            code="SCREENER_EXPORT_JOB_NOT_FOUND",
+            status_code=404,
+        )
+
+
+class ScreenerExportJobFailedError(ScreenerError):
+    def __init__(self, export_id: str, reason: str):
+        super().__init__(
+            f"Export job '{export_id}' failed: {reason}",
+            code="SCREENER_EXPORT_JOB_FAILED",
+            status_code=500,
+        )
+
+
+class ScreenerExportQuotaExceededError(ScreenerError):
+    def __init__(self, message: str):
+        super().__init__(
+            f"Export resource quota exceeded: {message}",
+            code="SCREENER_EXPORT_QUOTA_EXCEEDED",
+            status_code=429,
+        )
+
+
+class ScreenerExportScopeInvalidError(ScreenerError):
+    def __init__(self, message: str):
+        super().__init__(
+            f"Export scope is invalid: {message}",
+            code="SCREENER_EXPORT_SCOPE_INVALID",
+            status_code=400,
+        )
+
+
+class ScreenerExportFileUnavailableError(ScreenerError):
+    def __init__(self, export_id: str):
+        super().__init__(
+            f"Export file for job '{export_id}' is expired, deleted, or unavailable.",
+            code="SCREENER_EXPORT_FILE_UNAVAILABLE",
+            status_code=404,
+        )
+

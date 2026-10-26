@@ -76,6 +76,42 @@ export type EditorType =
   | "date_input";
 
 export type SortDirection = "asc" | "desc";
+export type SortNullOrder = "nulls_last" | "nulls_first";
+
+export type RankingMode = "single_factor" | "multi_factor_composite";
+export type RankingDirection = "higher_value_first" | "lower_value_first";
+export type RankingMethod = "dense_rank" | "competition_rank";
+export type RankingTransformation = "raw_rank" | "percentile" | "z_score";
+
+export type ExportFormat = "csv" | "xlsx" | "json";
+export type ExportScope = "current_page" | "all_matching_results";
+export type ExportJobStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancel_requested"
+  | "cancelled"
+  | "expired";
+
+export type SavedScreenerStatus = "active" | "archived" | "deleted";
+
+export interface RankingFactorWeight {
+  factor_id: string;
+  direction: RankingDirection;
+  transformation: RankingTransformation;
+  weight: number;
+}
+
+export interface ScreenerRankingSpec {
+  mode: RankingMode;
+  cohort_policy: string;
+  factors: RankingFactorWeight[];
+  method: RankingMethod;
+  missing_value_policy?: string;
+  minimum_coverage?: number;
+  methodology_version?: string;
+}
 
 export interface ScreenerUniverseDefinition {
   universe_id: string;
@@ -147,6 +183,7 @@ export interface FilterCriterion {
 export interface SortCriterion {
   field_id: string;
   direction: SortDirection;
+  null_order?: SortNullOrder;
 }
 
 export interface UniverseSelection {
@@ -164,6 +201,8 @@ export interface ScreenerRunRequest {
   universe: UniverseSelection;
   filters: FilterCriterion[];
   sort: SortCriterion[];
+  multi_sort?: SortCriterion[] | null;
+  ranking?: ScreenerRankingSpec | null;
   columns?: string[] | null;
   page?: number;
   page_size?: number;
@@ -202,6 +241,10 @@ export interface ScreenerResultRow {
   sector?: string | null;
   industry?: string | null;
   metrics: Record<string, ScreenerMetricCell>;
+  rank?: number | null;
+  composite_score?: number | null;
+  percentile?: number | null;
+  z_score?: number | null;
 }
 
 export interface ScreenerRunResponse {
@@ -221,6 +264,98 @@ export interface ScreenerRunResponse {
   source_coverage: Record<string, number>;
   execution_duration_ms: number;
   warnings: string[];
+  ranking_evaluation_id?: string | null;
+  ranking_summary?: {
+    mode: string;
+    method: string;
+    cohort_policy?: string;
+    eligible_count: number;
+    excluded_count: number;
+    methodology_version: string;
+  } | null;
+}
+
+export interface SavedScreener {
+  saved_screen_id: string;
+  owner_user_id: string;
+  name: string;
+  description?: string | null;
+  query_schema_version: string;
+  universe: UniverseSelection;
+  filters: FilterCriterion[];
+  columns: string[];
+  sort: SortCriterion[];
+  ranking?: ScreenerRankingSpec | null;
+  period_policy: string;
+  currency_policy: string;
+  revision: number;
+  status: SavedScreenerStatus;
+  created_at: string;
+  updated_at: string;
+  last_executed_at?: string | null;
+}
+
+export interface SavedScreenerCreateRequest {
+  name: string;
+  description?: string | null;
+  universe: UniverseSelection;
+  filters: FilterCriterion[];
+  columns?: string[];
+  sort: SortCriterion[];
+  ranking?: ScreenerRankingSpec | null;
+  period_policy?: string;
+  currency_policy?: string;
+  idempotency_key?: string | null;
+}
+
+export interface SavedScreenerUpdateRequest {
+  name?: string;
+  description?: string | null;
+  universe?: UniverseSelection;
+  filters?: FilterCriterion[];
+  columns?: string[];
+  sort?: SortCriterion[];
+  ranking?: ScreenerRankingSpec | null;
+  period_policy?: string;
+  currency_policy?: string;
+  expected_revision: number;
+}
+
+export interface SavedScreenerListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  items: SavedScreener[];
+}
+
+export interface ScreenerExportRequest {
+  query: ScreenerRunRequest;
+  saved_screen_id?: string | null;
+  format: ExportFormat;
+  scope: ExportScope;
+  selected_columns?: string[] | null;
+  include_metadata?: boolean;
+  idempotency_key?: string | null;
+}
+
+export interface ScreenerExportJob {
+  export_job_id: string;
+  owner_user_id: string;
+  status: ExportJobStatus;
+  format: ExportFormat;
+  scope: ExportScope;
+  row_count: number;
+  file_size_bytes?: number | null;
+  download_url?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  completed_at?: string | null;
+  expires_at?: string | null;
+}
+
+export interface ScreenerExportListResponse {
+  total: number;
+  items: ScreenerExportJob[];
 }
 
 export interface ConditionValidationIssue {

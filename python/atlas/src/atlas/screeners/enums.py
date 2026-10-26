@@ -185,3 +185,75 @@ class EditorType(CaseInsensitiveStrEnum):
     BOOLEAN_SELECT = "boolean_select"
     DATE_INPUT = "date_input"
 
+
+class SortNullOrder(CaseInsensitiveStrEnum):
+    """Null placement policy in sort ordering (Stage 97)."""
+
+    NULLS_LAST = "nulls_last"
+    NULLS_FIRST = "nulls_first"
+
+
+class RankingMode(CaseInsensitiveStrEnum):
+    """Ranking calculation mode (Stage 97)."""
+
+    SINGLE_FACTOR = "single_factor"
+    MULTI_FACTOR_COMPOSITE = "multi_factor_composite"
+
+
+class RankingDirection(CaseInsensitiveStrEnum):
+    """Ranking orientation (Stage 97)."""
+
+    HIGHER_VALUE_FIRST = "higher_value_first"
+    LOWER_VALUE_FIRST = "lower_value_first"
+
+
+class RankingMethod(CaseInsensitiveStrEnum):
+    """Ranking tie handling convention (Stage 97)."""
+
+    DENSE_RANK = "dense_rank"
+    COMPETITION_RANK = "competition_rank"
+
+
+class RankingTransformation(CaseInsensitiveStrEnum):
+    """Statistical normalization for ranking factors (Stage 97)."""
+
+    RAW_RANK = "raw_rank"
+    PERCENTILE = "percentile"
+    Z_SCORE = "z_score"
+
+
+class ExportFormat(CaseInsensitiveStrEnum):
+    """Export output format (Stage 97)."""
+
+    CSV = "csv"
+    XLSX = "xlsx"
+    JSON = "json"
+
+
+class ExportScope(CaseInsensitiveStrEnum):
+    """Scope of exported rows (Stage 97)."""
+
+    CURRENT_PAGE = "current_page"
+    ALL_MATCHING_RESULTS = "all_matching_results"
+
+
+class ExportJobStatus(CaseInsensitiveStrEnum):
+    """Background export job lifecycle states (Stage 97)."""
+
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCEL_REQUESTED = "cancel_requested"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
+
+
+class SavedScreenerStatus(CaseInsensitiveStrEnum):
+    """Status lifecycle for saved screeners (Stage 97)."""
+
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+    DELETED = "deleted"
+
+

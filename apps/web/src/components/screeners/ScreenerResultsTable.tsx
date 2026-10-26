@@ -37,6 +37,7 @@ export function ScreenerResultsTable({
   loading,
 }: ScreenerResultsTableProps) {
   const currentSort = sortCriteria[0];
+  const hasRanking = rows.some((r) => r.rank != null);
 
   return (
     <div className="relative flex-1 overflow-x-auto overflow-y-auto">
@@ -48,6 +49,13 @@ export function ScreenerResultsTable({
             <th className="w-10 px-3 py-2.5 text-center font-mono text-[11px] text-muted-foreground/60">
               #
             </th>
+
+            {/* Rank Column if active */}
+            {hasRanking && (
+              <th className="w-20 px-3 py-2.5 text-center font-mono text-[11px] font-semibold text-primary border-r border-border/40">
+                Rank / Score
+              </th>
+            )}
 
             {/* Symbol - Sticky Column */}
             <th
@@ -131,6 +139,30 @@ export function ScreenerResultsTable({
                 <td className="px-3 py-2 text-center text-muted-foreground/60 text-[11px]">
                   {idx + 1}
                 </td>
+
+                {/* Rank Column if active */}
+                {hasRanking && (
+                  <td className="px-3 py-2 text-center border-r border-border/40 font-mono">
+                    {row.rank != null ? (
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-primary text-xs">
+                          #{row.rank}
+                        </span>
+                        {row.percentile != null ? (
+                          <span className="text-[10px] text-muted-foreground">
+                            {row.percentile.toFixed(1)}%
+                          </span>
+                        ) : row.z_score != null ? (
+                          <span className="text-[10px] text-muted-foreground">
+                            z={row.z_score > 0 ? `+${row.z_score.toFixed(2)}` : row.z_score.toFixed(2)}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground/40">—</span>
+                    )}
+                  </td>
+                )}
 
                 {/* Symbol - Sticky Column */}
                 <td className={`sticky left-0 z-10 px-3 py-2 font-bold text-foreground border-r border-border/40 ${

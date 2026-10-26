@@ -7,9 +7,18 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from atlas.screeners.enums import (
+    ExportFormat,
+    ExportJobStatus,
+    ExportScope,
     FilterOperator,
     PeriodPolicy,
+    RankingDirection,
+    RankingMethod,
+    RankingMode,
+    RankingTransformation,
+    SavedScreenerStatus,
     SortDirection,
+    SortNullOrder,
 )
 
 
@@ -31,12 +40,42 @@ class FilterCriterionDTO(BaseModel):
 
 
 class SortCriterionDTO(BaseModel):
-    """Ordering specification."""
+    """Ordering specification with typed null handling."""
 
     model_config = ConfigDict(extra="ignore")
 
     field_id: str
     direction: SortDirection = SortDirection.DESC
+    null_order: SortNullOrder = SortNullOrder.NULLS_LAST
+
+
+# Typed alias for multi-sort keys
+ScreenerSortKeyDTO = SortCriterionDTO
+
+
+class RankingFactorWeightDTO(BaseModel):
+    """Individual factor configuration within a ranking specification."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    factor_id: str
+    direction: RankingDirection = RankingDirection.HIGHER_VALUE_FIRST
+    transformation: RankingTransformation = RankingTransformation.PERCENTILE
+    weight: float = 1.0
+
+
+class ScreenerRankingSpecDTO(BaseModel):
+    """Comprehensive quantitative factor ranking specification (Stage 97)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    mode: RankingMode = RankingMode.SINGLE_FACTOR
+    cohort_policy: str = "filter_matched_securities"
+    factors: List[RankingFactorWeightDTO] = Field(default_factory=list)
+    method: RankingMethod = RankingMethod.DENSE_RANK
+    missing_value_policy: str = "complete_case"
+    minimum_coverage: float = 1.0
+    methodology_version: str = "1.0.0"
 
 
 class UniverseSelectionDTO(BaseModel):
@@ -62,12 +101,15 @@ class ScreenerRunRequestDTO(BaseModel):
     universe: UniverseSelectionDTO = Field(default_factory=UniverseSelectionDTO)
     filters: List[FilterCriterionDTO] = Field(default_factory=list)
     sort: List[SortCriterionDTO] = Field(default_factory=list)
+    multi_sort: Optional[List[SortCriterionDTO]] = None
+    ranking: Optional[ScreenerRankingSpecDTO] = None
     columns: Optional[List[str]] = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=50, ge=1, le=100)
     cursor: Optional[str] = None
     period_policy: PeriodPolicy = PeriodPolicy.LATEST_ANNUAL
     currency_policy: str = "USD"
+
 
 
 class ScreenerMetricCellDTO(BaseModel):
@@ -108,6 +150,10 @@ class ScreenerResultRowDTO(BaseModel):
     sector: Optional[str] = None
     industry: Optional[str] = None
     metrics: Dict[str, ScreenerMetricCellDTO] = Field(default_factory=dict)
+    rank: Optional[int] = None
+    composite_score: Optional[float] = None
+    percentile: Optional[float] = None
+    z_score: Optional[float] = None
 
 
 class ScreenerRunResponseDTO(BaseModel):
@@ -131,6 +177,153 @@ class ScreenerRunResponseDTO(BaseModel):
     source_coverage: Dict[str, int]
     execution_duration_ms: float
     warnings: List[str] = Field(default_factory=list)
+    ranking_evaluation_id: Optional[UUID] = None
+    ranking_summary: Optional[Dict[str, Any]] = None
+
+
+class ScreenerRankingResultRowDTO(BaseModel):
+    """Result row for dedicated factor ranking evaluation."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    instrument_entity_id: UUID
+    ticker: str
+    canonical_security_name: str
+    rank: int
+    percentile: Optional[float] = None
+    z_score: Optional[float] = None
+    composite_score: Optional[float] = None
+    factor_contributions: Dict[str, float] = Field(default_factory=dict)
+    raw_factor_values: Dict[str, Optional[float]] = Field(default_factory=dict)
+
+
+class ScreenerRankingResponseDTO(BaseModel):
+    """Response payload for quantitative factor ranking evaluation."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    ranking_evaluation_id: UUID
+    mode: RankingMode
+    method: RankingMethod
+    cohort_policy: str
+    methodology_version: str
+    total_candidate_count: int
+    eligible_count: int
+    excluded_count: int
+    evaluated_as_of: datetime
+    results: List[ScreenerRankingResultRowDTO]
+
+
+class SavedScreenerDTO(BaseModel):
+    """Institutional persistent user-owned saved screener (Stage 97)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    saved_screen_id: UUID
+    owner_user_id: UUID
+    name: str
+    description: Optional[str] = None
+    query_schema_version: str = "1.0.0"
+    universe: UniverseSelectionDTO = Field(default_factory=UniverseSelectionDTO)
+    filters: List[FilterCriterionDTO] = Field(default_factory=list)
+    columns: List[str] = Field(default_factory=list)
+    sort: List[SortCriterionDTO] = Field(default_factory=list)
+    ranking: Optional[ScreenerRankingSpecDTO] = None
+    period_policy: PeriodPolicy = PeriodPolicy.LATEST_ANNUAL
+    currency_policy: str = "USD"
+    revision: int = 1
+    status: SavedScreenerStatus = SavedScreenerStatus.ACTIVE
+    created_at: datetime
+    updated_at: datetime
+    last_executed_at: Optional[datetime] = None
+
+
+class SavedScreenerCreateRequestDTO(BaseModel):
+    """Payload to create a new user-owned saved screener."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str
+    description: Optional[str] = None
+    universe: UniverseSelectionDTO = Field(default_factory=UniverseSelectionDTO)
+    filters: List[FilterCriterionDTO] = Field(default_factory=list)
+    columns: Optional[List[str]] = None
+    sort: List[SortCriterionDTO] = Field(default_factory=list)
+    ranking: Optional[ScreenerRankingSpecDTO] = None
+    period_policy: PeriodPolicy = PeriodPolicy.LATEST_ANNUAL
+    currency_policy: str = "USD"
+    idempotency_key: Optional[str] = None
+
+
+class SavedScreenerUpdateRequestDTO(BaseModel):
+    """Payload to update an existing saved screener with revision check."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: Optional[str] = None
+    description: Optional[str] = None
+    universe: Optional[UniverseSelectionDTO] = None
+    filters: Optional[List[FilterCriterionDTO]] = None
+    columns: Optional[List[str]] = None
+    sort: Optional[List[SortCriterionDTO]] = None
+    ranking: Optional[ScreenerRankingSpecDTO] = None
+    period_policy: Optional[PeriodPolicy] = None
+    currency_policy: Optional[str] = None
+    expected_revision: int
+
+
+class SavedScreenerListResponseDTO(BaseModel):
+    """Paginated list of user-owned saved screeners."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    total: int
+    page: int
+    page_size: int
+    items: List[SavedScreenerDTO]
+
+
+class ScreenerExportRequestDTO(BaseModel):
+    """Request payload to generate an authorized financial export."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    query: ScreenerRunRequestDTO
+    saved_screen_id: Optional[UUID] = None
+    format: ExportFormat = ExportFormat.CSV
+    scope: ExportScope = ExportScope.CURRENT_PAGE
+    selected_columns: Optional[List[str]] = None
+    include_metadata: bool = True
+    idempotency_key: Optional[str] = None
+
+
+class ScreenerExportJobDTO(BaseModel):
+    """Lifecycle metadata and status of an export job."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    export_job_id: UUID
+    owner_user_id: UUID
+    status: ExportJobStatus
+    format: ExportFormat
+    scope: ExportScope
+    row_count: int = 0
+    file_size_bytes: Optional[int] = None
+    download_url: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+
+
+class ScreenerExportListResponseDTO(BaseModel):
+    """List of export jobs for the current user."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    total: int
+    items: List[ScreenerExportJobDTO]
+
 
 
 class ConditionValidationIssueDTO(BaseModel):

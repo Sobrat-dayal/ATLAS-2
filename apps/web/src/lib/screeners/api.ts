@@ -130,3 +130,164 @@ export async function fetchScreenerCoverage(signal?: AbortSignal): Promise<Scree
   const res = await fetch(url, { headers: getHeaders(), signal });
   return handleResponse<ScreenerCoverageResponse>(res);
 }
+
+// =============================================================================
+// Stage 97: Saved Screeners API Client
+// =============================================================================
+
+export async function fetchSavedScreeners(
+  search?: string,
+  page: number = 1,
+  pageSize: number = 50,
+  signal?: AbortSignal
+): Promise<import("./types").SavedScreenerListResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  if (search) params.set("search", search);
+
+  const url = `${getBaseApiUrl()}/api/v1/screeners/saved?${params.toString()}`;
+  const res = await fetch(url, { headers: getHeaders(), signal });
+  return handleResponse<import("./types").SavedScreenerListResponse>(res);
+}
+
+export async function createSavedScreener(
+  req: import("./types").SavedScreenerCreateRequest,
+  signal?: AbortSignal
+): Promise<import("./types").SavedScreener> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/saved`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(req),
+    signal,
+  });
+  return handleResponse<import("./types").SavedScreener>(res);
+}
+
+export async function getSavedScreener(
+  savedScreenId: string,
+  signal?: AbortSignal
+): Promise<import("./types").SavedScreener> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/saved/${savedScreenId}`;
+  const res = await fetch(url, { headers: getHeaders(), signal });
+  return handleResponse<import("./types").SavedScreener>(res);
+}
+
+export async function updateSavedScreener(
+  savedScreenId: string,
+  req: import("./types").SavedScreenerUpdateRequest,
+  signal?: AbortSignal
+): Promise<import("./types").SavedScreener> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/saved/${savedScreenId}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(req),
+    signal,
+  });
+  return handleResponse<import("./types").SavedScreener>(res);
+}
+
+export async function deleteSavedScreener(
+  savedScreenId: string,
+  signal?: AbortSignal
+): Promise<{ status: string; saved_screen_id: string }> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/saved/${savedScreenId}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: getHeaders(),
+    signal,
+  });
+  return handleResponse<{ status: string; saved_screen_id: string }>(res);
+}
+
+export async function duplicateSavedScreener(
+  savedScreenId: string,
+  newName?: string,
+  signal?: AbortSignal
+): Promise<import("./types").SavedScreener> {
+  const params = new URLSearchParams();
+  if (newName) params.set("new_name", newName);
+
+  const url = `${getBaseApiUrl()}/api/v1/screeners/saved/${savedScreenId}/duplicate?${params.toString()}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    signal,
+  });
+  return handleResponse<import("./types").SavedScreener>(res);
+}
+
+export async function runSavedScreener(
+  savedScreenId: string,
+  page: number = 1,
+  pageSize: number = 50,
+  signal?: AbortSignal
+): Promise<ScreenerRunResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  const url = `${getBaseApiUrl()}/api/v1/screeners/saved/${savedScreenId}/run?${params.toString()}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    signal,
+  });
+  return handleResponse<ScreenerRunResponse>(res);
+}
+
+// =============================================================================
+// Stage 97: Export API Client
+// =============================================================================
+
+export async function createScreenerExport(
+  req: import("./types").ScreenerExportRequest,
+  signal?: AbortSignal
+): Promise<import("./types").ScreenerExportJob> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/exports`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(req),
+    signal,
+  });
+  return handleResponse<import("./types").ScreenerExportJob>(res);
+}
+
+export async function fetchScreenerExports(
+  signal?: AbortSignal
+): Promise<import("./types").ScreenerExportListResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/exports`;
+  const res = await fetch(url, { headers: getHeaders(), signal });
+  return handleResponse<import("./types").ScreenerExportListResponse>(res);
+}
+
+export async function getScreenerExportStatus(
+  exportId: string,
+  signal?: AbortSignal
+): Promise<import("./types").ScreenerExportJob> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/exports/${exportId}`;
+  const res = await fetch(url, { headers: getHeaders(), signal });
+  return handleResponse<import("./types").ScreenerExportJob>(res);
+}
+
+export async function cancelScreenerExport(
+  exportId: string,
+  signal?: AbortSignal
+): Promise<import("./types").ScreenerExportJob> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/exports/${exportId}/cancel`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    signal,
+  });
+  return handleResponse<import("./types").ScreenerExportJob>(res);
+}
+
+export function getScreenerExportDownloadUrl(exportId: string): string {
+  return `${getBaseApiUrl()}/api/v1/screeners/exports/${exportId}/download`;
+}
+

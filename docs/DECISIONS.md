@@ -9384,6 +9384,115 @@ This document records the major architectural and product decisions established.
 464. Documentation matches actual code.
 465. Stage 97 is the next canonical stage.
 
+## Stage 97: Saved Screeners, Sorting, Ranking and Exports
+
+### Product and Scope
+466. Stage 97 owns Saved Screens, Multi-Column Sorting, Quantitative Factor Ranking and Professional Result Exports.
+467. Stage 94 remains the canonical Screener Engine.
+468. Stage 95 remains the canonical Visual Filter Builder.
+469. Stage 96 remains the canonical Factor Registry.
+470. Stage 97 remains strictly within `/screeners`.
+471. No new global navigation module is created.
+472. No duplicate Screener execution engine is introduced.
+473. No general Saved module (Stage 119) is prematurely implemented.
+474. Stage 98 natural-language translation hooks remain deferred.
+
+### Saved Screens
+475. Saved Screens are user-owned (`owner_user_id`) with strict tenant isolation.
+476. Screen identity is a stable UUID primary key.
+477. Screen names are display labels and not primary keys.
+478. Query specifications are canonical and fully serialized.
+479. Query schema versions are stored (`1.0.0`).
+480. Filter Registry and Universe Registry compatibility is maintained.
+481. Universe selection, exchange, and country scopes are persisted.
+482. Filter parameters and conditions are persisted without loss.
+483. Financial reporting policies (`period_policy`) are preserved.
+484. Technical factor parameters (`rsi_14`, `sma_50`, etc.) are preserved.
+485. Display column configurations are preserved.
+486. Sort specifications are preserved.
+487. Ranking specifications are preserved.
+488. A saved query does not freeze matching securities; reruns evaluate current market data.
+489. Saved queries are validated before execution.
+490. Source entitlements are rechecked on open and run.
+491. Duplication creates a new user-owned entity with a new UUID.
+492. Deletion is authorized and applies soft-deletion.
+493. Concurrent updates use optimistic revision checks (`expected_revision`).
+494. Revision conflicts return HTTP 409 and do not silently overwrite changes.
+495. Unsupported legacy filters are not silently dropped.
+496. Query schema migrations are versioned and idempotent.
+
+### Sorting
+497. Sorting evaluates globally server-side across all matching securities before pagination.
+498. Sort fields are strictly allowlisted from sortable columns.
+499. Multi-column order is explicit with up to 5 sort keys.
+500. Null ordering is explicit (`nulls_last` / `nulls_first`).
+501. Stable unique tie-breakers `(instrument_entity_id, listing_id)` guarantee deterministic pagination.
+502. Stable pagination prevents duplicate or missing rows across pages.
+503. Sorting on restricted fields without source entitlement is blocked.
+504. Currency compatibility is validated.
+505. Financial period compatibility is enforced.
+506. Technical factor parameters participate in sort field identity.
+507. Sorting is never applied solely to the currently visible page.
+508. Mutable market data changes are qualified with evaluation timestamps.
+
+### Ranking
+509. Ranking is distinct from sorting; it assigns relative ordinal positions or standardized scores.
+510. Ranking evaluates within an explicit eligible cohort (`FILTER_MATCHED_SECURITIES` or `ALL_ELIGIBLE_UNIVERSE`).
+511. Factor direction is explicit (`HIGHER_VALUE_FIRST` or `LOWER_VALUE_FIRST`).
+512. Ties use documented policies (`DENSE_RANK` or `COMPETITION_RANK`).
+513. Missing factor observations are excluded; zero imputation is strictly prohibited.
+514. Sample size $N$, eligible count, and excluded count are disclosed.
+515. Cross-sectional percentiles are bounded between $0.0\%$ and $100.0\%$.
+516. Standardized Z-scores use sample statistics ($z = (x - \mu)/\sigma$).
+517. Zero-variance cohorts ($\sigma = 0$) map deterministically to neutral $z = 0.0$.
+518. Small samples display appropriate warnings.
+519. Composite factor weights are explicit and normalized ($\sum w_j = 1.0$).
+520. Weight validation rejects negative or non-finite weights.
+521. Strict complete-case missingness excludes securities lacking any composite factor.
+522. Financial period compatibility is enforced for fundamental rankings.
+523. Technical bar eligibility is enforced for indicator rankings.
+524. Ranking source vintages and calculation versions are preserved.
+525. Ranking methodology versions are recorded (`1.0.0`).
+526. Factor scores do not constitute investment recommendations.
+527. No fabricated expected returns or alpha claims are generated.
+528. Backtesting and trading strategy execution remain deferred.
+
+### Exports
+529. Export scope is explicit (`CURRENT_PAGE` or `ALL_MATCHING_RESULTS`).
+530. CSV exports follow RFC 4180 with UTF-8 encoding.
+531. XLSX exports generate professional multi-sheet workbooks (`Results`, `Methodology`, `Sources`, `Configuration`).
+532. All-results export does not silently become a single-page export.
+533. Exports bind to validated screener evaluations.
+534. Source watermarks and evaluation timestamps are preserved.
+535. Ranking exports preserve ranking methodology and factor weights.
+536. Column identities and units are preserved.
+537. Missing data is represented as blank/null, not zero.
+538. Financial decimal precision is preserved.
+539. Ticker symbols and leading-zero identifiers are preserved as text.
+540. CSV formula injection is mitigated: untrusted text starting with `=, +, -, @, \t, \r` is prefixed with `'`.
+541. Valid numeric values (including negative numbers) remain uncorrupted numeric cells.
+542. Export metadata manifest is inspectable.
+543. Export source licensing and field-level permissions are enforced.
+544. Large exports (>1,000 rows up to 50,000 rows) use background jobs.
+545. Export job statuses are durable (`QUEUED`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`, `EXPIRED`).
+546. Job creation supports client idempotency keys.
+547. Job cancellation, worker crash recovery, and partial artifact cleanup are implemented.
+548. Export files are stored in private protected storage.
+549. Downloads require user authorization with 24-hour time-limited retention.
+550. Export quotas (50,000 rows, max 2 concurrent jobs, max 5 pending) are enforced.
+
+### Verification & Quality
+551. Stage 97 passes saved-query persistence tests.
+552. Stage 97 passes RLS ownership tests.
+553. Stage 97 passes optimistic concurrency tests.
+554. Stage 97 passes multi-column sorting correctness tests.
+555. Stage 97 passes ranking mathematics tests (dense, competition, percentiles, Z-scores).
+556. Stage 97 passes export correctness tests (CSV and openpyxl XLSX).
+557. Stage 97 passes spreadsheet formula injection protection tests.
+558. Stage 97 passes export job lifecycle and cancellation tests.
+559. Stage 97 passes Stage 94-96 regression tests (66 backend pytest tests, 21 frontend vitest tests).
+560. Stage 98 is the next canonical roadmap stage.
+
 
 
 

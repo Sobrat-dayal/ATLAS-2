@@ -5,9 +5,11 @@ import {
   CountryOption,
   ExchangeOption,
   FilterCriterion,
+  SavedScreener,
   ScreenerColumnDefinition,
   ScreenerCoverageResponse,
   ScreenerFilterDefinition,
+  ScreenerRankingSpec,
   ScreenerResultRow,
   ScreenerRunRequest,
   ScreenerRunResponse,
@@ -50,6 +52,19 @@ export function useScreener() {
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(50);
+
+  // Stage 97: Advanced Sort, Ranking & Saved Screens state
+  const [rankingSpec, setRankingSpec] = useState<ScreenerRankingSpec | null>(null);
+  const [currentSavedScreen, setCurrentSavedScreen] = useState<SavedScreener | null>(null);
+  const [isDirtyFromSaved, setIsDirtyFromSaved] = useState<boolean>(false);
+
+  // Modals state
+  const [isSavedScreensOpen, setIsSavedScreensOpen] = useState<boolean>(false);
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState<boolean>(false);
+  const [isSaveAs, setIsSaveAs] = useState<boolean>(false);
+  const [isRankingModalOpen, setIsRankingModalOpen] = useState<boolean>(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState<boolean>(false);
+  const [isAdvancedSortOpen, setIsAdvancedSortOpen] = useState<boolean>(false);
 
   // Output & UI state
   const [results, setResults] = useState<ScreenerRunResponse | null>(null);
@@ -104,7 +119,8 @@ export function useScreener() {
       overridePage?: number,
       overrideUniverseId?: string,
       overrideFilters?: FilterCriterion[],
-      overrideSort?: SortCriterion[]
+      overrideSort?: SortCriterion[],
+      overrideRanking?: ScreenerRankingSpec | null
     ) => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -118,6 +134,7 @@ export function useScreener() {
       const targetUniverse = overrideUniverseId ?? selectedUniverseId;
       const targetFilters = overrideFilters ?? activeFilters;
       const targetSort = overrideSort ?? sortCriteria;
+      const targetRanking = overrideRanking !== undefined ? overrideRanking : rankingSpec;
       const targetPage = overridePage ?? page;
 
       const requestPayload: ScreenerRunRequest = {
@@ -129,6 +146,8 @@ export function useScreener() {
         },
         filters: targetFilters,
         sort: targetSort,
+        multi_sort: targetSort.length > 1 ? targetSort : undefined,
+        ranking: targetRanking ?? undefined,
         columns: visibleColumnIds.length > 0 ? visibleColumnIds : null,
         page: targetPage,
         page_size: pageSize,
@@ -152,6 +171,7 @@ export function useScreener() {
       selectedUniverseId,
       activeFilters,
       sortCriteria,
+      rankingSpec,
       page,
       pageSize,
       selectedExchanges,
@@ -170,6 +190,7 @@ export function useScreener() {
   const handleUniverseChange = (id: string) => {
     setSelectedUniverseId(id);
     setPage(1);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
   };
 
   const handleToggleExchange = (mic: string) => {
@@ -177,6 +198,7 @@ export function useScreener() {
       prev.includes(mic) ? prev.filter((m) => m !== mic) : [...prev, mic]
     );
     setPage(1);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
   };
 
   const handleToggleCountry = (code: string) => {
@@ -184,6 +206,7 @@ export function useScreener() {
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
     );
     setPage(1);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
   };
 
   const handleToggleSector = (name: string) => {
@@ -191,11 +214,11 @@ export function useScreener() {
       prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name]
     );
     setPage(1);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
   };
 
   const handleAddFilter = (criterion: FilterCriterion) => {
     setActiveFilters((prev) => {
-      // If same filter_id exists, update it, else add
       const idx = prev.findIndex((f) => f.filter_id === criterion.filter_id);
       if (idx >= 0) {
         const copy = [...prev];
@@ -205,16 +228,19 @@ export function useScreener() {
       return [...prev, criterion];
     });
     setPage(1);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
   };
 
   const handleRemoveFilter = (filterId: string) => {
     setActiveFilters((prev) => prev.filter((f) => f.filter_id !== filterId));
     setPage(1);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
   };
 
   const handleSetFilters = (filters: FilterCriterion[]) => {
     setActiveFilters(filters);
     setPage(1);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
     executeQuery(1, undefined, filters);
   };
 
@@ -223,14 +249,16 @@ export function useScreener() {
     setSelectedExchanges([]);
     setSelectedCountries([]);
     setSelectedSectors([]);
+    setRankingSpec(null);
+    setSortCriteria(DEFAULT_SORT);
     setPage(1);
-    executeQuery(1, undefined, []);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
+    executeQuery(1, undefined, [], DEFAULT_SORT, null);
   };
 
-
   const handleSortToggle = (fieldId: string) => {
-    setSortCriteria((prev) => {
-      const current = prev.find((s) => s.field_id === fieldId);
+    const newSort: SortCriterion[] = (() => {
+      const current = sortCriteria.find((s) => s.field_id === fieldId);
       if (!current) {
         return [{ field_id: fieldId, direction: "desc" }];
       }
@@ -238,24 +266,75 @@ export function useScreener() {
         return [{ field_id: fieldId, direction: "asc" }];
       }
       return DEFAULT_SORT;
-    });
+    })();
+
+    setSortCriteria(newSort);
     setPage(1);
-    executeQuery(1, undefined, undefined, [
-      sortCriteria[0]?.field_id === fieldId && sortCriteria[0]?.direction === "desc"
-        ? { field_id: fieldId, direction: "asc" }
-        : { field_id: fieldId, direction: "desc" },
-    ]);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
+    executeQuery(1, undefined, undefined, newSort);
+  };
+
+  const handleSetMultiSort = (newSort: SortCriterion[]) => {
+    const validSort = newSort.length > 0 ? newSort : DEFAULT_SORT;
+    setSortCriteria(validSort);
+    setPage(1);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
+    executeQuery(1, undefined, undefined, validSort);
+  };
+
+  const handleApplyRanking = (spec: ScreenerRankingSpec | null) => {
+    setRankingSpec(spec);
+    setPage(1);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
+    executeQuery(1, undefined, undefined, undefined, spec);
+  };
+
+  const handleLoadSavedScreen = (screen: SavedScreener) => {
+    setSelectedUniverseId(screen.universe.universe_id);
+    setSelectedExchanges(screen.universe.exchange_mics ?? []);
+    setSelectedCountries(screen.universe.listing_country_codes ?? []);
+    setSelectedSectors(screen.universe.sectors ?? []);
+    setActiveFilters(screen.filters);
+    const screenSort = screen.sort && screen.sort.length > 0 ? screen.sort : DEFAULT_SORT;
+    setSortCriteria(screenSort);
+    setRankingSpec(screen.ranking ?? null);
+    if (screen.columns && screen.columns.length > 0) {
+      setVisibleColumnIds(screen.columns);
+    }
+    setCurrentSavedScreen(screen);
+    setIsDirtyFromSaved(false);
+    setPage(1);
+
+    executeQuery(
+      1,
+      screen.universe.universe_id,
+      screen.filters,
+      screenSort,
+      screen.ranking ?? null
+    );
+  };
+
+  const handleClearSavedScreen = () => {
+    setCurrentSavedScreen(null);
+    setIsDirtyFromSaved(false);
+  };
+
+  const handleSavedScreenSaved = (saved: SavedScreener) => {
+    setCurrentSavedScreen(saved);
+    setIsDirtyFromSaved(false);
   };
 
   const handleToggleColumn = (columnId: string) => {
     setVisibleColumnIds((prev) =>
       prev.includes(columnId) ? prev.filter((c) => c !== columnId) : [...prev, columnId]
     );
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
   };
 
   const handleResetColumns = () => {
     const defaultCols = columnsRegistry.filter((col) => col.default_visible).map((c) => c.column_id);
     setVisibleColumnIds(defaultCols);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -290,6 +369,19 @@ export function useScreener() {
     page,
     pageSize,
 
+    // Stage 97: Ranking & Saved Screen state
+    rankingSpec,
+    currentSavedScreen,
+    isDirtyFromSaved,
+
+    // Modals state
+    isSavedScreensOpen,
+    isSaveDialogOpen,
+    isSaveAs,
+    isRankingModalOpen,
+    isExportDialogOpen,
+    isAdvancedSortOpen,
+
     // Outputs
     results,
     loading,
@@ -308,6 +400,11 @@ export function useScreener() {
     removeFilter: handleRemoveFilter,
     clearFilters: handleClearFilters,
     setSorting: handleSortToggle,
+    setMultiSort: handleSetMultiSort,
+    applyRanking: handleApplyRanking,
+    loadSavedScreen: handleLoadSavedScreen,
+    clearSavedScreen: handleClearSavedScreen,
+    onSavedScreenSaved: handleSavedScreenSaved,
     toggleColumn: handleToggleColumn,
     resetColumns: handleResetColumns,
     goToPage: handlePageChange,
@@ -315,6 +412,12 @@ export function useScreener() {
     selectRow: setSelectedRow,
     setIsCoverageOpen,
     setIsColumnManagerOpen,
+    setIsSavedScreensOpen,
+    setIsSaveDialogOpen,
+    setIsSaveAs,
+    setIsRankingModalOpen,
+    setIsExportDialogOpen,
+    setIsAdvancedSortOpen,
     runScreener: executeQuery,
   };
 }
