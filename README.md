@@ -935,6 +935,21 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Linter: `ruff check` on Stage 88 (0 errors).
 - **Documentation**: See `docs/COMPANY_SUPPLY_CHAIN.md` and `docs/DECISIONS.md`.
 
+## Institutional-Grade Economics V1 (Stage 89)
+- **Architecture**: Authoritative global macroeconomic terminal workspace within `/economics` (Module 7). Features canonical economic indicator identity, sovereign source series discovery, G6 major economies matrix (United States, Euro Area, China, India, Japan, United Kingdom), multi-vintage official estimate tracking (Advance, Second, Third), point-in-time publication filtering, versioned mathematical transformations, and high-performance interactive time-series charting.
+- **Canonical Indicator & Series Architecture**: Rigorous separation between abstract canonical indicator concepts (e.g. `GDP_GROWTH_QOQ_ANN`, `CPI_INFLATION_YOY`) and sovereign source series (e.g. BEA `A191RL1Q225SBEA`, BLS `CUUR0000SA0`, Eurostat `prc_hicp_manr`). Preserves official agency definitions, measurement units, reporting frequencies, and seasonal-adjustment policies.
+- **Strict Anti-Fabrication Rule**: Zero manufactured economic data, zero unweighted synthetic "World GDP" averages, and zero substitution of market equity/bond quotes for sovereign economic statistics. All figures carry explicit reference periods, units, and sovereign authority provenance.
+- **Measurement Semantics & Growth Formulas**: Clear differentiation between price levels (`INDEX_POINTS`) and inflation rates (`PERCENT`). Rates are adjusted in `PERCENTAGE_POINTS` (%p) or `BASIS_POINTS` (bps). Compound quarterly annualization is calculated strictly on positive constant-price GDP levels: $[(y_t / y_{t-1})^4 - 1] \times 100$.
+- **Official Vintages & Point-in-Time Queries**: Tracks historical revisions across publication vintages. Query bounds (`as_of_date`) filter out subsequent revisions to prevent analytical backtest look-ahead leakage.
+- **Global Overview Matrix & Interactive Workspace**: Features headline macro snapshot cards, G6 comparative matrix with click-to-chart actions, searchable indicator catalog, SVG line and bar time-series charts with zero-line support for negative values, paginated tabular data with CSV export, and source inspector drawer.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_economics_v1.py` (27/27 passed).
+  - Full regression suite: 218 backend tests passed across Companies, Financial Statements, Ratios, Earnings, Ownership, Filings, Peers, Supply Chain, and Economics V1.
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors).
+  - Production build: `cmd /c npm run build` (Next.js 16.3.8 Turbopack clean compile, 38/38 routes including `/economics`).
+  - Linter: `ruff check` on Stage 89 (0 errors).
+- **Documentation**: See `docs/ECONOMICS_V1.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

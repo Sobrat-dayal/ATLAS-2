@@ -33,6 +33,7 @@ from .company_ratios import router as company_ratios_router
 from .company_statements import router as company_statements_router
 from .company_supply_chain import router as company_supply_chain_router
 from .economics import router as economics_router
+from .economics_v1 import router as economics_v1_router
 from .geography import router as geography_router
 from .health import router as health_router
 from .news import router as news_router
@@ -62,6 +63,7 @@ api_router.include_router(company_statements_router, prefix="")
 api_router.include_router(company_supply_chain_router, prefix="")
 api_router.include_router(geography_router, prefix="")
 api_router.include_router(economics_router, prefix="")
+api_router.include_router(economics_v1_router, prefix="")
 api_router.include_router(research_router, prefix="")
 api_router.include_router(news_router, prefix="")
 api_router.include_router(identifiers_router, prefix="")

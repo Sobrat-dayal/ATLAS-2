@@ -7921,6 +7921,222 @@ This document records the major architectural and product decisions established.
 179. Documentation must match the actual implementation.
 180. Stage 89 is the next canonical stage.
 
+## Stage 89 Decisions - Institutional-Grade Economics V1
+
+### Product
+1. Stage 89 implements Economics V1.
+2. Economics is hosted at `/economics`.
+3. No new global module is introduced.
+4. The existing AppShell is preserved.
+5. The global overview uses genuine statistical series.
+6. The indicator explorer uses canonical data.
+7. Historical charts use actual observations.
+8. No fake global statistics are generated.
+9. Stage 90–93 advanced features remain deferred.
+
+### Canonical Identity
+10. Economic Indicator identity is stable.
+11. Source series identity is separate from canonical indicator identity.
+12. Provider series codes are source-qualified.
+13. Geographic Entity identity is reused.
+14. Country and monetary area are distinct.
+15. Official series definitions are preserved.
+16. Source methodology versions are preserved.
+17. Different indicator concepts are not silently merged.
+18. Different provider statistical methodologies are not automatically interchangeable.
+
+### Observations
+19. Observation reference periods are explicit.
+20. Publication time differs from reference period.
+21. Ingestion time differs from publication time.
+22. Values preserve original source units.
+23. Frequency is explicit.
+24. Seasonal adjustment is explicit.
+25. Nominal/real basis is explicit.
+26. Source status is explicit where known.
+27. Missing values remain missing.
+28. Latest-only sources do not imply historical vintages.
+29. Genuine revisions are preserved where available.
+30. No future information enters historical views.
+
+### Statistical Units
+31. Index levels differ from percentage changes.
+32. Rates differ from rate changes.
+33. Percentage points differ from percentages.
+34. Basis points are handled explicitly.
+35. GDP currency units retain scale.
+36. Monetary and index units are not silently mixed.
+37. Annualized and nonannualized growth remain distinct.
+38. Conversion is allowed only under defined methodology.
+39. Decimal-safe arithmetic is used.
+
+### GDP
+40. Real and nominal GDP are distinct.
+41. Current and constant-price GDP are distinct.
+42. PPP and FX-converted GDP are distinct.
+43. Quarterly GDP growth uses valid periods.
+44. Annualized GDP growth uses an explicit formula.
+45. Source growth rates retain their definition.
+46. National accounting methodology differences are preserved.
+47. Historical revisions remain traceable.
+
+### Inflation
+48. CPI index levels are distinct from inflation rates.
+49. YoY and MoM are distinct.
+50. Index rebasing is handled explicitly.
+51. Headline and core inflation are distinct.
+52. Different CPI scopes are not silently merged.
+53. Seasonal adjustment is preserved.
+54. Missing reference periods prevent invalid derived growth.
+
+### Labor
+55. Unemployment uses source labor-force definitions.
+56. Employment differs from unemployment.
+57. Payroll changes differ from unemployment rates.
+58. Survey methodology differences are preserved.
+59. Labor series benchmark revisions are retained when available.
+
+### Interest Rates
+60. Policy rates differ from bond yields.
+61. Policy targets differ from effective rates.
+62. Policy rate ranges are supported where genuine.
+63. Monetary area identity is explicit.
+64. Central-bank institution research remains Stage 91.
+
+### Providers
+65. Stage 28–32 Provider architecture is reused.
+66. Provider routing is concept-compatible.
+67. Fallback cannot silently change statistical definition.
+68. Provider health is reused.
+69. Source licenses are enforced.
+70. Official statistical sources are preferred where suitable.
+71. Missing source data is not fabricated.
+72. Source access policies are verified.
+73. Normal page loads do not trigger upstream fanout.
+
+### Transformations
+74. Transformations use a versioned registry.
+75. No arbitrary execution is allowed.
+76. YoY requires compatible prior-year period.
+77. MoM requires compatible prior-month period.
+78. QoQ requires comparable quarters.
+79. Annualization is methodology-specific.
+80. Percentage point and basis point changes have distinct units.
+81. Zero denominator produces an unavailable/nonmeaningful output where appropriate.
+82. Derived values preserve source observation lineage.
+83. Missing source observations are not interpolated.
+
+### Overview
+84. The global overview uses a curated supported economy set.
+85. Curated economy data is not presented as a complete world aggregate.
+86. Official global aggregates require actual source identities.
+87. Each headline value retains its own period.
+88. Mixed reporting frequencies are labeled.
+89. Source freshness is visible.
+90. No fake realtime status is displayed.
+91. No unsupported macroeconomic interpretation is generated.
+
+### Time Series
+92. Historical charts use actual dates.
+93. Units are displayed.
+94. Negative values are supported.
+95. Missing periods remain gaps.
+96. Revisions are qualified.
+97. Latest-revised vs vintage views remain distinct.
+98. Existing chart adapters are reused.
+99. No new universal chart engine is created.
+
+### APIs and Storage
+100. Typed Economics APIs are provided.
+101. Authentication is enforced.
+102. Source entitlements are enforced.
+103. Series metadata is canonical.
+104. Historical observations use existing storage.
+105. New data warehouses are not introduced.
+106. Queries are bounded.
+107. Source revisions participate in cache keys.
+108. Vintage context participates in cache keys.
+109. Transformation versions participate in cache keys.
+110. Entitlement scope participates in restricted cache keys.
+111. Revision invalidation is supported.
+112. No per-cell Provider requests are made.
+113. Ordinary reads do not mutate canonical observations.
+
+### UI
+114. Economics Overview is functional.
+115. Major Economies table is source-backed.
+116. Indicator Explorer is functional.
+117. Historical Series is functional.
+118. Unit labels are visible.
+119. Reporting periods are visible.
+120. Source details are inspectable.
+121. Revisions are visible where available.
+122. Missing-data states are explicit.
+123. Dark/light modes are preserved.
+124. Agent Dock compatibility is preserved.
+125. Bottom Taskbar compatibility is preserved.
+126. Responsive layouts are supported.
+127. Keyboard accessibility is supported.
+128. Screen-reader accessibility is supported.
+129. No purple gradients are introduced.
+130. No emoji icons are introduced.
+131. No fake economic values are displayed.
+
+### Security
+132. Authentication is reused.
+133. Authorization is reused.
+134. Source licensing is enforced.
+135. Restricted derived data is protected.
+136. Arbitrary SQL is prohibited.
+137. Arbitrary formulas are prohibited.
+138. Arbitrary URL fetching is prohibited.
+139. Provider secrets remain server-side.
+140. Resource limits are enforced.
+141. No Trading orders occur.
+142. No Portfolio mutations occur.
+143. No Broker calls occur.
+144. No Agents execute.
+145. No Workflows execute.
+146. No LLM calls are required.
+
+### Roadmap Boundaries
+147. Stage 90 owns Country Economics.
+148. Stage 91 owns Central Banks.
+149. Stage 92 owns Economic Calendar.
+150. Stage 93 owns Macro Comparisons.
+151. Stages 94–98 own Screeners.
+152. Stages 99–103 own News.
+153. Stages 104–109 own Research.
+154. Stages 110–114 own Portfolios.
+155. Stages 115–118 own Risk.
+156. Stages 119–120 own Saved/Workspaces.
+157. Stages 121–128 own Terminal/AI.
+158. Stages 129–140 own Maps/Intelligence.
+159. Stages 141–142 own Options/Quant pricing.
+160. Stage 143 owns Backtesting.
+161. Stage 144 owns Paper Trading.
+162. Stage 145 owns Broker Sandbox.
+163. Stages 146+ own Agents.
+164. No full Country Economics module is built.
+165. No comprehensive Central Banks module is built.
+166. No Economic Calendar engine is built.
+167. No global Macro Comparisons engine is built.
+168. No autonomous macro forecast model is built.
+169. No new full Screener is built.
+170. No duplicate Economic Data store is created.
+171. Stage 89 must pass indicator identity tests.
+172. Stage 89 must pass unit tests.
+173. Stage 89 must pass frequency tests.
+174. Stage 89 must pass transformation tests.
+175. Stage 89 must pass vintage and revision tests.
+176. Stage 89 must pass point-in-time tests.
+177. Stage 89 must pass geographic coverage tests.
+178. Stage 89 must pass entitlement tests.
+179. Stage 89 must pass relevant previous-stage regressions.
+180. Documentation must match actual implementation.
+181. Stage 90 is the next canonical stage.
+
+
 
 
 
