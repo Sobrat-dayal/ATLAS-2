@@ -9062,6 +9062,56 @@ This document records the major architectural and product decisions established.
 194. Documentation must match actual code.
 195. Stage 94 is the next canonical stage.
 
+## Stage 94: Institutional-Grade Financial Screeners V1
+
+### Product and Scope
+196. Stage 94 implements Financial Screeners V1.
+197. Screeners workspace is accessible at the canonical `/screeners` route.
+198. Global navigation and AppShell structure remain strictly preserved.
+199. Canonical Financial Instrument Entities (Stage 17) are reused.
+200. Canonical Company Entities (Stage 18) are reused.
+201. Canonical Market Data and Live Quotes (Stages 33, 41, 44) are reused.
+202. Canonical Fundamental Statements and Ratios (Stages 34, 82, 83) are reused.
+203. No separate or shadow source-of-truth warehouse is created.
+204. Advanced recursive Boolean rule engines and automated alerts remain deferred to Stages 95–98.
+
+### Financial Instrument Identity & Universes
+205. Financial Instrument UUID is the primary canonical identifier authority.
+206. Company Entity (issuer) and Financial Instrument Entity (security) identities are strictly distinct.
+207. Exchange listing identity is explicit with venue-scoped Market Identifier Codes (MIC).
+208. Ticker strings are not globally unique; exchange qualification prevents collisions.
+209. Symbol renames do not create artificial new corporate or security entities.
+210. Multiple share classes (e.g. Alphabet Class A GOOGL vs Class C GOOG, Berkshire Hathaway BRK.A vs BRK.B) are distinct instruments sharing the same issuer company.
+211. Cross-listings (e.g. Infosys ADR on NYSE vs Infosys Common on NSE) maintain distinct instrument identities, trading currencies, and venue metadata.
+212. Depositary receipts (ADRs/GDRs) retain foreign issuer domicile and conversion semantics.
+213. ETFs and fund units are classified as funds and excluded from common equity screening by default.
+214. Delisted and suspended securities are excluded from current active universes by default while preserved for historical survivorship-bias-free screening.
+215. Screener row grain is explicitly canonical security listing.
+216. Issuer and security counts are never conflated.
+
+### Market Data, Fundamentals, and Valuation Ratios
+217. Price metrics require trading currency, exchange session, and source timestamps.
+218. Stale quotes are qualified and never deceptively labeled live.
+219. Market capitalization represents institutional equity market cap and respects share-class scope.
+220. Daily volume and 20-day average volume respect venue and session scope.
+221. Fundamentals (Revenue, Net Income, Operating Income, Assets, Book Equity, EPS) belong to verified issuer companies and preserve fiscal period, reporting currency, and consolidation scope.
+222. Conventional P/E on non-positive earnings is undefined / Not Meaningful (N/M), never 0 or negative.
+223. Missing metrics are represented as unavailable/missing ("—") and never coerced to zero.
+224. Missing metrics never satisfy relational comparisons (>, <, >=, <=, BETWEEN).
+
+### Filter Engine & Query Execution
+225. Filter definitions use stable, typed identifiers, explicit value types, and allowlisted operators.
+226. Comparison operators include EQ, NE, GT, GTE, LT, LTE, BETWEEN, and IN.
+227. Basic AND composition is supported; arbitrary user SQL or code execution is strictly prohibited.
+228. Filter complexity is capped at 20 active conditions per query.
+229. Screening executes entirely server-side; downloading the universe to the client is prohibited.
+230. Server-side screening performs zero external provider RPC fanout on read.
+231. Sorting is deterministic with primary field ordering (NULLS LAST) and a stable tie-breaker on (instrument_entity_id, listing_id).
+232. Pagination is server-side bounded (default 50, maximum 100) with opaque cursor integrity.
+233. Cell-level provenance, observation period, and freshness metadata are enriched on every response.
+234. Stage 95 is the next canonical stage for advanced financial screener capabilities.
+
+
 
 
 

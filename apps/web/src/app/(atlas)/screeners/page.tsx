@@ -1,5 +1,5 @@
 import { ATLAS_MODULES } from "@/config/atlas-modules";
-import { ModuleFoundation } from "@/components/modules/ModuleFoundation";
+import { ScreenerWorkspace } from "@/components/screeners";
 import { Metadata } from "next";
 
 export function generateMetadata(): Metadata {
@@ -9,5 +9,5 @@ export function generateMetadata(): Metadata {
 }
 
 export default function ScreenersPage() {
-  return <ModuleFoundation module={ATLAS_MODULES.screeners} />;
+  return <ScreenerWorkspace />;
 }
