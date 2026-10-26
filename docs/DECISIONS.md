@@ -9520,6 +9520,36 @@ This document records the major architectural and product decisions established.
 578. Stage 98 completes the 5-stage Screener series (Stages 94, 95, 96, 97, 98).
 579. Stage 99 (News module) is the next canonical roadmap stage; no Stage 99 implementation is started during Stage 98.
 
+## Stage 99: Financial News Platform Foundation
+
+### Domain Identity & Provenance
+580. News module foundation operates at primary top-level route `/news`; all 20 canonical routes remain intact.
+581. Canonical `NewsArticle` is distinct from Stage 20/36 `NewsEvent`; an article is an immutable media record, while an event is a real-world occurrence that may be reported by multiple articles.
+582. Publisher identity (`NewsPublisher`) is strictly decoupled from distributor/provider identity (`NewsSource`); wire services and syndicating outlets maintain separate attribution.
+583. Article identifier is a deterministic SHA-256 hash (`sha256(f"{source_provider_id}:{provider_article_id}")[:24]`); repeated ingestion is strictly idempotent.
+584. Five distinct timestamp semantics are preserved: `published_at`, `source_updated_at`, `first_seen_at`, `ingested_at`, and `last_fetched_at`. Ingestion timestamps are never substituted for publication timestamps.
+585. Canonical URL normalization strips tracking parameters (`utm_*`, `fbclid`, `gclid`, `ref`, `source`, `campaign`, `trk`) and fragments while preserving destination semantics.
+586. SSRF defense rejects loopbacks, RFC 1918 private ranges, link-local addresses, AWS metadata endpoints (`169.254.169.254`), and dangerous schemes (`javascript:`, `data:`, `file:`, `ftp:`).
+587. HTML sanitization strips `<script>`, `<style>`, and `<iframe>` blocks before removing residual tags, preventing script execution and formatting distortion.
+
+### Entity Linking & Deduplication
+588. Articles are linked to canonical Company Entities (Stage 18) and Financial Instrument Entities (Stage 17) via explicit mentions (`NewsEntityMention`).
+589. Ticker collision guardrails reject short common English words (e.g. `IT`, `ON`, `CAN`, `ARE`, `FOR`, `ALL`) unless explicitly formatted as cashtags (`$TICKER`).
+590. ADRs and multiple share classes (`GOOGL` vs `GOOG`, `INFY` ADR on NYSE vs `INFY.NSE`) are disambiguated by exchange and verified source identifiers.
+591. Entity mention never implies market impact or investment recommendation; sentiment scores and predictive return percentages are strictly prohibited in Stage 99.
+592. Deduplication identifies exact source duplicates while preserving separate records for independent publisher reports on the same event.
+593. Syndication preserves original wire publisher attribution (`is_syndicated=True`, `original_wire_publisher_id="reuters"`).
+594. Article corrections, revisions, and retractions are preserved in an immutable audit trail (`NewsArticleRevision`); withdrawn articles are marked `WITHDRAWN` and full excerpts suppressed.
+595. Full-text scraping and paywall circumvention are prohibited; ATLAS stores and displays only source-licensed headlines and excerpts.
+
+### Feeds, Caching & Workspace
+596. News feeds use keyset cursor pagination (`published_at DESC, article_id DESC`) with base64 cursors; pages are strictly disjoint with zero skipped or duplicate records.
+597. In-memory feed cache uses MD5 query hashing, TTL bounds, and immediate cache invalidation upon article ingestion or status revision.
+598. Read-only news access causes zero mutations across securities, companies, fundamentals, economic indicators, portfolios, watchlists, or broker accounts. News ingestion never triggers trading or order routing.
+599. The frontend delivers an institutional Bloomberg-style financial news workspace with high-density feed tables, split article previews, category tabs, source/publisher/geography filters, entity navigation chips, latency class indicators, keyboard navigation, and full accessibility.
+600. Stage 99 establishes the foundational News data layer; advanced intelligence, AI summarization, market impact scoring, and automated event clustering are deferred to Stages 100–103. Stage 100 is the next canonical roadmap stage.
+
+
 
 
 

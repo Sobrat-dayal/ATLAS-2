@@ -979,6 +979,30 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Linter: `ruff check` on Stage 90 (0 errors).
 - **Documentation**: See `docs/COUNTRY_ECONOMICS.md` and `docs/DECISIONS.md`.
 
+## Institutional-Grade Financial News Platform Foundation (Stage 99)
+- **Architecture**: Authoritative global financial news terminal workspace at `/news` (Module 8). Features canonical News Article entities, verified Publisher registry, authorized Provider adapters (`openbb_news`, `financial_wire_direct`, `regulator_announcements`, `corporate_press_wire`), idempotent ingestion pipelines with deterministic SHA-256 identity, duplicate detection, syndicated content recognition, and full revision audit trails.
+- **Canonical Entity Linking & Disambiguation**: Resolves article mentions to canonical Company Entities (Stage 18) and Financial Instrument Entities (Stage 17) with strict ticker collision filters (excluding short common English words like `IT`, `ON`, `CAN`, `ARE`, `FOR`), exchange context disambiguation, ADR vs ordinary share qualification, and zero speculative sentiment or market-impact claims.
+- **Timestamp Rigor & Provenance**: Tracks 5 distinct timestamps (`published_at`, `source_updated_at`, `first_seen_at`, `ingested_at`, `last_fetched_at`) with strict UTC guarantees and qualified calendar date precision. Ingestion timestamps are never substituted for publication timestamps.
+- **Security & Copyright Compliance**:
+  - Full SSRF protection rejecting loopback, RFC 1918 private ranges, link-local, and AWS metadata addresses (`169.254.169.254`).
+  - HTML sanitization stripping `<script>`, `<style>`, and `<iframe>` blocks before stripping residual tags.
+  - Safe external navigation with `rel="noopener noreferrer"` and scheme validation.
+  - Strict copyright adherence: stores and serves only source-authorized headlines and excerpts; zero unpermitted full-text scraping or paywall circumvention.
+- **Bloomberg-Style Financial News Workspace**:
+  - High-density news feed table with publication time, verified publisher, headline, category badges, and interactive entity navigation chips.
+  - Split article preview pane with publisher verification, copyright-compliant excerpt, timestamps, and safe external article link.
+  - Keyset cursor pagination (`published_at DESC, article_id DESC`) with base64 cursors guaranteeing disjoint pages.
+  - In-memory feed cache with immediate invalidation upon ingestion or revision.
+  - Full keyboard accessibility: Up/Down arrow key headline navigation.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_news_v1.py` (30/30 passed).
+  - Regression suite: 123 passed across news, economics, and screeners.
+  - Frontend unit tests: `cmd /c pnpm test` (32/32 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors).
+  - Production build: `cmd /c pnpm build` (Next.js 16.3.8 Turbopack clean compile, all 38 routes).
+  - Linter: `uv run ruff check` on Stage 99 (0 errors).
+- **Documentation**: See `docs/NEWS_V1.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets
