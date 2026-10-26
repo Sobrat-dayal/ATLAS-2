@@ -7,7 +7,7 @@ import re
 import threading
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -25,6 +25,8 @@ from atlas.news.enums import (
     NewsAvailabilityStatus,
     NewsCategory,
     NewsLatencyClass,
+    NewsMarketReactionWindow,
+    NewsSentimentLabel,
     NewsStoryStatus,
 )
 from atlas.news.events import (
@@ -33,6 +35,10 @@ from atlas.news.events import (
     FinancialEventTypeDefinition,
     NewsEventEvidence,
     NewsFinancialEvent,
+)
+from atlas.news.market_reaction import (
+    MarketReactionEngine,
+    ObservedNewsMarketContext,
 )
 from atlas.news.models import NewsEvent
 from atlas.news.normalization import (
@@ -53,6 +59,15 @@ from atlas.news.schemas import (
     NewsSearchSuggestionDTO,
     NewsTimelineBucketDTO,
     NewsTimelineResponseDTO,
+)
+from atlas.news.sentiment import (
+    EntitySentimentAggregate,
+    EventSentimentProfile,
+    FinancialSentimentClassifier,
+    NewsEntityRelevance,
+    NewsSentimentAnnotation,
+    SentimentTimelineBucket,
+    StorySentimentProfile,
 )
 from atlas.news.sources import (
     NewsSource,
@@ -351,6 +366,11 @@ class NewsRepository:
         self._events_by_id: dict[str, NewsFinancialEvent] = {}
         self._clustering_engine = StoryClusteringEngine()
         self._event_engine = EventClassificationEngine()
+        self._sentiment_by_article: dict[str, list[NewsSentimentAnnotation]] = {}
+        self._relevance_by_article: dict[str, list[NewsEntityRelevance]] = {}
+        self._sentiment_by_entity: dict[str, list[NewsSentimentAnnotation]] = {}
+        self._sentiment_classifier = FinancialSentimentClassifier()
+        self._market_reaction_engine = MarketReactionEngine()
         self._last_successful_fetch: Optional[datetime] = None
         self._seed_baseline_articles()
 
@@ -490,6 +510,58 @@ class NewsRepository:
 
                             if ev.event_id not in story.linked_event_ids:
                                 story.linked_event_ids.append(ev.event_id)
+
+                        # Stage 102: Classify Target-Aware Sentiment & Entity Relevance
+                        targets = list(normalized.linked_entities)
+                        if not targets:
+                            targets = list(
+                                resolve_entities_in_text(f"{normalized.headline} {normalized.permitted_excerpt or ''}")
+                            )
+
+                        if not targets:
+                            ann = self._sentiment_classifier.classify_article_target(
+                                article=normalized,
+                                target_entity_id="entity-market-general",
+                                target_name="General Market",
+                                target_ticker=None,
+                            )
+                            if normalized.article_id not in self._sentiment_by_article:
+                                self._sentiment_by_article[normalized.article_id] = []
+                            self._sentiment_by_article[normalized.article_id].append(ann)
+                            if "entity-market-general" not in self._sentiment_by_entity:
+                                self._sentiment_by_entity["entity-market-general"] = []
+                            self._sentiment_by_entity["entity-market-general"].append(ann)
+                        else:
+                            for ent in targets:
+                                ann = self._sentiment_classifier.classify_article_target(
+                                    article=normalized,
+                                    target_entity_id=ent.entity_id,
+                                    target_name=ent.canonical_name,
+                                    target_ticker=ent.ticker,
+                                )
+                                if normalized.article_id not in self._sentiment_by_article:
+                                    self._sentiment_by_article[normalized.article_id] = []
+                                self._sentiment_by_article[normalized.article_id].append(ann)
+
+                                ent_key = ent.entity_id.lower()
+                                if ent_key not in self._sentiment_by_entity:
+                                    self._sentiment_by_entity[ent_key] = []
+                                self._sentiment_by_entity[ent_key].append(ann)
+                                if ent.ticker:
+                                    tick_key = ent.ticker.lower()
+                                    if tick_key not in self._sentiment_by_entity:
+                                        self._sentiment_by_entity[tick_key] = []
+                                    self._sentiment_by_entity[tick_key].append(ann)
+
+                                rel = self._sentiment_classifier.classify_article_relevance(
+                                    article=normalized,
+                                    entity_id=ent.entity_id,
+                                    canonical_name=ent.canonical_name,
+                                    ticker=ent.ticker,
+                                )
+                                if normalized.article_id not in self._relevance_by_article:
+                                    self._relevance_by_article[normalized.article_id] = []
+                                self._relevance_by_article[normalized.article_id].append(rel)
 
                     elif res.is_exact_duplicate:
                         dup_count += 1
@@ -1409,6 +1481,346 @@ class NewsRepository:
             reverse=True,
         )
         return matching[:limit]
+
+    # -----------------------------------------------------------------------
+    # Stage 102 Sentiment, Relevance & Market Reaction Analytics Methods
+    # -----------------------------------------------------------------------
+
+    def get_article_sentiment(self, article_id: str) -> List[NewsSentimentAnnotation]:
+        with self._lock:
+            annotations = self._sentiment_by_article.get(article_id)
+            if annotations:
+                return list(annotations)
+
+            # If not yet indexed, resolve from article directly
+            article = self._dedup.get_article(article_id)
+            if not article:
+                return []
+
+            targets = list(article.linked_entities)
+            if not targets:
+                targets = list(
+                    resolve_entities_in_text(f"{article.headline} {article.permitted_excerpt or ''}")
+                )
+
+            res = []
+            if not targets:
+                ann = self._sentiment_classifier.classify_article_target(
+                    article=article,
+                    target_entity_id="entity-market-general",
+                    target_name="General Market",
+                )
+                res.append(ann)
+            else:
+                for ent in targets:
+                    ann = self._sentiment_classifier.classify_article_target(
+                        article=article,
+                        target_entity_id=ent.entity_id,
+                        target_name=ent.canonical_name,
+                        target_ticker=ent.ticker,
+                    )
+                    res.append(ann)
+
+            self._sentiment_by_article[article_id] = res
+            return res
+
+    def get_entity_sentiment_aggregate(
+        self,
+        entity_id: str,
+        days: int = 30,
+        sources: Optional[List[str]] = None,
+    ) -> EntitySentimentAggregate:
+        with self._lock:
+            ent_key = entity_id.lower()
+            annotations = list(self._sentiment_by_entity.get(ent_key, []))
+            if not annotations:
+                for key, anns in self._sentiment_by_entity.items():
+                    if ent_key in key or any(
+                        ann.target_ticker and ann.target_ticker.lower() == ent_key for ann in anns
+                    ):
+                        annotations.extend(anns)
+                        break
+
+        # Filter by publication window
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        valid_anns = [a for a in annotations if a.source_published_at >= cutoff]
+
+        if sources:
+            source_set = {s.lower() for s in sources}
+            filtered = []
+            for a in valid_anns:
+                art = self._dedup.get_article(a.article_id)
+                if art and (art.source_provider_id.lower() in source_set or art.publisher_id.lower() in source_set):
+                    filtered.append(a)
+            valid_anns = filtered
+
+        pos = sum(1 for a in valid_anns if a.sentiment_label == NewsSentimentLabel.POSITIVE)
+        neg = sum(1 for a in valid_anns if a.sentiment_label == NewsSentimentLabel.NEGATIVE)
+        neu = sum(1 for a in valid_anns if a.sentiment_label == NewsSentimentLabel.NEUTRAL)
+        mix = sum(1 for a in valid_anns if a.sentiment_label == NewsSentimentLabel.MIXED)
+        ins = sum(1 for a in valid_anns if a.sentiment_label == NewsSentimentLabel.INSUFFICIENT_EVIDENCE)
+        eligible = pos + neg + neu + mix
+
+        net_sent = round((pos - neg) / eligible, 4) if eligible > 0 else 0.0
+
+        story_ids = set()
+        publishers = set()
+        for a in valid_anns:
+            art = self._dedup.get_article(a.article_id)
+            if art:
+                publishers.add(art.publisher_id)
+            for story in self._stories_by_id.values():
+                if a.article_id in story.article_ids:
+                    story_ids.add(story.story_id)
+
+        aspect_counts: dict[str, int] = {}
+        for a in valid_anns:
+            if a.sentiment_aspect and a.sentiment_aspect.value != "GENERAL":
+                aspect_counts[a.sentiment_aspect.value] = aspect_counts.get(a.sentiment_aspect.value, 0) + 1
+
+        top_aspects = [
+            {"aspect": k, "count": v}
+            for k, v in sorted(aspect_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        ]
+
+        target_name = valid_anns[0].target_canonical_name if valid_anns else None
+        target_ticker = valid_anns[0].target_ticker if valid_anns else None
+
+        completeness = (
+            "HIGH" if eligible >= 8 else ("MODERATE" if eligible >= 3 else ("SPARSE" if eligible >= 1 else "INSUFFICIENT"))
+        )
+
+        return EntitySentimentAggregate(
+            target_entity_id=entity_id,
+            target_canonical_name=target_name,
+            target_ticker=target_ticker,
+            evaluation_window_days=days,
+            eligible_count=eligible,
+            positive_count=pos,
+            negative_count=neg,
+            neutral_count=neu,
+            mixed_count=mix,
+            insufficient_evidence_count=ins,
+            net_sentiment=net_sent,
+            unique_story_count=len(story_ids),
+            independent_publisher_count=len(publishers),
+            top_aspects=top_aspects,
+            coverage_completeness=completeness,
+            methodology_version="v1.0.0-institutional",
+            evaluation_time=datetime.now(timezone.utc),
+        )
+
+    def get_entity_sentiment_timeline(
+        self,
+        entity_id: str,
+        interval: str = "DAY",
+        days: int = 30,
+    ) -> Dict[str, Any]:
+        with self._lock:
+            ent_key = entity_id.lower()
+            annotations = list(self._sentiment_by_entity.get(ent_key, []))
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        valid_anns = [a for a in annotations if a.source_published_at >= cutoff]
+        valid_anns.sort(key=lambda a: a.source_published_at)
+
+        buckets_map: dict[str, list[NewsSentimentAnnotation]] = {}
+        for a in valid_anns:
+            dt = a.source_published_at
+            if interval == "MONTH":
+                key = dt.strftime("%Y-%m")
+            elif interval == "WEEK":
+                key = f"{dt.year}-W{dt.isocalendar()[1]:02d}"
+            else:
+                key = dt.strftime("%Y-%m-%d")
+
+            if key not in buckets_map:
+                buckets_map[key] = []
+            buckets_map[key].append(a)
+
+        buckets = []
+        for key, anns in sorted(buckets_map.items()):
+            pos = sum(1 for x in anns if x.sentiment_label == NewsSentimentLabel.POSITIVE)
+            neg = sum(1 for x in anns if x.sentiment_label == NewsSentimentLabel.NEGATIVE)
+            neu = sum(1 for x in anns if x.sentiment_label == NewsSentimentLabel.NEUTRAL)
+            mix = sum(1 for x in anns if x.sentiment_label == NewsSentimentLabel.MIXED)
+            eligible = pos + neg + neu + mix
+            net = round((pos - neg) / eligible, 4) if eligible > 0 else 0.0
+
+            start_ts = min(x.source_published_at for x in anns)
+            end_ts = max(x.source_published_at for x in anns)
+
+            buckets.append(
+                SentimentTimelineBucket(
+                    bucket_start=start_ts,
+                    bucket_end=end_ts,
+                    label=key,
+                    eligible_count=eligible,
+                    positive_count=pos,
+                    negative_count=neg,
+                    neutral_count=neu,
+                    mixed_count=mix,
+                    net_sentiment=net,
+                )
+            )
+
+        total_eligible = sum(b.eligible_count for b in buckets)
+        total_pos = sum(b.positive_count for b in buckets)
+        total_neg = sum(b.negative_count for b in buckets)
+        overall_net = round((total_pos - total_neg) / total_eligible, 4) if total_eligible > 0 else 0.0
+
+        return {
+            "target_entity_id": entity_id,
+            "interval": interval,
+            "buckets": buckets,
+            "total_articles": total_eligible,
+            "overall_net_sentiment": overall_net,
+            "as_of": datetime.now(timezone.utc),
+        }
+
+    def get_story_sentiment(self, story_id: str) -> Optional[StorySentimentProfile]:
+        with self._lock:
+            story = self._stories_by_id.get(story_id)
+            if not story:
+                return None
+
+            member_annotations = []
+            publishers = set()
+            for aid in story.article_ids:
+                anns = self.get_article_sentiment(aid)
+                member_annotations.extend(anns)
+                art = self._dedup.get_article(aid)
+                if art:
+                    publishers.add(art.publisher_id)
+
+        pos = sum(1 for a in member_annotations if a.sentiment_label == NewsSentimentLabel.POSITIVE)
+        neg = sum(1 for a in member_annotations if a.sentiment_label == NewsSentimentLabel.NEGATIVE)
+        neu = sum(1 for a in member_annotations if a.sentiment_label == NewsSentimentLabel.NEUTRAL)
+        mix = sum(1 for a in member_annotations if a.sentiment_label == NewsSentimentLabel.MIXED)
+        eligible = pos + neg + neu + mix
+        net = round((pos - neg) / eligible, 4) if eligible > 0 else 0.0
+
+        dist = {
+            "POSITIVE": pos,
+            "NEGATIVE": neg,
+            "NEUTRAL": neu,
+            "MIXED": mix,
+            "INSUFFICIENT_EVIDENCE": sum(
+                1 for a in member_annotations if a.sentiment_label == NewsSentimentLabel.INSUFFICIENT_EVIDENCE
+            ),
+        }
+
+        return StorySentimentProfile(
+            story_id=story_id,
+            target_entity_id=story.primary_entity_id or "entity-general",
+            distribution=dist,
+            net_sentiment=net,
+            eligible_article_count=eligible,
+            independent_source_count=len(publishers),
+            evaluation_time=datetime.now(timezone.utc),
+        )
+
+    def get_event_sentiment(self, event_id: str) -> Optional[EventSentimentProfile]:
+        with self._lock:
+            ev = self._events_by_id.get(event_id)
+            if not ev:
+                return None
+
+            ev_annotations = []
+            for aid in ev.supporting_article_ids:
+                anns = self.get_article_sentiment(aid)
+                ev_annotations.extend(anns)
+
+        pos = sum(1 for a in ev_annotations if a.sentiment_label == NewsSentimentLabel.POSITIVE)
+        neg = sum(1 for a in ev_annotations if a.sentiment_label == NewsSentimentLabel.NEGATIVE)
+        neu = sum(1 for a in ev_annotations if a.sentiment_label == NewsSentimentLabel.NEUTRAL)
+        mix = sum(1 for a in ev_annotations if a.sentiment_label == NewsSentimentLabel.MIXED)
+        eligible = pos + neg + neu + mix
+        net = round((pos - neg) / eligible, 4) if eligible > 0 else 0.0
+
+        dist = {
+            "POSITIVE": pos,
+            "NEGATIVE": neg,
+            "NEUTRAL": neu,
+            "MIXED": mix,
+            "INSUFFICIENT_EVIDENCE": sum(
+                1 for a in ev_annotations if a.sentiment_label == NewsSentimentLabel.INSUFFICIENT_EVIDENCE
+            ),
+        }
+
+        return EventSentimentProfile(
+            event_id=event_id,
+            target_entity_id=ev.primary_entity_id,
+            distribution=dist,
+            net_sentiment=net,
+            eligible_evidence_count=eligible,
+            assertion_status=ev.assertion_status.value,
+            evaluation_time=datetime.now(timezone.utc),
+        )
+
+    def get_entity_relevance(self, article_id: str) -> List[NewsEntityRelevance]:
+        with self._lock:
+            rel = self._relevance_by_article.get(article_id)
+            if rel:
+                return list(rel)
+
+            art = self._dedup.get_article(article_id)
+            if not art:
+                return []
+
+            records = []
+            for ent in art.linked_entities:
+                r = self._sentiment_classifier.classify_article_relevance(
+                    article=art,
+                    entity_id=ent.entity_id,
+                    canonical_name=ent.canonical_name,
+                    ticker=ent.ticker,
+                )
+                records.append(r)
+            self._relevance_by_article[article_id] = records
+            return records
+
+    def get_observed_market_reaction(
+        self,
+        article_id_or_event_id: str,
+        instrument_id: Optional[str] = None,
+        ticker: Optional[str] = None,
+        window: NewsMarketReactionWindow = NewsMarketReactionWindow.PREV_CLOSE_TO_NEXT_CLOSE,
+        exchange: str = "NASDAQ",
+        currency: str = "USD",
+    ) -> ObservedNewsMarketContext:
+        with self._lock:
+            art = self._dedup.get_article(article_id_or_event_id)
+            ev = self._events_by_id.get(article_id_or_event_id)
+
+        pub_time = datetime.now(timezone.utc)
+        resolved_ticker = ticker or "AAPL"
+        company_name = "Target Company"
+
+        if art:
+            pub_time = art.published_at
+            if art.linked_entities:
+                first_ent = art.linked_entities[0]
+                resolved_ticker = first_ent.ticker or resolved_ticker
+                company_name = first_ent.canonical_name
+        elif ev:
+            pub_time = ev.announcement_time or ev.event_date or ev.first_seen_at
+            company_name = ev.primary_entity_name
+            if ev.primary_entity_id.startswith("company-"):
+                resolved_ticker = ev.primary_entity_id.replace("company-", "").upper()
+
+        inst_id = instrument_id or f"inst-{resolved_ticker.lower()}"
+
+        return self._market_reaction_engine.calculate_observed_reaction(
+            article_id_or_event_id=article_id_or_event_id,
+            instrument_id=inst_id,
+            ticker=resolved_ticker,
+            company_name=company_name,
+            publication_time=pub_time,
+            window=window,
+            exchange=exchange,
+            currency=currency,
+        )
 
     def _seed_baseline_articles(self) -> None:
         """Populates authentic, source-qualified baseline financial articles."""

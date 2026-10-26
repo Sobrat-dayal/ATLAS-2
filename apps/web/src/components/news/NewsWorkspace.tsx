@@ -18,7 +18,8 @@ import { NewsStoryTable } from "./NewsStoryTable";
 import { NewsStoryInspector } from "./NewsStoryInspector";
 import { NewsFinancialEventTable } from "./NewsFinancialEventTable";
 import { NewsEventInspector } from "./NewsEventInspector";
-import { LayoutList, Clock, SlidersHorizontal, Layers, ShieldCheck } from "lucide-react";
+import { NewsSentimentWorkspace } from "./sentiment/NewsSentimentWorkspace";
+import { LayoutList, Clock, SlidersHorizontal, Layers, ShieldCheck, BarChart3 } from "lucide-react";
 
 export function NewsWorkspace() {
   const router = useRouter();
@@ -179,6 +180,17 @@ export function NewsWorkspace() {
               <span>Financial Events</span>
             </button>
             <button
+              onClick={() => setView("SENTIMENT")}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded transition-colors ${
+                view === "SENTIMENT"
+                  ? "bg-cyan-500 text-white font-semibold shadow-sm"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Sentiment & Reactions</span>
+            </button>
+            <button
               onClick={() => setView("TIMELINE")}
               className={`flex items-center space-x-1.5 px-2.5 py-1 rounded transition-colors ${
                 view === "TIMELINE"
@@ -215,6 +227,8 @@ export function NewsWorkspace() {
       {/* Main Content Area */}
       {error ? (
         <NewsEmptyState isError={true} errorMessage={error} onRetry={refresh} />
+      ) : view === "SENTIMENT" ? (
+        <NewsSentimentWorkspace />
       ) : view === "STORIES" ? (
         /* Story Threads View */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">

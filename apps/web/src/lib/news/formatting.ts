@@ -35,6 +35,8 @@ export function formatFullUtcTime(isoString: string): string {
   }
 }
 
+export const formatUtcTimestamp = formatFullUtcTime;
+
 export function formatRelativeTime(isoString: string): string {
   if (!isoString) return "";
   try {

@@ -133,3 +133,53 @@ class NewsStoryClusterAmbiguousError(NewsDomainError):
 
     pass
 
+
+# Stage 102 Sentiment, Relevance & Market Reaction Errors
+class NewsSentimentNotFoundError(NewsDomainError):
+    """Raised when sentiment annotations for an article or target cannot be found."""
+
+    pass
+
+
+class NewsSentimentInsufficientEvidenceError(NewsDomainError):
+    """Raised when available licensed text is inadequate for sentiment classification."""
+
+    pass
+
+
+class NewsSentimentTargetUnresolvedError(NewsDomainError):
+    """Raised when requested entity target cannot be resolved for sentiment analysis."""
+
+    pass
+
+
+class NewsSentimentRestrictedError(NewsDomainError):
+    """Raised when underlying article rights prevent sentiment computation or extraction."""
+
+    pass
+
+
+class NewsRelevanceNotFoundError(NewsDomainError):
+    """Raised when relevance relationships for an entity cannot be resolved."""
+
+    pass
+
+
+class NewsMarketReactionPriceUnavailableError(NewsDomainError):
+    """Raised when historical market prices are missing for the observation window."""
+
+    pass
+
+
+class NewsMarketReactionSecurityUnresolvedError(NewsDomainError):
+    """Raised when an entity cannot be mapped to a canonical trading instrument."""
+
+    pass
+
+
+class NewsMarketReactionWindowUnsupportedError(NewsDomainError):
+    """Raised when an invalid or unsupported market observation window is requested."""
+
+    pass
+
+

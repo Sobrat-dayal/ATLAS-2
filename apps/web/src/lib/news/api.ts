@@ -3,13 +3,24 @@
  */
 
 import {
+  EntitySentimentAggregateDTO,
+  EventSentimentProfileDTO,
+  FinancialEventTypeDefinitionDTO,
+  MarketReactionRequestDTO,
   NewsArticleDTO,
   NewsCoverageResponseDTO,
+  NewsEntityRelevanceDTO,
   NewsFeedQueryParams,
   NewsFeedResponseDTO,
+  NewsFinancialEventDTO,
   NewsFreshnessResponseDTO,
   NewsPublisherDTO,
+  NewsSentimentAnnotationDTO,
   NewsSourceDTO,
+  ObservedNewsMarketContextDTO,
+  SentimentEvaluationResultDTO,
+  SentimentTimelineResponseDTO,
+  StorySentimentProfileDTO,
 } from "./types";
 
 function getBaseApiUrl(): string {
@@ -388,7 +399,7 @@ export async function getNewsEventTypes(): Promise<
 export async function getEntityEvents(
   entityId: string,
   limit: number = 20
-): Promise<import("./types").NewsFinancialEventDTO[]> {
+): Promise<NewsFinancialEventDTO[]> {
   const url = new URL(
     `/api/v1/news/entities/${encodeURIComponent(entityId)}/events`,
     getBaseApiUrl()
@@ -398,7 +409,150 @@ export async function getEntityEvents(
     method: "GET",
     headers: getHeaders(),
   });
-  return handleResponse<import("./types").NewsFinancialEventDTO[]>(res);
+  return handleResponse<NewsFinancialEventDTO[]>(res);
 }
+
+// =========================================================================
+// STAGE 102: Financial Sentiment, Relevance & Market Reaction Client
+// =========================================================================
+
+export async function getArticleSentiment(
+  articleId: string
+): Promise<NewsSentimentAnnotationDTO[]> {
+  const url = `${getBaseApiUrl()}/api/v1/news/articles/${encodeURIComponent(articleId)}/sentiment`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsSentimentAnnotationDTO[]>(res);
+}
+
+export async function getEntitySentiment(
+  entityId: string,
+  days: number = 30
+): Promise<EntitySentimentAggregateDTO> {
+  const url = new URL(
+    `/api/v1/news/entities/${encodeURIComponent(entityId)}/sentiment`,
+    getBaseApiUrl()
+  );
+  url.searchParams.set("days", String(days));
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<EntitySentimentAggregateDTO>(res);
+}
+
+export async function getEntitySentimentTimeline(
+  entityId: string,
+  interval: string = "DAY",
+  days: number = 30
+): Promise<SentimentTimelineResponseDTO> {
+  const url = new URL(
+    `/api/v1/news/entities/${encodeURIComponent(entityId)}/sentiment/timeline`,
+    getBaseApiUrl()
+  );
+  url.searchParams.set("interval", interval);
+  url.searchParams.set("days", String(days));
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<SentimentTimelineResponseDTO>(res);
+}
+
+export async function getStorySentiment(
+  storyId: string,
+  targetEntityId?: string
+): Promise<StorySentimentProfileDTO> {
+  const url = new URL(
+    `/api/v1/news/stories/${encodeURIComponent(storyId)}/sentiment`,
+    getBaseApiUrl()
+  );
+  if (targetEntityId) {
+    url.searchParams.set("target_entity_id", targetEntityId);
+  }
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<StorySentimentProfileDTO>(res);
+}
+
+export async function getEventSentiment(
+  eventId: string,
+  targetEntityId?: string
+): Promise<EventSentimentProfileDTO> {
+  const url = new URL(
+    `/api/v1/news/events/${encodeURIComponent(eventId)}/sentiment`,
+    getBaseApiUrl()
+  );
+  if (targetEntityId) {
+    url.searchParams.set("target_entity_id", targetEntityId);
+  }
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<EventSentimentProfileDTO>(res);
+}
+
+export async function getEntityRelevance(
+  entityId: string,
+  limit: number = 50
+): Promise<NewsEntityRelevanceDTO[]> {
+  const url = new URL(
+    `/api/v1/news/entities/${encodeURIComponent(entityId)}/relevance`,
+    getBaseApiUrl()
+  );
+  url.searchParams.set("limit", String(limit));
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsEntityRelevanceDTO[]>(res);
+}
+
+export async function getArticleRelevance(
+  articleId: string
+): Promise<NewsEntityRelevanceDTO[]> {
+  const url = `${getBaseApiUrl()}/api/v1/news/articles/${encodeURIComponent(articleId)}/relevance`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsEntityRelevanceDTO[]>(res);
+}
+
+export async function getNewsMethodologies(): Promise<Record<string, unknown>> {
+  const url = `${getBaseApiUrl()}/api/v1/news/analytics/methodologies`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<Record<string, unknown>>(res);
+}
+
+export async function getObservedMarketReaction(
+  req: MarketReactionRequestDTO
+): Promise<ObservedNewsMarketContextDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/analytics/market-reaction`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(req),
+  });
+  return handleResponse<ObservedNewsMarketContextDTO>(res);
+}
+
+export async function getSentimentEvaluation(): Promise<SentimentEvaluationResultDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/analytics/evaluation`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<SentimentEvaluationResultDTO>(res);
+}
+
 
 

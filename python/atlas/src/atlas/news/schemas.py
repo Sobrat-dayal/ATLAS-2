@@ -2,6 +2,7 @@
 
 import datetime
 import uuid
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -14,11 +15,17 @@ from atlas.news.enums import (
     FinancialEventType,
     NewsArticleType,
     NewsAvailabilityStatus,
+    NewsClassificationMethod,
+    NewsEntityRelevanceClass,
     NewsEventAssertionStatus,
     NewsEventLifecycleStatus,
+    NewsEvidenceScope,
     NewsEvidenceType,
+    NewsFinancialAspect,
     NewsLatencyClass,
     NewsLicensingStatus,
+    NewsMarketReactionWindow,
+    NewsSentimentLabel,
     NewsStoryMembershipReason,
     NewsStoryMembershipStatus,
     NewsStoryStatus,
@@ -444,4 +451,180 @@ class FinancialEventTypeDefinitionDTO(BaseModel):
     supported_amount_types: List[EventAmountType]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Stage 102: Sentiment, Relevance & Market Reaction DTOs
+# ---------------------------------------------------------------------------
+class SentimentEvidenceReferenceDTO(BaseModel):
+    evidence_id: str
+    article_revision_id: str
+    evidence_scope: NewsEvidenceScope
+    text_span: Optional[str] = None
+    rationale_code: str
+    source_rights: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsSentimentAnnotationDTO(BaseModel):
+    annotation_id: str
+    article_id: str
+    article_revision_id: str
+    target_entity_id: str
+    target_entity_type: str
+    target_canonical_name: Optional[str] = None
+    target_ticker: Optional[str] = None
+    sentiment_label: NewsSentimentLabel
+    sentiment_aspect: NewsFinancialAspect
+    sentiment_score: float
+    confidence_score: Optional[float] = None
+    classification_status: str
+    classification_method: NewsClassificationMethod
+    classifier_version: str
+    taxonomy_version: str
+    evidence: List[SentimentEvidenceReferenceDTO] = Field(default_factory=list)
+    explanation: Optional[str] = None
+    source_published_at: datetime.datetime
+    analysis_created_at: datetime.datetime
+    retrospective_reprocessing: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsEntityRelevanceDTO(BaseModel):
+    relevance_id: str
+    article_id: str
+    article_revision_id: str
+    entity_id: str
+    entity_type: str
+    canonical_name: str
+    ticker: Optional[str] = None
+    relevance_class: NewsEntityRelevanceClass
+    relevance_score: float
+    evidence_source: NewsEvidenceScope
+    is_primary_subject: bool
+    is_direct_participant: bool
+    source_published_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EntitySentimentAggregateDTO(BaseModel):
+    target_entity_id: str
+    target_canonical_name: Optional[str] = None
+    target_ticker: Optional[str] = None
+    evaluation_window_days: int
+    eligible_count: int
+    positive_count: int
+    negative_count: int
+    neutral_count: int
+    mixed_count: int
+    insufficient_evidence_count: int
+    net_sentiment: float
+    unique_story_count: int
+    independent_publisher_count: int
+    top_aspects: List[Dict[str, Any]] = Field(default_factory=list)
+    coverage_completeness: str
+    methodology_version: str
+    evaluation_time: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SentimentTimelineBucketDTO(BaseModel):
+    bucket_start: datetime.datetime
+    bucket_end: datetime.datetime
+    label: str
+    eligible_count: int
+    positive_count: int
+    negative_count: int
+    neutral_count: int
+    mixed_count: int
+    net_sentiment: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SentimentTimelineResponseDTO(BaseModel):
+    target_entity_id: str
+    interval: str
+    buckets: List[SentimentTimelineBucketDTO]
+    total_articles: int
+    overall_net_sentiment: float
+    as_of: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StorySentimentProfileDTO(BaseModel):
+    story_id: str
+    target_entity_id: str
+    distribution: Dict[str, int]
+    net_sentiment: float
+    eligible_article_count: int
+    independent_source_count: int
+    evaluation_time: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EventSentimentProfileDTO(BaseModel):
+    event_id: str
+    target_entity_id: str
+    distribution: Dict[str, int]
+    net_sentiment: float
+    eligible_evidence_count: int
+    assertion_status: str
+    evaluation_time: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ObservedNewsMarketContextDTO(BaseModel):
+    article_id_or_event_id: str
+    instrument_id: str
+    ticker: str
+    company_name: str
+    currency: str
+    exchange: str
+    publication_time: datetime.datetime
+    publication_precision: str
+    observation_window: NewsMarketReactionWindow
+    window_start_time: datetime.datetime
+    window_end_time: datetime.datetime
+    price_start: Decimal
+    price_end: Decimal
+    observed_return: Decimal
+    observed_return_percent: Decimal
+    benchmark_instrument_id: Optional[str] = None
+    benchmark_name: Optional[str] = None
+    benchmark_return_percent: Optional[Decimal] = None
+    benchmark_relative_return_percent: Optional[Decimal] = None
+    adjustment_policy: str
+    noncausal_disclaimer: str
+    limitations: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MarketReactionRequestDTO(BaseModel):
+    article_id_or_event_id: str
+    instrument_id: Optional[str] = None
+    ticker: Optional[str] = None
+    window: NewsMarketReactionWindow = NewsMarketReactionWindow.PREV_CLOSE_TO_NEXT_CLOSE
+    exchange: str = "NASDAQ"
+    currency: str = "USD"
+
+
+class SentimentEvaluationResultDTO(BaseModel):
+    evaluation_corpus_size: int
+    macro_f1: float
+    classifier_version: str
+    taxonomy_version: str
+    per_class_metrics: Dict[str, Any]
+    evaluation_timestamp: str
+
+    model_config = ConfigDict(from_attributes=True)
+
 

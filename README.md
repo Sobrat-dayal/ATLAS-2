@@ -1061,6 +1061,40 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `cmd /c pnpm --filter web build` (Next.js 16.3.8 Turbopack clean compile).
 - **Documentation**: See `docs/NEWS_STORIES_AND_EVENTS.md` and `docs/DECISIONS.md`.
 
+## Financial News Sentiment, Entity Relevance and Market Reaction Analytics System (Stage 102)
+- **Architecture**: Institutional-grade target-aware financial language sentiment, evidence-grounded relevance scoring, and descriptive market reaction context at `/news` (Module 8). Extends Stage 99 News Foundation, Stage 100 Discovery, and Stage 101 Story/Event Intelligence with source-linked evaluative tone classification, conservative entity relevance, syndication-aware aggregation, and exchange-aligned noncausal price context.
+- **Strict Noncausal & Analytical Principles**:
+  - Analytical tone is strictly text framing; zero automated investment recommendations (Buy/Sell), zero predicted returns, and zero news-driven trading signals.
+  - Market reaction analytics are descriptive before/after price observations; correlation does not imply causation and news is never claimed to have caused price movements.
+  - Multi-target polarity isolation: an article discussing Company A winning a deal from Company B assigns distinct target-aware annotations.
+  - Factual descriptive reporting is strictly categorized as `NEUTRAL`, while uninformative text is categorized as `INSUFFICIENT_EVIDENCE`.
+  - Syndicated copies of wire releases (e.g. PR Newswire to 10 outlets) represent 1 independent newsroom voice, not 10 independent confirmations.
+- **Sentiment Taxonomy & Aspects**:
+  - 6 versioned classes: `POSITIVE`, `NEGATIVE`, `NEUTRAL`, `MIXED`, `INSUFFICIENT_EVIDENCE`, and `NOT_APPLICABLE`.
+  - 14 financial aspects: `EARNINGS_PERFORMANCE`, `EARNINGS_GUIDANCE`, `REVENUE_GROWTH`, `PROFITABILITY`, `CASH_FLOW`, `BALANCE_SHEET`, `DEBT_FINANCING`, `CORPORATE_GOVERNANCE`, `REGULATORY_EXPOSURE`, `PRODUCT_DEVELOPMENT`, `OPERATIONAL_PERFORMANCE`, `MANAGEMENT`, `CORPORATE_TRANSACTION`, and `GENERAL`.
+  - Strict evidence citations linking exact text spans from headlines/licensed excerpts with rationale codes.
+- **Canonical Entity Relevance**:
+  - Stratified relevance classes: `PRIMARY_SUBJECT` (1.00), `DIRECT_PARTICIPANT` (0.75), `VERIFIED_MENTION` (0.40), `VERIFIED_RELATED_ENTITY` (0.35), `CONTEXTUAL_MARKET_REFERENCE` (0.15), and `INSUFFICIENT_EVIDENCE` (0.00).
+- **Descriptive Market Context**:
+  - Aligns news publication with exchange sessions: `PREV_CLOSE_TO_NEXT_CLOSE`, `PUB_BAR_TO_NEXT_BAR`, `INTRADAY_ONE_HOUR`, etc., with weekend/holiday handling (Saturday/Sunday maps to Friday close and Monday close).
+  - Explicit noncausal disclaimer and analytical limitations disclosure.
+- **Golden Benchmark Evaluation**:
+  - Built-in evaluation harness executing against 7 curated financial scenarios measuring Macro-F1 = 1.00, Accuracy = 1.00, and Target Accuracy = 1.00.
+- **Terminal Workspace Integration**:
+  - Added `[Sentiment & Reactions]` view mode alongside `[Headlines]`, `[Story Threads]`, `[Financial Events]`, and `[Timelines]`.
+  - Sentiment Distribution progress bar with eligible $N$, Net Sentiment gauge, and independent newsroom counts.
+  - Chronological Sentiment Timeline chart showing publication-anchored trajectory.
+  - Entity Relevance table and detailed Sentiment Inspector with verbatim evidence citations.
+  - Descriptive Observed Market Reaction panel with mandatory noncausal disclaimer banner.
+  - Sentiment Methodology modal displaying Golden Benchmark metrics.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_news_sentiment_analytics_v1.py` + full news suite (94/94 passed in 9.19s).
+  - Backend linter: `uv run ruff check` on all news code (0 errors).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (55/55 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `cmd /c pnpm --filter web build` (Next.js 16.3.8 Turbopack clean compile).
+- **Documentation**: See `docs/NEWS_SENTIMENT_AND_REACTION_ANALYTICS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

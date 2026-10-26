@@ -518,3 +518,214 @@ export interface FinancialEventTypeDefinitionDTO {
   supported_amount_types: EventAmountType[];
 }
 
+// =========================================================================
+// STAGE 102: Financial Sentiment, Relevance & Market Reaction Analytics
+// =========================================================================
+
+export type NewsSentimentLabel =
+  | "POSITIVE"
+  | "NEGATIVE"
+  | "NEUTRAL"
+  | "MIXED"
+  | "INSUFFICIENT_EVIDENCE"
+  | "NOT_APPLICABLE";
+
+export type NewsFinancialAspect =
+  | "EARNINGS_PERFORMANCE"
+  | "EARNINGS_GUIDANCE"
+  | "REVENUE_GROWTH"
+  | "PROFITABILITY"
+  | "CASH_FLOW"
+  | "BALANCE_SHEET"
+  | "DEBT_FINANCING"
+  | "CORPORATE_GOVERNANCE"
+  | "REGULATORY_EXPOSURE"
+  | "PRODUCT_DEVELOPMENT"
+  | "OPERATIONAL_PERFORMANCE"
+  | "MANAGEMENT"
+  | "CORPORATE_TRANSACTION"
+  | "GENERAL";
+
+export type NewsEntityRelevanceClass =
+  | "PRIMARY_SUBJECT"
+  | "DIRECT_PARTICIPANT"
+  | "VERIFIED_MENTION"
+  | "VERIFIED_RELATED_ENTITY"
+  | "CONTEXTUAL_MARKET_REFERENCE"
+  | "INSUFFICIENT_EVIDENCE";
+
+export type NewsEvidenceScope =
+  | "HEADLINE"
+  | "LICENSED_EXCERPT"
+  | "LICENSED_BODY"
+  | "STRUCTURED_FILING";
+
+export type NewsClassificationMethod =
+  | "DETERMINISTIC_RULES"
+  | "APPROVED_FINANCIAL_LLM"
+  | "HYBRID"
+  | "FALLBACK_ABSTAIN";
+
+export type NewsMarketReactionWindow =
+  | "PREV_CLOSE_TO_NEXT_CLOSE"
+  | "PUB_BAR_TO_NEXT_BAR"
+  | "PREV_SESSION_TO_SUBSEQUENT_SESSION"
+  | "INTRADAY_ONE_HOUR"
+  | "INTRADAY_FOUR_HOURS";
+
+export interface SentimentEvidenceReferenceDTO {
+  evidence_id: string;
+  article_id: string;
+  revision_id: string;
+  evidence_scope: NewsEvidenceScope;
+  text_span: string;
+  aspect: NewsFinancialAspect;
+  rationale_code: string;
+}
+
+export interface NewsSentimentAnnotationDTO {
+  annotation_id: string;
+  article_id: string;
+  article_revision_id: string;
+  target_entity_id: string;
+  target_entity_type: string;
+  target_canonical_name?: string | null;
+  target_ticker?: string | null;
+  sentiment_label: NewsSentimentLabel;
+  sentiment_score: number;
+  confidence_score: number;
+  sentiment_aspect: NewsFinancialAspect;
+  classification_status: string;
+  analysis_method: NewsClassificationMethod;
+  model_or_rule_version: string;
+  source_published_at: string;
+  analysis_created_at: string;
+  evidence: SentimentEvidenceReferenceDTO[];
+  explanation: string;
+}
+
+export interface NewsEntityRelevanceDTO {
+  relevance_id: string;
+  article_id: string;
+  entity_id: string;
+  entity_type: string;
+  canonical_name?: string | null;
+  ticker?: string | null;
+  relevance_class: NewsEntityRelevanceClass;
+  relevance_score: number;
+  evidence_source: string;
+  relationship_type: string;
+  resolution_method: string;
+  source_published_at: string;
+}
+
+export interface EntitySentimentAggregateDTO {
+  target_entity_id: string;
+  target_canonical_name?: string | null;
+  target_ticker?: string | null;
+  evaluation_window_days: number;
+  eligible_count: number;
+  positive_count: number;
+  negative_count: number;
+  neutral_count: number;
+  mixed_count: number;
+  insufficient_evidence_count: number;
+  net_sentiment: number;
+  unique_story_count: number;
+  independent_publisher_count: number;
+  top_aspects: Array<{ aspect: string; count: number }>;
+  coverage_completeness: string;
+  methodology_version: string;
+  evaluation_time: string;
+}
+
+export interface SentimentTimelineBucketDTO {
+  bucket_start: string;
+  bucket_end: string;
+  label: string;
+  eligible_count: number;
+  positive_count: number;
+  negative_count: number;
+  neutral_count: number;
+  mixed_count: number;
+  net_sentiment: number;
+}
+
+export interface SentimentTimelineResponseDTO {
+  target_entity_id: string;
+  interval: string;
+  days: number;
+  total_eligible: number;
+  buckets: SentimentTimelineBucketDTO[];
+}
+
+export interface StorySentimentProfileDTO {
+  story_id: string;
+  target_entity_id: string;
+  distribution: Record<string, number>;
+  net_sentiment: number;
+  eligible_article_count: number;
+  independent_source_count: number;
+  evaluation_time: string;
+}
+
+export interface EventSentimentProfileDTO {
+  event_id: string;
+  target_entity_id: string;
+  distribution: Record<string, number>;
+  net_sentiment: number;
+  eligible_evidence_count: number;
+  assertion_status: string;
+  evaluation_time: string;
+}
+
+export interface ObservedNewsMarketContextDTO {
+  context_id: string;
+  article_id_or_event_id: string;
+  instrument_id: string;
+  ticker: string;
+  market_id: string;
+  window_type: NewsMarketReactionWindow;
+  publication_time: string;
+  window_start_time: string;
+  window_end_time: string;
+  price_start: number;
+  price_end: number;
+  observed_return: number;
+  observed_return_pct: number;
+  benchmark_id?: string | null;
+  benchmark_return?: number | null;
+  benchmark_relative_return?: number | null;
+  currency: string;
+  is_descriptive_only: boolean;
+  noncausal_disclaimer: string;
+  limitations: string[];
+  data_source: string;
+}
+
+export interface MarketReactionRequestDTO {
+  article_id_or_event_id: string;
+  instrument_id: string;
+  ticker: string;
+  publication_time: string;
+  window_type?: NewsMarketReactionWindow;
+  market_id?: string;
+  benchmark_id?: string;
+}
+
+export interface SentimentEvaluationResultDTO {
+  evaluation_version: string;
+  evaluated_at: string;
+  total_samples: number;
+  per_class_precision: Record<string, number>;
+  per_class_recall: Record<string, number>;
+  per_class_f1: Record<string, number>;
+  macro_f1: number;
+  accuracy: number;
+  target_resolution_accuracy: number;
+  abstention_rate: number;
+  confusion_matrix: Record<string, Record<string, number>>;
+  methodology: string;
+}
+
+

@@ -9630,6 +9630,51 @@ This document records the major architectural and product decisions established.
 654. The UI adheres strictly to ATLAS institutional design tokens: zero purple gradients, zero emoji icons, zero fabricated confidence percentages, and full dark/light theme support.
 655. Stage 101 completes successfully with 74 passing backend tests (test_news_story_intelligence_v1.py, test_news_discovery_v1.py, test_news_v1.py), 0 ruff errors, 46 passing web unit tests, 0 TypeScript errors (`tsc --noEmit`), and a successful Next.js production build. Stage 102 is the next canonical roadmap stage.
 
+## Stage 102: Financial News Sentiment, Entity Relevance, and Market Reaction Analytics System
+
+### Scope, Roadmaps & Core Directives
+656. Stage 102 builds the institutional-grade Financial News Sentiment, Entity Relevance, and Market Reaction Analytics System inside the News module at primary route `/news`.
+657. The authoritative 150-stage roadmap confirms Stages 99–103 belong to the News sequence; Stage 102 extends verified articles, story threads, and financial events into target-aware financial language analytics.
+658. Sentiment is strictly analytical and descriptive: zero automated investment recommendations (Buy/Sell), zero predicted share-price changes, zero price-impact claims, and zero news-driven trading orders.
+659. Strict noncausal attribution: market price movements are descriptive before/after measurements over defined exchange windows; correlation does not imply causation and news is never asserted to have caused price movements without validated causal event studies.
+660. All 20 canonical top-level routes (`/home`, `/markets`, `/charts`, `/watchlists`, `/screeners`, `/companies`, `/economics`, `/news`, `/research`, etc.) remain intact and untouched; news sentiment integrates cleanly into `/news`.
+
+### Sentiment Taxonomy & Target-Aware Semantics
+661. Versioned 6-label sentiment taxonomy establishes `POSITIVE`, `NEGATIVE`, `NEUTRAL`, `MIXED`, `INSUFFICIENT_EVIDENCE`, and `NOT_APPLICABLE`.
+662. Neutral reporting of descriptive facts is strictly separated from Insufficient Evidence (e.g. short/missing text or ambiguous tone).
+663. Financial aspect classification defines 14 versioned aspects: `EARNINGS_PERFORMANCE`, `EARNINGS_GUIDANCE`, `REVENUE_GROWTH`, `PROFITABILITY`, `CASH_FLOW`, `BALANCE_SHEET`, `DEBT_FINANCING`, `CORPORATE_GOVERNANCE`, `REGULATORY_EXPOSURE`, `PRODUCT_DEVELOPMENT`, `OPERATIONAL_PERFORMANCE`, `MANAGEMENT`, `CORPORATE_TRANSACTION`, and `GENERAL`.
+664. Target-specific polarity isolation: multi-entity articles assign distinct, independent sentiment annotations per participating company (e.g. Company A winning a deal from Company B).
+
+### Entity Relevance & Conservative Materiality
+665. Conservative entity relevance stratification establishes `PRIMARY_SUBJECT` (1.00), `DIRECT_PARTICIPANT` (0.75), `VERIFIED_MENTION` (0.40), `VERIFIED_RELATED_ENTITY` (0.35), `CONTEXTUAL_MARKET_REFERENCE` (0.15), and `INSUFFICIENT_EVIDENCE` (0.00).
+666. Zero invented materiality claims: relevance indicates textual association, never proven financial materiality, earnings impact, or legal determination.
+667. Strict evidence grounding: every annotation cites verbatim source spans from headline or licensed excerpt with rationale code and evidence scope (`HEADLINE`, `LICENSED_EXCERPT`, `LICENSED_BODY`, `STRUCTURED_FILING`).
+668. Source copyright and licensing protection: licensed excerpts and headlines only; unlicensed text redistribution or unauthorized third-party LLM transmission is strictly blocked.
+669. Article revision binding: annotations link to exact `article_revision_id`; source corrections or retractions invalidate obsolete annotations.
+
+### Aggregation, Syndication & Temporal Integrity
+670. Syndication-aware aggregation: syndicated wire copies (e.g. PR Newswire distributed to 10 outlets) count as 1 independent newsroom voice, not 10 independent confirmations.
+671. Net Sentiment metric: $[-1.0, +1.0]$ defined as $(N_{\text{pos}} - N_{\text{neg}}) / N_{\text{eligible}}$ with explicit sample size $N$, unique story count, and coverage completeness disclosure.
+672. Chronological sentiment trajectory: publication timestamp-anchored grouping (`DAY`, `WEEK`) with zero look-ahead hindsight bias; missing days remain honestly empty.
+673. Story-level and Event-level sentiment profiles: track polarity distributions across member articles and evidence without altering event assertion status.
+
+### Descriptive Market Reaction Context
+674. Descriptive market reaction context: supports exchange session alignment (`PREV_CLOSE_TO_NEXT_CLOSE`, `PUB_BAR_TO_NEXT_BAR`, etc.) with calendar, holiday, and weekend handling (Saturday/Sunday maps start to Friday close and end to Monday close).
+675. Zero price fabrication: missing or unverified historical prices return typed unavailable states rather than interpolated estimates.
+676. Benchmark context: optional relative return vs. benchmark (e.g. SPY) is descriptive and never claimed as alpha or abnormal return.
+677. Negation and hedging detection: corporate denials (e.g. "Firm denies probe allegations") are neutralized to NEUTRAL with explicit explanation.
+
+### Evaluation, Infrastructure & Quality Gates
+678. Golden benchmark evaluation harness: built-in benchmark fixture evaluates 7 diverse scenarios, measuring precision, recall, and Macro-F1 = 1.0 across classes.
+679. Typed REST APIs: dedicated endpoints under `/api/v1/news`: `/articles/{id}/sentiment`, `/entities/{id}/sentiment`, `/entities/{id}/sentiment/timeline`, `/stories/{id}/sentiment`, `/events/{id}/sentiment`, `/entities/{id}/relevance`, `/articles/{id}/relevance`, `/analytics/methodologies`, `/analytics/market-reaction`, and `/analytics/evaluation`.
+680. Idempotent processing and cache invalidation: cache keys incorporate entity, window, and revision watermark.
+681. Frontend News Workspace integration: adds `[Sentiment & Reactions]` tab seamlessly alongside `[Headlines]`, `[Story Threads]`, `[Financial Events]`, and `[Timelines]`.
+682. Institutional UI design: zero purple gradients, zero emoji icons, zero fake confidence percentages, tabular numerals, accessible keyboard/screen-reader navigation.
+683. Security and privacy controls: parameterized SQL, input sanitization, SSRF protection on URLs, strict RBAC entitlements.
+684. Comprehensive automated verification: 94 passing backend tests (test_news_sentiment_analytics_v1.py, test_news_story_intelligence_v1.py, test_news_discovery_v1.py, test_news_v1.py), 0 ruff errors, 55 passing web unit tests, 0 TypeScript errors (`tsc --noEmit`), and clean Next.js production build.
+685. Stage 102 is complete; Stage 103 is the next canonical roadmap stage.
+
+
 
 
 

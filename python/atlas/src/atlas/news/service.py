@@ -37,6 +37,7 @@ from atlas.news.events import (
     NewsEventEvidence,
     NewsFinancialEvent,
 )
+from atlas.news.market_reaction import ObservedNewsMarketContext
 from atlas.news.normalization import (
     normalize_canonical_url,
     normalize_timestamp,
@@ -55,14 +56,18 @@ from atlas.news.repository import (
     NewsStoryQuery,
 )
 from atlas.news.schemas import (
+    EntitySentimentAggregateDTO,
     EventAmountDTO,
     EventParticipantDTO,
+    EventSentimentProfileDTO,
     FinancialEventTypeDefinitionDTO,
+    MarketReactionRequestDTO,
     NewsArticleDTO,
     NewsCoverageResponseDTO,
     NewsDiscoveryQueryDTO,
     NewsDiscoveryResponseDTO,
     NewsEntityMentionDTO,
+    NewsEntityRelevanceDTO,
     NewsEventEvidenceDTO,
     NewsEventFeedResponseDTO,
     NewsEventResponse,
@@ -75,6 +80,7 @@ from atlas.news.schemas import (
     NewsIngestionResponseDTO,
     NewsPublisherDTO,
     NewsSearchSuggestionDTO,
+    NewsSentimentAnnotationDTO,
     NewsSourceDTO,
     NewsStoryFeedResponseDTO,
     NewsStoryThreadDTO,
@@ -82,6 +88,18 @@ from atlas.news.schemas import (
     NewsTimelineRequestDTO,
     NewsTimelineResponseDTO,
     NewsTopicDTO,
+    ObservedNewsMarketContextDTO,
+    SentimentEvaluationResultDTO,
+    SentimentEvidenceReferenceDTO,
+    SentimentTimelineBucketDTO,
+    SentimentTimelineResponseDTO,
+    StorySentimentProfileDTO,
+)
+from atlas.news.sentiment import (
+    EntitySentimentAggregate,
+    NewsEntityRelevance,
+    NewsSentimentAnnotation,
+    evaluate_golden_benchmark,
 )
 from atlas.news.stories import NewsStoryThread
 from atlas.news.topics import get_topic, list_topics
@@ -184,6 +202,10 @@ class NewsService:
     def __init__(self, repository: Optional[NewsRepository] = None):
         self._repository = repository or NewsRepository()
         self._cache = default_news_cache
+
+    @property
+    def repository(self) -> NewsRepository:
+        return self._repository
 
     def get_feed(
         self,
@@ -935,6 +957,216 @@ class NewsService:
             first_observed_at=r.first_observed_at,
             is_verified_by_filing=r.is_verified_by_filing,
             filing_id=r.filing_id,
+        )
+
+    # -----------------------------------------------------------------------
+    # Stage 102 Sentiment, Relevance & Market Context Services
+    # -----------------------------------------------------------------------
+
+    def get_article_sentiment(
+        self, article_id: str, is_entitled: bool = True
+    ) -> List[NewsSentimentAnnotationDTO]:
+        article = self.repository._dedup.get_article(article_id)
+        if not article:
+            raise NewsArticleNotFoundError(article_id)
+        if article.availability_status == NewsAvailabilityStatus.WITHDRAWN:
+            raise NewsArticleWithdrawnError(article_id)
+
+        annotations = self.repository.get_article_sentiment(article_id)
+        return [self._map_sentiment_to_dto(a, is_entitled=is_entitled) for a in annotations]
+
+    def get_entity_sentiment_aggregate(
+        self, entity_id: str, days: int = 30, sources: Optional[List[str]] = None
+    ) -> EntitySentimentAggregateDTO:
+        agg = self.repository.get_entity_sentiment_aggregate(
+            entity_id=entity_id, days=days, sources=sources
+        )
+        return self._map_sentiment_aggregate_to_dto(agg)
+
+    def get_entity_sentiment_timeline(
+        self, entity_id: str, interval: str = "DAY", days: int = 30
+    ) -> SentimentTimelineResponseDTO:
+        raw = self.repository.get_entity_sentiment_timeline(
+            entity_id=entity_id, interval=interval, days=days
+        )
+        bucket_dtos = [
+            SentimentTimelineBucketDTO(
+                bucket_start=b.bucket_start,
+                bucket_end=b.bucket_end,
+                label=b.label,
+                eligible_count=b.eligible_count,
+                positive_count=b.positive_count,
+                negative_count=b.negative_count,
+                neutral_count=b.neutral_count,
+                mixed_count=b.mixed_count,
+                net_sentiment=b.net_sentiment,
+            )
+            for b in raw["buckets"]
+        ]
+        return SentimentTimelineResponseDTO(
+            target_entity_id=raw["target_entity_id"],
+            interval=raw["interval"],
+            buckets=bucket_dtos,
+            total_articles=raw["total_articles"],
+            overall_net_sentiment=raw["overall_net_sentiment"],
+            as_of=raw["as_of"],
+        )
+
+    def get_story_sentiment(self, story_id: str) -> StorySentimentProfileDTO:
+        profile = self.repository.get_story_sentiment(story_id)
+        if not profile:
+            raise NewsStoryNotFoundError(story_id)
+        return StorySentimentProfileDTO(
+            story_id=profile.story_id,
+            target_entity_id=profile.target_entity_id,
+            distribution=profile.distribution,
+            net_sentiment=profile.net_sentiment,
+            eligible_article_count=profile.eligible_article_count,
+            independent_source_count=profile.independent_source_count,
+            evaluation_time=profile.evaluation_time,
+        )
+
+    def get_event_sentiment(self, event_id: str) -> EventSentimentProfileDTO:
+        profile = self.repository.get_event_sentiment(event_id)
+        if not profile:
+            raise NewsFinancialEventNotFoundError(event_id)
+        return EventSentimentProfileDTO(
+            event_id=profile.event_id,
+            target_entity_id=profile.target_entity_id,
+            distribution=profile.distribution,
+            net_sentiment=profile.net_sentiment,
+            eligible_evidence_count=profile.eligible_evidence_count,
+            assertion_status=profile.assertion_status,
+            evaluation_time=profile.evaluation_time,
+        )
+
+    def get_entity_relevance(self, article_id: str) -> List[NewsEntityRelevanceDTO]:
+        article = self.repository._dedup.get_article(article_id)
+        if not article:
+            raise NewsArticleNotFoundError(article_id)
+        relevances = self.repository.get_entity_relevance(article_id)
+        return [self._map_relevance_to_dto(r) for r in relevances]
+
+    def get_observed_market_reaction(
+        self, req: MarketReactionRequestDTO
+    ) -> ObservedNewsMarketContextDTO:
+        ctx = self.repository.get_observed_market_reaction(
+            article_id_or_event_id=req.article_id_or_event_id,
+            instrument_id=req.instrument_id,
+            ticker=req.ticker,
+            window=req.window,
+            exchange=req.exchange,
+            currency=req.currency,
+        )
+        return self._map_market_reaction_to_dto(ctx)
+
+    def get_sentiment_evaluation(self) -> SentimentEvaluationResultDTO:
+        result = evaluate_golden_benchmark()
+        return SentimentEvaluationResultDTO(**result)
+
+    def _map_sentiment_to_dto(
+        self, a: NewsSentimentAnnotation, is_entitled: bool = True
+    ) -> NewsSentimentAnnotationDTO:
+        ev_dtos = [
+            SentimentEvidenceReferenceDTO(
+                evidence_id=e.evidence_id,
+                article_revision_id=e.article_revision_id,
+                evidence_scope=e.evidence_scope,
+                text_span=e.text_span if is_entitled else None,
+                rationale_code=e.rationale_code,
+                source_rights=e.source_rights,
+            )
+            for e in a.evidence
+        ]
+        return NewsSentimentAnnotationDTO(
+            annotation_id=a.annotation_id,
+            article_id=a.article_id,
+            article_revision_id=a.article_revision_id,
+            target_entity_id=a.target_entity_id,
+            target_entity_type=a.target_entity_type,
+            target_canonical_name=a.target_canonical_name,
+            target_ticker=a.target_ticker,
+            sentiment_label=a.sentiment_label,
+            sentiment_aspect=a.sentiment_aspect,
+            sentiment_score=a.sentiment_score,
+            confidence_score=a.confidence_score,
+            classification_status=a.classification_status,
+            classification_method=a.classification_method,
+            classifier_version=a.classifier_version,
+            taxonomy_version=a.taxonomy_version,
+            evidence=ev_dtos,
+            explanation=a.explanation if is_entitled else "Explanation restricted by content license.",
+            source_published_at=a.source_published_at,
+            analysis_created_at=a.analysis_created_at,
+            retrospective_reprocessing=a.retrospective_reprocessing,
+        )
+
+    def _map_relevance_to_dto(self, r: NewsEntityRelevance) -> NewsEntityRelevanceDTO:
+        return NewsEntityRelevanceDTO(
+            relevance_id=r.relevance_id,
+            article_id=r.article_id,
+            article_revision_id=r.article_revision_id,
+            entity_id=r.entity_id,
+            entity_type=r.entity_type,
+            canonical_name=r.canonical_name,
+            ticker=r.ticker,
+            relevance_class=r.relevance_class,
+            relevance_score=r.relevance_score,
+            evidence_source=r.evidence_source,
+            is_primary_subject=r.is_primary_subject,
+            is_direct_participant=r.is_direct_participant,
+            source_published_at=r.source_published_at,
+        )
+
+    def _map_sentiment_aggregate_to_dto(
+        self, agg: EntitySentimentAggregate
+    ) -> EntitySentimentAggregateDTO:
+        return EntitySentimentAggregateDTO(
+            target_entity_id=agg.target_entity_id,
+            target_canonical_name=agg.target_canonical_name,
+            target_ticker=agg.target_ticker,
+            evaluation_window_days=agg.evaluation_window_days,
+            eligible_count=agg.eligible_count,
+            positive_count=agg.positive_count,
+            negative_count=agg.negative_count,
+            neutral_count=agg.neutral_count,
+            mixed_count=agg.mixed_count,
+            insufficient_evidence_count=agg.insufficient_evidence_count,
+            net_sentiment=agg.net_sentiment,
+            unique_story_count=agg.unique_story_count,
+            independent_publisher_count=agg.independent_publisher_count,
+            top_aspects=agg.top_aspects,
+            coverage_completeness=agg.coverage_completeness,
+            methodology_version=agg.methodology_version,
+            evaluation_time=agg.evaluation_time,
+        )
+
+    def _map_market_reaction_to_dto(
+        self, ctx: ObservedNewsMarketContext
+    ) -> ObservedNewsMarketContextDTO:
+        return ObservedNewsMarketContextDTO(
+            article_id_or_event_id=ctx.article_id_or_event_id,
+            instrument_id=ctx.instrument_id,
+            ticker=ctx.ticker,
+            company_name=ctx.company_name,
+            currency=ctx.currency,
+            exchange=ctx.exchange,
+            publication_time=ctx.publication_time,
+            publication_precision=ctx.publication_precision,
+            observation_window=ctx.observation_window,
+            window_start_time=ctx.window_start_time,
+            window_end_time=ctx.window_end_time,
+            price_start=ctx.price_start,
+            price_end=ctx.price_end,
+            observed_return=ctx.observed_return,
+            observed_return_percent=ctx.observed_return_percent,
+            benchmark_instrument_id=ctx.benchmark_instrument_id,
+            benchmark_name=ctx.benchmark_name,
+            benchmark_return_percent=ctx.benchmark_return_percent,
+            benchmark_relative_return_percent=ctx.benchmark_relative_return_percent,
+            adjustment_policy=ctx.adjustment_policy,
+            noncausal_disclaimer=ctx.noncausal_disclaimer,
+            limitations=ctx.limitations,
         )
 
 

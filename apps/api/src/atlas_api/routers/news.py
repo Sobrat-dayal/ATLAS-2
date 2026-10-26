@@ -34,11 +34,15 @@ from atlas.news.errors import (
 )
 from atlas.news.repository import NewsFeedQuery
 from atlas.news.schemas import (
+    EntitySentimentAggregateDTO,
+    EventSentimentProfileDTO,
     FinancialEventTypeDefinitionDTO,
+    MarketReactionRequestDTO,
     NewsArticleDTO,
     NewsCoverageResponseDTO,
     NewsDiscoveryQueryDTO,
     NewsDiscoveryResponseDTO,
+    NewsEntityRelevanceDTO,
     NewsEventEvidenceDTO,
     NewsEventFeedResponseDTO,
     NewsEventResponse,
@@ -50,12 +54,17 @@ from atlas.news.schemas import (
     NewsIngestionResponseDTO,
     NewsPublisherDTO,
     NewsSearchSuggestionDTO,
+    NewsSentimentAnnotationDTO,
     NewsSourceDTO,
     NewsStoryFeedResponseDTO,
     NewsStoryThreadDTO,
     NewsTimelineRequestDTO,
     NewsTimelineResponseDTO,
     NewsTopicDTO,
+    ObservedNewsMarketContextDTO,
+    SentimentEvaluationResultDTO,
+    SentimentTimelineResponseDTO,
+    StorySentimentProfileDTO,
 )
 from atlas.news.service import (
     NewsEventService,
@@ -577,6 +586,191 @@ def get_entity_events(
     user: AuthPrincipal = Depends(get_current_user),
 ):
     return service.get_entity_events(entity_id=entity_id, limit=limit)
+
+
+
+# ---------------------------------------------------------------------------
+# Stage 102 Sentiment, Relevance & Market Context Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/api/v1/news/articles/{article_id}/sentiment",
+    response_model=List[NewsSentimentAnnotationDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get source-qualified article sentiment annotations",
+)
+def get_article_sentiment(
+    article_id: str = Path(..., description="Canonical Article ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_article_sentiment(article_id, is_entitled=True)
+    except NewsArticleNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except NewsArticleWithdrawnError as e:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/entities/{entity_id}/sentiment",
+    response_model=EntitySentimentAggregateDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get target entity sentiment aggregate over evaluation window",
+)
+def get_entity_sentiment_aggregate(
+    entity_id: str = Path(..., description="Canonical entity ID (e.g. 'comp-aapl-001')"),
+    days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
+    sources: Optional[List[str]] = Query(None, description="Optional publisher or provider filters"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.get_entity_sentiment_aggregate(entity_id=entity_id, days=days, sources=sources)
+
+
+@router.get(
+    "/api/v1/news/entities/{entity_id}/sentiment/timeline",
+    response_model=SentimentTimelineResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get historical sentiment observations bucketed by interval",
+)
+def get_entity_sentiment_timeline(
+    entity_id: str = Path(..., description="Canonical entity ID (e.g. 'comp-aapl-001')"),
+    interval: str = Query("DAY", pattern="^(DAY|WEEK|MONTH)$", description="Bucketing interval"),
+    days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.get_entity_sentiment_timeline(entity_id=entity_id, interval=interval, days=days)
+
+
+@router.get(
+    "/api/v1/news/stories/{story_id}/sentiment",
+    response_model=StorySentimentProfileDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get story thread sentiment distribution profile",
+)
+def get_story_sentiment(
+    story_id: str = Path(..., description="Canonical Story Thread ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_story_sentiment(story_id)
+    except NewsStoryNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/events/{event_id}/sentiment",
+    response_model=EventSentimentProfileDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get event sentiment distribution profile",
+)
+def get_event_sentiment(
+    event_id: str = Path(..., description="Canonical Financial Event ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_event_sentiment(event_id)
+    except NewsFinancialEventNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/entities/{entity_id}/relevance",
+    response_model=List[NewsEntityRelevanceDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get entity relevance records for an article or entity target",
+)
+def get_entity_relevance(
+    entity_id: str = Path(..., description="Canonical Article ID or Entity ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_entity_relevance(entity_id)
+    except NewsArticleNotFoundError:
+        return []
+
+
+@router.get(
+    "/api/v1/news/articles/{article_id}/relevance",
+    response_model=List[NewsEntityRelevanceDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get entity relevance records for an article",
+)
+def get_article_relevance(
+    article_id: str = Path(..., description="Canonical Article ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_entity_relevance(article_id)
+    except NewsArticleNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/analytics/methodologies",
+    status_code=status.HTTP_200_OK,
+    summary="Get approved sentiment taxonomy and methodology specifications",
+)
+def get_sentiment_methodologies(
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return {
+        "taxonomy_version": "v1.0.0-financial",
+        "classifier_version": "rules-fin-2026.1",
+        "sentiment_labels": [
+            {"code": "POSITIVE", "description": "Favorable evaluative framing toward target"},
+            {"code": "NEGATIVE", "description": "Unfavorable evaluative framing toward target"},
+            {"code": "NEUTRAL", "description": "Objective descriptive factual reporting"},
+            {"code": "MIXED", "description": "Material conflicting favorable and unfavorable views"},
+            {"code": "INSUFFICIENT_EVIDENCE", "description": "Text insufficient for defensible classification"},
+            {"code": "NOT_APPLICABLE", "description": "Target not meaningfully discussed"},
+        ],
+        "financial_aspects": [
+            "EARNINGS_PERFORMANCE", "REVENUE_GROWTH", "PROFITABILITY",
+            "CASH_FLOW", "BALANCE_SHEET", "DEBT_FINANCING", "CORPORATE_GOVERNANCE",
+            "REGULATORY_EXPOSURE", "PRODUCT_DEVELOPMENT", "OPERATIONAL_PERFORMANCE",
+            "MANAGEMENT", "CORPORATE_TRANSACTION", "GENERAL"
+        ],
+        "relevance_classes": [
+            "PRIMARY_SUBJECT", "DIRECT_PARTICIPANT", "VERIFIED_MENTION",
+            "VERIFIED_RELATED_ENTITY", "CONTEXTUAL_MARKET_REFERENCE", "INSUFFICIENT_EVIDENCE"
+        ],
+        "noncausal_policy": "Market reaction measurements are descriptive historical observations. Correlation does not imply causation.",
+    }
+
+
+@router.post(
+    "/api/v1/news/analytics/market-reaction",
+    response_model=ObservedNewsMarketContextDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Calculate descriptive observed market reaction around publication window",
+)
+def post_market_reaction(
+    req: MarketReactionRequestDTO,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.get_observed_market_reaction(req)
+
+
+@router.get(
+    "/api/v1/news/analytics/evaluation",
+    response_model=SentimentEvaluationResultDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Run and inspect golden corpus evaluation metrics (Macro-F1, Precision, Recall)",
+)
+def get_sentiment_evaluation(
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.get_sentiment_evaluation()
 
 
 # ---------------------------------------------------------------------------
