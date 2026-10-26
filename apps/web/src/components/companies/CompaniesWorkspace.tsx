@@ -25,9 +25,11 @@ import { CompanyNewsDocsTab } from "./CompanyNewsDocsTab";
 import { CompanyOverviewTab } from "./CompanyOverviewTab";
 import { CompanySecuritiesTab } from "./CompanySecuritiesTab";
 import { FinancialRatiosWorkspace } from "./ratios/FinancialRatiosWorkspace";
+import { EarningsWorkspace } from "./earnings/EarningsWorkspace";
 import {
   ArrowLeft,
   Building2,
+  Calendar,
   DollarSign,
   FileText,
   Layers,
@@ -158,6 +160,11 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           <span>Financial Ratios</span>
                         </TabsTrigger>
 
+                        <TabsTrigger value="earnings" className="gap-1.5 text-xs">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>Earnings</span>
+                        </TabsTrigger>
+
                         <TabsTrigger value="news" className="gap-1.5 text-xs">
                           <FileText className="w-3.5 h-3.5" />
                           <span>News & Docs ({overview.recent_news.length + overview.documents.length})</span>
@@ -184,6 +191,15 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                         <FinancialRatiosWorkspace
                           companyId={overview.company_entity_id}
                           companyName={overview.identity.display_name}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="earnings">
+                        <EarningsWorkspace
+                          companyId={overview.company_entity_id}
+                          companyName={overview.identity.display_name}
+                          onNavigateToStatements={() => setActiveTab("financials")}
+                          onNavigateToRatios={() => setActiveTab("ratios")}
                         />
                       </TabsContent>
 

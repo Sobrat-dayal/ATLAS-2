@@ -862,6 +862,19 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Quality gates: Ruff 0 errors, TypeScript typecheck 0 errors.
 - **Documentation**: See `docs/LIVE_WATCHLIST_UPDATES.md` and `docs/DECISIONS.md`.
 
+## Company Earnings Intelligence (Stage 84)
+- **Architecture**: Institutional-grade earnings workspace inside `/companies` integrating corporate earnings announcements, actual reported results, analyst consensus expectations, decimal-safe earnings surprise calculations, corporate forward management guidance, and verified earnings call references.
+- **Strict Pre-Release Cutoff**: Consensus expectation snapshots enforce strict publication timestamps prior to earnings release ($T_{\text{consensus}} < T_{\text{announcement}}$), prohibiting look-ahead revision leakage.
+- **Pure Decimal Arithmetic**: Zero floating point inaccuracy, robust zero-estimate denominator handling ($0$ consensus produces qualified percentage `None`), and negative-estimate magnitude interpretation using absolute denominators.
+- **Management Guidance Tracking**: Displays company-issued forward projections (ranges and point values) with explicit accounting basis, period targets, revisions, and withdrawals—strictly separated from 3rd-party analyst consensus.
+- **Earnings Calls & Transcripts**: Rights-aware conference call scheduling, audio webcasts, and licensed transcript access without synthesizing fake transcripts or generating LLM remarks.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_company_earnings.py` (22/22 passed).
+  - All 121 company module tests passed (`test_companies_v1.py`, `test_company_financial_statements.py`, `test_company_financial_ratios.py`, `test_company_earnings.py`).
+  - Frontend typecheck: `npx.cmd tsc --noEmit` (0 errors).
+  - Linter: `ruff check` on Stage 84 (0 errors).
+- **Documentation**: See `docs/COMPANY_EARNINGS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

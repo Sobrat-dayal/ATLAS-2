@@ -6830,6 +6830,213 @@ This document records the major architectural and product decisions established.
 187. Documentation matches actual code.
 188. Stage 84 is the next canonical stage.
 
+## Stage 84: Company Earnings Intelligence
+
+### Product and Domain
+1. Stage 84 implements Company Earnings V1.
+2. Earnings belongs to `/companies`.
+3. No global module is added.
+4. Stage 81 Company identity is reused.
+5. Stage 82 Financial Statements remain authoritative.
+6. Stage 83 Financial Ratios remain authoritative.
+7. Earnings events, actuals, estimates and guidance are distinct domains.
+8. Earnings surprise is derived only from comparable actuals and consensus.
+9. No fabricated financial expectations are created.
+10. No trading recommendations are generated.
+
+### Entity and Period Identity
+11. Canonical Company UUID is preserved.
+12. Reporting Entity scope is explicit.
+13. Fiscal period identity is explicit.
+14. Fiscal period end differs from announcement time.
+15. Fiscal quarters are not assumed calendar quarters.
+16. Non-calendar fiscal years are supported.
+17. 52/53-week period conventions are respected.
+18. Share-class context is explicit.
+19. ADR per-share basis is qualified.
+20. Parent/subsidiary results are not silently combined.
+
+### Earnings Events
+21. Canonical Corporate Events are reused.
+22. Confirmed and estimated dates remain distinct.
+23. Postponed events preserve revisions.
+24. Cancelled events remain distinct.
+25. Date-only events do not receive invented timestamps.
+26. Timezones are preserved.
+27. DST rules are respected.
+28. Market-session classification requires valid source/session evidence.
+29. Duplicate event records are safely reconciled.
+30. No next earnings date is fabricated.
+
+### Actual Results
+31. EPS comes from genuine source facts.
+32. Basic and diluted EPS are distinct.
+33. GAAP and adjusted EPS are distinct.
+34. Continuing-operations scope is preserved.
+35. Revenue concept definitions are qualified.
+36. Revenue currency is explicit.
+37. YTD is distinct from standalone quarter.
+38. Stage 82 derivations are reused.
+39. Original release and later restatement are distinct.
+40. Missing EPS/Revenue remain unavailable.
+
+### Analyst Estimates
+41. Consensus is not a reported financial fact.
+42. Estimate source is explicit.
+43. Consensus methodology is explicit.
+44. Forecast horizon is explicit.
+45. Analyst count is not fabricated.
+46. Estimate basis is explicit.
+47. Historical estimate observations require real vintages.
+48. Latest-only consensus cannot produce historical revisions.
+49. Source publication timestamps are preserved.
+50. Missing consensus remains unavailable.
+
+### Temporal Integrity
+51. Earnings release time is distinct from period end.
+52. Consensus snapshot time is distinct from ingestion time.
+53. Historical surprise uses a pre-release eligible estimate.
+54. Post-announcement estimate revisions are excluded.
+55. Same-day date-only estimates are not assumed pre-release.
+56. Historical as-known-at views require genuine vintages.
+57. Later restatements do not leak into original-announcement comparisons.
+58. Source corrections preserve lineage.
+59. No fabricated historical estimate values are allowed.
+
+### Surprise Calculations
+60. Actual and estimate must have the same fiscal period.
+61. Metric/accounting basis must be compatible.
+62. Per-share basis must be compatible.
+63. Currency must be compatible.
+64. Consolidation/reporting scope must be compatible.
+65. Absolute surprise formula is versioned.
+66. Percentage surprise formula is versioned.
+67. Zero estimates do not produce infinite percentages.
+68. Negative estimates receive explicit interpretation.
+69. Beat/miss/in-line policy is documented.
+70. Missing estimates do not produce fabricated surprises.
+71. No earnings beat automatically implies a Buy recommendation.
+72. No earnings miss automatically implies a Sell recommendation.
+
+### Guidance
+73. Management guidance is distinct from analyst estimates.
+74. Guidance period is explicit.
+75. Guidance range and point values are distinct.
+76. Guidance accounting basis is explicit.
+77. Guidance currency is preserved.
+78. Original guidance is preserved.
+79. Revised guidance is distinguished.
+80. Withdrawn guidance is distinguished.
+81. No implied numerical guidance is generated from qualitative text.
+82. Missing guidance remains unavailable.
+
+### Calls and Documents
+83. Earnings Call event references use verified sources.
+84. Call time and timezone are explicit.
+85. Webcast URLs are validated.
+86. Transcripts use existing canonical Document Entities.
+87. Transcript publication timestamps are preserved.
+88. Transcript licensing is enforced.
+89. No new transcription pipeline is introduced.
+90. No fictional transcripts or LLM-generated call summaries are created.
+91. Earnings-related News uses existing verified references.
+
+### Data and APIs
+92. Typed Earnings APIs are implemented.
+93. Source provenance is preserved.
+94. Derived surprise lineage is preserved.
+95. Entitlements apply to estimates and actuals separately.
+96. Restricted estimates cannot be leaked through derived surprises.
+97. Source reads are bounded.
+98. Historical periods are paginated/bounded.
+99. Cache keys include event revisions.
+100. Cache keys include consensus vintages.
+101. Cache keys include calculation versions.
+102. Restatements invalidate affected views.
+103. No Provider fanout occurs on ordinary page load.
+104. No duplicate fundamental-data store is created.
+105. No new unrestricted News crawler is created.
+
+### UI
+106. Earnings Overview is functional.
+107. Earnings History is functional.
+108. Actual EPS and Revenue are qualified.
+109. Consensus data is labeled.
+110. Earnings surprise methodology is inspectable.
+111. Verified next earnings status is visible.
+112. Earnings event timezone is visible.
+113. Guidance is source-backed.
+114. Calls/transcript references are source-backed.
+115. Historical charts use real observations.
+116. Missing historical estimates remain missing.
+117. Partial source failures do not break available actuals.
+118. Companies navigation remains functional.
+119. Financial Statements navigation remains functional.
+120. Financial Ratios navigation remains functional.
+121. Watchlist integration is preserved.
+122. Responsive layouts are supported.
+123. Keyboard accessibility is supported.
+124. Screen-reader accessibility is supported.
+125. Dark/light mode is preserved.
+126. Agent Dock compatibility is preserved.
+127. Bottom Taskbar compatibility is preserved.
+128. No purple gradients are introduced.
+129. No emoji icons are introduced.
+130. No fake financial metrics are displayed.
+
+### Security and Resource Use
+131. Authentication is enforced.
+132. Company/source authorization is enforced.
+133. Analyst-estimate licensing is enforced.
+134. Transcript licensing is enforced.
+135. Restricted derived-data leakage is prohibited.
+136. No arbitrary SQL is accepted.
+137. No arbitrary formula execution is allowed.
+138. Unsafe external URLs are rejected.
+139. Provider credentials remain server-side.
+140. Resource limits are enforced.
+141. Normal Earnings reads do not mutate canonical facts.
+142. No Trading orders occur.
+143. No Portfolio changes occur.
+144. No Broker calls occur.
+145. No Agents execute.
+146. No Workflows execute.
+147. No LLM calls are required.
+
+### Roadmap Boundaries
+148. Stage 85 owns Ownership.
+149. Stage 86 owns Filings.
+150. Stage 87 owns Peers.
+151. Stage 88 owns Supply Chains.
+152. Stages 89–93 own Economics.
+153. Stages 94–98 own Screeners.
+154. Stages 99–103 own News.
+155. Stages 104–109 own Research.
+156. Stages 110–114 own Portfolios.
+157. Stages 115–118 own Risk.
+158. Stages 119–120 own Saved/Workspaces.
+159. Stages 121–128 own Terminal/AI.
+160. Stages 129–140 own Maps/Intelligence.
+161. Stages 141–142 own Options/Quant pricing.
+162. Stage 143 owns Backtesting.
+163. Stage 144 owns Paper Trading.
+164. Stage 145 owns Broker Sandbox.
+165. Stages 146+ own Agents.
+166. No Ownership analytics is implemented.
+167. No Filings crawler/parser is introduced.
+168. No peer company comparison engine is introduced.
+169. No supply-chain analysis is introduced.
+170. No full News sentiment pipeline is introduced.
+171. No full Research RAG is introduced.
+172. No trading strategy engine is introduced.
+173. Stage 84 must pass earnings arithmetic tests.
+174. Stage 84 must pass estimate-vintage tests.
+175. Stage 84 must pass source entitlement tests.
+176. Stage 84 must pass event/timezone tests.
+177. Stage 84 must pass Stage 81–83 regressions.
+178. Documentation must reflect actual source coverage.
+179. Stage 85 is the next canonical stage.
+
 
 
 
