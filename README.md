@@ -875,6 +875,21 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Linter: `ruff check` on Stage 84 (0 errors).
 - **Documentation**: See `docs/COMPANY_EARNINGS.md` and `docs/DECISIONS.md`.
 
+## Company Ownership Intelligence (Stage 85)
+- **Architecture**: Institutional-grade company ownership workspace inside `/companies` integrating institutional shareholders (Form 13F), corporate insiders (Forms 3/4/5), beneficial owners (Schedules 13D/13G), macro shareholding patterns, ownership concentration, voting rights, and quarterly position changes.
+- **Strict Distinction Matrix**: Formally separates investment managers from managed investment funds, registered nominees from beneficial owners, direct from indirect holdings, economic exposure from voting control, and historical period facts from later amendments.
+- **Pure Decimal Precision**: Exact `Decimal` arithmetic for all share percentages, position changes, and percentage-point impacts with zero-division safety and negative-denominator rejection.
+- **Non-Duplication & Deduplication**: Prevents double-counting overlapping positions across parent managers, sub-advisers, and group filings in concentration calculations.
+- **Multi-Jurisdiction Handling**: Preserves native regulatory taxonomies (US SEC Section 13(f)/16 vs. Indian SEBI Clause 35 promoter/public/pledged classifications) without artificial forced mappings.
+- **Zero Real-Time Conflation**: Preserves reporting dates and publication timestamps, clearly surfacing 45-day regulatory reporting lags.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_company_ownership.py` (12/12 passed).
+  - All 133 company module tests passed (`test_companies_v1.py`, `test_company_financial_statements.py`, `test_company_financial_ratios.py`, `test_company_earnings.py`, `test_company_ownership.py`).
+  - Frontend typecheck: `npx.cmd tsc --noEmit` (0 errors).
+  - Production build: `npm.cmd run build` (Next.js 16.3.8 Turbopack clean compile).
+  - Linter: `ruff check` on Stage 85 (0 errors).
+- **Documentation**: See `docs/COMPANY_OWNERSHIP.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

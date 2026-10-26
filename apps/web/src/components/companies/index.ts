@@ -10,3 +10,4 @@ export * from "./AddToWatchlistModal";
 export * from "./statements/FinancialStatementsWorkspace";
 export * from "./ratios/FinancialRatiosWorkspace";
 export * from "./earnings";
+export * from "./ownership";

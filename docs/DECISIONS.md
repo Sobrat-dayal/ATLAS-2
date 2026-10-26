@@ -7037,6 +7037,226 @@ This document records the major architectural and product decisions established.
 178. Documentation must reflect actual source coverage.
 179. Stage 85 is the next canonical stage.
 
+## Stage 85: Company Ownership Intelligence
+
+### Product
+1. Stage 85 implements Company Ownership Intelligence.
+2. Ownership remains inside `/companies`.
+3. No new global module is created.
+4. The existing AppShell is preserved.
+5. Canonical source data is mandatory.
+6. No fictional holders or holdings are created.
+7. Reported positions are not treated as realtime.
+8. Ownership does not imply trading recommendations.
+9. No duplicate Company registry is introduced.
+10. No new universal filing engine is created.
+
+### Identity
+11. Company Entity remains authoritative.
+12. Financial Instrument Entity remains authoritative.
+13. Holder Entity has a stable canonical identity.
+14. Investment fund and manager are distinct.
+15. Reporting party and holder are distinct.
+16. Custodian and beneficial owner are distinct.
+17. Parent and subsidiary are distinct.
+18. Public insider identity is scoped appropriately.
+19. Security share classes are preserved.
+20. ADRs remain distinct from ordinary shares.
+21. Ticker text is not a primary key.
+22. Similar names do not cause automatic merging.
+
+### Ownership Semantics
+23. Ownership observation is source-qualified.
+24. Holdings and transactions are distinct.
+25. Direct and indirect ownership are distinct.
+26. Economic and voting ownership are distinct.
+27. Reported and derived percentages are distinct.
+28. Source ownership dates are preserved.
+29. Publication dates are preserved.
+30. Revision dates are preserved.
+31. Disclosure scope is explicit.
+32. Positions do not automatically create controlling-parent relationships.
+
+### Institutional Ownership
+33. 13F data is not treated as complete beneficial ownership.
+34. 13F data is not realtime.
+35. Investment discretion is distinguished from economic benefit.
+36. Put/Call positions are not ordinary shares.
+37. Shorts are not inferred from absent 13F positions.
+38. Manager/fund double counting is prevented.
+39. Filing amendments are distinguished.
+40. Institutional reporting jurisdiction is explicit.
+
+### Insider Ownership
+41. Insider roles are issuer-specific and time-aware.
+42. Transactions are not total holdings.
+43. Form 3/4/5 semantics are preserved where supported.
+44. Direct/indirect positions are distinguished.
+45. Derivative positions remain distinct.
+46. Post-transaction holding is shown only when source-backed.
+47. Missing current insider positions are not guessed.
+
+### Beneficial Ownership
+48. Beneficial ownership requires actual source claims.
+49. Group disclosures are handled separately from members.
+50. Sole/shared voting power is distinguished.
+51. Sole/shared dispositive power is distinguished.
+52. Economic ownership is not silently equated with control.
+53. Absence of disclosure does not prove zero ownership.
+54. Filing amendments and source periods are preserved.
+
+### Jurisdictions
+55. US ownership disclosures retain source-specific semantics.
+56. Indian shareholding patterns retain their own classifications.
+57. Promoter roles are source/jurisdiction-qualified.
+58. Pledged shares are not treated as sold shares.
+59. Different ownership taxonomies are not silently combined.
+60. Unsupported jurisdictions remain unavailable.
+
+### Percentages
+61. Ownership percentage requires a compatible denominator.
+62. Share-class identity is checked.
+63. Outstanding vs issued shares are distinct.
+64. Treasury-share treatment is documented.
+65. Voting and economic denominators differ where relevant.
+66. Historical percentage uses qualified historical context.
+67. Source-reported percentages are preserved.
+68. Derived percentages are separately labeled.
+69. Missing denominator means unavailable percentage.
+70. Exact decimal arithmetic is used.
+
+### Historical Ownership
+71. Historical holdings use actual reporting periods.
+72. Publication date is distinct from reporting date.
+73. Amendments do not silently overwrite history.
+74. As-known-at requires genuine vintages.
+75. No publication look-ahead is permitted.
+76. Missing reporting periods are not fabricated.
+77. Source coverage changes are visible.
+78. Current holdings are not inferred from historical disclosures.
+
+### Ownership Changes
+79. Position changes require comparable securities.
+80. Position changes require comparable holders.
+81. Position changes require compatible source scopes.
+82. Corporate actions are considered.
+83. ADR conversion changes are considered.
+84. Share issuance/buybacks may change percentages.
+85. Newly reported is not synonymous with new investor.
+86. Missing from dataset is not synonymous with full exit.
+87. Snapshot changes are not trade history.
+88. Change calculations preserve source lineage.
+
+### Concentration
+89. Concentration uses compatible nonduplicated records.
+90. Top-holder metrics are scope-qualified.
+91. Incomplete data does not imply complete institutional ownership.
+92. Group/member duplicate counting is prohibited.
+93. Pie-chart completeness must be proven.
+94. Voting and economic concentration remain distinct.
+
+### Market Context
+95. Reported position values remain source-qualified.
+96. Current indicative valuation is separately labeled.
+97. Stale holdings are not treated as current positions.
+98. Currency and share-price units are checked.
+99. No portfolio accounting system is introduced.
+100. No new market Quote store is created.
+
+### Data and Performance
+101. Existing canonical services are reused.
+102. New ownership schema is narrow where needed.
+103. Ownership source records are versioned.
+104. Database indexes support issuer/holder/period queries.
+105. Holder reads are batched.
+106. Historical periods are bounded.
+107. Graph traversals are bounded.
+108. Source caches include revisions.
+109. Entitlement scope is included in restricted cache keys.
+110. Amended disclosures invalidate affected views.
+111. No Provider fanout occurs on page load.
+112. No regulatory crawler is triggered by UI reads.
+
+### APIs and UI
+113. Ownership APIs are typed.
+114. Ownership Overview is functional.
+115. Institutional Holders is functional where data exists.
+116. Insider Holdings is functional where data exists.
+117. Beneficial Ownership is functional where data exists.
+118. Shareholding Patterns are supported where data exists.
+119. Security selector is functional.
+120. Reporting-period selector is functional.
+121. Source inspector is functional.
+122. Historical position analysis is qualified.
+123. Source coverage is visible.
+124. Missing values are explained.
+125. Compact tables are used.
+126. Existing Companies navigation is preserved.
+127. Dark/light themes are preserved.
+128. Responsive layouts are supported.
+129. Agent Dock compatibility is preserved.
+130. Bottom Taskbar compatibility is preserved.
+131. Keyboard accessibility is supported.
+132. Screen-reader accessibility is supported.
+133. No purple gradients are introduced.
+134. No emoji icons are introduced.
+135. No fake shareholder data is introduced.
+
+### Security and Privacy
+136. Authentication is required.
+137. Source entitlements are enforced.
+138. Restricted derived holdings are protected.
+139. Individual privacy is respected.
+140. Home addresses are not exposed.
+141. Private personal contact details are not exposed.
+142. Arbitrary SQL is prohibited.
+143. Unsafe arbitrary URLs are rejected.
+144. Provider credentials remain server-side.
+145. Resource limits are enforced.
+146. Ownership reads do not mutate canonical facts.
+147. No Trading orders occur.
+148. No Broker calls occur.
+149. No Portfolio mutations occur.
+150. No Agents execute.
+151. No Workflows execute.
+152. No LLM calls are required.
+
+### Roadmap Boundaries
+153. Stage 86 owns Filings.
+154. Stage 87 owns Peers.
+155. Stage 88 owns Supply Chains.
+156. Stages 89–93 own Economics.
+157. Stages 94–98 own Screeners.
+158. Stages 99–103 own News.
+159. Stages 104–109 own Research.
+160. Stages 110–114 own Portfolios.
+161. Stages 115–118 own Risk.
+162. Stages 119–120 own Saved/Workspaces.
+163. Stages 121–128 own Terminal/AI.
+164. Stages 129–140 own Maps/Intelligence.
+165. Stages 141–142 own Options/Quant pricing.
+166. Stage 143 owns Backtesting.
+167. Stage 144 owns Paper Trading.
+168. Stage 145 owns Broker Sandbox.
+169. Stages 146+ own Agents.
+170. No full Filings crawler/parser is implemented.
+171. No peer benchmarking engine is implemented.
+172. No supply-chain relationships are inferred.
+173. No customer portfolio accounting is implemented.
+174. No insider-trading strategy is implemented.
+175. No duplicate Entity database is implemented.
+176. No unrestricted personal-information collection is implemented.
+177. Stage 85 must pass identity tests.
+178. Stage 85 must pass percentage tests.
+179. Stage 85 must pass disclosure scope tests.
+180. Stage 85 must pass double-counting tests.
+181. Stage 85 must pass history/temporal tests.
+182. Stage 85 must pass entitlement/privacy tests.
+183. Stage 85 must pass Stage 81–84 regressions.
+184. Documentation must match implementation.
+185. Stage 86 is the next canonical stage.
+
+
 
 
 

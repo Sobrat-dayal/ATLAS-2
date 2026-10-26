@@ -26,6 +26,7 @@ import { CompanyOverviewTab } from "./CompanyOverviewTab";
 import { CompanySecuritiesTab } from "./CompanySecuritiesTab";
 import { FinancialRatiosWorkspace } from "./ratios/FinancialRatiosWorkspace";
 import { EarningsWorkspace } from "./earnings/EarningsWorkspace";
+import { OwnershipWorkspace } from "./ownership/OwnershipWorkspace";
 import {
   ArrowLeft,
   Building2,
@@ -35,6 +36,7 @@ import {
   Layers,
   Loader2,
   Percent,
+  PieChart,
   Search,
 } from "lucide-react";
 
@@ -165,6 +167,11 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           <span>Earnings</span>
                         </TabsTrigger>
 
+                        <TabsTrigger value="ownership" className="gap-1.5 text-xs">
+                          <PieChart className="w-3.5 h-3.5" />
+                          <span>Ownership</span>
+                        </TabsTrigger>
+
                         <TabsTrigger value="news" className="gap-1.5 text-xs">
                           <FileText className="w-3.5 h-3.5" />
                           <span>News & Docs ({overview.recent_news.length + overview.documents.length})</span>
@@ -200,6 +207,17 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           companyName={overview.identity.display_name}
                           onNavigateToStatements={() => setActiveTab("financials")}
                           onNavigateToRatios={() => setActiveTab("ratios")}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="ownership">
+                        <OwnershipWorkspace
+                          companyId={overview.company_entity_id}
+                          companyName={overview.identity.display_name}
+                          onNavigateToOverview={() => setActiveTab("overview")}
+                          onNavigateToFinancials={() => setActiveTab("financials")}
+                          onNavigateToRatios={() => setActiveTab("ratios")}
+                          onNavigateToEarnings={() => setActiveTab("earnings")}
                         />
                       </TabsContent>
 
