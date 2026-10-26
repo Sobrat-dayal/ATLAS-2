@@ -8353,6 +8353,232 @@ This document records the major architectural and product decisions established.
 184. Documentation must match the implementation.
 185. Stage 91 is the next canonical stage.
 
+## Stage 91: Central Bank Intelligence
+
+### Product and Scope
+1. Stage 91 implements Central Bank Intelligence.
+2. Central Banks belongs inside `/economics`.
+3. No new global module is introduced.
+4. Stage 89 Economic Data is reused.
+5. Stage 90 Country Economics is preserved.
+6. No duplicate canonical rate-history database is introduced.
+7. No fake central-bank records are created.
+8. No autonomous policy forecasting is implemented.
+9. Stage 92 global calendar remains out of scope.
+10. Stage 93 cross-country benchmarking remains out of scope.
+
+### Institution Identity
+11. Central Banks use canonical Entity UUIDs.
+12. Institution aliases use Stage 22.
+13. Monetary jurisdictions use Stage 19.
+14. Currency authority is source-qualified.
+15. Countries and monetary unions are distinguished.
+16. Committee Entities are distinct from institutions.
+17. Current institutional relationships are not retroactively applied.
+18. Official institutional sources are retained.
+
+### Policy Framework
+19. Statutory mandates are distinct from operating strategies.
+20. Inflation objectives use exact source definitions.
+21. Point targets differ from target ranges.
+22. Target bands differ from target centers.
+23. Historical framework revisions are preserved.
+24. Target effective periods are explicit.
+25. No unsupported central-bank score is generated.
+
+### Policy Instruments
+26. Rate instruments have stable identities.
+27. Target ranges are not collapsed into fake official point rates.
+28. Administered rates differ from market effective rates.
+29. Multiple official rates may coexist.
+30. Negative rates are supported.
+31. Historical instrument replacements are preserved.
+32. Rate units are explicit.
+33. Source series identity is preserved.
+
+### Monetary Decisions
+34. Decisions are distinct from rate observations.
+35. Official decision identity is preserved.
+36. Decisions may affect multiple instruments.
+37. Scheduled and emergency decisions are distinct.
+38. Announcement and effective timestamps are distinct.
+39. Basis-point arithmetic uses compatible instruments.
+40. Target range endpoints are calculated separately.
+41. Holds require actual verified decisions.
+42. Missing previous rates do not generate invented changes.
+43. Source corrections preserve revision lineage.
+44. No rate-series-only decision fabrication occurs.
+
+### Meetings and Committees
+45. Meeting identity is source-backed.
+46. Multi-day meetings preserve date ranges.
+47. Meeting outcome is distinct from meeting date.
+48. Meeting minutes can publish later.
+49. Emergency decisions need not be tied to ordinary meetings.
+50. Committee membership is historical.
+51. Voting status is explicit.
+52. Individual votes are displayed only when published.
+53. Dissent and abstention are source-qualified.
+54. No artificial hawk/dove classifications are introduced.
+
+### Official Documents
+55. Stage 20 Document Entities are reused.
+56. Document source identifiers are preserved.
+57. Official source URLs are verified.
+58. Publication dates are preserved.
+59. Original content is protected.
+60. HTML rendering is sanitized.
+61. XML parsing is secure.
+62. PDF active content is disabled.
+63. Corrections preserve source revisions.
+64. Search uses authorized genuine text.
+65. No fake official publications are created.
+
+### Forward Guidance
+66. Forward guidance requires actual official communication.
+67. Guidance wording is source-grounded.
+68. Guidance types are explicit.
+69. Conditional language is preserved.
+70. Later revisions/supersessions are recorded.
+71. Guidance is not transformed into an unsupported probability forecast.
+72. LLM interpretations are not authoritative source records.
+
+### Balance Sheets and Programs
+73. Balance-sheet categories use canonical economic series.
+74. Total assets differ from QE commitments.
+75. Reserves liabilities differ from FX reserve assets.
+76. Asset holdings differ from purchase flows.
+77. Program authorizations differ from executed transactions.
+78. Runoff may involve maturities and valuation.
+79. QT cannot be inferred solely from any total-assets decline.
+80. Reporting currency and unit scales are preserved.
+81. Accounting classifications are source-defined.
+82. Historical balance-sheet revisions are retained.
+83. Missing categories are not fabricated.
+84. Reconciliation is not forced without valid accounting coverage.
+
+### Temporal Integrity
+85. Meeting time differs from decision publication.
+86. Announcement may differ from effective time.
+87. Publication may differ from ingestion time.
+88. Exact timestamps and date-only records are distinct.
+89. Historical as-known-at requires source availability qualification.
+90. Corrections do not leak backward.
+91. Historical vintages are preserved where available.
+92. No look-ahead is permitted.
+
+### Providers and Ingestion
+93. Stage 28–32 Provider architecture is reused.
+94. Official source policies are respected.
+95. Provider capability coverage is explicit.
+96. Unavailable integrations are not advertised as operational.
+97. Ingestion runs in existing background workers.
+98. Idempotency is enforced.
+99. Document duplicates are prevented.
+100. Rate limits are shared across workers.
+101. Retries and backoff are bounded.
+102. Ingestion checkpoints are recoverable.
+103. Page loads do not trigger uncontrolled external fetching.
+104. Source conflicts are not silently overwritten.
+105. Provider licensing is enforced.
+
+### APIs and Performance
+106. Central Bank APIs are typed.
+107. Authentication is enforced.
+108. Authorization is enforced.
+109. Source entitlements are enforced.
+110. Queries are bounded.
+111. Historical reads are batched.
+112. Cache keys include source revisions.
+113. Cache keys include publication context.
+114. Cache keys include instrument identity.
+115. Cache keys include entitlement scope.
+116. Document caches are access-controlled.
+117. Corrections invalidate impacted views.
+118. Normal reads do not mutate source records.
+119. No every-tick external polling is introduced.
+
+### UI
+120. Central Banks Overview is functional.
+121. Institution Explorer is functional.
+122. Profile view is functional.
+123. Policy instruments are inspectable.
+124. Current rates are source-backed.
+125. Rate history is functional.
+126. Decision history is functional.
+127. Meeting history is functional where source-backed.
+128. Committee/vote views are qualified.
+129. Publications are functional.
+130. Speeches are functional where available.
+131. Balance Sheet is functional where available.
+132. Programs are source-backed.
+133. Policy Timeline is functional.
+134. Source Inspector is functional.
+135. Missing-data states are explicit.
+136. Dark/light modes are preserved.
+137. Agent Dock compatibility is preserved.
+138. Bottom Taskbar compatibility is preserved.
+139. Responsive layouts are supported.
+140. Keyboard accessibility is supported.
+141. Screen-reader accessibility is supported.
+142. No purple gradients are introduced.
+143. No emoji icons are introduced.
+144. No fabricated policy records are displayed.
+
+### Security
+145. Authentication is reused.
+146. Authorization is reused.
+147. Provider licensing is enforced.
+148. Restricted source-text leakage is prevented.
+149. Unsafe document execution is prohibited.
+150. Arbitrary SQL is prohibited.
+151. Arbitrary formulas are prohibited.
+152. Arbitrary URL fetching is prohibited.
+153. Provider secrets remain server-side.
+154. Resource limits are enforced.
+155. No Trading orders occur.
+156. No Portfolio mutations occur.
+157. No Broker actions occur.
+158. No Agents execute.
+159. No Workflows execute.
+160. No LLM calls are required.
+
+### Roadmap Boundaries
+161. Stage 92 owns Economic Calendar.
+162. Stage 93 owns Macro Comparisons.
+163. Stages 94–98 own Screeners.
+164. Stages 99–103 own News.
+165. Stages 104–109 own Research.
+166. Stages 110–114 own Portfolios.
+167. Stages 115–118 own Risk.
+168. Stages 119–120 own Saved/Workspaces.
+169. Stages 121–128 own Terminal/AI.
+170. Stages 129–140 own Maps/Intelligence.
+171. Stages 141–142 own Options/Quant pricing.
+172. Stage 143 owns Backtesting.
+173. Stage 144 owns Paper Trading.
+174. Stage 145 owns Broker Sandbox.
+175. Stages 146+ own Agents.
+176. No global Economic Calendar is built.
+177. No economic surprise engine is built.
+178. No market-implied meeting probabilities are built.
+179. No full multi-country policy comparison engine is built.
+180. No AI policy forecasting is built.
+181. No duplicate Economics platform is built.
+182. No duplicate Document Entity database is built.
+183. Stage 91 must pass institution identity tests.
+184. Stage 91 must pass instrument correctness tests.
+185. Stage 91 must pass monetary decision tests.
+186. Stage 91 must pass rate-change tests.
+187. Stage 91 must pass meeting/voting tests.
+188. Stage 91 must pass source-document security tests.
+189. Stage 91 must pass historical point-in-time tests.
+190. Stage 91 must pass balance-sheet/program tests.
+191. Stage 91 must pass entitlement tests.
+192. Stage 91 must pass Stage 89–90 regressions.
+193. Documentation must match actual implementation.
+194. Stage 92 is the next canonical stage.
+
 
 
 

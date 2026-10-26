@@ -24,7 +24,7 @@ import {
   TransformationType,
 } from "@/lib/economics";
 
-export type EconomicsSubTab = "overview" | "country" | "explorer" | "series";
+export type EconomicsSubTab = "overview" | "country" | "central-banks" | "explorer" | "series";
 export type { DateRangePreset };
 
 export interface UseEconomicsReturn {
@@ -35,6 +35,11 @@ export interface UseEconomicsReturn {
   selectedCountryEconomicsId: string;
   setSelectedCountryEconomicsId: (id: string) => void;
   navigateToCountry: (countryId: string) => void;
+
+  // Selected Central Bank in Central Banks Workspace
+  selectedCentralBankId: string;
+  setSelectedCentralBankId: (id: string) => void;
+  navigateToCentralBank: (bankId: string) => void;
 
   // Global Overview Data
   overview: GlobalMacroOverviewResponseDTO | null;
@@ -178,10 +183,16 @@ export function useEconomics(): UseEconomicsReturn {
 
   // Action to select a series and switch to series view tab
   const [selectedCountryEconomicsId, setSelectedCountryEconomicsId] = useState<string>("US");
+  const [selectedCentralBankId, setSelectedCentralBankId] = useState<string>("cb-fed");
 
   const navigateToCountry = useCallback((countryId: string) => {
     setSelectedCountryEconomicsId(countryId);
     setActiveTab("country");
+  }, []);
+
+  const navigateToCentralBank = useCallback((bankId: string) => {
+    setSelectedCentralBankId(bankId);
+    setActiveTab("central-banks");
   }, []);
 
   const selectSeries = useCallback(
@@ -199,6 +210,9 @@ export function useEconomics(): UseEconomicsReturn {
     selectedCountryEconomicsId,
     setSelectedCountryEconomicsId,
     navigateToCountry,
+    selectedCentralBankId,
+    setSelectedCentralBankId,
+    navigateToCentralBank,
     overview,
     geographies,
     categories,

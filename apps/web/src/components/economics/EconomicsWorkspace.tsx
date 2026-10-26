@@ -20,6 +20,7 @@ import { EconomicObservationsTable } from "./EconomicObservationsTable";
 import { EconomicSourceInspector } from "./EconomicSourceInspector";
 import { EconomicCoveragePanel } from "./EconomicCoveragePanel";
 import { CountryEconomicsWorkspace } from "./countries/CountryEconomicsWorkspace";
+import { CentralBanksWorkspace } from "./central-banks/CentralBanksWorkspace";
 
 export function EconomicsWorkspace() {
   const {
@@ -27,6 +28,8 @@ export function EconomicsWorkspace() {
     setActiveTab,
     selectedCountryEconomicsId,
     navigateToCountry,
+    selectedCentralBankId,
+    navigateToCentralBank,
     overview,
     geographies,
     categories,
@@ -72,11 +75,11 @@ export function EconomicsWorkspace() {
                   ATLAS Macroeconomic Intelligence
                 </h1>
                 <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  STAGE 90 COUNTRY ECONOMICS
+                  STAGE 91 CENTRAL BANKS
                 </span>
               </div>
               <p className="text-xs text-atlas-text-muted">
-                Canonical National Accounts, Sovereign Country Intelligence & Historical Statistical Vintages
+                Canonical National Accounts, Central Bank Monetary Policy & Historical Statistical Vintages
               </p>
             </div>
           </div>
@@ -105,6 +108,17 @@ export function EconomicsWorkspace() {
               >
                 <Landmark className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Country Economics</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("central-banks")}
+                className={`px-3 py-1.5 rounded font-medium transition-colors flex items-center gap-1.5 ${
+                  activeTab === "central-banks"
+                    ? "bg-atlas-surface text-atlas-text-primary shadow-xs"
+                    : "text-atlas-text-muted hover:text-atlas-text-primary"
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5 text-amber-400" />
+                <span>Central Banks</span>
               </button>
               <button
                 onClick={() => setActiveTab("explorer")}
