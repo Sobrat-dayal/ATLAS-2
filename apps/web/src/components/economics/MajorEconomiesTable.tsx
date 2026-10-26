@@ -16,9 +16,14 @@ import { MajorEconomyMacroSummaryDTO } from "@/lib/economics";
 interface MajorEconomiesTableProps {
   economies: MajorEconomyMacroSummaryDTO[];
   onSelectSeries?: (seriesId: string) => void;
+  onNavigateCountry?: (countryId: string) => void;
 }
 
-export function MajorEconomiesTable({ economies, onSelectSeries }: MajorEconomiesTableProps) {
+export function MajorEconomiesTable({
+  economies,
+  onSelectSeries,
+  onNavigateCountry,
+}: MajorEconomiesTableProps) {
   if (!economies || economies.length === 0) {
     return (
       <div className="p-6 bg-atlas-surface border border-atlas-border-subtle rounded text-center text-atlas-text-muted text-sm">
@@ -93,12 +98,27 @@ export function MajorEconomiesTable({ economies, onSelectSeries }: MajorEconomie
                   {/* Economy Column */}
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-atlas-border-subtle/60 text-atlas-text-primary">
+                      <button
+                        onClick={() => onNavigateCountry?.(geo.iso_code)}
+                        className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-atlas-border-subtle/60 text-atlas-text-primary hover:bg-atlas-accent/20 hover:text-atlas-accent transition-colors"
+                        title={`Open ${geo.name} Country Intelligence`}
+                      >
                         {geo.iso_code}
-                      </span>
+                      </button>
                       <div>
                         <div className="font-medium text-atlas-text-primary flex items-center gap-1.5">
-                          {geo.name}
+                          {onNavigateCountry ? (
+                            <button
+                              onClick={() => onNavigateCountry(geo.iso_code)}
+                              className="hover:text-atlas-accent text-left transition-colors font-medium flex items-center gap-1 group"
+                              title={`Open ${geo.name} Country Intelligence`}
+                            >
+                              <span>{geo.name}</span>
+                              <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-atlas-accent transition-opacity" />
+                            </button>
+                          ) : (
+                            <span>{geo.name}</span>
+                          )}
                         </div>
                         <div className="text-[10px] text-atlas-text-muted font-mono">
                           {geo.currency_code} &bull; {geo.central_bank_name}

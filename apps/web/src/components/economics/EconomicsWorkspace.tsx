@@ -9,6 +9,7 @@ import {
   Layers,
   ShieldCheck,
   AlertTriangle,
+  Landmark,
 } from "lucide-react";
 import { EconomicsSubTab, useEconomics } from "@/hooks/economics/useEconomics";
 import { GlobalMacroSnapshotCards } from "./GlobalMacroSnapshotCards";
@@ -18,11 +19,14 @@ import { EconomicSeriesChart } from "./EconomicSeriesChart";
 import { EconomicObservationsTable } from "./EconomicObservationsTable";
 import { EconomicSourceInspector } from "./EconomicSourceInspector";
 import { EconomicCoveragePanel } from "./EconomicCoveragePanel";
+import { CountryEconomicsWorkspace } from "./countries/CountryEconomicsWorkspace";
 
 export function EconomicsWorkspace() {
   const {
     activeTab,
     setActiveTab,
+    selectedCountryEconomicsId,
+    navigateToCountry,
     overview,
     geographies,
     categories,
@@ -65,14 +69,14 @@ export function EconomicsWorkspace() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold text-atlas-text-primary tracking-tight">
-                  ATLAS Global Economics
+                  ATLAS Macroeconomic Intelligence
                 </h1>
                 <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  STAGE 89 V1
+                  STAGE 90 COUNTRY ECONOMICS
                 </span>
               </div>
               <p className="text-xs text-atlas-text-muted">
-                Canonical Macroeconomic Indicators, Sovereign Time Series & Statistical Vintages
+                Canonical National Accounts, Sovereign Country Intelligence & Historical Statistical Vintages
               </p>
             </div>
           </div>
@@ -90,6 +94,17 @@ export function EconomicsWorkspace() {
               >
                 <Globe className="w-3.5 h-3.5 text-atlas-accent" />
                 <span>Overview</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("country")}
+                className={`px-3 py-1.5 rounded font-medium transition-colors flex items-center gap-1.5 ${
+                  activeTab === "country"
+                    ? "bg-atlas-surface text-atlas-text-primary shadow-xs"
+                    : "text-atlas-text-muted hover:text-atlas-text-primary"
+                }`}
+              >
+                <Landmark className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Country Economics</span>
               </button>
               <button
                 onClick={() => setActiveTab("explorer")}
@@ -147,13 +162,21 @@ export function EconomicsWorkspace() {
             <MajorEconomiesTable
               economies={overview?.major_economies || []}
               onSelectSeries={handleSelectSeriesFromAnywhere}
+              onNavigateCountry={navigateToCountry}
             />
 
             <EconomicCoveragePanel coverage={coverage} />
           </div>
         )}
 
-        {/* Tab 2: Economic Indicator & Series Explorer */}
+        {/* Tab 2: Country Economics Intelligence (Stage 90) */}
+        {activeTab === "country" && (
+          <div>
+            <CountryEconomicsWorkspace initialCountryId={selectedCountryEconomicsId} />
+          </div>
+        )}
+
+        {/* Tab 3: Economic Indicator & Series Explorer */}
         {activeTab === "explorer" && (
           <div>
             <EconomicIndicatorExplorer

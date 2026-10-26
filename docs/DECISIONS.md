@@ -8136,6 +8136,224 @@ This document records the major architectural and product decisions established.
 180. Documentation must match actual implementation.
 181. Stage 90 is the next canonical stage.
 
+## Stage 90: Country Economics Intelligence
+
+### Product
+1. Stage 90 implements Country Economics.
+2. Country Economics belongs inside `/economics`.
+3. Existing global navigation is preserved.
+4. Stage 89 is reused.
+5. No duplicate economic-data platform is introduced.
+6. Country-specific statistics are source-backed.
+7. Country coverage is represented honestly.
+8. Missing statistics remain unavailable.
+9. No macroeconomic forecasting engine is introduced.
+10. Stage 91–93 features remain deferred.
+
+### Country Identity
+11. Geographic Entity identity is canonical.
+12. Country identifiers are stable.
+13. Countries and economic areas are distinct.
+14. Historical geography changes are qualified.
+15. Country currency identity is preserved.
+16. Reporting-area scope is explicit.
+17. No neighboring-country data substitution occurs.
+
+### National Accounts
+18. Nominal and real GDP are distinct.
+19. Current and constant prices are distinct.
+20. PPP and market-FX GDP are distinct.
+21. GDP growth uses valid periods.
+22. Annualization is explicit.
+23. Per-capita GDP uses compatible population.
+24. National accounts revisions are preserved.
+25. Expenditure components are source-qualified.
+26. Government consumption differs from total government spending.
+27. Net exports use compatible national accounts values.
+28. Chain-linked components are not forced to sum.
+29. Statistical discrepancies are preserved.
+30. Production value added is distinct from corporate Revenue.
+31. Sectoral GVA differs from GDP.
+32. Income-side GDP is supported only where data exists.
+33. No unsupported component contributions are generated.
+
+### Inflation
+34. CPI index level differs from inflation.
+35. Headline and core definitions are distinguished.
+36. CPI food/energy weights use real source values.
+37. Seasonal adjustment is explicit.
+38. CPI rebasing is handled.
+39. PPI/WPI differ from CPI.
+40. No fictional inflation basket is created.
+41. No inflation forecast is generated.
+
+### Labor
+42. Unemployment uses official labor-force definitions.
+43. Employment rate differs from unemployment rate.
+44. Payroll jobs differ from employed persons.
+45. Labor-force participation is scope-qualified.
+46. Youth age ranges are preserved.
+47. Real and nominal wages are distinct.
+48. Productivity uses compatible inputs.
+49. Survey revisions are preserved.
+
+### Industry and Consumption
+50. Industrial production uses official source index methodology.
+51. Retail sales retain real/nominal status.
+52. Confidence surveys retain survey meaning.
+53. PMI is displayed only when licensed.
+54. Housing statistics retain source definitions.
+55. No arbitrary conversion into GDP occurs.
+
+### Monetary
+56. Monetary aggregates are country-specific.
+57. Credit stock differs from new lending.
+58. Policy targets differ from effective rates.
+59. Monetary-area scope is explicit.
+60. Full Central Banks research remains Stage 91.
+
+### Government Accounts
+61. Central and general government are distinct.
+62. Cash and accrual accounting are distinct.
+63. Government consumption differs from total expenditure.
+64. Fiscal periods are explicit.
+65. Fiscal balance methodology is explicit.
+66. Primary balance methodology is explicit.
+67. Fiscal ratios require compatible denominators.
+68. Gross and net debt are distinct.
+69. Debt stock differs from GDP flow.
+70. Debt-to-GDP timing is qualified.
+71. No sovereign default forecast is generated.
+
+### External Sector
+72. Goods and services trade are distinct.
+73. Trade balance uses compatible exports/imports.
+74. Customs and national accounts trade definitions may differ.
+75. Current account differs from trade balance.
+76. BOP accounting sign conventions are preserved.
+77. FDI flows differ from stocks.
+78. Portfolio flows differ from FDI.
+79. Gross and net reserves are distinct.
+80. External debt scope is explicit.
+81. No unsupported reserve-adequacy score is produced.
+82. No corporate supply-chain relationships are inferred.
+
+### Demographics
+83. Population data uses official source observations.
+84. Age groups use source boundaries.
+85. Urbanization retains its definition.
+86. GDP per capita uses aligned inputs.
+87. Census revisions are preserved.
+88. No fabricated high-frequency population data is introduced.
+89. No unsupported structural growth forecast is generated.
+
+### Temporal Integrity
+90. Reference period differs from publication date.
+91. Publication date differs from ingestion time.
+92. Preliminary and revised observations are distinguished.
+93. Actual source vintages are preserved.
+94. Latest-revised history differs from as-known-at history.
+95. Missing vintage capability is disclosed.
+96. No historical look-ahead is permitted.
+97. Missing periods are not interpolated.
+98. Source methodological changes remain visible.
+
+### APIs and Data
+99. Stage 35 remains the canonical economic store.
+100. Stage 89 indicator/series registries are reused.
+101. Country APIs are typed.
+102. Category reads are batched.
+103. Historical queries are bounded.
+104. Authentication is enforced.
+105. Source entitlements are enforced.
+106. Derived restricted values are protected.
+107. Cache keys include source revisions.
+108. Cache keys include geography.
+109. Cache keys include statistical definitions.
+110. Cache keys include vintage context.
+111. Cache keys include entitlement scope.
+112. Source revisions invalidate affected views.
+113. Page loads do not trigger Provider fanout.
+114. Ordinary reads do not mutate canonical observations.
+
+### UI
+115. Country selection is functional.
+116. Country Overview is functional.
+117. GDP workspace is functional.
+118. Inflation workspace is functional.
+119. Labor workspace is functional.
+120. Industry workspace is functional where data exists.
+121. Monetary workspace is functional where data exists.
+122. Fiscal workspace is functional where data exists.
+123. External workspace is functional where data exists.
+124. Demographics workspace is functional where data exists.
+125. Historical data is source-backed.
+126. Source inspectors are functional.
+127. Reporting periods are visible.
+128. Units are visible.
+129. Revisions are visible where supported.
+130. Coverage limitations are visible.
+131. Dark/light mode is preserved.
+132. Agent Dock compatibility is preserved.
+133. Bottom Taskbar compatibility is preserved.
+134. Responsive layouts are supported.
+135. Keyboard navigation is supported.
+136. Screen-reader accessibility is supported.
+137. No purple gradients are introduced.
+138. No emoji icons are introduced.
+139. No fabricated economic figures are displayed.
+
+### Security
+140. Authentication is reused.
+141. Authorization is reused.
+142. Provider licensing is enforced.
+143. Derived-data leakage is prevented.
+144. Arbitrary SQL is prohibited.
+145. Arbitrary formulas are prohibited.
+146. Arbitrary source URL fetching is prohibited.
+147. Provider credentials remain server-side.
+148. Resource limits are enforced.
+149. No Trading orders occur.
+150. No Portfolio mutations occur.
+151. No Broker calls occur.
+152. No Agents execute.
+153. No Workflows execute.
+154. No LLM calls are required.
+
+### Roadmap Boundaries
+155. Stage 91 owns Central Banks.
+156. Stage 92 owns Economic Calendar.
+157. Stage 93 owns Macro Comparisons.
+158. Stages 94–98 own Screeners.
+159. Stages 99–103 own News.
+160. Stages 104–109 own Research.
+161. Stages 110–114 own Portfolios.
+162. Stages 115–118 own Risk.
+163. Stages 119–120 own Saved/Workspaces.
+164. Stages 121–128 own Terminal/AI.
+165. Stages 129–140 own Maps/Intelligence.
+166. Stages 141–142 own Options/Quant pricing.
+167. Stage 143 owns Backtesting.
+168. Stage 144 owns Paper Trading.
+169. Stage 145 owns Broker Sandbox.
+170. Stages 146+ own Agents.
+171. No Central Banks research engine is implemented.
+172. No upcoming Economic Calendar is implemented.
+173. No full multi-country Macro Comparisons engine is implemented.
+174. No economic forecasting system is implemented.
+175. No geopolitical exposure engine is implemented.
+176. No global Screener is implemented.
+177. No duplicate economic warehouse is implemented.
+178. Stage 90 must pass GDP reconciliation tests.
+179. Stage 90 must pass inflation methodology tests.
+180. Stage 90 must pass fiscal accounting tests.
+181. Stage 90 must pass external-sector tests.
+182. Stage 90 must pass historical vintage tests.
+183. Stage 90 must pass Stage 89 regressions.
+184. Documentation must match the implementation.
+185. Stage 91 is the next canonical stage.
+
+
 
 
 

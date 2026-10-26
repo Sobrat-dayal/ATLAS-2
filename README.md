@@ -950,6 +950,35 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Linter: `ruff check` on Stage 89 (0 errors).
 - **Documentation**: See `docs/ECONOMICS_V1.md` and `docs/DECISIONS.md`.
 
+## Institutional-Grade Country Economics Intelligence (Stage 90)
+- **Architecture**: Comprehensive sovereign macroeconomic analysis workspace within `/economics` (Module 7). Transforms the canonical macroeconomic infrastructure into an institutional Country Economics workstation covering national accounts, expenditure structures, production-side Gross Value Added (GVA), inflation baskets, labor market dynamics, fiscal accounts, sovereign debt, international trade, balance of payments, and demographics for core G6 economies (United States `US`, Euro Area `EA`, China `CN`, India `IN`, Japan `JP`, United Kingdom `GB`).
+- **SNA 2008 / ESA 2010 National Accounts Rigor**:
+  - Distinguishes nominal (current prices) from real (constant / chained volume) GDP.
+  - Implements genuine expenditure decomposition: $GDP = C + I + G + (X - M)$ with component values, shares of GDP, and contributions to growth (%p).
+  - Explicit non-additivity handling: Discloses that chain-linked volume measures are non-additive outside base years and does not force reconciliation.
+  - Production Approach (GVA): Sector value-added allocations (Agriculture, Industry/Manufacturing, Services) with explicit note bridging GVA to GDP via taxes less subsidies on products.
+  - Real GDP per capita calculated strictly against compatible census/annual population reference years.
+- **Price Stability & Labor Market Surveys**:
+  - CPI price index levels with official base years (e.g. `1982-84=100`, `2015=100`), headline YoY/MoM, core CPI YoY/MoM, food & energy sub-indices, PPI, and GDP deflators with explicit seasonal adjustment tags.
+  - Labor market statistics preserve sovereign survey methodologies (BLS CPS, UK ONS LFS, China NBS Urban) and distinguish unemployment rate (% labor force), participation rate, employment-to-population ratio, youth unemployment, and nominal vs real wage growth.
+- **Fiscal Accounting & Public Debt Invariants**:
+  - Never confuses `CENTRAL_GOVERNMENT` with `GENERAL_GOVERNMENT` scope, and explicitly identifies accrual vs cash accounting.
+  - Full revenue/expenditure breakdown with primary balance (excluding debt interest expense).
+  - Public debt stock vs annual GDP flow denominator timing alignment policy.
+- **External Sector & Demographics**:
+  - Strictly distinguishes customs goods trade from total goods-and-services trade and current account balance (BPM6 standard, including primary/secondary income).
+  - Demographic profiles benchmarked to official census records: Working-age cohort (15–64), youth, elderly, dependency ratio, and urbanization.
+- **Professional Terminal UI & Zero Side-Effects**:
+  - Bloomberg/terminal-dense layout with country search, quick G6 switcher, 10 specialized category workspaces (`Overview`, `GDP & Growth`, `Inflation`, `Labor`, `Industry`, `Monetary`, `Fiscal`, `External & BOP`, `Demographics`, `Coverage Matrix`).
+  - Strictly 0 LLM calls, 0 trading orders, 0 portfolio changes, 0 database writes on read.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_country_economics.py` (22/22 passed).
+  - Regression suite: 49/49 passed (`test_economics_v1.py` + `test_country_economics.py`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors).
+  - Production build: `cmd /c npm run build` (Next.js 16.3.8 Turbopack clean compile, 38/38 routes including `/economics`).
+  - Linter: `ruff check` on Stage 90 (0 errors).
+- **Documentation**: See `docs/COUNTRY_ECONOMICS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

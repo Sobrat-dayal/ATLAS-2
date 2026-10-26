@@ -24,12 +24,17 @@ import {
   TransformationType,
 } from "@/lib/economics";
 
-export type EconomicsSubTab = "overview" | "explorer" | "series";
+export type EconomicsSubTab = "overview" | "country" | "explorer" | "series";
 export type { DateRangePreset };
 
 export interface UseEconomicsReturn {
   activeTab: EconomicsSubTab;
   setActiveTab: (tab: EconomicsSubTab) => void;
+
+  // Selected Country in Country Economics Workspace
+  selectedCountryEconomicsId: string;
+  setSelectedCountryEconomicsId: (id: string) => void;
+  navigateToCountry: (countryId: string) => void;
 
   // Global Overview Data
   overview: GlobalMacroOverviewResponseDTO | null;
@@ -172,6 +177,13 @@ export function useEconomics(): UseEconomicsReturn {
   }, [selectedSeriesId, activeTransformation, loadSeriesDetails]);
 
   // Action to select a series and switch to series view tab
+  const [selectedCountryEconomicsId, setSelectedCountryEconomicsId] = useState<string>("US");
+
+  const navigateToCountry = useCallback((countryId: string) => {
+    setSelectedCountryEconomicsId(countryId);
+    setActiveTab("country");
+  }, []);
+
   const selectSeries = useCallback(
     async (seriesId: string) => {
       setSelectedSeriesId(seriesId);
@@ -184,6 +196,9 @@ export function useEconomics(): UseEconomicsReturn {
   return {
     activeTab,
     setActiveTab,
+    selectedCountryEconomicsId,
+    setSelectedCountryEconomicsId,
+    navigateToCountry,
     overview,
     geographies,
     categories,
