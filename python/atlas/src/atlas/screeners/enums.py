@@ -59,6 +59,35 @@ class FilterCategory(CaseInsensitiveStrEnum):
     FUNDAMENTALS = "fundamentals"
     VALUATION = "valuation"
     PROFITABILITY = "profitability"
+    GROWTH = "growth"
+    CASH_FLOW = "cash_flow"
+    BALANCE_SHEET = "balance_sheet"
+    CAPITAL_EFFICIENCY = "capital_efficiency"
+    TECHNICAL_TREND = "technical_trend"
+    TECHNICAL_MOMENTUM = "technical_momentum"
+    TECHNICAL_VOLATILITY = "technical_volatility"
+    TECHNICAL_VOLUME = "technical_volume"
+
+
+class TechnicalInterval(CaseInsensitiveStrEnum):
+    """Trading interval for technical analysis."""
+
+    DAILY = "1d"
+    WEEKLY = "1w"
+
+
+class BarCompletionPolicy(CaseInsensitiveStrEnum):
+    """Observation bar completion requirement."""
+
+    LAST_COMPLETED = "last_completed"
+    LATEST = "latest"
+
+
+class PriceAdjustmentPolicy(CaseInsensitiveStrEnum):
+    """Corporate action adjustment basis."""
+
+    SPLIT_ADJUSTED = "split_adjusted"
+    UNADJUSTED = "unadjusted"
 
 
 class FilterOperator(CaseInsensitiveStrEnum):

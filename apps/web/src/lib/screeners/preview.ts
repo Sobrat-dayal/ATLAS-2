@@ -34,43 +34,52 @@ export function formatConditionPlainEnglish(
     return `${metricLabel} ${opLabel} [Incomplete Draft]`;
   }
 
+  // Parameter specification suffix (e.g. custom lookback)
+  const paramSuffix = cond.parameters?.period ? ` [Period: ${cond.parameters.period} bars]` : "";
+
+  // Boolean condition
+  if (def?.value_type === "boolean") {
+    const boolVal = cond.value === "true" || cond.value === "True" ? "True" : "False";
+    return `${metricLabel}${paramSuffix} ${opLabel} ${boolVal}`;
+  }
+
   // Range condition
   if (cond.operator === "between") {
     const lower = cond.value;
     const upper = cond.secondaryValue || "[Missing Upper Bound]";
     const unitSuffix = def?.unit_kind === "percent" ? "%" : def?.unit_kind === "multiple" ? "x" : "";
     const curSuffix = cond.currency ? ` ${cond.currency}` : "";
-    return `${metricLabel} BETWEEN ${lower}${unitSuffix} AND ${upper}${unitSuffix}${curSuffix}`;
+    return `${metricLabel}${paramSuffix} BETWEEN ${lower}${unitSuffix} AND ${upper}${unitSuffix}${curSuffix}`;
   }
 
   // Multi-select / Enum IN
   if (cond.operator === "in") {
-    return `${metricLabel} IN [${cond.value}]`;
+    return `${metricLabel}${paramSuffix} IN [${cond.value}]`;
   }
 
   // Monetary / Numeric
   if (def?.value_type === "currency" || def?.unit_kind === "monetary") {
     const cur = cond.currency || "USD";
     const mag = cond.magnitude && cond.magnitude !== "UNITS" ? ` ${cond.magnitude}` : "";
-    return `${metricLabel} ${opLabel} ${cond.value}${mag} (${cur})`;
+    return `${metricLabel}${paramSuffix} ${opLabel} ${cond.value}${mag} (${cur})`;
   }
 
   // Percentage
   if (def?.value_type === "percentage" || def?.unit_kind === "percent") {
-    return `${metricLabel} ${opLabel} ${cond.value}%`;
+    return `${metricLabel}${paramSuffix} ${opLabel} ${cond.value}%`;
   }
 
   // Multiple (e.g. P/E, P/B)
   if (def?.unit_kind === "multiple") {
-    return `${metricLabel} ${opLabel} ${cond.value}x`;
+    return `${metricLabel}${paramSuffix} ${opLabel} ${cond.value}x`;
   }
 
   // Shares / Integer
   if (def?.unit_kind === "shares" || def?.value_type === "integer") {
-    return `${metricLabel} ${opLabel} ${Number(cond.value).toLocaleString()} shares`;
+    return `${metricLabel}${paramSuffix} ${opLabel} ${Number(cond.value).toLocaleString()} shares`;
   }
 
-  return `${metricLabel} ${opLabel} ${cond.value}`;
+  return `${metricLabel}${paramSuffix} ${opLabel} ${cond.value}`;
 }
 
 export function generateQueryPreview(

@@ -21,14 +21,22 @@ interface FilterLibraryProps {
 }
 
 const CATEGORY_TABS: Array<{ id: "ALL" | FilterCategory; label: string }> = [
-  { id: "ALL", label: "All Metrics" },
-  { id: "market_data", label: "Market Data" },
-  { id: "fundamentals", label: "Fundamentals" },
-  { id: "valuation", label: "Valuation" },
+  { id: "ALL", label: "All Factors" },
+  { id: "growth", label: "Growth" },
   { id: "profitability", label: "Profitability" },
-  { id: "listing", label: "Listing & Venue" },
+  { id: "valuation", label: "Valuation" },
+  { id: "cash_flow", label: "Cash Flow" },
+  { id: "balance_sheet", label: "Balance Sheet" },
+  { id: "capital_efficiency", label: "Cap Efficiency" },
+  { id: "technical_trend", label: "Trend & MAs" },
+  { id: "technical_momentum", label: "Momentum" },
+  { id: "technical_volatility", label: "Volatility" },
+  { id: "technical_volume", label: "Volume" },
+  { id: "market_data", label: "Price & Quotes" },
+  { id: "fundamentals", label: "Statements" },
+  { id: "listing", label: "Listing" },
   { id: "geography", label: "Geography" },
-  { id: "industry", label: "Sector & Industry" },
+  { id: "industry", label: "Sectors" },
 ];
 
 export function FilterLibrary({
@@ -162,13 +170,23 @@ export function FilterLibrary({
             >
               <div className="flex items-start justify-between gap-1">
                 <div className="flex-1 truncate">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-medium text-foreground truncate">
                       {filter.display_name}
                     </span>
                     <span className="rounded bg-muted/70 px-1 py-0.2 text-[9px] font-mono uppercase text-muted-foreground">
                       {filter.unit_kind}
                     </span>
+                    {filter.indicator_type && (
+                      <span className="rounded bg-primary/10 border border-primary/20 px-1 py-0.2 text-[8px] font-mono uppercase text-primary">
+                        {filter.indicator_type}
+                      </span>
+                    )}
+                    {filter.minimum_lookback && (
+                      <span className="rounded bg-amber-500/10 border border-amber-500/20 px-1 py-0.2 text-[8px] font-mono text-amber-500">
+                        {filter.minimum_lookback}b
+                      </span>
+                    )}
                   </div>
                   <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
                     {filter.description}

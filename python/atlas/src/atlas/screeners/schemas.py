@@ -25,6 +25,8 @@ class FilterCriterionDTO(BaseModel):
     secondary_value: Optional[Any] = None
     currency: Optional[str] = None
     unit: Optional[str] = None
+    parameters: Optional[Dict[str, Any]] = None
+    period_policy: Optional[str] = None
 
 
 

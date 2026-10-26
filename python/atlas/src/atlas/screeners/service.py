@@ -50,6 +50,12 @@ from atlas.screeners.schemas import (
     SortCriterionDTO,
     ValidationResponseDTO,
 )
+from atlas.screeners.technical import (
+    compute_ema,
+    compute_momentum,
+    compute_rsi,
+    compute_sma,
+)
 
 # Execution budget constants
 MAX_ACTIVE_FILTERS = 20
@@ -72,6 +78,18 @@ class ScreenerService:
 
     def get_filters(self) -> List[ScreenerFilterDefinition]:
         return self._repo.get_filters()
+
+    def get_filter(self, filter_id: str) -> Optional[ScreenerFilterDefinition]:
+        """Lookup a specific factor/filter by ID from the canonical registry."""
+        return self._repo.get_filter(filter_id)
+
+    def get_factors(self, category: Optional[str] = None) -> List[ScreenerFilterDefinition]:
+        """Returns all approved factors, optionally filtered by category name."""
+        all_filters = self._repo.get_filters()
+        if not category:
+            return all_filters
+        cat_upper = category.upper()
+        return [f for f in all_filters if f.category.value.upper() == cat_upper or f.category.name == cat_upper]
 
     def get_columns(self) -> List[ScreenerColumnDefinition]:
         return self._repo.get_columns()
@@ -345,6 +363,40 @@ class ScreenerService:
                         ))
                         continue
 
+            # Validate parameters if supplied for parameterized/technical filters
+            if f.parameters:
+                param_error = None
+                if f_def.allowed_parameters:
+                    for k, v in f.parameters.items():
+                        if k not in f_def.allowed_parameters:
+                            param_error = f"Parameter '{k}' is not supported for filter '{f.filter_id}'."
+                            break
+                        if k == "period":
+                            try:
+                                p_int = int(v)
+                                if p_int < 2 or p_int > 500:
+                                    param_error = f"Period parameter must be an integer between 2 and 500, got {v}."
+                                    break
+                            except (ValueError, TypeError):
+                                param_error = f"Period parameter must be an integer, got '{v}'."
+                                break
+                if param_error:
+                    rejected_filters.append({
+                        "filter_id": f.filter_id,
+                        "condition_id": f.condition_id,
+                        "reason": param_error,
+                        "code": "SCREENER_PARAMETER_INVALID",
+                    })
+                    issues.append(ConditionValidationIssueDTO(
+                        condition_id=f.condition_id,
+                        filter_id=f.filter_id,
+                        field_path="parameters",
+                        code="SCREENER_PARAMETER_INVALID",
+                        severity="error",
+                        message=param_error,
+                    ))
+                    continue
+
             accepted_filters.append(f)
 
         # 2. Contradiction Detection across active conditions
@@ -490,6 +542,40 @@ class ScreenerService:
                         ))
                 else:
                     enum_eq_seen[f.filter_id] = (str_val, f.condition_id)
+
+        # C. Boolean contradiction detection
+        bool_eq_seen: Dict[str, Tuple[bool, Optional[str]]] = {}
+        for f in accepted_filters:
+            f_def = self._repo.get_filter(f.filter_id)
+            if f_def and f_def.value_type == ValueType.BOOLEAN and f.operator == FilterOperator.EQ:
+                b_val = f.value if isinstance(f.value, bool) else (str(f.value).strip().lower() in ("true", "1", "yes"))
+                if f.filter_id in bool_eq_seen:
+                    prev_b, prev_cid = bool_eq_seen[f.filter_id]
+                    if prev_b != b_val:
+                        contradictions_detected = True
+                        reason = f"Contradictory boolean conditions on '{f.filter_id}': cannot require both True and False simultaneously."
+                        rejected_filters.append({
+                            "filter_id": f.filter_id,
+                            "condition_id": f.condition_id,
+                            "reason": reason,
+                            "code": "SCREENER_CONTRADICTORY_CONDITIONS",
+                        })
+                        issues.append(ConditionValidationIssueDTO(
+                            condition_id=f.condition_id,
+                            filter_id=f.filter_id,
+                            code="SCREENER_CONTRADICTORY_CONDITIONS",
+                            severity="error",
+                            message=reason,
+                        ))
+                else:
+                    bool_eq_seen[f.filter_id] = (b_val, f.condition_id)
+
+        # Sector applicability warnings
+        if request.universe.sectors and "Financial Services" in request.universe.sectors:
+            fin_inapplicable = {"gross_margin", "fcf", "net_debt", "ev_to_ebitda", "current_ratio", "quick_ratio"}
+            for f in accepted_filters:
+                if f.filter_id in fin_inapplicable:
+                    warnings.append(f"Metric '{f.filter_id}' is inapplicable to financial institutions and banks and will evaluate to null/missing.")
 
         # Universe size calculation
         universe_candidates = self._prefilter_universe(request)
@@ -713,12 +799,36 @@ class ScreenerService:
         field_name = crit.filter_id
         val = getattr(record, field_name, None)
 
+        # Dynamic indicator evaluation if custom parameters provided and bars available
+        if crit.parameters and record.historical_bars:
+            closes = [Decimal(str(b["close"])) for b in record.historical_bars]
+            p = crit.parameters.get("period")
+            if p is not None:
+                p_int = int(p)
+                if field_name.startswith("sma") or field_name == "sma":
+                    val = compute_sma(closes, p_int)
+                elif field_name.startswith("ema") or field_name == "ema":
+                    val = compute_ema(closes, p_int)
+                elif field_name.startswith("rsi") or field_name == "rsi":
+                    val = compute_rsi(closes, p_int)
+                elif field_name.startswith("momentum") or field_name == "momentum":
+                    val = compute_momentum(closes, p_int)
+
         # Strict NULL handling
         if val is None:
             return False
 
         op = crit.operator
         target = crit.value
+
+        # Boolean handling
+        if isinstance(val, bool):
+            target_bool = target if isinstance(target, bool) else (str(target).strip().lower() in ("true", "1", "yes"))
+            if op == FilterOperator.EQ:
+                return val == target_bool
+            elif op == FilterOperator.NE:
+                return val != target_bool
+            return False
 
         # Numeric / Decimal handling
         if isinstance(val, (Decimal, int, float)):
@@ -913,11 +1023,17 @@ class ScreenerService:
             return MetricAvailabilityStatus.MISSING, "—"
 
         try:
+            if col.data_type == ValueType.BOOLEAN:
+                return MetricAvailabilityStatus.AVAILABLE, ("Yes" if raw_val else "No")
+
             if col.unit_kind == UnitKind.MONETARY:
                 d = Decimal(str(raw_val))
                 curr = record.trading_currency
                 sym = "$" if curr == "USD" else ("₹" if curr == "INR" else ("€" if curr == "EUR" else ("£" if curr == "GBP" else f"{curr} ")))
-                if col.column_id == "market_cap" or col.column_id in ["revenue", "net_income", "total_assets", "book_equity", "traded_value_latest"]:
+                if col.column_id == "market_cap" or col.column_id in [
+                    "revenue", "net_income", "total_assets", "book_equity", "traded_value_latest",
+                    "operating_cash_flow", "capex", "fcf", "total_debt", "net_debt", "ev"
+                ]:
                     # Compact scaling for institutional tables
                     abs_d = abs(d)
                     sign = "-" if d < 0 else ""
@@ -929,7 +1045,7 @@ class ScreenerService:
                         return MetricAvailabilityStatus.AVAILABLE, f"{sign}{sym}{(abs_d / Decimal('1000000')).quantize(Decimal('0.01'))}M"
                     return MetricAvailabilityStatus.AVAILABLE, f"{sign}{sym}{abs_d.quantize(Decimal('0.01'))}"
                 else:
-                    # Last price
+                    # Last price / Moving Average / ATR
                     return MetricAvailabilityStatus.AVAILABLE, f"{sym}{d.quantize(Decimal('0.01'))}"
 
             elif col.unit_kind == UnitKind.PERCENT:

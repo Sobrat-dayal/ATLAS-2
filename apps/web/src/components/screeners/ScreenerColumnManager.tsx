@@ -55,12 +55,28 @@ export function ScreenerColumnManager({
               cat === "market_data"
                 ? "Market Data & Quotes"
                 : cat === "fundamentals"
-                ? "Fundamental Metrics"
+                ? "Fundamental Financials"
                 : cat === "valuation"
                 ? "Valuation Multiples"
                 : cat === "profitability"
                 ? "Profitability & Returns"
-                : cat.toUpperCase();
+                : cat === "growth"
+                ? "Growth Metrics"
+                : cat === "cash_flow"
+                ? "Cash Flow & Free Cash Flow"
+                : cat === "balance_sheet"
+                ? "Balance Sheet & Solvency"
+                : cat === "capital_efficiency"
+                ? "Capital Efficiency"
+                : cat === "technical_trend"
+                ? "Technical Trend & Moving Averages"
+                : cat === "technical_momentum"
+                ? "Technical Momentum & Oscillators"
+                : cat === "technical_volatility"
+                ? "Technical Volatility & Bands"
+                : cat === "technical_volume"
+                ? "Technical Volume & Liquidity"
+                : cat.replace(/_/g, " ").toUpperCase();
 
             return (
               <div key={cat} className="space-y-2">

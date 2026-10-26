@@ -41,6 +41,8 @@ export function useVisualFilterBuilder({
         secondaryValue: af.secondary_value ? String(af.secondary_value) : null,
         currency: af.currency || (def?.currency_options ? def.currency_options[0] : null),
         magnitude: "UNITS" as const,
+        parameters: af.parameters || null,
+        periodPolicy: af.period_policy || null,
         status: "valid" as const,
       };
     });
@@ -80,7 +82,9 @@ export function useVisualFilterBuilder({
         d.value !== a.value ||
         d.secondaryValue !== a.secondaryValue ||
         d.currency !== a.currency ||
-        d.magnitude !== a.magnitude
+        d.magnitude !== a.magnitude ||
+        JSON.stringify(d.parameters) !== JSON.stringify(a.parameters) ||
+        d.periodPolicy !== a.periodPolicy
       );
     });
   }, [draftConditions, appliedConditions]);
@@ -96,12 +100,14 @@ export function useVisualFilterBuilder({
         conditionId: `cond-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         filterId,
         operator: def.default_operator,
-        value: "",
+        value: def.editor_type === "boolean_select" ? "true" : "",
         secondaryValue: null,
         currency: def.currency_options ? def.currency_options[0] : null,
         magnitude: (def.magnitude_options?.[0] as any) || "UNITS",
-        status: "incomplete",
-        validationMessage: "Threshold required",
+        parameters: def.default_parameters ? { ...def.default_parameters } : null,
+        periodPolicy: null,
+        status: def.editor_type === "boolean_select" ? "valid" : "incomplete",
+        validationMessage: def.editor_type === "boolean_select" ? null : "Threshold required",
       };
 
       setDraftConditions((prev) => [...prev, newCond]);
@@ -130,6 +136,7 @@ export function useVisualFilterBuilder({
 
       const duplicated: VisualFilterCondition = {
         ...target,
+        parameters: target.parameters ? { ...target.parameters } : null,
         conditionId: `cond-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         isDirty: true,
       };
@@ -153,10 +160,12 @@ export function useVisualFilterBuilder({
     // Convert visual draft conditions into canonical FilterCriterion[]
     const canonicalCriteria: FilterCriterion[] = draftConditions.map((cond) => {
       const def = filtersRegistry.find((f) => f.filter_id === cond.filterId);
-      let numVal: number | string = cond.value;
+      let numVal: number | string | boolean = cond.value;
 
-      // Normalize monetary magnitude factor
-      if (def?.editor_type === "monetary_input" && cond.magnitude && cond.magnitude !== "UNITS") {
+      // Normalize boolean or monetary magnitude factor
+      if (def?.editor_type === "boolean_select") {
+        numVal = cond.value === "true" || cond.value === "True";
+      } else if (def?.editor_type === "monetary_input" && cond.magnitude && cond.magnitude !== "UNITS") {
         const mult = getMagnitudeMultiplier(cond.magnitude);
         const parsed = Number(cond.value);
         if (Number.isFinite(parsed)) {
@@ -172,6 +181,8 @@ export function useVisualFilterBuilder({
         secondary_value: cond.secondaryValue || null,
         currency: cond.currency || null,
         unit: def?.unit_kind || null,
+        parameters: cond.parameters || null,
+        period_policy: cond.periodPolicy || null,
       };
     });
 

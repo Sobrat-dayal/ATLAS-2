@@ -1,10 +1,11 @@
 """FastAPI Router for Financial Screeners V1 (Stage 94)."""
 
-from typing import List
+from typing import Any, Dict, List, Optional
 
 from atlas.screeners import (
     CountryOptionDTO,
     ExchangeOptionDTO,
+    FilterCriterionDTO,
     ScreenerColumnDefinition,
     ScreenerCoverageResponseDTO,
     ScreenerError,
@@ -17,6 +18,7 @@ from atlas.screeners import (
     ValidationResponseDTO,
 )
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/screeners", tags=["Screeners"])
 
@@ -51,6 +53,87 @@ def list_filters(
 ) -> List[ScreenerFilterDefinition]:
     """Retrieves all approved filter criteria with value types, operators, and units."""
     return service.get_filters()
+
+
+@router.get(
+    "/factors",
+    response_model=List[ScreenerFilterDefinition],
+    summary="List approved factor and filter definitions",
+)
+def list_factors(
+    category: Optional[str] = None,
+    service: ScreenerService = Depends(get_screener_service),
+) -> List[ScreenerFilterDefinition]:
+    """Retrieves all approved fundamental and technical factors, optionally filtered by category."""
+    return service.get_factors(category=category)
+
+
+@router.get(
+    "/factors/{factor_id}",
+    response_model=ScreenerFilterDefinition,
+    summary="Inspect factor methodology and definition",
+)
+def get_factor(
+    factor_id: str,
+    service: ScreenerService = Depends(get_screener_service),
+) -> ScreenerFilterDefinition:
+    """Retrieves full methodology, formula reference, allowed operators, and parameters for a specific factor."""
+    factor = service.get_filter(factor_id)
+    if not factor:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "FACTOR_NOT_FOUND", "message": f"Factor '{factor_id}' is not in the canonical registry."},
+        )
+    return factor
+
+
+@router.get(
+    "/factors/{factor_id}/parameters",
+    summary="Get allowed and default parameters for a factor",
+)
+def get_factor_parameters(
+    factor_id: str,
+    service: ScreenerService = Depends(get_screener_service),
+) -> Dict[str, Any]:
+    """Retrieves allowed parameter bounds, defaults, and components for technical and parameterized factors."""
+    factor = service.get_filter(factor_id)
+    if not factor:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "FACTOR_NOT_FOUND", "message": f"Factor '{factor_id}' is not in the canonical registry."},
+        )
+    return {
+        "factor_id": factor.filter_id,
+        "indicator_type": factor.indicator_type,
+        "default_parameters": factor.default_parameters,
+        "allowed_parameters": factor.allowed_parameters,
+        "minimum_lookback": factor.minimum_lookback,
+        "output_components": factor.output_components,
+        "calculation_version": factor.calculation_version,
+    }
+
+
+class FactorValidationRequestDTO(BaseModel):
+    filters: List[FilterCriterionDTO]
+    universe_id: str = "all_us_equities"
+
+
+@router.post(
+    "/factors/validate",
+    response_model=ValidationResponseDTO,
+    summary="Validate factor conditions and parameter bounds",
+)
+def validate_factors(
+    request: FactorValidationRequestDTO,
+    service: ScreenerService = Depends(get_screener_service),
+) -> ValidationResponseDTO:
+    """Validates factor predicates and parameter bounds without executing the full screen."""
+    run_req = ScreenerRunRequestDTO(
+        universe_id=request.universe_id,
+        filters=request.filters,
+        limit=1,
+    )
+    return service.validate_query(run_req)
 
 
 @router.get(

@@ -50,7 +50,7 @@ const OPERATOR_DISPLAY_NAMES: Record<string, string> = {
 export function VisualConditionRow({
   condition,
   index,
-  totalConditions,
+  totalConditions: _totalConditions,
   filtersRegistry,
   exchanges,
   geographies,
@@ -95,7 +95,7 @@ export function VisualConditionRow({
       value: "",
       secondaryValue: null,
       currency: newDef.currency_options ? newDef.currency_options[0] : null,
-      magnitude: (newDef.magnitude_options?.[0] as any) || "UNITS",
+      magnitude: (newDef.magnitude_options?.[0] as VisualFilterCondition["magnitude"]) || "UNITS",
       status: "incomplete",
       validationMessage: null,
       fieldErrors: {},
@@ -151,6 +151,34 @@ export function VisualConditionRow({
           </select>
         )}
 
+        {/* Parameter controls for technical indicators */}
+        {currentFilter?.allowed_parameters?.period && (
+          <div className="flex items-center gap-1 rounded border border-border/60 bg-muted/30 px-1.5 py-0.5 text-[11px] font-mono">
+            <span className="text-muted-foreground text-[10px]">Period:</span>
+            <input
+              type="number"
+              min={2}
+              max={500}
+              value={
+                condition.parameters?.period !== undefined
+                  ? Number(condition.parameters.period)
+                  : currentFilter.default_parameters?.period !== undefined
+                  ? Number(currentFilter.default_parameters.period)
+                  : 20
+              }
+              onChange={(e) => {
+                const p = parseInt(e.target.value, 10);
+                onUpdate(condition.conditionId, {
+                  parameters: { ...(condition.parameters || {}), period: isNaN(p) ? 20 : p },
+                });
+              }}
+              aria-label="Indicator period in completed daily bars"
+              className="h-5 w-12 rounded border border-border/60 bg-background px-1 text-[11px] font-mono text-center focus:border-primary focus:outline-none"
+            />
+            <span className="text-muted-foreground text-[9px]">bars</span>
+          </div>
+        )}
+
         {/* Typed Value Editor */}
         {condition.operator === "between" ? (
           <RangeFilterInput
@@ -167,6 +195,16 @@ export function VisualConditionRow({
             }
             hasError={hasError || isIncomplete}
           />
+        ) : currentFilter?.editor_type === "boolean_select" ? (
+          <select
+            value={condition.value === "true" || condition.value === "True" ? "true" : "false"}
+            onChange={(e) => onUpdate(condition.conditionId, { value: e.target.value })}
+            aria-label="Boolean filter value"
+            className="h-7 rounded border border-border/70 bg-background/90 px-2 text-xs font-medium text-foreground transition-colors hover:border-border focus:border-primary focus:outline-none"
+          >
+            <option value="true">True (Satisfied)</option>
+            <option value="false">False (Unsatisfied)</option>
+          </select>
         ) : currentFilter?.editor_type === "monetary_input" ? (
           <MonetaryFilterInput
             value={condition.value}

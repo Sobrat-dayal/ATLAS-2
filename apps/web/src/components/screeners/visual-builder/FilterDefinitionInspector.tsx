@@ -101,6 +101,36 @@ export function FilterDefinitionInspector({
                 {filter.default_operator}
               </p>
             </div>
+            {filter.indicator_type && (
+              <>
+                <div>
+                  <span className="text-[11px] text-muted-foreground">Indicator Family</span>
+                  <p className="font-mono font-medium text-primary uppercase">
+                    {filter.indicator_type} (v{filter.calculation_version || "1.0.0"})
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[11px] text-muted-foreground">Lookback Requirement</span>
+                  <p className="font-mono font-medium text-foreground">
+                    ≥ {filter.minimum_lookback || 20} completed bars
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-[11px] text-muted-foreground">Time Horizon & Bar Policy</span>
+                  <p className="font-mono text-[11px] text-muted-foreground">
+                    Completed daily exchange sessions (split-adjusted, zero look-ahead bias)
+                  </p>
+                </div>
+                {filter.output_components && filter.output_components.length > 0 && (
+                  <div className="col-span-2">
+                    <span className="text-[11px] text-muted-foreground">Output Components</span>
+                    <p className="font-mono text-[11px] text-foreground">
+                      {filter.output_components.join(", ")}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
             {filter.aliases && filter.aliases.length > 0 && (
               <div className="col-span-2">
                 <span className="text-[11px] text-muted-foreground">Aliases / Search Keywords</span>

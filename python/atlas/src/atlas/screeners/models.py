@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -63,6 +63,12 @@ class ScreenerFilterDefinition(BaseModel):
     decimal_precision: Optional[int] = 2
     entitlement_state: str = "PUBLIC"
     source_coverage_summary: Optional[str] = None
+    indicator_type: Optional[str] = None
+    default_parameters: Optional[Dict[str, Any]] = None
+    allowed_parameters: Optional[Dict[str, List[Any]]] = None
+    minimum_lookback: Optional[int] = None
+    output_components: Optional[List[str]] = None
+    calculation_version: str = "1.0.0"
 
 
 
@@ -142,6 +148,72 @@ class ScreenerObservationRecord(BaseModel):
     net_margin: Optional[Decimal] = None
     roe: Optional[Decimal] = None
     roa: Optional[Decimal] = None
+    roic: Optional[Decimal] = None
+
+    # Growth Metrics (Stage 96)
+    revenue_growth_yoy: Optional[Decimal] = None
+    revenue_growth_qoq: Optional[Decimal] = None
+    net_income_growth_yoy: Optional[Decimal] = None
+    eps_growth_yoy: Optional[Decimal] = None
+
+    # Balance Sheet Strength & Debt (Stage 96)
+    total_debt: Optional[Decimal] = None
+    net_debt: Optional[Decimal] = None
+    debt_to_equity: Optional[Decimal] = None
+    current_ratio: Optional[Decimal] = None
+    quick_ratio: Optional[Decimal] = None
+    interest_coverage: Optional[Decimal] = None
+
+    # Cash Flow & Capital (Stage 96)
+    operating_cash_flow: Optional[Decimal] = None
+    capex: Optional[Decimal] = None
+    fcf: Optional[Decimal] = None
+    fcf_growth_yoy: Optional[Decimal] = None
+    fcf_yield: Optional[Decimal] = None
+
+    # Advanced Valuation (Stage 96)
+    ev: Optional[Decimal] = None
+    ev_to_ebitda: Optional[Decimal] = None
+    ev_to_revenue: Optional[Decimal] = None
+
+    # Technical Indicators (Stage 96 - completed daily bars)
+    sma_20: Optional[Decimal] = None
+    sma_50: Optional[Decimal] = None
+    sma_100: Optional[Decimal] = None
+    sma_200: Optional[Decimal] = None
+    ema_20: Optional[Decimal] = None
+    ema_50: Optional[Decimal] = None
+    ema_200: Optional[Decimal] = None
+    rsi_14: Optional[Decimal] = None
+    macd_line: Optional[Decimal] = None
+    macd_signal: Optional[Decimal] = None
+    macd_hist: Optional[Decimal] = None
+    bollinger_middle: Optional[Decimal] = None
+    bollinger_upper: Optional[Decimal] = None
+    bollinger_lower: Optional[Decimal] = None
+    bollinger_bandwidth: Optional[Decimal] = None
+    bollinger_pct_b: Optional[Decimal] = None
+    atr_14: Optional[Decimal] = None
+    atr_pct: Optional[Decimal] = None
+    momentum_5d: Optional[Decimal] = None
+    momentum_20d: Optional[Decimal] = None
+    momentum_60d: Optional[Decimal] = None
+    momentum_252d: Optional[Decimal] = None
+    historical_volatility_20d: Optional[Decimal] = None
+    relative_volume_20d: Optional[Decimal] = None
+    high_52w: Optional[Decimal] = None
+    low_52w: Optional[Decimal] = None
+    price_to_52w_high: Optional[Decimal] = None
+    price_to_52w_low: Optional[Decimal] = None
+
+    # State & Event Predicates (Stage 96)
+    golden_cross: Optional[bool] = None
+    price_above_sma200: Optional[bool] = None
+    price_above_sma50: Optional[bool] = None
+    macd_crossover: Optional[bool] = None
+
+    # Canonical historical bar series (split-adjusted, completed sessions)
+    historical_bars: Optional[List[Dict[str, Any]]] = None
 
     # Reporting metadata
     fiscal_period: Optional[str] = "FY2025"

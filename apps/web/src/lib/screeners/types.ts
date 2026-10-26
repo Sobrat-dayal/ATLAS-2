@@ -28,7 +28,15 @@ export type FilterCategory =
   | "market_data"
   | "fundamentals"
   | "valuation"
-  | "profitability";
+  | "profitability"
+  | "growth"
+  | "cash_flow"
+  | "balance_sheet"
+  | "capital_efficiency"
+  | "technical_trend"
+  | "technical_momentum"
+  | "technical_volatility"
+  | "technical_volume";
 
 export type FilterOperator =
   | "eq"
@@ -103,6 +111,12 @@ export interface ScreenerFilterDefinition {
   decimal_precision?: number;
   entitlement_state?: string;
   source_coverage_summary?: string;
+  indicator_type?: string | null;
+  default_parameters?: Record<string, string | number | boolean> | null;
+  allowed_parameters?: Record<string, Array<string | number | boolean>> | null;
+  minimum_lookback?: number | null;
+  output_components?: string[] | null;
+  calculation_version?: string;
 }
 
 export interface ScreenerColumnDefinition {
@@ -121,10 +135,12 @@ export interface FilterCriterion {
   condition_id?: string;
   filter_id: string;
   operator: FilterOperator;
-  value: string | number;
+  value: string | number | boolean;
   secondary_value?: string | number | null;
   currency?: string | null;
   unit?: string | null;
+  parameters?: Record<string, string | number | boolean> | null;
+  period_policy?: string | null;
 }
 
 
@@ -241,6 +257,8 @@ export interface VisualFilterCondition {
   secondaryValue?: string | null;
   currency?: string | null;
   magnitude?: "UNITS" | "THOUSANDS" | "MILLIONS" | "BILLIONS" | "TRILLIONS";
+  parameters?: Record<string, string | number | boolean> | null;
+  periodPolicy?: string | null;
   status: ConditionStatus;
   validationMessage?: string | null;
   fieldErrors?: Record<string, string>;

@@ -191,6 +191,24 @@ export function validateVisualConditions(
       }
     }
 
+    // Parameter validation for technical indicators
+    if (cond.parameters?.period !== undefined) {
+      const p = Number(cond.parameters.period);
+      if (!Number.isInteger(p) || p < 2 || p > 500) {
+        status = "invalid";
+        fieldErrors.parameters = "Period must be an integer between 2 and 500 bars.";
+        validationMessage = fieldErrors.parameters;
+        issues.push({
+          condition_id: cond.conditionId,
+          filter_id: cond.filterId,
+          field_path: "parameters.period",
+          code: "SCREENER_PARAMETER_INVALID",
+          severity: "error",
+          message: validationMessage,
+        });
+      }
+    }
+
     return {
       ...cond,
       status,

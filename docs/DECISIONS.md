@@ -9225,7 +9225,164 @@ This document records the major architectural and product decisions established.
 327. Screen-reader accessible input labels, error announcements, and focus restoration are enforced.
 328. Responsive layouts operate seamlessly across desktop (1920px), tablet (768px), and mobile (320px).
 329. Stage 95 satisfies all test requirements, passing 35 backend tests and 13 frontend tests.
-330. Stage 96 is the next canonical stage for fundamental, technical, and multi-factor screening expansion.
+330. Stage 96 is the canonical stage for fundamental, technical, and multi-factor screening expansion.
+
+## Stage 96 — Fundamental, Technical and Multi-Factor Screening Engine
+
+### Product & Architecture
+331. Stage 96 implements institutional-grade fundamental, technical and multi-factor screening.
+332. Stage 94 remains the canonical Screener Engine.
+333. Stage 95 remains the Visual Filter Builder.
+334. No new top-level Screener route is created; operations live at `/screeners`.
+335. No duplicate security universe is introduced.
+336. No duplicate market data store is introduced.
+337. No duplicate financial statements store is introduced.
+338. No alternate Screener query language is created.
+
+### Fundamental Data & Accounting Integrity
+339. Canonical financial statements from Stage 82 are authoritative.
+340. Canonical financial ratios from Stage 83 are reused.
+341. Financial reporting periods are explicit (FY2025/TTM).
+342. Annual, quarterly, and TTM remain distinct concepts.
+343. Consolidated and standalone scopes remain distinct.
+344. Reporting currency is preserved and qualified.
+345. Financial restatements are preserved and qualified.
+346. Publication timestamp is respected for point-in-time integrity.
+347. Missing data evaluates to strict NULL and never passes numerical filters.
+348. Financial-sector applicability is enforced (Banking excluded from industrial COGS/FCF/Net Debt).
+349. Negative denominator treatment in growth metrics is explicit.
+350. No artificial EBITDA is created from arbitrary shortcuts.
+351. No artificial earnings forecasts are created.
+
+### Valuation & Multiples
+352. Price-based ratios use valid completed prices.
+353. Market cap uses valid security/issuer share-class scope.
+354. Enterprise Value (EV) methodology is explicit.
+355. Cash adjustments are source-qualified.
+356. Negative earnings eligibility is respected (P/E evaluates to N/M).
+357. Source-reported and derived ratios remain distinguishable.
+358. No unsupported valuation scores are invented.
+
+### Technical Indicator Engine & Mathematics
+359. Canonical OHLCV data is authoritative.
+360. Security and listing identity is preserved.
+361. Trading calendar is respected (trading sessions != calendar days).
+362. Completed bars are default (`LAST_COMPLETED`).
+363. Incomplete bar values are strictly qualified if ever used.
+364. Corporate-action adjustment (splits) is explicit.
+365. Split-adjusted and total-return-adjusted series are distinct.
+366. Missing bars are not synthesized.
+367. Indicator lookback is validated with strict warm-up requirements.
+368. Formula versions are stored (`1.0.0`).
+369. Indicator warm-up is strictly enforced (returns None if bars < lookback).
+370. Charts and Screeners use consistent formulas.
+371. SMA implementation is documented and verified against TA-Lib.
+372. EMA initialization uses seed SMA.
+373. RSI smoothing uses Wilder's method with zero-loss edge case handling.
+374. MACD parameter conventions are fast=12, slow=26, signal=9.
+375. Bollinger Bands standard deviation uses sample convention.
+376. ATR smoothing uses Wilder's method with ATR% normalized to close.
+377. Momentum horizon is defined in eligible trading bars (5d, 20d, 60d, 252d).
+378. Volatility annualization uses 252 trading sessions with log returns.
+379. Relative Volume compares latest session volume to 20-session baseline.
+380. Breakout windows exclude current observation from prior high/low threshold.
+381. Crossovers use prior/current completed observations.
+382. Technical indicators do not imply future market performance.
+
+### Multi-Factor & Cross-Sectional Composition
+383. Multi-factor screening combines approved factors in a single query.
+384. Existing Boolean AND semantics remain authoritative.
+385. Fundamental issuer and technical security grains are reconciled via canonical relationships.
+386. Missing factor values do not pass numeric filters.
+387. Factors use typed units (monetary, percent, multiple, shares, dimensionless).
+388. Factor period eligibility is checked.
+389. Factor entitlements are checked.
+390. No arbitrary executable formulas or code injection allowed.
+391. Cross-sectional transformations require defined eligible cohorts.
+392. No arbitrary composite ranking product is created.
+393. No ML alpha score or predictive return metric is introduced.
+
+### Point-in-Time & Look-Ahead Prevention
+394. Historical inputs respect knowledge-time eligibility.
+395. Statement period end is not publication time.
+396. Incomplete bars cannot be treated as completed.
+397. Restatements cannot leak backward into historical vintages.
+398. Source revisions are preserved.
+399. Historical-as-known-at requires real source vintages.
+400. Ordinary current screening does not imply historical backtesting.
+401. No historical trading performance claims are created.
+
+### Performance & Scaling
+402. Zero external provider calls per security on screener query.
+403. Screening is fully executed server-side.
+404. Cheap universe predicates reduce candidate sets before expensive indicator checks.
+405. Derived factors are batch-computed across eligible equities.
+406. Common parameter sets (SMA 20/50/200, RSI 14, MACD 12/26/9) are materialized.
+407. Uncommon parameter sets are bounded to integer periods between 2 and 500.
+408. Derived projections are rebuildable from canonical history.
+409. Source watermarks are recorded on derived indicators.
+410. Formula versions participate in caching.
+411. Corporate action revisions invalidate affected factors.
+412. Financial restatements invalidate affected factors.
+413. Entitlement changes invalidate restricted responses.
+414. Query complexity is bounded to 20 active filters.
+415. Database and computation timeouts are enforced.
+416. Pagination occurs strictly after correct predicate evaluation.
+
+### Visual Builder & UI Integration
+417. Fundamental categories work seamlessly in Visual Builder.
+418. Technical categories work seamlessly in Visual Builder.
+419. Multi-factor composition works seamlessly with AND logic.
+420. Parameterized technical inputs (period) operate dynamically.
+421. Financial period controls display reporting policies.
+422. Factor Inspector displays exact methodology and formula specs.
+423. Source Inspector displays provenance, observation periods, and freshness.
+424. Data quality and coverage indicators are visible.
+425. Insufficient-history states are visible without errors.
+426. No fake technical signals or stock recommendations are displayed.
+427. Stage 94 results remain functional.
+428. Stage 95 Visual Builder remains functional.
+429. Dark/light themes are preserved.
+430. Agent Dock remains compatible.
+431. Bottom Taskbar remains compatible.
+432. Desktop, tablet, and mobile layouts are fully responsive.
+433. Keyboard and screen-reader accessibility are preserved.
+434. No purple gradients or emoji icons are introduced.
+
+### Security & Governance
+435. Authentication is enforced.
+436. Authorization is enforced.
+437. Factor IDs are strictly allowlisted (70 canonical filters).
+438. Parameters are bounded (periods between 2 and 500).
+439. Source entitlements are enforced.
+440. Derived-data licensing is respected.
+441. Restricted filter counts do not leak values.
+442. Cache isolation is enforced.
+443. No arbitrary SQL or user code execution.
+444. No executable user formulas.
+445. No arbitrary provider URLs.
+446. Provider secrets remain server-side.
+447. No trading or financial order submission.
+448. No portfolio mutation.
+449. No broker execution.
+450. No autonomous screening agents.
+451. Exactly 0 LLM calls during screener operation.
+
+### Roadmap Boundaries
+452. Stage 97 owns Saved Screens.
+453. Stage 97 owns advanced sorting and ranking leaderboards.
+454. Stage 97 owns CSV/Excel exports.
+455. Stage 98 owns natural-language translation hooks.
+456. Stage 143 owns Backtesting.
+457. Stage 144 owns Paper Trading.
+458. Stage 145 owns Broker Sandbox.
+459. Stage 96 passes fundamental correctness tests.
+460. Stage 96 passes technical indicator numerical tests.
+461. Stage 96 passes look-ahead and warm-up tests.
+462. Stage 96 passes multi-factor combination tests.
+463. Stage 96 passes Stage 94-95 regression tests (54 backend tests passed, 16 frontend tests passed).
+464. Documentation matches actual code.
+465. Stage 97 is the next canonical stage.
 
 
 
