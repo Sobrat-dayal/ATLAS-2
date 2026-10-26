@@ -8579,6 +8579,259 @@ This document records the major architectural and product decisions established.
 193. Documentation must match actual implementation.
 194. Stage 92 is the next canonical stage.
 
+## Stage 92: Global Economic Calendar
+
+### Product
+1. Stage 92 implements Global Economic Calendar.
+2. Calendar belongs inside `/economics`.
+3. No new global Sidebar module is created.
+4. Stage 89 Economic Indicators are reused.
+5. Stage 90 Country Economics is reused.
+6. Stage 91 Central Banks is reused.
+7. Stage 49 Notification Center is reused.
+8. No duplicate global event-intelligence platform is created.
+9. Stage 93 Macro Comparisons remains out of scope.
+
+### Event Semantics
+10. Calendar events are distinct from statistical observations.
+11. Release families are explicit.
+12. Official occurrences have stable identity.
+13. One event may publish multiple observations.
+14. Advance and revised releases may be distinct occurrences.
+15. Event titles are not primary keys.
+16. Source identifiers are preserved.
+17. Provider duplicates are reconciled.
+18. Schedule changes preserve event identity.
+19. Cancelled events remain historically traceable.
+20. Missing schedule data is not fabricated.
+
+### Timezones
+21. Exact instants use timezone-aware storage.
+22. UTC is canonical for instants.
+23. IANA source timezone is preserved.
+24. User timezone is display context.
+25. Date-only events are not assigned midnight.
+26. Unknown release times remain unknown.
+27. DST ambiguity is handled.
+28. Local date boundaries are respected.
+29. Today/Week views use selected timezone.
+30. Source date and displayed user date can differ.
+
+### Lifecycle
+31. Scheduled does not equal released.
+32. Passing scheduled time does not prove release.
+33. Release verification requires evidence.
+34. Official postponements require source support.
+35. Official cancellations require source support.
+36. Schedule revision history is preserved.
+37. Publication corrections are preserved.
+38. Provider outages do not generate fabricated release statuses.
+
+### Actuals
+39. Stage 35 remains authoritative for actual observations.
+40. Calendar actuals reference canonical observation IDs.
+41. Preliminary/revised/final stages remain distinct.
+42. First release vintage is preserved where available.
+43. Later revisions do not erase historical actuals.
+44. Missing actuals remain missing.
+45. Reference periods are explicit.
+46. Publication time differs from ingestion time.
+
+### Previous Values
+47. Previous reporting periods are source-qualified.
+48. Previous original and revised values are distinct.
+49. Historical previous-value claims require genuine vintages.
+50. Missing original previous values are not fabricated.
+
+### Consensus
+51. Consensus values require authorized source data.
+52. Individual forecasts differ from consensus.
+53. Forecast aggregation methodology is preserved.
+54. Contributor count is displayed only when known.
+55. Forecast snapshots are versioned.
+56. Forecast publication timestamp is preserved.
+57. Post-release snapshots cannot serve as pre-release forecasts.
+58. Forecast licensing is enforced.
+59. Missing consensus remains unavailable.
+60. No model-generated consensus is created.
+
+### Surprises
+61. Surprise is actual minus compatible consensus.
+62. Indicator identity must match.
+63. Geography must match.
+64. Reference period must match.
+65. Adjustment policy must match.
+66. Unit must match.
+67. First-release vintage must be qualified.
+68. Percentage-point differences are correct.
+69. Basis-point differences are correct.
+70. Employment units are preserved.
+71. Zero denominators are handled.
+72. Negative denominators are methodology-qualified.
+73. Missing forecasts prevent calculation.
+74. Surprise sign does not imply investment impact.
+75. Calculation versions and lineage are preserved.
+
+### Importance
+76. Source-defined importance is distinguished from internal policy.
+77. Internal ratings are deterministic and documented.
+78. Importance is not market-impact probability.
+79. Unknown ratings remain unclassified.
+80. No fabricated probabilities appear.
+
+### Central Banks
+81. Stage 91 remains authoritative for Central Bank identities.
+82. Meeting events reference verified institution records.
+83. Decision announcements differ from meetings.
+84. Rate holds differ from rate hikes/cuts.
+85. Emergency meetings require official evidence.
+86. No future decision outcomes are predicted.
+
+### Providers and Ingestion
+87. Stage 28–32 architecture is reused.
+88. Official schedules are preferred where suitable.
+89. Source licensing is verified.
+90. Provider capability coverage is explicit.
+91. Schedule and actual sources can differ.
+92. Ingestion is shared across users.
+93. Page loads do not trigger Provider fanout.
+94. Jobs use checkpoints.
+95. Retries are bounded.
+96. Event ingestion is idempotent.
+97. Source revisions are preserved.
+98. Invalid Provider fallback is rejected.
+99. No unrestricted external crawler is created.
+
+### Realtime
+100. Realtime event delivery is source-qualified.
+101. Browser WebSocket receipt does not prove realtime source delivery.
+102. Official publication time is distinct.
+103. Provider delivery time is distinct.
+104. ATLAS ingestion time is distinct.
+105. Event updates have stable IDs/revisions.
+106. Duplicate updates are idempotent.
+107. Reconnect requires snapshot reconciliation.
+108. No per-event WebSocket is created.
+109. No guaranteed subsecond release delivery is claimed without evidence.
+
+### Notifications
+110. Stage 49 Notification Center is reused.
+111. Alerts are user-owned.
+112. Auth/RLS is enforced.
+113. Reminders require valid schedule precision.
+114. Release notifications require verified publication.
+115. Rescheduled events update reminder logic.
+116. Cancelled events stop normal reminders.
+117. Notification intents are idempotent.
+118. Durable delivery/outbox is used where appropriate.
+119. Worker recovery is supported.
+120. Concurrent workers do not create duplicate notification intents.
+121. Quiet hours are respected.
+122. User timezone is respected.
+123. Entitlement changes are respected.
+124. Notification quotas are enforced.
+125. No external channel is claimed unless implemented.
+126. No release-based trading action is created.
+
+### Storage and Caching
+127. Event records are distinct from canonical observations.
+128. Event-to-indicator relationships are explicit.
+129. Schedule revisions are preserved.
+130. Forecast snapshots are preserved.
+131. Event lists are indexed by date.
+132. Queries are bounded.
+133. Cache keys include schedule revision.
+134. Cache keys include actual vintage.
+135. Cache keys include forecast snapshot.
+136. Cache keys include entitlement scope.
+137. Schedule revisions invalidate affected views.
+138. New actuals invalidate affected views.
+139. Forecast revisions invalidate affected views.
+140. Restricted consensus cannot leak through shared caches.
+
+### UI
+141. Calendar navigation is functional.
+142. Today view is functional.
+143. Tomorrow view is functional.
+144. Week views are functional.
+145. Custom range is functional.
+146. Country filters are functional.
+147. Category filters are functional.
+148. Importance filters are functional.
+149. Status filters are functional.
+150. Source filters are functional.
+151. Central Bank event filters are functional.
+152. User timezone display is correct.
+153. Date-only event display is correct.
+154. Event details are functional.
+155. Actual values are source-backed.
+156. Forecasts are source-backed.
+157. Previous/revised values are qualified.
+158. Surprises use correct units.
+159. Official source links are genuine.
+160. User alert controls are functional.
+161. Notification history is functional.
+162. Missing-data states are explicit.
+163. Dark/light themes are preserved.
+164. Agent Dock compatibility is preserved.
+165. Bottom Taskbar compatibility is preserved.
+166. Responsive layouts are supported.
+167. Keyboard accessibility is supported.
+168. Screen-reader accessibility is supported.
+169. No purple gradients are introduced.
+170. No emoji icons are introduced.
+171. No fake economic releases are displayed.
+
+### Security
+172. Authentication is enforced.
+173. Authorization is enforced.
+174. User alerts are private.
+175. Forecast licensing is enforced.
+176. Restricted surprise derivations are protected.
+177. Arbitrary SQL is prohibited.
+178. Arbitrary formulas are prohibited.
+179. Arbitrary Provider URLs are prohibited.
+180. Provider secrets remain server-side.
+181. Alert resource quotas are enforced.
+182. Safe source-document handling is preserved.
+183. No Trading orders occur.
+184. No Portfolio mutations occur.
+185. No Broker actions occur.
+186. No Agents execute.
+187. No arbitrary Workflows execute.
+188. No LLM calls are required.
+
+### Roadmap Boundaries
+189. Stage 93 owns Macro Comparisons.
+190. Stages 94–98 own Screeners.
+191. Stages 99–103 own News.
+192. Stages 104–109 own Research.
+193. Stages 110–114 own Portfolios.
+194. Stages 115–118 own Risk.
+195. Stages 119–120 own Saved/Workspaces.
+196. Stages 121–128 own Terminal/AI.
+197. Stages 129–140 own Maps/Intelligence.
+198. Stages 141–142 own Options/Quant pricing.
+199. Stage 143 owns Backtesting.
+200. Stage 144 owns Paper Trading.
+201. Stage 145 owns Broker Sandbox.
+202. Stages 146+ own Agents.
+203. No cross-country macro factor comparison engine is implemented.
+204. No autonomous economic forecasting is implemented.
+205. No research RAG engine is implemented.
+206. No economic event trading engine is implemented.
+207. No duplicate Economic Data warehouse is built.
+208. Stage 92 must pass timezone/DST tests.
+209. Stage 92 must pass release lifecycle tests.
+210. Stage 92 must pass forecast vintage tests.
+211. Stage 92 must pass economic surprise tests.
+212. Stage 92 must pass alert recovery/idempotency tests.
+213. Stage 92 must pass entitlement tests.
+214. Stage 92 must pass Stage 89–91 regressions.
+215. Documentation must match actual code.
+216. Stage 93 is the next canonical stage.
+
+
 
 
 

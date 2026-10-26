@@ -33,6 +33,7 @@ from .company_ratios import router as company_ratios_router
 from .company_statements import router as company_statements_router
 from .company_supply_chain import router as company_supply_chain_router
 from .central_banks import router as central_banks_router
+from .economic_calendar import router as economic_calendar_router
 from .country_economics import router as country_economics_router
 from .economics import router as economics_router
 from .economics_v1 import router as economics_v1_router
@@ -68,6 +69,7 @@ api_router.include_router(economics_router, prefix="")
 api_router.include_router(economics_v1_router, prefix="")
 api_router.include_router(country_economics_router, prefix="")
 api_router.include_router(central_banks_router, prefix="")
+api_router.include_router(economic_calendar_router, prefix="")
 api_router.include_router(research_router, prefix="")
 api_router.include_router(news_router, prefix="")
 api_router.include_router(identifiers_router, prefix="")
