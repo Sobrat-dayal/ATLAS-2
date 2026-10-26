@@ -27,24 +27,32 @@ from atlas.news.errors import (
     NewsArticleWithdrawnError,
     NewsCategoryUnsupportedError,
     NewsEventNotFoundError,
+    NewsFinancialEventNotFoundError,
     NewsQueryInvalidError,
     NewsSearchInvalidError,
+    NewsStoryNotFoundError,
 )
 from atlas.news.repository import NewsFeedQuery
 from atlas.news.schemas import (
+    FinancialEventTypeDefinitionDTO,
     NewsArticleDTO,
     NewsCoverageResponseDTO,
     NewsDiscoveryQueryDTO,
     NewsDiscoveryResponseDTO,
+    NewsEventEvidenceDTO,
+    NewsEventFeedResponseDTO,
     NewsEventResponse,
     NewsFacetsResponseDTO,
     NewsFeedResponseDTO,
+    NewsFinancialEventDTO,
     NewsFreshnessResponseDTO,
     NewsIngestionRequestDTO,
     NewsIngestionResponseDTO,
     NewsPublisherDTO,
     NewsSearchSuggestionDTO,
     NewsSourceDTO,
+    NewsStoryFeedResponseDTO,
+    NewsStoryThreadDTO,
     NewsTimelineRequestDTO,
     NewsTimelineResponseDTO,
     NewsTopicDTO,
@@ -380,6 +388,195 @@ def get_news_search_suggestions(
     user: AuthPrincipal = Depends(get_current_user),
 ):
     return service.get_suggestions(prefix=q, limit=limit)
+
+
+# ---------------------------------------------------------------------------
+# Stage 101 Story Intelligence Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/api/v1/news/stories",
+    response_model=NewsStoryFeedResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get source-authorized canonical Story Thread feed",
+)
+def get_news_stories(
+    status_filter: Optional[str] = Query(None, alias="status", description="Filter by story status (ACTIVE, QUIET, etc.)"),
+    entity_id: Optional[str] = Query(None, description="Filter by primary or related canonical entity ID"),
+    topic_id: Optional[str] = Query(None, description="Filter by canonical topic ID"),
+    publisher_id: Optional[str] = Query(None, description="Filter by verified publisher ID"),
+    q: Optional[str] = Query(None, description="Search query across story titles and member headlines"),
+    start_date: Optional[datetime.datetime] = Query(None, description="Published on or after UTC datetime"),
+    end_date: Optional[datetime.datetime] = Query(None, description="Published on or before UTC datetime"),
+    limit: int = Query(30, ge=1, le=100, description="Page limit (default 30, max 100)"),
+    cursor: Optional[str] = Query(None, description="Pagination cursor"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.list_stories(
+        status=status_filter,
+        entity_id=entity_id,
+        topic_id=topic_id,
+        publisher_id=publisher_id,
+        q=q,
+        start_date=start_date,
+        end_date=end_date,
+        limit=limit,
+        cursor=cursor,
+    )
+
+
+@router.get(
+    "/api/v1/news/stories/{story_id}",
+    response_model=NewsStoryThreadDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get canonical Story Thread details",
+)
+def get_news_story(
+    story_id: str = Path(..., description="Canonical Story Thread ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_story(story_id)
+    except NewsStoryNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/stories/{story_id}/articles",
+    response_model=List[NewsArticleDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get chronological member articles in Story Thread",
+)
+def get_news_story_articles(
+    story_id: str = Path(..., description="Canonical Story Thread ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_story_articles(story_id)
+    except NewsStoryNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/stories/{story_id}/events",
+    response_model=List[NewsFinancialEventDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get linked verified financial events for Story Thread",
+)
+def get_news_story_events(
+    story_id: str = Path(..., description="Canonical Story Thread ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_story_events(story_id)
+    except NewsStoryNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 101 Financial Event Classification Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/api/v1/news/events/types",
+    response_model=List[FinancialEventTypeDefinitionDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get canonical financial event taxonomy and definitions",
+)
+def get_news_event_types(
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.list_event_types()
+
+
+@router.get(
+    "/api/v1/news/events",
+    response_model=NewsEventFeedResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get source-evidenced financial event feed",
+)
+def get_news_events(
+    event_type: Optional[str] = Query(None, description="Filter by canonical event type"),
+    lifecycle_status: Optional[str] = Query(None, description="Filter by lifecycle status (PROPOSED, ANNOUNCED, COMPLETED, etc.)"),
+    assertion_status: Optional[str] = Query(None, description="Filter by assertion status (OFFICIALLY_REPORTED, RUMORED, etc.)"),
+    primary_entity_id: Optional[str] = Query(None, description="Filter by primary subject canonical entity ID"),
+    related_entity_id: Optional[str] = Query(None, description="Filter by any participant entity ID"),
+    story_id: Optional[str] = Query(None, description="Filter by associated Story Thread ID"),
+    q: Optional[str] = Query(None, description="Search query across event titles and participants"),
+    start_date: Optional[datetime.datetime] = Query(None, description="Event occurrence on or after UTC datetime"),
+    end_date: Optional[datetime.datetime] = Query(None, description="Event occurrence on or before UTC datetime"),
+    limit: int = Query(30, ge=1, le=100, description="Page limit (default 30, max 100)"),
+    cursor: Optional[str] = Query(None, description="Pagination cursor"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.list_events(
+        event_type=event_type,
+        lifecycle_status=lifecycle_status,
+        assertion_status=assertion_status,
+        primary_entity_id=primary_entity_id,
+        related_entity_id=related_entity_id,
+        story_id=story_id,
+        q=q,
+        start_date=start_date,
+        end_date=end_date,
+        limit=limit,
+        cursor=cursor,
+    )
+
+
+@router.get(
+    "/api/v1/news/events/{event_id}",
+    response_model=NewsFinancialEventDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get verified financial event details",
+)
+def get_news_event_by_id(
+    event_id: str = Path(..., description="Canonical Financial Event ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_event(event_id)
+    except NewsFinancialEventNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/events/{event_id}/evidence",
+    response_model=List[NewsEventEvidenceDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get structured source evidence records for event",
+)
+def get_news_event_evidence(
+    event_id: str = Path(..., description="Canonical Financial Event ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_event_evidence(event_id)
+    except NewsFinancialEventNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/entities/{entity_id}/events",
+    response_model=List[NewsFinancialEventDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get verified financial events associated with an entity",
+)
+def get_entity_events(
+    entity_id: str = Path(..., description="Canonical entity ID (e.g. 'comp-aapl-001')"),
+    limit: int = Query(20, ge=1, le=100, description="Max events to return"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.get_entity_events(entity_id=entity_id, limit=limit)
 
 
 # ---------------------------------------------------------------------------

@@ -275,3 +275,246 @@ export interface NewsDiscoveryResponseDTO {
   facets?: NewsFacetsResponseDTO | null;
   active_filters?: Record<string, unknown> | null;
 }
+
+// ---------------------------------------------------------------------------
+// Stage 101 Story Intelligence & Financial Event Types
+// ---------------------------------------------------------------------------
+
+export type NewsStoryStatus =
+  | "ACTIVE"
+  | "DEVELOPING"
+  | "QUIET"
+  | "ARCHIVED"
+  | "MERGED"
+  | "WITHDRAWN_FROM_DISPLAY";
+
+export type NewsStoryMembershipReason =
+  | "EXACT_CANONICAL_DUPLICATE"
+  | "SYNDICATED_WIRE_REPUBLICATION"
+  | "SHARED_TRANSACTION_IDENTIFIER"
+  | "SHARED_EVENT_IDENTITY"
+  | "TOPIC_ENTITY_TEMPORAL_CLUSTER"
+  | "MANUAL_CURATION_LINK";
+
+export type NewsStoryMembershipStatus =
+  | "CONFIRMED"
+  | "PROVISIONAL"
+  | "DISPUTED"
+  | "SUPERSEDED";
+
+export type FinancialEventType =
+  | "EARNINGS_RELEASE"
+  | "EARNINGS_GUIDANCE"
+  | "DIVIDEND_DECLARATION"
+  | "SHARE_REPURCHASE"
+  | "MERGER_ACQUISITION_AGREEMENT"
+  | "MERGER_ACQUISITION_PROPOSAL"
+  | "MERGER_ACQUISITION_COMPLETION"
+  | "MERGER_ACQUISITION_CANCELLATION"
+  | "EQUITY_FINANCING"
+  | "DEBT_FINANCING"
+  | "EXECUTIVE_APPOINTMENT"
+  | "EXECUTIVE_RESIGNATION"
+  | "REGULATORY_ACTION"
+  | "LITIGATION_FILING"
+  | "BANKRUPTCY_RESTRUCTURING"
+  | "PRODUCT_LAUNCH"
+  | "FACILITY_EXPANSION"
+  | "CENTRAL_BANK_POLICY_DECISION"
+  | "ECONOMIC_RELEASE"
+  | "GOVERNMENT_POLICY";
+
+export type NewsEventLifecycleStatus =
+  | "PROPOSED"
+  | "ANNOUNCED"
+  | "PENDING"
+  | "APPROVED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "WITHDRAWN"
+  | "UNKNOWN";
+
+export type NewsEventAssertionStatus =
+  | "OFFICIALLY_REPORTED"
+  | "THIRD_PARTY_REPORTED"
+  | "ALLEGED"
+  | "RUMORED"
+  | "DENIED"
+  | "DISPUTED"
+  | "CORRECTED"
+  | "UNRESOLVED";
+
+export type EventParticipantRole =
+  | "PRIMARY_SUBJECT"
+  | "ACQUIRER"
+  | "TARGET"
+  | "SELLER"
+  | "BUYER"
+  | "ISSUER"
+  | "LENDER"
+  | "INVESTOR"
+  | "UNDERWRITER"
+  | "REGULATOR"
+  | "SUBJECT"
+  | "RESPONDENT"
+  | "OFFICER";
+
+export type EventAmountType =
+  | "TRANSACTION_VALUE"
+  | "DIVIDEND_PER_SHARE"
+  | "BUYBACK_AUTHORIZATION"
+  | "FINANCING_AMOUNT"
+  | "INTEREST_RATE_TARGET"
+  | "QUARTERLY_REVENUE"
+  | "NET_INCOME"
+  | "FINE_PENALTY_AMOUNT";
+
+export type EventAmountApproximation =
+  | "EXACT"
+  | "APPROXIMATE"
+  | "RANGE_MIN"
+  | "RANGE_MAX"
+  | "UNDISCLOSED";
+
+export type EventTimePrecision =
+  | "EXACT_INSTANT"
+  | "CALENDAR_DAY"
+  | "MONTH"
+  | "YEAR"
+  | "UNKNOWN";
+
+export type NewsEvidenceType =
+  | "OFFICIAL_PRESS_RELEASE"
+  | "REGULATORY_FILING"
+  | "CENTRAL_BANK_RELEASE"
+  | "PUBLISHER_REPORT"
+  | "WIRE_REPORT"
+  | "THIRD_PARTY_STATEMENT";
+
+export interface NewsStoryArticleLinkDTO {
+  story_id: string;
+  article_id: string;
+  publisher_id: string;
+  published_at: string;
+  headline: string;
+  membership_reason: NewsStoryMembershipReason;
+  membership_status: NewsStoryMembershipStatus;
+  is_primary_anchor: boolean;
+  linked_at: string;
+}
+
+export interface NewsStoryThreadDTO {
+  story_id: string;
+  display_title: string;
+  canonical_topic_label?: string | null;
+  topic_ids: string[];
+  primary_entity_id?: string | null;
+  primary_entity_name?: string | null;
+  related_entities: NewsEntityMentionDTO[];
+  first_source_published_at: string;
+  latest_source_published_at: string;
+  first_seen_at: string;
+  latest_activity_at: string;
+  story_status: NewsStoryStatus;
+  article_count: number;
+  independent_publisher_count: number;
+  publishers: string[];
+  article_ids: string[];
+  representative_article_id: string;
+  clustering_method: string;
+  clustering_version: string;
+  linked_event_ids: string[];
+}
+
+export interface NewsStoryFeedResponseDTO {
+  stories: NewsStoryThreadDTO[];
+  total_count: number;
+  next_cursor?: string | null;
+  has_more: boolean;
+  as_of: string;
+}
+
+export interface EventParticipantDTO {
+  entity_id: string;
+  canonical_name: string;
+  role: EventParticipantRole;
+  resolution_status: string;
+}
+
+export interface EventAmountDTO {
+  amount_type: EventAmountType;
+  amount_value: number;
+  currency: string;
+  period?: string | null;
+  approximation_status: EventAmountApproximation;
+  source_text?: string | null;
+}
+
+export interface NewsEventEvidenceDTO {
+  evidence_id: string;
+  event_id: string;
+  article_id: string;
+  publisher_id: string;
+  publisher_name: string;
+  source_provider_id: string;
+  evidence_type: NewsEvidenceType;
+  headline: string;
+  permitted_excerpt?: string | null;
+  source_published_at: string;
+  first_observed_at: string;
+  is_verified_by_filing: boolean;
+  filing_id?: string | null;
+}
+
+export interface NewsEventRevisionDTO {
+  revision_id: string;
+  event_id: string;
+  timestamp: string;
+  previous_lifecycle_status?: NewsEventLifecycleStatus | null;
+  new_lifecycle_status: NewsEventLifecycleStatus;
+  previous_assertion_status?: NewsEventAssertionStatus | null;
+  new_assertion_status: NewsEventAssertionStatus;
+  change_reason: string;
+  evidence_id?: string | null;
+}
+
+export interface NewsFinancialEventDTO {
+  event_id: string;
+  event_type: FinancialEventType;
+  event_title: string;
+  primary_entity_id: string;
+  primary_entity_name: string;
+  lifecycle_status: NewsEventLifecycleStatus;
+  assertion_status: NewsEventAssertionStatus;
+  event_date?: string | null;
+  event_time_precision: EventTimePrecision;
+  announcement_time?: string | null;
+  first_seen_at: string;
+  last_evidence_updated_at: string;
+  participants: EventParticipantDTO[];
+  amounts: EventAmountDTO[];
+  supporting_article_ids: string[];
+  evidence_records: NewsEventEvidenceDTO[];
+  linked_story_ids: string[];
+  revisions: NewsEventRevisionDTO[];
+  is_disputed: boolean;
+  is_corrected: boolean;
+}
+
+export interface NewsEventFeedResponseDTO {
+  events: NewsFinancialEventDTO[];
+  total_count: number;
+  next_cursor?: string | null;
+  has_more: boolean;
+  as_of: string;
+}
+
+export interface FinancialEventTypeDefinitionDTO {
+  event_type_id: FinancialEventType;
+  canonical_label: string;
+  event_family: string;
+  description: string;
+  supported_roles: EventParticipantRole[];
+  supported_amount_types: EventAmountType[];
+}
+

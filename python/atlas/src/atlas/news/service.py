@@ -29,7 +29,13 @@ from atlas.news.errors import (
     NewsCategoryUnsupportedError,
     NewsEventDataInconsistentError,
     NewsEventNotFoundError,
+    NewsFinancialEventNotFoundError,
     NewsSearchInvalidError,
+    NewsStoryNotFoundError,
+)
+from atlas.news.events import (
+    NewsEventEvidence,
+    NewsFinancialEvent,
 )
 from atlas.news.normalization import (
     normalize_canonical_url,
@@ -41,31 +47,43 @@ from atlas.news.origin import NewsDataOrigin
 from atlas.news.publishers import get_verified_publisher
 from atlas.news.repository import (
     NewsDiscoveryQuery,
+    NewsEventQuery,
     NewsEventRepository,
     NewsFeedQuery,
     NewsFeedResult,
     NewsRepository,
+    NewsStoryQuery,
 )
 from atlas.news.schemas import (
+    EventAmountDTO,
+    EventParticipantDTO,
+    FinancialEventTypeDefinitionDTO,
     NewsArticleDTO,
     NewsCoverageResponseDTO,
     NewsDiscoveryQueryDTO,
     NewsDiscoveryResponseDTO,
     NewsEntityMentionDTO,
+    NewsEventEvidenceDTO,
+    NewsEventFeedResponseDTO,
     NewsEventResponse,
+    NewsEventRevisionDTO,
     NewsFacetsResponseDTO,
     NewsFeedResponseDTO,
+    NewsFinancialEventDTO,
     NewsFreshnessResponseDTO,
     NewsIngestionRequestDTO,
     NewsIngestionResponseDTO,
     NewsPublisherDTO,
     NewsSearchSuggestionDTO,
     NewsSourceDTO,
+    NewsStoryFeedResponseDTO,
+    NewsStoryThreadDTO,
     NewsTimelineBucketDTO,
     NewsTimelineRequestDTO,
     NewsTimelineResponseDTO,
     NewsTopicDTO,
 )
+from atlas.news.stories import NewsStoryThread
 from atlas.news.topics import get_topic, list_topics
 from atlas.news.types import NewsEventKind, NewsEventStatus
 
@@ -642,6 +660,281 @@ class NewsService:
             is_corrected=art.is_corrected,
             syndicated_from_id=art.syndicated_from_id,
             correction_details=art.correction_details,
+        )
+
+    # -----------------------------------------------------------------------
+    # Stage 101 Story Intelligence Methods
+    # -----------------------------------------------------------------------
+
+    def list_stories(
+        self,
+        status: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        topic_id: Optional[str] = None,
+        publisher_id: Optional[str] = None,
+        q: Optional[str] = None,
+        start_date: Optional[datetime.datetime] = None,
+        end_date: Optional[datetime.datetime] = None,
+        limit: int = 30,
+        cursor: Optional[str] = None,
+    ) -> NewsStoryFeedResponseDTO:
+        query = NewsStoryQuery(
+            status=status,
+            entity_id=entity_id,
+            topic_id=topic_id,
+            publisher_id=publisher_id,
+            q=q,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            cursor=cursor,
+        )
+        res = self._repository.list_stories(query)
+        dtos = [self._map_story_to_dto(s) for s in res.stories]
+        return NewsStoryFeedResponseDTO(
+            stories=dtos,
+            total_count=res.total_count,
+            next_cursor=res.next_cursor,
+            has_more=res.has_more,
+            as_of=datetime.datetime.now(datetime.timezone.utc),
+        )
+
+    def get_story(self, story_id: str) -> NewsStoryThreadDTO:
+        story = self._repository.get_story(story_id)
+        if not story:
+            raise NewsStoryNotFoundError(f"Story Thread '{story_id}' not found")
+        return self._map_story_to_dto(story)
+
+    def get_story_articles(self, story_id: str, is_entitled: bool = True) -> List[NewsArticleDTO]:
+        story = self._repository.get_story(story_id)
+        if not story:
+            raise NewsStoryNotFoundError(f"Story Thread '{story_id}' not found")
+        articles = self._repository.get_story_articles(story_id)
+        return [self._map_article_to_dto(a, is_entitled=is_entitled) for a in articles]
+
+    def get_story_events(self, story_id: str) -> List[NewsFinancialEventDTO]:
+        story = self._repository.get_story(story_id)
+        if not story:
+            raise NewsStoryNotFoundError(f"Story Thread '{story_id}' not found")
+        events = self._repository.get_story_events(story_id)
+        return [self._map_event_to_dto(e) for e in events]
+
+    def merge_stories(self, target_story_id: str, source_story_id: str) -> NewsStoryThreadDTO:
+        target = self._repository.get_story(target_story_id)
+        if not target:
+            raise NewsStoryNotFoundError(f"Target Story Thread '{target_story_id}' not found")
+        source = self._repository.get_story(source_story_id)
+        if not source:
+            raise NewsStoryNotFoundError(f"Source Story Thread '{source_story_id}' not found")
+        merged = self._repository.merge_stories(target_story_id, source_story_id)
+        return self._map_story_to_dto(merged)
+
+    def split_story(
+        self, story_id: str, article_ids_to_split: list[str], new_title: str
+    ) -> tuple[NewsStoryThreadDTO, NewsStoryThreadDTO]:
+        story = self._repository.get_story(story_id)
+        if not story:
+            raise NewsStoryNotFoundError(f"Story Thread '{story_id}' not found")
+        parent, child = self._repository.split_story(story_id, article_ids_to_split, new_title)
+        return self._map_story_to_dto(parent), self._map_story_to_dto(child)
+
+    # -----------------------------------------------------------------------
+    # Stage 101 Financial Event Classification Methods
+    # -----------------------------------------------------------------------
+
+    def list_events(
+        self,
+        event_type: Optional[str] = None,
+        lifecycle_status: Optional[str] = None,
+        assertion_status: Optional[str] = None,
+        primary_entity_id: Optional[str] = None,
+        related_entity_id: Optional[str] = None,
+        story_id: Optional[str] = None,
+        q: Optional[str] = None,
+        start_date: Optional[datetime.datetime] = None,
+        end_date: Optional[datetime.datetime] = None,
+        limit: int = 30,
+        cursor: Optional[str] = None,
+    ) -> NewsEventFeedResponseDTO:
+        query = NewsEventQuery(
+            event_type=event_type,
+            lifecycle_status=lifecycle_status,
+            assertion_status=assertion_status,
+            primary_entity_id=primary_entity_id,
+            related_entity_id=related_entity_id,
+            story_id=story_id,
+            q=q,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            cursor=cursor,
+        )
+        res = self._repository.list_events(query)
+        dtos = [self._map_event_to_dto(e) for e in res.events]
+        return NewsEventFeedResponseDTO(
+            events=dtos,
+            total_count=res.total_count,
+            next_cursor=res.next_cursor,
+            has_more=res.has_more,
+            as_of=datetime.datetime.now(datetime.timezone.utc),
+        )
+
+    def get_event(self, event_id: str) -> NewsFinancialEventDTO:
+        ev = self._repository.get_event(event_id)
+        if not ev:
+            raise NewsFinancialEventNotFoundError(f"Financial Event '{event_id}' not found")
+        return self._map_event_to_dto(ev)
+
+    def get_event_evidence(self, event_id: str, is_entitled: bool = True) -> List[NewsEventEvidenceDTO]:
+        ev = self._repository.get_event(event_id)
+        if not ev:
+            raise NewsFinancialEventNotFoundError(f"Financial Event '{event_id}' not found")
+        records = self._repository.get_event_evidence(event_id)
+        return [self._map_evidence_to_dto(r, is_entitled=is_entitled) for r in records]
+
+    def list_event_types(self) -> List[FinancialEventTypeDefinitionDTO]:
+        types = self._repository.list_event_types()
+        return [
+            FinancialEventTypeDefinitionDTO(
+                event_type_id=t.event_type_id,
+                canonical_label=t.canonical_label,
+                event_family=t.event_family,
+                description=t.description,
+                supported_roles=t.supported_roles,
+                supported_amount_types=t.supported_amount_types,
+            )
+            for t in types
+        ]
+
+    def get_entity_events(self, entity_id: str, limit: int = 20) -> List[NewsFinancialEventDTO]:
+        events = self._repository.get_entity_events(entity_id, limit=limit)
+        return [self._map_event_to_dto(e) for e in events]
+
+    # -----------------------------------------------------------------------
+    # Stage 101 Mapping Helpers
+    # -----------------------------------------------------------------------
+
+    def _map_story_to_dto(self, story: NewsStoryThread) -> NewsStoryThreadDTO:
+        entity_dtos = [
+            NewsEntityMentionDTO(
+                entity_id=e.entity_id,
+                entity_type=e.entity_type,
+                canonical_name=e.canonical_name,
+                ticker=e.ticker,
+                exchange=e.exchange,
+                country_code=e.country_code,
+                mention_type=e.mention_type.value,
+                resolution_method=e.resolution_method.value,
+                verification_status=e.verification_status,
+            )
+            for e in story.related_entities
+        ]
+
+        return NewsStoryThreadDTO(
+            story_id=story.story_id,
+            display_title=story.display_title,
+            canonical_topic_label=story.canonical_topic_label,
+            topic_ids=list(story.topic_ids),
+            primary_entity_id=story.primary_entity_id,
+            primary_entity_name=story.primary_entity_name,
+            related_entities=entity_dtos,
+            first_source_published_at=story.first_source_published_at,
+            latest_source_published_at=story.latest_source_published_at,
+            first_seen_at=story.first_seen_at,
+            latest_activity_at=story.latest_activity_at,
+            story_status=story.story_status,
+            article_count=story.article_count,
+            independent_publisher_count=story.independent_publisher_count,
+            publishers=list(story.publishers),
+            article_ids=list(story.article_ids),
+            representative_article_id=story.representative_article_id,
+            clustering_method=story.clustering_method,
+            clustering_version=story.clustering_version,
+            linked_event_ids=list(story.linked_event_ids),
+        )
+
+    def _map_event_to_dto(self, ev: NewsFinancialEvent, is_entitled: bool = True) -> NewsFinancialEventDTO:
+        participant_dtos = [
+            EventParticipantDTO(
+                entity_id=p.entity_id,
+                canonical_name=p.canonical_name,
+                role=p.role,
+                resolution_status=p.resolution_status,
+            )
+            for p in ev.participants
+        ]
+
+        amount_dtos = [
+            EventAmountDTO(
+                amount_type=a.amount_type,
+                amount_value=a.amount_value,
+                currency=a.currency,
+                period=a.period,
+                approximation_status=a.approximation_status,
+                source_text=a.source_text,
+            )
+            for a in ev.amounts
+        ]
+
+        evidence_dtos = [
+            self._map_evidence_to_dto(r, is_entitled=is_entitled)
+            for r in ev.evidence_records
+        ]
+
+        revision_dtos = [
+            NewsEventRevisionDTO(
+                revision_id=rev.revision_id,
+                event_id=rev.event_id,
+                timestamp=rev.timestamp,
+                previous_lifecycle_status=rev.previous_lifecycle_status,
+                new_lifecycle_status=rev.new_lifecycle_status,
+                previous_assertion_status=rev.previous_assertion_status,
+                new_assertion_status=rev.new_assertion_status,
+                change_reason=rev.change_reason,
+                evidence_id=rev.evidence_id,
+            )
+            for rev in ev.revisions
+        ]
+
+        return NewsFinancialEventDTO(
+            event_id=ev.event_id,
+            event_type=ev.event_type,
+            event_title=ev.event_title,
+            primary_entity_id=ev.primary_entity_id,
+            primary_entity_name=ev.primary_entity_name,
+            lifecycle_status=ev.lifecycle_status,
+            assertion_status=ev.assertion_status,
+            event_date=ev.event_date,
+            event_time_precision=ev.event_time_precision,
+            announcement_time=ev.announcement_time,
+            first_seen_at=ev.first_seen_at,
+            last_evidence_updated_at=ev.last_evidence_updated_at,
+            participants=participant_dtos,
+            amounts=amount_dtos,
+            supporting_article_ids=list(ev.supporting_article_ids),
+            evidence_records=evidence_dtos,
+            linked_story_ids=list(ev.linked_story_ids),
+            revisions=revision_dtos,
+            is_disputed=ev.is_disputed,
+            is_corrected=ev.is_corrected,
+        )
+
+    def _map_evidence_to_dto(self, r: NewsEventEvidence, is_entitled: bool = True) -> NewsEventEvidenceDTO:
+        excerpt = r.permitted_excerpt if is_entitled else None
+        return NewsEventEvidenceDTO(
+            evidence_id=r.evidence_id,
+            event_id=r.event_id,
+            article_id=r.article_id,
+            publisher_id=r.publisher_id,
+            publisher_name=r.publisher_name,
+            source_provider_id=r.source_provider_id,
+            evidence_type=r.evidence_type,
+            headline=r.headline,
+            permitted_excerpt=excerpt,
+            source_published_at=r.source_published_at,
+            first_observed_at=r.first_observed_at,
+            is_verified_by_filing=r.is_verified_by_filing,
+            filing_id=r.filing_id,
         )
 
 

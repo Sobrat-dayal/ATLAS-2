@@ -89,3 +89,47 @@ class NewsIngestionFailedError(NewsDomainError):
     """Raised when an ingestion batch fails critical validation."""
 
     pass
+
+
+# Stage 101 Story Intelligence & Financial Event Errors
+class NewsStoryNotFoundError(NewsDomainError):
+    """Raised when a requested canonical Story Thread ID does not exist."""
+
+    pass
+
+
+class NewsStoryMergedError(NewsDomainError):
+    """Raised when a story has been merged into another canonical thread."""
+
+    pass
+
+
+class NewsStoryWithdrawnError(NewsDomainError):
+    """Raised when a story has been withdrawn from display."""
+
+    pass
+
+
+class NewsFinancialEventNotFoundError(NewsDomainError):
+    """Raised when a requested Financial Event ID does not exist."""
+
+    pass
+
+
+class NewsEventEvidenceMissingError(NewsDomainError):
+    """Raised when required source evidence is missing for a financial event."""
+
+    pass
+
+
+class NewsEventEvidenceRestrictedError(NewsDomainError):
+    """Raised when event evidence is restricted by licensing permissions."""
+
+    pass
+
+
+class NewsStoryClusterAmbiguousError(NewsDomainError):
+    """Raised when a clustering operation cannot resolve thread membership unambiguously."""
+
+    pass
+

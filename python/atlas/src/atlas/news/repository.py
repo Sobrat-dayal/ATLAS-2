@@ -25,6 +25,14 @@ from atlas.news.enums import (
     NewsAvailabilityStatus,
     NewsCategory,
     NewsLatencyClass,
+    NewsStoryStatus,
+)
+from atlas.news.events import (
+    EVENT_TYPE_CATALOG,
+    EventClassificationEngine,
+    FinancialEventTypeDefinition,
+    NewsEventEvidence,
+    NewsFinancialEvent,
 )
 from atlas.news.models import NewsEvent
 from atlas.news.normalization import (
@@ -50,6 +58,10 @@ from atlas.news.sources import (
     NewsSource,
     get_news_source,
     list_news_sources,
+)
+from atlas.news.stories import (
+    NewsStoryThread,
+    StoryClusteringEngine,
 )
 from atlas.news.topics import (
     classify_topics_for_article,
@@ -160,6 +172,94 @@ class NewsDiscoveryQuery:
         self.cursor = cursor
 
 
+class NewsStoryQuery:
+    """Encapsulates filter and pagination parameters for canonical Story Thread feeds (Stage 101)."""
+
+    def __init__(
+        self,
+        status: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        topic_id: Optional[str] = None,
+        publisher_id: Optional[str] = None,
+        q: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        limit: int = 30,
+        cursor: Optional[str] = None,
+    ):
+        self.status = status.upper() if status else None
+        self.entity_id = entity_id.lower() if entity_id else None
+        self.topic_id = topic_id.upper() if topic_id else None
+        self.publisher_id = publisher_id.lower() if publisher_id else None
+        self.q = q.strip() if q else None
+        self.start_date = start_date
+        self.end_date = end_date
+        self.limit = max(1, min(100, limit))
+        self.cursor = cursor
+
+
+class NewsStoryFeedResult:
+    """Paginated result set for canonical Story Thread queries."""
+
+    def __init__(
+        self,
+        stories: List[NewsStoryThread],
+        total_count: int,
+        next_cursor: Optional[str],
+        has_more: bool,
+    ):
+        self.stories = stories
+        self.total_count = total_count
+        self.next_cursor = next_cursor
+        self.has_more = has_more
+
+
+class NewsEventQuery:
+    """Encapsulates filter and pagination parameters for Financial Event queries (Stage 101)."""
+
+    def __init__(
+        self,
+        event_type: Optional[str] = None,
+        lifecycle_status: Optional[str] = None,
+        assertion_status: Optional[str] = None,
+        primary_entity_id: Optional[str] = None,
+        related_entity_id: Optional[str] = None,
+        story_id: Optional[str] = None,
+        q: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        limit: int = 30,
+        cursor: Optional[str] = None,
+    ):
+        self.event_type = event_type.upper() if event_type else None
+        self.lifecycle_status = lifecycle_status.upper() if lifecycle_status else None
+        self.assertion_status = assertion_status.upper() if assertion_status else None
+        self.primary_entity_id = primary_entity_id.lower() if primary_entity_id else None
+        self.related_entity_id = related_entity_id.lower() if related_entity_id else None
+        self.story_id = story_id.strip() if story_id else None
+        self.q = q.strip() if q else None
+        self.start_date = start_date
+        self.end_date = end_date
+        self.limit = max(1, min(100, limit))
+        self.cursor = cursor
+
+
+class NewsEventFeedResult:
+    """Paginated result set for Financial Event queries."""
+
+    def __init__(
+        self,
+        events: List[NewsFinancialEvent],
+        total_count: int,
+        next_cursor: Optional[str],
+        has_more: bool,
+    ):
+        self.events = events
+        self.total_count = total_count
+        self.next_cursor = next_cursor
+        self.has_more = has_more
+
+
 class NewsFeedResult:
     """Paginated result set for news feed queries."""
 
@@ -247,6 +347,10 @@ class NewsRepository:
     def __init__(self) -> None:
         self._lock = threading.RLock()
         self._dedup = DeduplicationEngine()
+        self._stories_by_id: dict[str, NewsStoryThread] = {}
+        self._events_by_id: dict[str, NewsFinancialEvent] = {}
+        self._clustering_engine = StoryClusteringEngine()
+        self._event_engine = EventClassificationEngine()
         self._last_successful_fetch: Optional[datetime] = None
         self._seed_baseline_articles()
 
@@ -273,7 +377,7 @@ class NewsRepository:
     def ingest_articles(self, raw_articles: List[NewsArticle]) -> IngestionBatchResult:
         """
         Ingests a batch of articles with idempotency, deduplication,
-        entity resolution, sanitization, and cache invalidation.
+        entity resolution, sanitization, story clustering, and event extraction.
         """
         total = len(raw_articles)
         new_count = 0
@@ -349,10 +453,44 @@ class NewsRepository:
 
                     res: DeduplicationResult = self._dedup.process_incoming_article(normalized)
 
-                    if res.is_new:
-                        new_count += 1
-                    elif res.is_revision:
-                        rev_count += 1
+                    if res.is_new or res.is_revision:
+                        if res.is_new:
+                            new_count += 1
+                        else:
+                            rev_count += 1
+
+                        # Cluster into canonical Story Thread
+                        story, _ = self._clustering_engine.cluster_article(
+                            normalized,
+                            list(self._stories_by_id.values()),
+                            self._dedup._articles_by_id,
+                        )
+                        self._stories_by_id[story.story_id] = story
+
+                        # Classify source-evidenced Financial Events
+                        events = self._event_engine.classify_article(
+                            normalized,
+                            linked_story_id=story.story_id,
+                        )
+                        for ev in events:
+                            if ev.event_id in self._events_by_id:
+                                existing_ev = self._events_by_id[ev.event_id]
+                                if normalized.article_id not in existing_ev.supporting_article_ids:
+                                    existing_ev.supporting_article_ids.append(normalized.article_id)
+                                for ev_rec in ev.evidence_records:
+                                    existing_ev.evidence_records.append(ev_rec)
+                                if story.story_id not in existing_ev.linked_story_ids:
+                                    existing_ev.linked_story_ids.append(story.story_id)
+                                existing_ev.last_evidence_updated_at = max(
+                                    existing_ev.last_evidence_updated_at, normalized.published_at
+                                )
+                                existing_ev.source_revision_watermark += 1
+                            else:
+                                self._events_by_id[ev.event_id] = ev
+
+                            if ev.event_id not in story.linked_event_ids:
+                                story.linked_event_ids.append(ev.event_id)
+
                     elif res.is_exact_duplicate:
                         dup_count += 1
 
@@ -996,6 +1134,281 @@ class NewsRepository:
             staleness_seconds=staleness,
             active_source_count=len(list_news_sources()),
         )
+
+    # -----------------------------------------------------------------------
+    # Stage 101 Story Intelligence & Multi-Source Grouping Methods
+    # -----------------------------------------------------------------------
+
+    def list_stories(self, query: NewsStoryQuery) -> NewsStoryFeedResult:
+        with self._lock:
+            stories = list(self._stories_by_id.values())
+
+        matching = []
+        for s in stories:
+            # Status filter: exclude non-active by default unless explicitly queried
+            if query.status:
+                if s.story_status.value != query.status:
+                    continue
+            else:
+                if s.story_status in (
+                    NewsStoryStatus.ARCHIVED,
+                    NewsStoryStatus.MERGED,
+                    NewsStoryStatus.WITHDRAWN_FROM_DISPLAY,
+                ):
+                    continue
+
+            # Entity filter
+            if query.entity_id:
+                has_entity = (
+                    (s.primary_entity_id and s.primary_entity_id.lower() == query.entity_id)
+                    or any(e.entity_id and e.entity_id.lower() == query.entity_id for e in s.related_entities)
+                )
+                if not has_entity:
+                    continue
+
+            # Topic filter
+            if query.topic_id and query.topic_id not in s.topic_ids:
+                continue
+
+            # Publisher filter
+            if query.publisher_id:
+                with self._lock:
+                    member_articles = [self._dedup._articles_by_id.get(aid) for aid in s.article_ids]
+                has_pub = any(
+                    a and (a.publisher_id.lower() == query.publisher_id or a.publisher.lower() == query.publisher_id)
+                    for a in member_articles
+                )
+                if not has_pub:
+                    continue
+
+            # Text query
+            if query.q:
+                q_lower = query.q.lower()
+                title_match = q_lower in s.display_title.lower()
+                ent_match = bool(s.primary_entity_name and q_lower in s.primary_entity_name.lower())
+                if not (title_match or ent_match):
+                    continue
+
+            # Date range
+            if query.start_date and s.latest_source_published_at < query.start_date:
+                continue
+            if query.end_date and s.latest_source_published_at > query.end_date:
+                continue
+
+            matching.append(s)
+
+        # Sort: latest_source_published_at descending, tie-break on story_id
+        matching.sort(key=lambda x: (x.latest_source_published_at, x.story_id), reverse=True)
+        total_count = len(matching)
+
+        # Cursor pagination
+        start_idx = 0
+        if query.cursor:
+            try:
+                decoded = base64.b64decode(query.cursor.encode("utf-8")).decode("utf-8")
+                parts = decoded.split(":")
+                cursor_ts = float(parts[0])
+                cursor_id = parts[1]
+                for idx, s in enumerate(matching):
+                    if s.latest_source_published_at.timestamp() < cursor_ts or (
+                        s.latest_source_published_at.timestamp() == cursor_ts and s.story_id < cursor_id
+                    ):
+                        start_idx = idx
+                        break
+                else:
+                    start_idx = len(matching)
+            except Exception:
+                start_idx = 0
+
+        end_idx = start_idx + query.limit
+        page_items = matching[start_idx:end_idx]
+        has_more = end_idx < total_count
+
+        next_cursor: Optional[str] = None
+        if has_more and page_items:
+            last = page_items[-1]
+            raw_cursor = f"{last.latest_source_published_at.timestamp()}:{last.story_id}"
+            next_cursor = base64.b64encode(raw_cursor.encode("utf-8")).decode("utf-8")
+
+        return NewsStoryFeedResult(
+            stories=page_items,
+            total_count=total_count,
+            next_cursor=next_cursor,
+            has_more=has_more,
+        )
+
+    def get_story(self, story_id: str) -> Optional[NewsStoryThread]:
+        with self._lock:
+            return self._stories_by_id.get(story_id)
+
+    def get_story_articles(self, story_id: str) -> List[NewsArticle]:
+        with self._lock:
+            story = self._stories_by_id.get(story_id)
+            if not story:
+                return []
+            articles = [
+                self._dedup._articles_by_id[aid]
+                for aid in story.article_ids
+                if aid in self._dedup._articles_by_id
+            ]
+        # Chronological progression: earliest first
+        articles.sort(key=lambda a: (a.published_at, a.article_id))
+        return articles
+
+    def get_story_events(self, story_id: str) -> List[NewsFinancialEvent]:
+        with self._lock:
+            story = self._stories_by_id.get(story_id)
+            if not story:
+                return []
+            events = [
+                self._events_by_id[eid]
+                for eid in story.linked_event_ids
+                if eid in self._events_by_id
+            ]
+        events.sort(key=lambda e: (e.event_date or e.announcement_time or e.first_seen_at, e.event_id))
+        return events
+
+    def merge_stories(self, target_story_id: str, source_story_id: str) -> NewsStoryThread:
+        with self._lock:
+            target = self._stories_by_id.get(target_story_id)
+            source = self._stories_by_id.get(source_story_id)
+            if not target or not source:
+                raise ValueError("Target or source story does not exist")
+            merged = self._clustering_engine.merge_stories(
+                target, source, self._dedup._articles_by_id
+            )
+            default_news_cache.invalidate_all()
+            return merged
+
+    def split_story(
+        self, story_id: str, article_ids_to_split: list[str], new_title: str
+    ) -> tuple[NewsStoryThread, NewsStoryThread]:
+        with self._lock:
+            parent = self._stories_by_id.get(story_id)
+            if not parent:
+                raise ValueError("Story not found")
+            parent_mod, child = self._clustering_engine.split_story(
+                parent, article_ids_to_split, new_title, self._dedup._articles_by_id
+            )
+            self._stories_by_id[child.story_id] = child
+            default_news_cache.invalidate_all()
+            return parent_mod, child
+
+    # -----------------------------------------------------------------------
+    # Stage 101 Financial Event Classification & Evidence Query Methods
+    # -----------------------------------------------------------------------
+
+    def list_events(self, query: NewsEventQuery) -> NewsEventFeedResult:
+        with self._lock:
+            events = list(self._events_by_id.values())
+
+        matching = []
+        for ev in events:
+            if query.event_type and ev.event_type.value != query.event_type:
+                continue
+            if query.lifecycle_status and ev.lifecycle_status.value != query.lifecycle_status:
+                continue
+            if query.assertion_status and ev.assertion_status.value != query.assertion_status:
+                continue
+            if query.primary_entity_id and ev.primary_entity_id.lower() != query.primary_entity_id:
+                continue
+            if query.related_entity_id:
+                has_rel = any(
+                    p.entity_id and p.entity_id.lower() == query.related_entity_id
+                    for p in ev.participants
+                )
+                if not has_rel:
+                    continue
+            if query.story_id and query.story_id not in ev.linked_story_ids:
+                continue
+            if query.q:
+                q_lower = query.q.lower()
+                title_match = q_lower in ev.event_title.lower()
+                ent_match = q_lower in ev.primary_entity_name.lower()
+                part_match = any(q_lower in p.entity_name.lower() for p in ev.participants)
+                if not (title_match or ent_match or part_match):
+                    continue
+
+            ev_time = ev.event_date or ev.announcement_time or ev.first_seen_at
+            if query.start_date and ev_time < query.start_date:
+                continue
+            if query.end_date and ev_time > query.end_date:
+                continue
+
+            matching.append(ev)
+
+        # Sort: newest event time first, tie break on event_id
+        matching.sort(
+            key=lambda x: (x.event_date or x.announcement_time or x.first_seen_at, x.event_id),
+            reverse=True,
+        )
+        total_count = len(matching)
+
+        # Keyset pagination
+        start_idx = 0
+        if query.cursor:
+            try:
+                decoded = base64.b64decode(query.cursor.encode("utf-8")).decode("utf-8")
+                parts = decoded.split(":")
+                cursor_ts = float(parts[0])
+                cursor_id = parts[1]
+                for idx, ev in enumerate(matching):
+                    t = (ev.event_date or ev.announcement_time or ev.first_seen_at).timestamp()
+                    if t < cursor_ts or (t == cursor_ts and ev.event_id < cursor_id):
+                        start_idx = idx
+                        break
+                else:
+                    start_idx = len(matching)
+            except Exception:
+                start_idx = 0
+
+        end_idx = start_idx + query.limit
+        page_items = matching[start_idx:end_idx]
+        has_more = end_idx < total_count
+
+        next_cursor: Optional[str] = None
+        if has_more and page_items:
+            last = page_items[-1]
+            last_ts = (last.event_date or last.announcement_time or last.first_seen_at).timestamp()
+            raw_cursor = f"{last_ts}:{last.event_id}"
+            next_cursor = base64.b64encode(raw_cursor.encode("utf-8")).decode("utf-8")
+
+        return NewsEventFeedResult(
+            events=page_items,
+            total_count=total_count,
+            next_cursor=next_cursor,
+            has_more=has_more,
+        )
+
+    def get_event(self, event_id: str) -> Optional[NewsFinancialEvent]:
+        with self._lock:
+            return self._events_by_id.get(event_id)
+
+    def get_event_evidence(self, event_id: str) -> List[NewsEventEvidence]:
+        with self._lock:
+            ev = self._events_by_id.get(event_id)
+            if not ev:
+                return []
+            return list(ev.evidence_records)
+
+    def list_event_types(self) -> List[FinancialEventTypeDefinition]:
+        return list(EVENT_TYPE_CATALOG)
+
+    def get_entity_events(self, entity_id: str, limit: int = 20) -> List[NewsFinancialEvent]:
+        with self._lock:
+            events = list(self._events_by_id.values())
+
+        ent_lower = entity_id.lower()
+        matching = [
+            ev for ev in events
+            if ev.primary_entity_id.lower() == ent_lower
+            or any(p.entity_id and p.entity_id.lower() == ent_lower for p in ev.participants)
+        ]
+        matching.sort(
+            key=lambda x: (x.event_date or x.announcement_time or x.first_seen_at, x.event_id),
+            reverse=True,
+        )
+        return matching[:limit]
 
     def _seed_baseline_articles(self) -> None:
         """Populates authentic, source-qualified baseline financial articles."""

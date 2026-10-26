@@ -59,6 +59,56 @@ export function formatRelativeTime(isoString: string): string {
   }
 }
 
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+export function formatUtcDate(isoString?: string | null): string {
+  if (!isoString) return "—";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "—";
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } catch {
+    return "—";
+  }
+}
+
+export function formatUtcDateTime(isoString?: string | null): string {
+  if (!isoString) return "N/A";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "N/A";
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    const hours = String(d.getUTCHours()).padStart(2, "0");
+    const minutes = String(d.getUTCMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
+  } catch {
+    return "N/A";
+  }
+}
+
+export function formatShortUtcDateTime(isoString?: string | null): string {
+  if (!isoString) return "N/A";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "N/A";
+    const month = MONTH_NAMES[d.getUTCMonth()];
+    const day = d.getUTCDate();
+    const hours = String(d.getUTCHours()).padStart(2, "0");
+    const minutes = String(d.getUTCMinutes()).padStart(2, "0");
+    return `${month} ${day}, ${hours}:${minutes} UTC`;
+  } catch {
+    return "N/A";
+  }
+}
+
 export function getCategoryBadgeStyle(category: string): {
   bg: string;
   text: string;

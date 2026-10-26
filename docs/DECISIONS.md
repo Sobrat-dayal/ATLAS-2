@@ -9588,6 +9588,49 @@ This document records the major architectural and product decisions established.
 624. Ordinary news discovery causes zero mutations across securities, companies, fundamentals, economic indicators, portfolios, watchlists, or broker accounts.
 625. Stage 100 passes all automated test suites (58 backend tests across Stage 99 and 100 passing cleanly with 0 ruff errors; 40 frontend tests passing cleanly; TypeScript compile passing with 0 errors; Next.js production build passing with 0 errors). Stage 101 is the next canonical stage.
 
+## Stage 101: Financial News Story Intelligence and Event Classification System
+
+### Scope, Roadmaps & Core Directives
+626. Stage 101 builds the institutional-grade Financial News Story Intelligence and Event Classification System on top of Stage 99 (Foundation) and Stage 100 (Discovery, Search & Timelines) at primary route `/news`.
+627. The canonical frozen 150-stage roadmap confirms Stages 99–103 belong to the News sequence; Stage 101 owns canonical Story Threads (`story-*`) and Financial Event records (`fev-*`).
+628. Stage 101 maintains strict conceptual separation across Article (source-specific published text), Story Thread (group of related coverage covering the same developing narrative), and Financial Event (evidence-backed assertion about an identifiable corporate, economic, or market occurrence).
+629. Advanced generative research synthesis, multi-article narrative briefs, sentiment trading signals, predicted share-price impact, abnormal return forecasts, and autonomous research agents remain strictly deferred to later stages.
+630. All 20 canonical top-level routes (`/home`, `/markets`, `/charts`, `/watchlists`, `/screeners`, `/companies`, `/economics`, `/news`, `/research`, etc.) remain intact and untouched.
+
+### Story Threads & Conservative Clustering
+631. Story Threads possess deterministic, stable identifiers (`story-<sha256(lead_article_id)[:16]>`) independent of variable headlines.
+632. Candidate retrieval uses blocking on shared canonical company/instrument entities, verified event type, and temporal proximity windows (e.g. 7 days for earnings, 30 days for M&A).
+633. Entity overlap alone is strictly insufficient to cluster articles; articles must share specific event context or narrative identity to prevent false merges of unrelated corporate news.
+634. Syndicated wire republications (e.g., PR Newswire distributed to multiple outlets) are distinguished from independent newsroom reporting; `independent_publisher_count` tracks genuine independent publisher organizations rather than raw republished copies.
+635. Administrative story merge and split operations preserve full audit trails, recording previous story IDs, timestamp, and administrative reason; split articles retain their verified relationships.
+636. Story titles are source-grounded display labels derived from the lead representative article; synthetic, hallucinated narrative summaries are strictly prohibited.
+637. Story operational lifecycle tracks `ACTIVE`, `QUIET`, `ARCHIVED`, `MERGED`, and `WITHDRAWN_FROM_DISPLAY` without confusing operational tracking with real-world event completion.
+
+### Financial Event Taxonomy & Classification
+638. Canonical Event Taxonomy establishes 20 versioned event types (`EARNINGS_RELEASE`, `EARNINGS_GUIDANCE`, `DIVIDEND_DECLARATION`, `SHARE_BUYBACK_AUTHORIZATION`, `MERGER_ACQUISITION_PROPOSAL`, `MERGER_ACQUISITION_AGREEMENT`, `MERGER_ACQUISITION_COMPLETION`, `MERGER_ACQUISITION_TERMINATION`, `EQUITY_FINANCING_ANNOUNCEMENT`, `DEBT_FINANCING_ANNOUNCEMENT`, `EXECUTIVE_APPOINTMENT`, `EXECUTIVE_DEPARTURE`, `REGULATORY_INVESTIGATION_ANNOUNCEMENT`, `REGULATORY_ENFORCEMENT_ACTION`, `LITIGATION_FILING`, `BANKRUPTCY_RESTRUCTURING_FILING`, `PRODUCT_LAUNCH_ANNOUNCEMENT`, `FACILITY_EXPANSION_ANNOUNCEMENT`, `CENTRAL_BANK_POLICY_DECISION`, `ECONOMIC_RELEASE_ANNOUNCEMENT`).
+639. Event assertion status (`OFFICIALLY_REPORTED`, `THIRD_PARTY_REPORTED`, `ALLEGED`, `RUMORED`, `DENIED`, `DISPUTED`, `CORRECTED`, `UNRESOLVED`) is strictly separated from transaction lifecycle status (`PROPOSED`, `ANNOUNCED`, `PENDING`, `APPROVED`, `COMPLETED`, `CANCELLED`, `WITHDRAWN`, `UNKNOWN`).
+640. Rumors, anonymous sources, and preliminary talks are never converted into confirmed announcements; an acquisition rumor remains `RUMORED` / `PROPOSED`.
+641. Regulatory investigations are never classified as findings or proof of wrongdoing; an investigation remains `ANNOUNCED` or `PENDING` with assertion `OFFICIALLY_REPORTED` or `THIRD_PARTY_REPORTED`.
+642. Event participants use canonical Entity IDs with verified roles (`PRIMARY_SUBJECT`, `ACQUIRER`, `TARGET`, `REGULATOR`, `ISSUER`, `LENDER`, `INVESTOR`, `UNDERWRITER`, `EXECUTIVE`, `COUNTERPARTY`).
+643. Source-evidenced monetary amounts (`EventAmount`) preserve exact numeric values, currencies, units, and approximation flags (`EXACT`, `APPROXIMATE`, `RANGE_MIN`, `RANGE_MAX`, `ESTIMATED`); unverified valuations are never guessed.
+644. Currency conversion is never performed implicitly without verified, time-aligned FX rates; original reported currencies and Indian numbering scales (`crore`, `lakh`) are preserved.
+
+### Temporal Precision & Evidence Lineage
+645. Multiple temporal dimensions are preserved without conflation: `event_date` (when the underlying event allegedly occurred), `announcement_time` (when officially disclosed), `published_at` (when the reporting article was published), and `first_seen_at` (when ATLAS ingested the evidence).
+646. Point-in-time integrity is strictly enforced: historical-as-known-at queries do not leak future revisions, subsequent corrections, or post-dated announcements into earlier timelines.
+647. Every financial event attribute is grounded in verifiable structured evidence (`NewsEventEvidence`) linking source provider, publisher, revision ID, and permitted quotation excerpts.
+648. Article corrections or retractions propagate automatically: if a source article is withdrawn, its evidence link is revoked, and the event lifecycle status transitions to `WITHDRAWN` or is re-evaluated.
+649. Event revisions maintain an immutable audit history (`NewsEventRevision`) recording previous statuses, new statuses, timestamps, and reason for change.
+
+### API, Ingestion & User Experience
+650. REST API provides dedicated, typed endpoints under `/api/v1/news`: `/stories`, `/stories/{id}`, `/stories/{id}/articles`, `/stories/{id}/events`, `/events`, `/events/{id}`, `/events/{id}/evidence`, `/events/types`, and `/entities/{id}/events`.
+651. Ingestion-time classification hooks process articles idempotently (`sha256(article_id + extraction_version)`); duplicate ingestion jobs cause zero duplicate events or stories.
+652. Story and event feeds use keyset pagination and cache invalidation upon article ingestion, story merge/split, or event revision.
+653. The frontend delivers four integrated view modes: `[Headlines]` (Stage 99), `[Story Threads]` (Stage 101), `[Financial Events]` (Stage 101), and `[Timelines]` (Stage 100), sharing canonical entity filters and search state.
+654. The UI adheres strictly to ATLAS institutional design tokens: zero purple gradients, zero emoji icons, zero fabricated confidence percentages, and full dark/light theme support.
+655. Stage 101 completes successfully with 74 passing backend tests (test_news_story_intelligence_v1.py, test_news_discovery_v1.py, test_news_v1.py), 0 ruff errors, 46 passing web unit tests, 0 TypeScript errors (`tsc --noEmit`), and a successful Next.js production build. Stage 102 is the next canonical roadmap stage.
+
+
 
 
 

@@ -241,3 +241,164 @@ export async function getNewsSuggestions(
   return handleResponse<import("./types").NewsSearchSuggestionDTO[]>(res);
 }
 
+// ---------------------------------------------------------------------------
+// Stage 101 Story Intelligence & Financial Event API Client Functions
+// ---------------------------------------------------------------------------
+
+export interface NewsStoryQueryParams {
+  status?: string;
+  entity_id?: string;
+  topic_id?: string;
+  publisher_id?: string;
+  q?: string;
+  start_date?: string;
+  end_date?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export async function getNewsStories(
+  params?: NewsStoryQueryParams
+): Promise<import("./types").NewsStoryFeedResponseDTO> {
+  const url = new URL("/api/v1/news/stories", getBaseApiUrl());
+  if (params) {
+    if (params.status) url.searchParams.set("status", params.status);
+    if (params.entity_id) url.searchParams.set("entity_id", params.entity_id);
+    if (params.topic_id) url.searchParams.set("topic_id", params.topic_id);
+    if (params.publisher_id) url.searchParams.set("publisher_id", params.publisher_id);
+    if (params.q) url.searchParams.set("q", params.q);
+    if (params.start_date) url.searchParams.set("start_date", params.start_date);
+    if (params.end_date) url.searchParams.set("end_date", params.end_date);
+    if (params.limit) url.searchParams.set("limit", String(params.limit));
+    if (params.cursor) url.searchParams.set("cursor", params.cursor);
+  }
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsStoryFeedResponseDTO>(res);
+}
+
+export async function getNewsStory(
+  storyId: string
+): Promise<import("./types").NewsStoryThreadDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/stories/${encodeURIComponent(storyId)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsStoryThreadDTO>(res);
+}
+
+export async function getNewsStoryArticles(
+  storyId: string
+): Promise<import("./types").NewsArticleDTO[]> {
+  const url = `${getBaseApiUrl()}/api/v1/news/stories/${encodeURIComponent(storyId)}/articles`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsArticleDTO[]>(res);
+}
+
+export async function getNewsStoryEvents(
+  storyId: string
+): Promise<import("./types").NewsFinancialEventDTO[]> {
+  const url = `${getBaseApiUrl()}/api/v1/news/stories/${encodeURIComponent(storyId)}/events`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsFinancialEventDTO[]>(res);
+}
+
+export interface NewsEventQueryParams {
+  event_type?: string;
+  lifecycle_status?: string;
+  assertion_status?: string;
+  primary_entity_id?: string;
+  related_entity_id?: string;
+  story_id?: string;
+  q?: string;
+  start_date?: string;
+  end_date?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export async function getNewsEvents(
+  params?: NewsEventQueryParams
+): Promise<import("./types").NewsEventFeedResponseDTO> {
+  const url = new URL("/api/v1/news/events", getBaseApiUrl());
+  if (params) {
+    if (params.event_type) url.searchParams.set("event_type", params.event_type);
+    if (params.lifecycle_status) url.searchParams.set("lifecycle_status", params.lifecycle_status);
+    if (params.assertion_status) url.searchParams.set("assertion_status", params.assertion_status);
+    if (params.primary_entity_id) url.searchParams.set("primary_entity_id", params.primary_entity_id);
+    if (params.related_entity_id) url.searchParams.set("related_entity_id", params.related_entity_id);
+    if (params.story_id) url.searchParams.set("story_id", params.story_id);
+    if (params.q) url.searchParams.set("q", params.q);
+    if (params.start_date) url.searchParams.set("start_date", params.start_date);
+    if (params.end_date) url.searchParams.set("end_date", params.end_date);
+    if (params.limit) url.searchParams.set("limit", String(params.limit));
+    if (params.cursor) url.searchParams.set("cursor", params.cursor);
+  }
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsEventFeedResponseDTO>(res);
+}
+
+export async function getNewsEvent(
+  eventId: string
+): Promise<import("./types").NewsFinancialEventDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/events/${encodeURIComponent(eventId)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsFinancialEventDTO>(res);
+}
+
+export async function getNewsEventEvidence(
+  eventId: string
+): Promise<import("./types").NewsEventEvidenceDTO[]> {
+  const url = `${getBaseApiUrl()}/api/v1/news/events/${encodeURIComponent(eventId)}/evidence`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsEventEvidenceDTO[]>(res);
+}
+
+export async function getNewsEventTypes(): Promise<
+  import("./types").FinancialEventTypeDefinitionDTO[]
+> {
+  const url = `${getBaseApiUrl()}/api/v1/news/events/types`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").FinancialEventTypeDefinitionDTO[]>(res);
+}
+
+export async function getEntityEvents(
+  entityId: string,
+  limit: number = 20
+): Promise<import("./types").NewsFinancialEventDTO[]> {
+  const url = new URL(
+    `/api/v1/news/entities/${encodeURIComponent(entityId)}/events`,
+    getBaseApiUrl()
+  );
+  url.searchParams.set("limit", String(limit));
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsFinancialEventDTO[]>(res);
+}
+
+

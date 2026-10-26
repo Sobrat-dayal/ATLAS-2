@@ -165,3 +165,153 @@ class NewsIndustrySector(StrEnum):
     MATERIALS = "MATERIALS"
     REAL_ESTATE = "REAL_ESTATE"
     UTILITIES = "UTILITIES"
+
+
+# ---------------------------------------------------------------------------
+# Stage 101: Story Intelligence & Financial Event Enums
+# ---------------------------------------------------------------------------
+
+class NewsStoryStatus(StrEnum):
+    """Operational lifecycle status of a multi-source news story thread."""
+
+    ACTIVE = "ACTIVE"
+    DEVELOPING = "DEVELOPING"
+    QUIET = "QUIET"
+    ARCHIVED = "ARCHIVED"
+    MERGED = "MERGED"
+    WITHDRAWN_FROM_DISPLAY = "WITHDRAWN_FROM_DISPLAY"
+
+
+class NewsStoryMembershipReason(StrEnum):
+    """Auditable rationale for associating an article with a story thread."""
+
+    SHARED_EVENT_IDENTITY = "SHARED_EVENT_IDENTITY"
+    SHARED_TRANSACTION_FILING = "SHARED_TRANSACTION_FILING"
+    TEMPORAL_ENTITY_COVERAGE = "TEMPORAL_ENTITY_COVERAGE"
+    REPORTED_DEVELOPMENT = "REPORTED_DEVELOPMENT"
+
+
+class NewsStoryMembershipStatus(StrEnum):
+    """Verification confidence of article story cluster membership."""
+
+    CONFIRMED = "CONFIRMED"
+    AMBIGUOUS = "AMBIGUOUS"
+    UNRESOLVED = "UNRESOLVED"
+
+
+class FinancialEventType(StrEnum):
+    """Canonical classification taxonomy of corporate and macroeconomic events."""
+
+    # Corporate Announcements
+    EARNINGS_RELEASE = "EARNINGS_RELEASE"
+    EARNINGS_GUIDANCE = "EARNINGS_GUIDANCE"
+    DIVIDEND_DECLARATION = "DIVIDEND_DECLARATION"
+    SHARE_REPURCHASE = "SHARE_REPURCHASE"
+    MERGER_ACQUISITION_PROPOSAL = "MERGER_ACQUISITION_PROPOSAL"
+    MERGER_ACQUISITION_AGREEMENT = "MERGER_ACQUISITION_AGREEMENT"
+    MERGER_ACQUISITION_COMPLETION = "MERGER_ACQUISITION_COMPLETION"
+    EQUITY_FINANCING = "EQUITY_FINANCING"
+    DEBT_FINANCING = "DEBT_FINANCING"
+    MANAGEMENT_APPOINTMENT = "MANAGEMENT_APPOINTMENT"
+    MANAGEMENT_DEPARTURE = "MANAGEMENT_DEPARTURE"
+    REGULATORY_ACTION = "REGULATORY_ACTION"
+    LITIGATION_FILING = "LITIGATION_FILING"
+    BANKRUPTCY_FILING = "BANKRUPTCY_FILING"
+    RESTRUCTURING = "RESTRUCTURING"
+    PRODUCT_LAUNCH = "PRODUCT_LAUNCH"
+    FACILITY_EXPANSION = "FACILITY_EXPANSION"
+
+    # Macroeconomic & Policy
+    CENTRAL_BANK_POLICY_DECISION = "CENTRAL_BANK_POLICY_DECISION"
+    ECONOMIC_RELEASE = "ECONOMIC_RELEASE"
+    GOVERNMENT_POLICY = "GOVERNMENT_POLICY"
+
+
+class NewsEventLifecycleStatus(StrEnum):
+    """Factual corporate lifecycle state of an underlying financial event."""
+
+    PROPOSED = "PROPOSED"
+    ANNOUNCED = "ANNOUNCED"
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    WITHDRAWN = "WITHDRAWN"
+    UNKNOWN = "UNKNOWN"
+
+
+class NewsEventAssertionStatus(StrEnum):
+    """Evidentiary qualification of source claims regarding a financial event."""
+
+    OFFICIALLY_REPORTED = "OFFICIALLY_REPORTED"
+    THIRD_PARTY_REPORTED = "THIRD_PARTY_REPORTED"
+    ALLEGED = "ALLEGED"
+    RUMORED = "RUMORED"
+    DENIED = "DENIED"
+    DISPUTED = "DISPUTED"
+    CORRECTED = "CORRECTED"
+    UNRESOLVED = "UNRESOLVED"
+
+
+class EventParticipantRole(StrEnum):
+    """Specific role of an entity in a corporate or regulatory transaction."""
+
+    PRIMARY_SUBJECT = "PRIMARY_SUBJECT"
+    ACQUIRER = "ACQUIRER"
+    TARGET = "TARGET"
+    SELLER = "SELLER"
+    BUYER = "BUYER"
+    ISSUER = "ISSUER"
+    LENDER = "LENDER"
+    INVESTOR = "INVESTOR"
+    UNDERWRITER = "UNDERWRITER"
+    REGULATOR = "REGULATOR"
+    SUBJECT = "SUBJECT"
+    RESPONDENT = "RESPONDENT"
+    OFFICER = "OFFICER"
+
+
+class EventAmountType(StrEnum):
+    """Category of monetary or quantitative figure reported in event evidence."""
+
+    TRANSACTION_VALUE = "TRANSACTION_VALUE"
+    DIVIDEND_PER_SHARE = "DIVIDEND_PER_SHARE"
+    BUYBACK_AUTHORIZATION = "BUYBACK_AUTHORIZATION"
+    QUARTERLY_REVENUE = "QUARTERLY_REVENUE"
+    NET_INCOME = "NET_INCOME"
+    FINANCING_PROCEEDS = "FINANCING_PROCEEDS"
+    REGULATORY_FINE = "REGULATORY_FINE"
+    TARGET_PRICE = "TARGET_PRICE"
+    INTEREST_RATE_TARGET = "INTEREST_RATE_TARGET"
+
+
+class EventAmountApproximation(StrEnum):
+    """Degree of approximation in reported financial amounts."""
+
+    EXACT = "EXACT"
+    APPROXIMATE = "APPROXIMATE"
+    RANGE_MIN = "RANGE_MIN"
+    RANGE_MAX = "RANGE_MAX"
+
+
+class EventTimePrecision(StrEnum):
+    """Temporal resolution of reported event occurrence."""
+
+    EXACT_INSTANT = "EXACT_INSTANT"
+    CALENDAR_DAY = "CALENDAR_DAY"
+    MONTH = "MONTH"
+    YEAR = "YEAR"
+    UNKNOWN = "UNKNOWN"
+
+
+class NewsEvidenceType(StrEnum):
+    """Classification of source evidence document supporting a financial event."""
+
+    OFFICIAL_PRESS_RELEASE = "OFFICIAL_PRESS_RELEASE"
+    REGULATORY_FILING = "REGULATORY_FILING"
+    COMPANY_DISCLOSURE = "COMPANY_DISCLOSURE"
+    CENTRAL_BANK_RELEASE = "CENTRAL_BANK_RELEASE"
+    PUBLISHER_REPORT = "PUBLISHER_REPORT"
+    WIRE_REPORT = "WIRE_REPORT"
+    THIRD_PARTY_CLAIM = "THIRD_PARTY_CLAIM"
+

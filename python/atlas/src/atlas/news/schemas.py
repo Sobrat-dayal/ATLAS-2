@@ -7,10 +7,21 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from atlas.news.enums import (
+    EventAmountApproximation,
+    EventAmountType,
+    EventParticipantRole,
+    EventTimePrecision,
+    FinancialEventType,
     NewsArticleType,
     NewsAvailabilityStatus,
+    NewsEventAssertionStatus,
+    NewsEventLifecycleStatus,
+    NewsEvidenceType,
     NewsLatencyClass,
     NewsLicensingStatus,
+    NewsStoryMembershipReason,
+    NewsStoryMembershipStatus,
+    NewsStoryStatus,
 )
 from atlas.news.types import NewsEventKind, NewsEventStatus
 
@@ -282,3 +293,155 @@ class NewsIngestionResponseDTO(BaseModel):
     revisions: int
     duplicates_suppressed: int
     errors: List[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Stage 101 Story & Financial Event DTOs
+# ---------------------------------------------------------------------------
+
+class NewsStoryArticleLinkDTO(BaseModel):
+    story_id: str
+    article_id: str
+    publisher_id: str
+    published_at: datetime.datetime
+    headline: str
+    membership_reason: NewsStoryMembershipReason
+    membership_status: NewsStoryMembershipStatus
+    is_primary_anchor: bool
+    linked_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsStoryThreadDTO(BaseModel):
+    story_id: str
+    display_title: str
+    canonical_topic_label: Optional[str] = None
+    topic_ids: List[str] = Field(default_factory=list)
+    primary_entity_id: Optional[str] = None
+    primary_entity_name: Optional[str] = None
+    related_entities: List[NewsEntityMentionDTO] = Field(default_factory=list)
+    first_source_published_at: datetime.datetime
+    latest_source_published_at: datetime.datetime
+    first_seen_at: datetime.datetime
+    latest_activity_at: datetime.datetime
+    story_status: NewsStoryStatus
+    article_count: int
+    independent_publisher_count: int
+    publishers: List[str] = Field(default_factory=list)
+    article_ids: List[str] = Field(default_factory=list)
+    representative_article_id: str
+    clustering_method: str
+    clustering_version: str
+    linked_event_ids: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsStoryFeedResponseDTO(BaseModel):
+    stories: List[NewsStoryThreadDTO]
+    total_count: int
+    next_cursor: Optional[str] = None
+    has_more: bool
+    as_of: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EventParticipantDTO(BaseModel):
+    entity_id: str
+    canonical_name: str
+    role: EventParticipantRole
+    resolution_status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EventAmountDTO(BaseModel):
+    amount_type: EventAmountType
+    amount_value: float
+    currency: str
+    period: Optional[str] = None
+    approximation_status: EventAmountApproximation
+    source_text: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsEventEvidenceDTO(BaseModel):
+    evidence_id: str
+    event_id: str
+    article_id: str
+    publisher_id: str
+    publisher_name: str
+    source_provider_id: str
+    evidence_type: NewsEvidenceType
+    headline: str
+    permitted_excerpt: Optional[str] = None
+    source_published_at: datetime.datetime
+    first_observed_at: datetime.datetime
+    is_verified_by_filing: bool
+    filing_id: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsEventRevisionDTO(BaseModel):
+    revision_id: str
+    event_id: str
+    timestamp: datetime.datetime
+    previous_lifecycle_status: Optional[NewsEventLifecycleStatus] = None
+    new_lifecycle_status: NewsEventLifecycleStatus
+    previous_assertion_status: Optional[NewsEventAssertionStatus] = None
+    new_assertion_status: NewsEventAssertionStatus
+    change_reason: str
+    evidence_id: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsFinancialEventDTO(BaseModel):
+    event_id: str
+    event_type: FinancialEventType
+    event_title: str
+    primary_entity_id: str
+    primary_entity_name: str
+    lifecycle_status: NewsEventLifecycleStatus
+    assertion_status: NewsEventAssertionStatus
+    event_date: Optional[datetime.datetime] = None
+    event_time_precision: EventTimePrecision
+    announcement_time: Optional[datetime.datetime] = None
+    first_seen_at: datetime.datetime
+    last_evidence_updated_at: datetime.datetime
+    participants: List[EventParticipantDTO] = Field(default_factory=list)
+    amounts: List[EventAmountDTO] = Field(default_factory=list)
+    supporting_article_ids: List[str] = Field(default_factory=list)
+    evidence_records: List[NewsEventEvidenceDTO] = Field(default_factory=list)
+    linked_story_ids: List[str] = Field(default_factory=list)
+    revisions: List[NewsEventRevisionDTO] = Field(default_factory=list)
+    is_disputed: bool
+    is_corrected: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsEventFeedResponseDTO(BaseModel):
+    events: List[NewsFinancialEventDTO]
+    total_count: int
+    next_cursor: Optional[str] = None
+    has_more: bool
+    as_of: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FinancialEventTypeDefinitionDTO(BaseModel):
+    event_type_id: FinancialEventType
+    canonical_label: str
+    event_family: str
+    description: str
+    supported_roles: List[EventParticipantRole]
+    supported_amount_types: List[EventAmountType]
+
+    model_config = ConfigDict(from_attributes=True)
+

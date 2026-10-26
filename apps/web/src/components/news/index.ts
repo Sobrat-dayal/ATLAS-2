@@ -9,3 +9,8 @@ export { NewsFeedTable } from "./NewsFeedTable";
 export { NewsArticlePreview } from "./NewsArticlePreview";
 export { NewsCoverageModal } from "./NewsCoverageModal";
 export { NewsEmptyState } from "./NewsEmptyState";
+export { NewsStoryTable } from "./NewsStoryTable";
+export { NewsStoryInspector } from "./NewsStoryInspector";
+export { NewsFinancialEventTable } from "./NewsFinancialEventTable";
+export { NewsEventInspector } from "./NewsEventInspector";
+

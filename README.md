@@ -1031,6 +1031,36 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Linter: `uv run ruff check` (0 errors).
 - **Documentation**: See `docs/NEWS_DISCOVERY_AND_TIMELINES.md` and `docs/DECISIONS.md`.
 
+## Financial News Story Intelligence and Event Classification System (Stage 101)
+- **Architecture**: Institutional-grade multi-source story clustering and evidence-based financial event classification at `/news` (Module 8). Connects Stage 99 News Foundation and Stage 100 Discovery by organizing disparate articles into auditable Story Threads (`story-*`) and identifying explicitly supported Financial Event records (`fev-*`) from verified source evidence.
+- **Story Threads & Conservative Clustering**:
+  - Candidate retrieval blocking on shared canonical company/instrument entities, verified event context, and bounded temporal proximity windows.
+  - Entity overlap alone is strictly insufficient to merge articles; stories require specific narrative and event identity to prevent false grouping.
+  - Syndicated wire republications are distinguished from independent newsroom reporting; `independent_publisher_count` tracks distinct verified newsrooms.
+  - Administrative merge and split capabilities with complete revision tracking.
+  - Sourced display titles without hallucinated narrative briefs.
+- **Canonical Financial Event Taxonomy**:
+  - 20 versioned corporate and macroeconomic event types: Earnings Releases, Guidance, Dividends, Buybacks, M&A (Proposals, Agreements, Completions, Terminations), Financing (Equity, Debt), Leadership Changes (Appointments, Departures), Regulatory Actions (Investigations, Enforcement), Litigation, Restructuring/Bankruptcy, Product Launches, Facility Expansions, Central Bank Rate Decisions, and Macro Releases.
+- **Assertion vs. Lifecycle Qualification**:
+  - Assertion statuses (`OFFICIALLY_REPORTED`, `THIRD_PARTY_REPORTED`, `RUMORED`, `ALLEGED`, `DENIED`, `DISPUTED`, `CORRECTED`) are strictly separated from transaction lifecycle states (`PROPOSED`, `ANNOUNCED`, `PENDING`, `APPROVED`, `COMPLETED`, `CANCELLED`, `WITHDRAWN`).
+  - Rumors are never converted into completed deals; regulatory investigations are never classified as findings of wrongdoing; forward guidance is never confused with reported earnings actuals.
+- **Evidence & Quantitative Precision**:
+  - Structured monetary extraction (`EventAmount`) preserving exact numeric values, currencies (`USD`, `EUR`, `INR`), scales (`crore`, `lakh`), and approximation flags (`EXACT`, `APPROXIMATE`, `RANGE_MIN`, `RANGE_MAX`, `ESTIMATED`). Valuations are never guessed.
+  - Verified transactional participant roles (`PRIMARY_SUBJECT`, `ACQUIRER`, `TARGET`, `REGULATOR`, `ISSUER`, `LENDER`, `EXECUTIVE`).
+  - Strict temporal precision: separates event occurrence, announcement time, article publication time, and ATLAS first-seen time without look-ahead bias.
+  - Every event attribute is grounded in immutable `NewsEventEvidence` citations with publisher attribution and permitted excerpts.
+- **Terminal Workspace & Workspaces**:
+  - 4 Integrated View Modes: `[Headlines]` (Stage 99), `[Story Threads]` (Stage 101), `[Financial Events]` (Stage 101), and `[Timelines]` (Stage 100).
+  - High-density Story Table with coverage counts, independent source metrics, and Story Inspector showing member article progression.
+  - Financial Event Table with assertion qualification badges, lifecycle status, formatted financial amounts, and Event Inspector with participant breakdowns, uncertainty notices for rumors, and evidence citations.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_news_story_intelligence_v1.py`, `test_news_discovery_v1.py`, `test_news_v1.py` (74/74 passed in 8.00s).
+  - Backend linter: `uv run ruff check` on all news modules (0 errors).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (46/46 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `cmd /c pnpm --filter web build` (Next.js 16.3.8 Turbopack clean compile).
+- **Documentation**: See `docs/NEWS_STORIES_AND_EVENTS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets
