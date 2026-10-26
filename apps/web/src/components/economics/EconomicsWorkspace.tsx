@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Landmark,
   Calendar,
+  GitCompare,
 } from "lucide-react";
 import { EconomicsSubTab, useEconomics } from "@/hooks/economics/useEconomics";
 import { GlobalMacroSnapshotCards } from "./GlobalMacroSnapshotCards";
@@ -23,6 +24,7 @@ import { EconomicCoveragePanel } from "./EconomicCoveragePanel";
 import { CountryEconomicsWorkspace } from "./countries/CountryEconomicsWorkspace";
 import { CentralBanksWorkspace } from "./central-banks/CentralBanksWorkspace";
 import { EconomicCalendarWorkspace } from "./calendar/EconomicCalendarWorkspace";
+import { MacroComparisonsWorkspace } from "./comparisons/MacroComparisonsWorkspace";
 
 export function EconomicsWorkspace() {
   const {
@@ -77,11 +79,11 @@ export function EconomicsWorkspace() {
                   ATLAS Macroeconomic Intelligence
                 </h1>
                 <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  STAGE 92 ECONOMIC CALENDAR
+                  STAGE 93 MACRO COMPARISONS
                 </span>
               </div>
               <p className="text-xs text-atlas-text-muted">
-                Canonical National Accounts, Central Bank Intelligence & Global Economic Calendar
+                Canonical National Accounts, Central Bank Intelligence, Economic Calendar & Macro Comparisons
               </p>
             </div>
           </div>
@@ -132,6 +134,17 @@ export function EconomicsWorkspace() {
               >
                 <Calendar className="w-3.5 h-3.5 text-blue-400" />
                 <span>Economic Calendar</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("comparisons")}
+                className={`px-3 py-1.5 rounded font-medium transition-colors flex items-center gap-1.5 ${
+                  activeTab === "comparisons"
+                    ? "bg-atlas-surface text-atlas-text-primary shadow-xs"
+                    : "text-atlas-text-muted hover:text-atlas-text-primary"
+                }`}
+              >
+                <GitCompare className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Macro Comparisons</span>
               </button>
               <button
                 onClick={() => setActiveTab("explorer")}
@@ -214,6 +227,13 @@ export function EconomicsWorkspace() {
         {activeTab === "calendar" && (
           <div>
             <EconomicCalendarWorkspace />
+          </div>
+        )}
+
+        {/* Tab: Institutional Macro Comparisons (Stage 93) */}
+        {activeTab === "comparisons" && (
+          <div>
+            <MacroComparisonsWorkspace />
           </div>
         )}
 

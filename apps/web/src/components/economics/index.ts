@@ -7,3 +7,6 @@ export * from "./EconomicSourceInspector";
 export * from "./EconomicCoveragePanel";
 export * from "./EconomicsWorkspace";
 export * from "./countries";
+export * from "./calendar";
+export * from "./central-banks";
+export * from "./comparisons";

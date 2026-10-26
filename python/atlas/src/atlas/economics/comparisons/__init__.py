@@ -1,0 +1,127 @@
+"""Institutional Macroeconomic Comparisons & Benchmarking (Stage 93).
+
+Provides cross-country economic benchmarking, GDP/PPP analysis, inflation & labor market
+comparisons, fiscal/debt analysis, monetary differentials, sovereign rankings,
+statistical distributions, historical divergence, and correlation analytics.
+"""
+
+from .enums import (
+    ComparisonMetricKind,
+    CompatibilityStatus,
+    CorrelationMethod,
+    GeographicCohortKind,
+    PeriodAlignmentPolicy,
+    RankingDirection,
+    TieBreakerPolicy,
+    VintagePolicy,
+    WeightingPolicy,
+)
+from .errors import (
+    MacroComparisonError,
+    MacroComparisonIndicatorUnavailableError,
+    MacroComparisonInsufficientSampleError,
+    MacroComparisonInvalidGeographyError,
+    MacroComparisonPeriodMismatchError,
+    MacroComparisonQueryLimitExceededError,
+    MacroComparisonUnitIncompatibleError,
+    MacroComparisonZeroVarianceError,
+)
+from .models import (
+    CohortAggregate,
+    ComparableIndicatorDefinition,
+    ComparisonEligibilityRecord,
+    CorrelationResult,
+    CountryMetricObservation,
+    CountryRankingRow,
+    DistributionSummary,
+    DivergencePoint,
+    GeographicCohort,
+    HistoricalTrendPoint,
+    MatrixCell,
+)
+from .repository import MacroComparisonsRepository
+from .schemas import (
+    ComparableIndicatorDTO,
+    ComparisonEligibilityRecordDTO,
+    ComparisonMatrixRequestDTO,
+    ComparisonMatrixResponseDTO,
+    CorrelationAnalysisRequestDTO,
+    CorrelationAnalysisResponseDTO,
+    CorrelationResultDTO,
+    CountryMetricObservationDTO,
+    CountryRankingRowDTO,
+    DistributionStatisticsRequestDTO,
+    DistributionSummaryDTO,
+    DivergenceAnalysisRequestDTO,
+    DivergenceAnalysisResponseDTO,
+    DivergencePointDTO,
+    EconomicRankingsRequestDTO,
+    EconomicRankingsResponseDTO,
+    GeographicCohortDTO,
+    HistoricalTrendPointDTO,
+    HistoricalTrendsRequestDTO,
+    HistoricalTrendsResponseDTO,
+    MacroCoverageSummaryDTO,
+    MatrixCellDTO,
+)
+from .service import MacroComparisonsService
+
+__all__ = [
+    # Enums
+    "CompatibilityStatus",
+    "ComparisonMetricKind",
+    "CorrelationMethod",
+    "GeographicCohortKind",
+    "PeriodAlignmentPolicy",
+    "RankingDirection",
+    "TieBreakerPolicy",
+    "VintagePolicy",
+    "WeightingPolicy",
+    # Errors
+    "MacroComparisonError",
+    "MacroComparisonIndicatorUnavailableError",
+    "MacroComparisonInsufficientSampleError",
+    "MacroComparisonInvalidGeographyError",
+    "MacroComparisonPeriodMismatchError",
+    "MacroComparisonQueryLimitExceededError",
+    "MacroComparisonUnitIncompatibleError",
+    "MacroComparisonZeroVarianceError",
+    # Models
+    "CohortAggregate",
+    "ComparableIndicatorDefinition",
+    "ComparisonEligibilityRecord",
+    "CorrelationResult",
+    "CountryMetricObservation",
+    "CountryRankingRow",
+    "DistributionSummary",
+    "DivergencePoint",
+    "GeographicCohort",
+    "HistoricalTrendPoint",
+    "MatrixCell",
+    # Repository & Service
+    "MacroComparisonsRepository",
+    "MacroComparisonsService",
+    # Schemas
+    "ComparableIndicatorDTO",
+    "ComparisonEligibilityRecordDTO",
+    "ComparisonMatrixRequestDTO",
+    "ComparisonMatrixResponseDTO",
+    "CorrelationAnalysisRequestDTO",
+    "CorrelationAnalysisResponseDTO",
+    "CorrelationResultDTO",
+    "CountryMetricObservationDTO",
+    "CountryRankingRowDTO",
+    "DistributionStatisticsRequestDTO",
+    "DistributionSummaryDTO",
+    "DivergenceAnalysisRequestDTO",
+    "DivergenceAnalysisResponseDTO",
+    "DivergencePointDTO",
+    "EconomicRankingsRequestDTO",
+    "EconomicRankingsResponseDTO",
+    "GeographicCohortDTO",
+    "HistoricalTrendPointDTO",
+    "HistoricalTrendsRequestDTO",
+    "HistoricalTrendsResponseDTO",
+    "MacroCoverageSummaryDTO",
+    "MatrixCellDTO",
+]

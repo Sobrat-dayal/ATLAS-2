@@ -8831,6 +8831,237 @@ This document records the major architectural and product decisions established.
 215. Documentation must match actual code.
 216. Stage 93 is the next canonical stage.
 
+## STAGE 93 — INSTITUTIONAL MACROECONOMIC COMPARISONS & BENCHMARKING ENGINE
+
+### Product
+1. Stage 93 implements Macro Comparisons.
+2. It remains inside `/economics`.
+3. No new global Sidebar module is introduced.
+4. The Stage 89 indicator registry is reused.
+5. Stage 90 Country Economics is reused.
+6. Stage 91 Central Bank instrument identity is reused.
+7. Stage 92 historical release/vintage context is reused.
+8. No duplicate canonical economic database is introduced.
+9. Country comparisons use source-backed observations.
+10. Stage 94 Screeners remains out of scope.
+
+### Geographic Identity
+11. Country UUIDs are canonical.
+12. Economic areas are distinct from countries.
+13. Geographic cohorts are explicitly defined.
+14. Historical cohort membership is qualified.
+15. Geographic overlaps are identified.
+16. Official aggregates differ from derived country sets.
+17. Country names are not primary join keys.
+18. No neighboring-country substitution occurs.
+
+### Indicator Identity
+19. Economic Indicator IDs are canonical.
+20. Provider source series IDs are preserved.
+21. Similar names do not imply identical concepts.
+22. Harmonized and nonharmonized series are distinguished.
+23. Methodology differences are disclosed.
+24. Missing metadata does not prove compatibility.
+25. Comparability states are explicit.
+26. Invalid arithmetic is blocked.
+
+### Units and Periods
+27. Percent differs from percentage points.
+28. Rates differ from rate changes.
+29. Basis points are explicit.
+30. Nominal vs real is preserved.
+31. Stock vs flow is preserved.
+32. Currency conversions require valid methods.
+33. Reference periods are aligned.
+34. Fiscal and calendar years are distinguished.
+35. Latest-common differs from latest-per-country.
+36. Missing periods are not fabricated.
+37. Frequency transformations are controlled.
+
+### GDP and PPP
+38. Nominal GDP uses defined currency basis.
+39. Real GDP uses source-specific price basis.
+40. PPP GDP differs from market-FX GDP.
+41. Historical GDP conversions are period-qualified.
+42. GDP per capita uses compatible population.
+43. GDP growth uses valid frequencies.
+44. Annualized growth remains distinct.
+45. Chain-linked component limitations are preserved.
+46. No unsupported GDP aggregates are created.
+
+### Inflation and Labor
+47. CPI/HICP definitions remain distinct.
+48. Headline/core inflation are distinct.
+49. YoY/MoM inflation are distinct.
+50. Index bases are qualified.
+51. Inflation differences use percentage points.
+52. Unemployment uses labor-force definitions.
+53. Age-group populations are source-qualified.
+54. Labor survey differences remain visible.
+55. No false national labor-quality score is generated.
+
+### Monetary
+56. Central Bank instruments use Stage 91 identities.
+57. Target ranges differ from point rates.
+58. Effective rates differ from administered rates.
+59. Monetary unions are handled correctly.
+60. Basis-point differences use compatible instruments.
+61. No carry-trade predictions are generated.
+
+### Fiscal and External
+62. Central/general government are distinct.
+63. Gross/net debt are distinct.
+64. Fiscal reporting years matter.
+65. Debt-to-GDP uses qualified denominators.
+66. Goods trade differs from total trade.
+67. Trade balance differs from current account.
+68. FDI stocks differ from flows.
+69. Foreign reserves retain source definition.
+70. No sovereign stability score is invented.
+
+### Ranking
+71. Rankings use eligible compatible observations.
+72. Ranking direction is numeric and explicit.
+73. Tie policy is documented.
+74. Missing countries are disclosed.
+75. Ranking population size is reported.
+76. Historical rankings preserve cohort methodology.
+77. No universal Best Economy score is introduced.
+
+### Distributions
+78. Means use eligible numeric samples.
+79. Median/percentiles use documented conventions.
+80. Standard deviation sample/population treatment is explicit.
+81. Sample N is displayed.
+82. Missing values are excluded honestly.
+83. Outliers are not silently removed.
+84. Weighted and unweighted statistics differ.
+85. Missing weights are not guessed.
+
+### Aggregates
+86. Official source aggregates are distinguished.
+87. Derived group aggregations require compatibility.
+88. Geographic overlaps prevent naive sums.
+89. GDP growth rates are not simply summed.
+90. Arbitrary inflation rates are not averaged into World Inflation.
+91. Group weights are period-qualified.
+92. Source methodology is disclosed.
+
+### Historical Analysis
+93. Historical reference periods are aligned.
+94. Actual missingness is preserved.
+95. Latest-restated differs from as-known-at.
+96. Source vintages are preserved.
+97. Later revisions do not leak backward.
+98. Historical differences use compatible series.
+99. No artificial future trend is projected.
+
+### Correlation
+100. Correlation requires period-aligned observations.
+101. Pearson and Spearman methods are distinct.
+102. Sample N is displayed.
+103. Zero variance produces undefined correlation.
+104. Missing observations are handled.
+105. Nonstationarity caveats are displayed.
+106. Serial dependence is acknowledged.
+107. Correlation is not causality.
+108. Correlation is not a trading signal.
+109. Arbitrary predictive lag optimization is not implemented.
+
+### APIs and Performance
+110. Comparison APIs are typed.
+111. Queries are read-only.
+112. Country counts are bounded.
+113. Indicator counts are bounded.
+114. Historical observation counts are bounded.
+115. Correlation matrix sizes are bounded.
+116. Queries batch canonical data reads.
+117. Compatibility is evaluated server-side.
+118. Calculation methodology is versioned.
+119. Cache keys include source revisions.
+120. Cache keys include vintage context.
+121. Cache keys include country membership revision.
+122. Cache keys include weighting policy.
+123. Cache keys include entitlement scope.
+124. Source revisions invalidate affected results.
+125. No page-load Provider fanout occurs.
+
+### UI
+126. Country multi-select works.
+127. Indicator selection works.
+128. Period selection works.
+129. Source selection works.
+130. Comparison Matrix works.
+131. Rankings work.
+132. Historical Trends work.
+133. Distributions work.
+134. Divergence works.
+135. Correlations work where valid.
+136. Eligibility warnings are visible.
+137. Source Methodology inspector works.
+138. Sample sizes are visible.
+139. Missing data is visible.
+140. URL comparison state works.
+141. Desktop layout is responsive.
+142. Tablet layout is responsive.
+143. Mobile layout is functional.
+144. Dark/light is preserved.
+145. Agent Dock compatibility is preserved.
+146. Bottom Taskbar compatibility is preserved.
+147. Keyboard accessibility is supported.
+148. Screen-reader accessibility is supported.
+149. No purple gradients are introduced.
+150. No emoji icons are introduced.
+151. No fictional economic values appear.
+
+### Security
+152. Authentication is enforced.
+153. Authorization is enforced.
+154. Source licensing is enforced.
+155. Restricted derived results are protected.
+156. Arbitrary SQL is prohibited.
+157. Arbitrary user formulas are prohibited.
+158. Arbitrary Provider URLs are prohibited.
+159. Provider secrets remain server-side.
+160. Resource limits are enforced.
+161. No Trading occurs.
+162. No Portfolio mutations occur.
+163. No Broker actions occur.
+164. No Agents execute.
+165. No Workflows execute.
+166. No LLM calls are required.
+
+### Roadmap Boundaries
+167. Stage 94 owns Screeners V1.
+168. Stage 95–98 continue Screeners.
+169. Stages 99–103 own News.
+170. Stages 104–109 own Research.
+171. Stages 110–114 own Portfolios.
+172. Stages 115–118 own Risk.
+173. Stages 119–120 own Saved and Workspaces.
+174. Stages 121–128 own Terminal/AI.
+175. Stages 129–140 own Maps/Intelligence.
+176. Stages 141–142 own Options/Quant pricing.
+177. Stage 143 owns Backtesting.
+178. Stage 144 owns Paper Trading.
+179. Stage 145 owns Broker Sandbox.
+180. Stages 146+ own Agents.
+181. No security/instrument Screener is created.
+182. No economic forecasting engine is created.
+183. No global Maps engine is created.
+184. No duplicate Economic Data platform is created.
+185. Stage 93 must pass compatibility tests.
+186. Stage 93 must pass period alignment tests.
+187. Stage 93 must pass PPP/currency tests.
+188. Stage 93 must pass rankings/distributions tests.
+189. Stage 93 must pass aggregation tests.
+190. Stage 93 must pass correlation tests.
+191. Stage 93 must pass point-in-time tests.
+192. Stage 93 must pass source-entitlement tests.
+193. Stage 93 must pass Stage 89–92 regressions.
+194. Documentation must match actual code.
+195. Stage 94 is the next canonical stage.
+
 
 
 

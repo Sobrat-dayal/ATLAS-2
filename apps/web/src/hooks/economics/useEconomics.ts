@@ -24,7 +24,7 @@ import {
   TransformationType,
 } from "@/lib/economics";
 
-export type EconomicsSubTab = "overview" | "country" | "central-banks" | "calendar" | "explorer" | "series";
+export type EconomicsSubTab = "overview" | "country" | "central-banks" | "calendar" | "comparisons" | "explorer" | "series";
 export type { DateRangePreset };
 
 export interface UseEconomicsReturn {
