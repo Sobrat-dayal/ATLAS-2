@@ -77,11 +77,11 @@ export function ScreenerHeader({
                   Financial Screeners
                 </h1>
                 <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground border border-border/50">
-                  V1 · STAGE 97
+                  V1 · STAGE 98
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Institutional Saved Strategies, Multi-Column Sorting, Factor Ranking & Financial Data Exports
+                Natural-Language Screener Translation, Factor Discovery, Visual Filters & Saved Strategies
               </p>
             </div>
           </div>

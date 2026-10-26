@@ -2740,16 +2740,18 @@ def _generate_canonical_bars(
         closes.append(c)
         highs.append(h)
         lows.append(lo)
-        bars.append({
-            "timestamp": t_dt.isoformat(),
-            "time_unix": int(t_dt.timestamp()),
-            "open": o,
-            "high": h,
-            "low": lo,
-            "close": c,
-            "volume": vol,
-            "is_final": True,
-        })
+        bars.append(
+            {
+                "timestamp": t_dt.isoformat(),
+                "time_unix": int(t_dt.timestamp()),
+                "open": o,
+                "high": h,
+                "low": lo,
+                "close": c,
+                "volume": vol,
+                "is_final": True,
+            }
+        )
 
     sma_20 = compute_sma(closes, 20)
     sma_50 = compute_sma(closes, 50)
@@ -2830,6 +2832,8 @@ def _generate_canonical_bars(
         "macd_crossover": macd_crossover,
     }
     return bars, indicators
+
+
 def _build_canonical_observation_catalog() -> List[ScreenerObservationRecord]:
     """
     Constructs the authoritative baseline candidate observation catalog.
@@ -3088,7 +3092,9 @@ def _build_canonical_observation_catalog() -> List[ScreenerObservationRecord]:
         ScreenerObservationRecord(
             instrument_entity_id=UUID("a1a2a3a4-b1b2-c1c2-d1d2-000000000006"),
             listing_id=UUID("b1b2c3d4-0001-0000-0000-000000000006"),
-            issuer_company_entity_id=UUID("c0000000-0000-0000-0000-000000000005"),  # Identical issuer company!
+            issuer_company_entity_id=UUID(
+                "c0000000-0000-0000-0000-000000000005"
+            ),  # Identical issuer company!
             canonical_security_name="Alphabet Inc. (Class C)",
             ticker="GOOG",
             exchange_mic="XNAS",
@@ -3568,7 +3574,9 @@ def _build_canonical_observation_catalog() -> List[ScreenerObservationRecord]:
         ScreenerObservationRecord(
             instrument_entity_id=UUID("a1a2a3a4-b1b2-c1c2-d1d2-000000000016"),
             listing_id=UUID("b1b2c3d4-0001-0000-0000-000000000016"),
-            issuer_company_entity_id=UUID("c0000000-0000-0000-0000-000000000015"),  # Identical issuer company!
+            issuer_company_entity_id=UUID(
+                "c0000000-0000-0000-0000-000000000015"
+            ),  # Identical issuer company!
             canonical_security_name="Infosys Ltd. (ADR)",
             ticker="INFY",
             exchange_mic="XNYS",
@@ -4010,21 +4018,37 @@ def _build_canonical_observation_catalog() -> List[ScreenerObservationRecord]:
         if fund:
             for k, v in fund.items():
                 r_dict[k] = v
-        elif r.sector and r.sector.lower() != "financial services" and r.revenue and r.revenue > Decimal("0"):
+        elif (
+            r.sector
+            and r.sector.lower() != "financial services"
+            and r.revenue
+            and r.revenue > Decimal("0")
+        ):
             # Synthetic default profile for unlisted foreign test equities (TCS, RELIANCE, SAP, etc.)
             r_dict.setdefault("revenue_growth_yoy", Decimal("8.50"))
             r_dict.setdefault("revenue_growth_qoq", Decimal("2.10"))
             r_dict.setdefault("net_income_growth_yoy", Decimal("12.40"))
             r_dict.setdefault("eps_growth_yoy", Decimal("12.60"))
-            r_dict.setdefault("operating_cash_flow", (r.revenue * Decimal("0.25")).quantize(Decimal("1")))
+            r_dict.setdefault(
+                "operating_cash_flow", (r.revenue * Decimal("0.25")).quantize(Decimal("1"))
+            )
             r_dict.setdefault("capex", (r.revenue * Decimal("0.06")).quantize(Decimal("1")))
             r_dict.setdefault("fcf", (r.revenue * Decimal("0.19")).quantize(Decimal("1")))
             r_dict.setdefault("fcf_growth_yoy", Decimal("10.50"))
             if r.market_cap and r.market_cap > Decimal("0"):
-                r_dict.setdefault("fcf_yield", ((r.revenue * Decimal("0.19")) / r.market_cap * Decimal("100")).quantize(Decimal("0.01")))
+                r_dict.setdefault(
+                    "fcf_yield",
+                    ((r.revenue * Decimal("0.19")) / r.market_cap * Decimal("100")).quantize(
+                        Decimal("0.01")
+                    ),
+                )
             if r.book_equity and r.book_equity > Decimal("0"):
-                r_dict.setdefault("total_debt", (r.book_equity * Decimal("0.35")).quantize(Decimal("1")))
-                r_dict.setdefault("net_debt", (r.book_equity * Decimal("0.10")).quantize(Decimal("1")))
+                r_dict.setdefault(
+                    "total_debt", (r.book_equity * Decimal("0.35")).quantize(Decimal("1"))
+                )
+                r_dict.setdefault(
+                    "net_debt", (r.book_equity * Decimal("0.10")).quantize(Decimal("1"))
+                )
                 r_dict.setdefault("debt_to_equity", Decimal("0.35"))
             r_dict.setdefault("current_ratio", Decimal("1.85"))
             r_dict.setdefault("quick_ratio", Decimal("1.45"))
@@ -4033,18 +4057,29 @@ def _build_canonical_observation_catalog() -> List[ScreenerObservationRecord]:
             if r.market_cap and r.market_cap > Decimal("0"):
                 r_dict.setdefault("ev", (r.market_cap * Decimal("1.05")).quantize(Decimal("1")))
                 r_dict.setdefault("ev_to_ebitda", Decimal("18.50"))
-                r_dict.setdefault("ev_to_revenue", (Decimal("1.05") * r.market_cap / r.revenue).quantize(Decimal("0.01")))
+                r_dict.setdefault(
+                    "ev_to_revenue",
+                    (Decimal("1.05") * r.market_cap / r.revenue).quantize(Decimal("0.01")),
+                )
 
         # 2. Attach canonical historical bars and technical indicator calculations
-        bar_count = 10 if r.ticker == "ENE" else (260 if r.last_price and r.last_price > Decimal("0") else 0)
-        bars, ind = _generate_canonical_bars(r.ticker, r.last_price or Decimal("0"), count=bar_count)
+        bar_count = (
+            10
+            if r.ticker == "ENE"
+            else (260 if r.last_price and r.last_price > Decimal("0") else 0)
+        )
+        bars, ind = _generate_canonical_bars(
+            r.ticker, r.last_price or Decimal("0"), count=bar_count
+        )
         r_dict["historical_bars"] = bars
         for k, v in ind.items():
             r_dict[k] = v
 
         # Compute relative volume for 20d if available
         if r.volume_latest and r.volume_20d_avg and r.volume_20d_avg > Decimal("0"):
-            r_dict["relative_volume_20d"] = compute_relative_volume(r.volume_latest, r.volume_20d_avg)
+            r_dict["relative_volume_20d"] = compute_relative_volume(
+                r.volume_latest, r.volume_20d_avg
+            )
 
         enriched_records.append(ScreenerObservationRecord(**r_dict))
 

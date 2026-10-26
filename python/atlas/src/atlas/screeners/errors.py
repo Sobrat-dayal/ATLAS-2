@@ -59,7 +59,9 @@ class ScreenerValueTypeInvalidError(ScreenerError):
 
 
 class ScreenerRangeInvalidError(ScreenerError):
-    def __init__(self, filter_id: str, min_val: Optional[str] = None, max_val: Optional[str] = None):
+    def __init__(
+        self, filter_id: str, min_val: Optional[str] = None, max_val: Optional[str] = None
+    ):
         super().__init__(
             f"Invalid range for filter '{filter_id}': lower bound ({min_val}) must be <= upper bound ({max_val}).",
             code="SCREENER_RANGE_INVALID",
@@ -318,3 +320,69 @@ class ScreenerExportFileUnavailableError(ScreenerError):
             status_code=404,
         )
 
+
+# =============================================================================
+# Stage 98: Natural-Language Screener Translation Errors
+# =============================================================================
+
+
+class NLScreenerError(ScreenerError):
+    """Base error for natural language translation engine."""
+
+    def __init__(self, message: str, code: str = "NL_SCREEN_ERROR", status_code: int = 400):
+        super().__init__(message, code=code, status_code=status_code)
+
+
+class NLScreenerEmptyRequestError(NLScreenerError):
+    def __init__(self):
+        super().__init__(
+            "Natural-language screening query cannot be empty.",
+            code="NL_SCREEN_REQUEST_EMPTY",
+            status_code=400,
+        )
+
+
+class NLScreenerTextTooLongError(NLScreenerError):
+    def __init__(self, length: int, max_length: int = 1000):
+        super().__init__(
+            f"Screening query length ({length} chars) exceeds the maximum allowed length of {max_length} characters.",
+            code="NL_SCREEN_REQUEST_TOO_LONG",
+            status_code=400,
+        )
+
+
+class NLScreenerAmbiguityError(NLScreenerError):
+    def __init__(self, message: str, ambiguity_id: Optional[str] = None):
+        super().__init__(
+            message,
+            code="NL_SCREEN_AMBIGUITY_DETECTED",
+            status_code=422,
+        )
+        self.ambiguity_id = ambiguity_id
+
+
+class NLScreenerUnsupportedRequirementError(NLScreenerError):
+    def __init__(self, requirement: str):
+        super().__init__(
+            f"Requested requirement '{requirement}' is unsupported by the Screener Engine.",
+            code="NL_SCREEN_REQUIREMENT_UNSUPPORTED",
+            status_code=400,
+        )
+
+
+class NLScreenerPromptInjectionError(NLScreenerError):
+    def __init__(self, reason: str = "Potential prompt injection or security violation detected."):
+        super().__init__(
+            f"Security policy rejection: {reason}",
+            code="NL_SCREEN_SECURITY_REJECTION",
+            status_code=400,
+        )
+
+
+class NLScreenerModelUnavailableError(NLScreenerError):
+    def __init__(self, detail: str = "Model translation adapter is currently unavailable."):
+        super().__init__(
+            detail,
+            code="NL_SCREEN_MODEL_UNAVAILABLE",
+            status_code=503,
+        )

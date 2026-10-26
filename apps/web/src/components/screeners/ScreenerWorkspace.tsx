@@ -18,6 +18,8 @@ import { SaveScreenDialog } from "./saved/SaveScreenDialog";
 import { AdvancedSortModal } from "./sorting/AdvancedSortModal";
 import { RankingConfigModal } from "./ranking/RankingConfigModal";
 import { ExportDialog } from "./exports/ExportDialog";
+import { NaturalLanguageScreener } from "./natural-language/NaturalLanguageScreener";
+import { Sliders, Sparkles } from "lucide-react";
 
 export function ScreenerWorkspace() {
   const {
@@ -80,7 +82,10 @@ export function ScreenerWorkspace() {
     setIsExportDialogOpen,
     setIsAdvancedSortOpen,
     runScreener,
+    applyNLProposal,
   } = useScreener();
+
+  const [filterMode, setFilterMode] = React.useState<"visual" | "natural_language">("visual");
 
   const totalMatching = results?.total_matching_count ?? 0;
   const totalEvaluated = results?.source_coverage?.total_evaluated ?? (coverage?.total_instruments ?? 0);
@@ -141,18 +146,65 @@ export function ScreenerWorkspace() {
         onToggleSector={toggleSector}
       />
 
-      {/* 4. Institutional Visual Screener Filter Builder (Stage 95) */}
-      <VisualScreenerBuilder
-        filtersRegistry={filtersRegistry}
-        universes={universes}
-        selectedUniverseId={selectedUniverseId}
-        exchanges={exchanges}
-        geographies={geographies}
-        industries={industries}
-        appliedFilters={activeFilters}
-        onApplyFilters={setFilters}
-        isLoading={loading}
-      />
+      {/* 4. Filter Mode Switcher (Visual Builder vs. Natural-Language AI Translation) */}
+      <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-6 py-2">
+        <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/80 p-0.5 text-xs">
+          <button
+            type="button"
+            onClick={() => setFilterMode("visual")}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-colors ${
+              filterMode === "visual"
+                ? "bg-card text-foreground shadow-sm border border-border/80"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Sliders className="h-3.5 w-3.5" />
+            <span>Visual Filters</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterMode("natural_language")}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-colors ${
+              filterMode === "natural_language"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Natural Language (AI)</span>
+          </button>
+        </div>
+        <div className="text-[11px] font-mono text-muted-foreground hidden sm:block">
+          {filterMode === "visual"
+            ? "Manual multi-factor rule composition"
+            : "Semantic translation to schema-validated canonical filters"}
+        </div>
+      </div>
+
+      {/* 5. Filter Builder Mode Component */}
+      {filterMode === "visual" ? (
+        <VisualScreenerBuilder
+          filtersRegistry={filtersRegistry}
+          universes={universes}
+          selectedUniverseId={selectedUniverseId}
+          exchanges={exchanges}
+          geographies={geographies}
+          industries={industries}
+          appliedFilters={activeFilters}
+          onApplyFilters={setFilters}
+          isLoading={loading}
+        />
+      ) : (
+        <NaturalLanguageScreener
+          onTransferToBuilder={(filters, universe) => {
+            applyNLProposal(filters, universe, undefined, false);
+            setFilterMode("visual");
+          }}
+          onApplyAndRun={(filters, universe, sort) => {
+            applyNLProposal(filters, universe, sort, true);
+          }}
+        />
+      )}
 
       {/* 5. Active Filter Badges with Quick Removal */}
       <ScreenerActiveFilters

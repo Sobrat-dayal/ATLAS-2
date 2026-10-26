@@ -9,6 +9,10 @@ from atlas.screeners.enums import (
     FreshnessStatus,
     ListingStatus,
     MetricAvailabilityStatus,
+    NLAmbiguityCategory,
+    NLRequirementStatus,
+    NLTranslationMode,
+    NLTranslationStatus,
     PeriodPolicy,
     PriceAdjustmentPolicy,
     RankingDirection,
@@ -26,6 +30,13 @@ from atlas.screeners.enums import (
     ValueType,
 )
 from atlas.screeners.errors import (
+    NLScreenerAmbiguityError,
+    NLScreenerEmptyRequestError,
+    NLScreenerError,
+    NLScreenerModelUnavailableError,
+    NLScreenerPromptInjectionError,
+    NLScreenerTextTooLongError,
+    NLScreenerUnsupportedRequirementError,
     SavedScreenerConflictError,
     SavedScreenerNameInvalidError,
     SavedScreenerNotAuthorizedError,
@@ -73,6 +84,10 @@ from atlas.screeners.models import (
     ScreenerObservationRecord,
     ScreenerUniverseDefinition,
 )
+from atlas.screeners.natural_language import (
+    NLScreenerTranslationEngine,
+    nl_translation_engine,
+)
 from atlas.screeners.ranking import FactorRankingEngine
 from atlas.screeners.repository import (
     CANONICAL_COLUMNS,
@@ -88,6 +103,13 @@ from atlas.screeners.schemas import (
     CountryOptionDTO,
     ExchangeOptionDTO,
     FilterCriterionDTO,
+    NLAmbiguityQuestionDTO,
+    NLCapabilitiesResponseDTO,
+    NLClarifyRequestDTO,
+    NLQueryModificationDiffDTO,
+    NLRequirementResolutionDTO,
+    NLTranslateRequestDTO,
+    NLTranslationProposalDTO,
     RankingFactorWeightDTO,
     SavedScreenerCreateRequestDTO,
     SavedScreenerDTO,
@@ -151,6 +173,10 @@ __all__ = [
     "TechnicalInterval",
     "BarCompletionPolicy",
     "PriceAdjustmentPolicy",
+    "NLTranslationStatus",
+    "NLAmbiguityCategory",
+    "NLRequirementStatus",
+    "NLTranslationMode",
     # Technical Indicators
     "compute_sma",
     "compute_ema",
@@ -164,6 +190,13 @@ __all__ = [
     "compute_52w_high_low",
     # Errors
     "ScreenerError",
+    "NLScreenerError",
+    "NLScreenerEmptyRequestError",
+    "NLScreenerTextTooLongError",
+    "NLScreenerAmbiguityError",
+    "NLScreenerUnsupportedRequirementError",
+    "NLScreenerPromptInjectionError",
+    "NLScreenerModelUnavailableError",
     "ScreenerUniverseNotFoundError",
     "ScreenerUniverseUnsupportedError",
     "ScreenerFilterNotFoundError",
@@ -215,6 +248,8 @@ __all__ = [
     "SavedScreenerRepository",
     "saved_screener_repository",
     "ScreenerService",
+    "NLScreenerTranslationEngine",
+    "nl_translation_engine",
     # Schemas
     "FilterCriterionDTO",
     "SortCriterionDTO",
@@ -240,4 +275,11 @@ __all__ = [
     "ScreenerExportRequestDTO",
     "ScreenerExportJobDTO",
     "ScreenerExportListResponseDTO",
+    "NLRequirementResolutionDTO",
+    "NLAmbiguityQuestionDTO",
+    "NLTranslateRequestDTO",
+    "NLClarifyRequestDTO",
+    "NLQueryModificationDiffDTO",
+    "NLTranslationProposalDTO",
+    "NLCapabilitiesResponseDTO",
 ]

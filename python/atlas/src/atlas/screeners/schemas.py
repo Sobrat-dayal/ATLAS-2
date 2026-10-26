@@ -11,6 +11,10 @@ from atlas.screeners.enums import (
     ExportJobStatus,
     ExportScope,
     FilterOperator,
+    NLAmbiguityCategory,
+    NLRequirementStatus,
+    NLTranslationMode,
+    NLTranslationStatus,
     PeriodPolicy,
     RankingDirection,
     RankingMethod,
@@ -36,7 +40,6 @@ class FilterCriterionDTO(BaseModel):
     unit: Optional[str] = None
     parameters: Optional[Dict[str, Any]] = None
     period_policy: Optional[str] = None
-
 
 
 class SortCriterionDTO(BaseModel):
@@ -109,7 +112,6 @@ class ScreenerRunRequestDTO(BaseModel):
     cursor: Optional[str] = None
     period_policy: PeriodPolicy = PeriodPolicy.LATEST_ANNUAL
     currency_policy: str = "USD"
-
 
 
 class ScreenerMetricCellDTO(BaseModel):
@@ -325,7 +327,6 @@ class ScreenerExportListResponseDTO(BaseModel):
     items: List[ScreenerExportJobDTO]
 
 
-
 class ConditionValidationIssueDTO(BaseModel):
     """Attributed validation issue for visual filter condition."""
 
@@ -351,7 +352,6 @@ class ValidationResponseDTO(BaseModel):
     warnings: List[str] = Field(default_factory=list)
     contradictions_detected: bool = False
     eligible_universe_size: int = 0
-
 
 
 class ExchangeOptionDTO(BaseModel):
@@ -401,3 +401,110 @@ class ScreenerCoverageResponseDTO(BaseModel):
     instruments_with_ratios: int
     providers_represented: List[str]
     data_freshness_breakdown: Dict[str, int]
+
+
+# =============================================================================
+# Stage 98: Natural-Language Screener Translation DTOs
+# =============================================================================
+
+
+class NLRequirementResolutionDTO(BaseModel):
+    """Tracking coverage and interpretation of an individual user requirement."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    requirement_id: str
+    source_text: str
+    interpreted_concept: Optional[str] = None
+    resolved_filter_id: Optional[str] = None
+    status: NLRequirementStatus = NLRequirementStatus.RESOLVED
+    explanation: str = ""
+    alternatives: Optional[List[str]] = None
+
+
+class NLAmbiguityQuestionDTO(BaseModel):
+    """Targeted clarification question to resolve semantic ambiguity."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    ambiguity_id: str
+    category: NLAmbiguityCategory
+    question: str
+    source_phrase: str
+    options: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class NLTranslateRequestDTO(BaseModel):
+    """Inbound request to translate natural-language screening instructions."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    text: str = Field(..., max_length=1000)
+    universe_context: Optional[str] = None
+    current_filters: Optional[List[FilterCriterionDTO]] = None
+    currency_policy: Optional[str] = "USD"
+    period_policy: Optional[PeriodPolicy] = PeriodPolicy.LATEST_ANNUAL
+    locale: Optional[str] = "en-US"
+    mode: NLTranslationMode = NLTranslationMode.CREATE_NEW_QUERY
+    request_id: Optional[str] = None
+
+
+class NLClarifyRequestDTO(BaseModel):
+    """User response to resolve an ambiguity in a translation proposal."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    proposal_id: str
+    original_text: str
+    ambiguity_id: str
+    selected_option_id: str
+    additional_text: Optional[str] = None
+    current_universe: Optional[UniverseSelectionDTO] = None
+    current_filters: Optional[List[FilterCriterionDTO]] = None
+
+
+class NLQueryModificationDiffDTO(BaseModel):
+    """Structured diff when modifying an existing screener draft."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    added_conditions: List[FilterCriterionDTO] = Field(default_factory=list)
+    updated_conditions: List[FilterCriterionDTO] = Field(default_factory=list)
+    removed_conditions: List[str] = Field(default_factory=list)
+
+
+class NLTranslationProposalDTO(BaseModel):
+    """Complete structured translation proposal ready for review and execution."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    proposal_id: str
+    status: NLTranslationStatus
+    original_text: str
+    universe: UniverseSelectionDTO = Field(default_factory=UniverseSelectionDTO)
+    filters: List[FilterCriterionDTO] = Field(default_factory=list)
+    sort: List[SortCriterionDTO] = Field(default_factory=list)
+    result_limit: Optional[int] = None
+    requirements: List[NLRequirementResolutionDTO] = Field(default_factory=list)
+    ambiguities: List[NLAmbiguityQuestionDTO] = Field(default_factory=list)
+    unsupported: List[str] = Field(default_factory=list)
+    assumptions: List[str] = Field(default_factory=list)
+    modification_diff: Optional[NLQueryModificationDiffDTO] = None
+    ready_for_review: bool = True
+    translator_version: str = "1.0.0"
+    registry_revision: str = "stage_98_v1"
+    coverage_count: str = ""
+
+
+class NLCapabilitiesResponseDTO(BaseModel):
+    """Registry of supported natural language translation capabilities and examples."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    supported_metrics: List[Dict[str, Any]] = Field(default_factory=list)
+    supported_operators: List[str] = Field(default_factory=list)
+    supported_currencies: List[str] = Field(default_factory=list)
+    supported_units: List[str] = Field(default_factory=list)
+    supported_indicators: List[Dict[str, Any]] = Field(default_factory=list)
+    supported_magnitudes: List[str] = Field(default_factory=list)
+    example_queries: List[Dict[str, str]] = Field(default_factory=list)

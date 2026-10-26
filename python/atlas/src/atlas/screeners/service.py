@@ -94,7 +94,11 @@ class ScreenerService:
         if not category:
             return all_filters
         cat_upper = category.upper()
-        return [f for f in all_filters if f.category.value.upper() == cat_upper or f.category.name == cat_upper]
+        return [
+            f
+            for f in all_filters
+            if f.category.value.upper() == cat_upper or f.category.name == cat_upper
+        ]
 
     def get_columns(self) -> List[ScreenerColumnDefinition]:
         return self._repo.get_columns()
@@ -104,7 +108,10 @@ class ScreenerService:
         records = self._repo.get_records()
         exchanges: Dict[str, Dict[str, Any]] = {}
         for r in records:
-            if r.listing_status == ListingStatus.ACTIVE and r.security_type == SecurityType.COMMON_STOCK:
+            if (
+                r.listing_status == ListingStatus.ACTIVE
+                and r.security_type == SecurityType.COMMON_STOCK
+            ):
                 mic = r.exchange_mic
                 if mic not in exchanges:
                     exchanges[mic] = {
@@ -115,14 +122,20 @@ class ScreenerService:
                     }
                 exchanges[mic]["count"] += 1
 
-        return [ExchangeOptionDTO(**item) for item in sorted(exchanges.values(), key=lambda x: x["name"])]
+        return [
+            ExchangeOptionDTO(**item)
+            for item in sorted(exchanges.values(), key=lambda x: x["name"])
+        ]
 
     def get_geographies(self) -> List[CountryOptionDTO]:
         """Returns supported country filter options with security counts."""
         records = self._repo.get_records()
         countries: Dict[str, Dict[str, Any]] = {}
         for r in records:
-            if r.listing_status == ListingStatus.ACTIVE and r.security_type == SecurityType.COMMON_STOCK:
+            if (
+                r.listing_status == ListingStatus.ACTIVE
+                and r.security_type == SecurityType.COMMON_STOCK
+            ):
                 code = r.listing_country_code
                 if code not in countries:
                     countries[code] = {
@@ -132,7 +145,9 @@ class ScreenerService:
                     }
                 countries[code]["count"] += 1
 
-        return [CountryOptionDTO(**item) for item in sorted(countries.values(), key=lambda x: x["name"])]
+        return [
+            CountryOptionDTO(**item) for item in sorted(countries.values(), key=lambda x: x["name"])
+        ]
 
     def get_industries(self) -> List[SectorOptionDTO]:
         """Returns supported sector & child industry classifications."""
@@ -172,8 +187,12 @@ class ScreenerService:
 
         quotes_count = sum(1 for r in records if r.last_price is not None)
         cap_count = sum(1 for r in records if r.market_cap is not None)
-        fundamentals_count = sum(1 for r in records if r.revenue is not None or r.net_income is not None)
-        ratios_count = sum(1 for r in records if r.pe_ratio is not None or r.dividend_yield is not None)
+        fundamentals_count = sum(
+            1 for r in records if r.revenue is not None or r.net_income is not None
+        )
+        ratios_count = sum(
+            1 for r in records if r.pe_ratio is not None or r.dividend_yield is not None
+        )
 
         freshness_map: Dict[str, int] = {}
         for r in records:
@@ -207,7 +226,9 @@ class ScreenerService:
             raise ScreenerUniverseNotFoundError(request.universe.universe_id)
 
         if len(request.filters) > MAX_ACTIVE_FILTERS:
-            raise ScreenerQueryLimitExceededError(limit=MAX_ACTIVE_FILTERS, actual=len(request.filters))
+            raise ScreenerQueryLimitExceededError(
+                limit=MAX_ACTIVE_FILTERS, actual=len(request.filters)
+            )
 
         accepted_filters: List[FilterCriterionDTO] = []
         rejected_filters: List[Dict[str, Any]] = []
@@ -220,152 +241,191 @@ class ScreenerService:
             f_def = self._repo.get_filter(f.filter_id)
             if not f_def:
                 reason = f"Filter '{f.filter_id}' is not in approved filter registry."
-                rejected_filters.append({
-                    "filter_id": f.filter_id,
-                    "condition_id": f.condition_id,
-                    "reason": reason,
-                    "code": "SCREENER_FILTER_NOT_FOUND",
-                })
-                issues.append(ConditionValidationIssueDTO(
-                    condition_id=f.condition_id,
-                    filter_id=f.filter_id,
-                    field_path="filter_id",
-                    code="SCREENER_FILTER_NOT_FOUND",
-                    severity="error",
-                    message=reason,
-                ))
+                rejected_filters.append(
+                    {
+                        "filter_id": f.filter_id,
+                        "condition_id": f.condition_id,
+                        "reason": reason,
+                        "code": "SCREENER_FILTER_NOT_FOUND",
+                    }
+                )
+                issues.append(
+                    ConditionValidationIssueDTO(
+                        condition_id=f.condition_id,
+                        filter_id=f.filter_id,
+                        field_path="filter_id",
+                        code="SCREENER_FILTER_NOT_FOUND",
+                        severity="error",
+                        message=reason,
+                    )
+                )
                 continue
 
             # Check universe eligibility
             if f_def.eligible_security_types:
-                overlap = set(f_def.eligible_security_types).intersection(set(u_def.eligible_security_types))
+                overlap = set(f_def.eligible_security_types).intersection(
+                    set(u_def.eligible_security_types)
+                )
                 if not overlap:
                     warning_msg = (
                         f"Metric '{f_def.display_name}' applies to security types {[st.value for st in f_def.eligible_security_types]}, "
                         f"which are not included in selected universe '{u_def.name}'."
                     )
                     warnings.append(warning_msg)
-                    issues.append(ConditionValidationIssueDTO(
-                        condition_id=f.condition_id,
-                        filter_id=f.filter_id,
-                        code="SCREENER_UNIVERSE_INCOMPATIBILITY",
-                        severity="warning",
-                        message=warning_msg,
-                    ))
+                    issues.append(
+                        ConditionValidationIssueDTO(
+                            condition_id=f.condition_id,
+                            filter_id=f.filter_id,
+                            code="SCREENER_UNIVERSE_INCOMPATIBILITY",
+                            severity="warning",
+                            message=warning_msg,
+                        )
+                    )
 
             if f.operator not in f_def.allowed_operators:
                 reason = f"Operator '{f.operator}' not allowed for '{f.filter_id}'. Allowed: {[op.value for op in f_def.allowed_operators]}."
-                rejected_filters.append({
-                    "filter_id": f.filter_id,
-                    "condition_id": f.condition_id,
-                    "reason": reason,
-                    "code": "SCREENER_OPERATOR_NOT_SUPPORTED",
-                })
-                issues.append(ConditionValidationIssueDTO(
-                    condition_id=f.condition_id,
-                    filter_id=f.filter_id,
-                    field_path="operator",
-                    code="SCREENER_OPERATOR_NOT_SUPPORTED",
-                    severity="error",
-                    message=reason,
-                ))
+                rejected_filters.append(
+                    {
+                        "filter_id": f.filter_id,
+                        "condition_id": f.condition_id,
+                        "reason": reason,
+                        "code": "SCREENER_OPERATOR_NOT_SUPPORTED",
+                    }
+                )
+                issues.append(
+                    ConditionValidationIssueDTO(
+                        condition_id=f.condition_id,
+                        filter_id=f.filter_id,
+                        field_path="operator",
+                        code="SCREENER_OPERATOR_NOT_SUPPORTED",
+                        severity="error",
+                        message=reason,
+                    )
+                )
                 continue
 
             # Validate range
             if f.operator == FilterOperator.BETWEEN:
                 if f.secondary_value is None or str(f.secondary_value).strip() == "":
                     reason = "Operator BETWEEN requires both a lower value and a secondary_value upper bound."
-                    rejected_filters.append({
-                        "filter_id": f.filter_id,
-                        "condition_id": f.condition_id,
-                        "reason": reason,
-                        "code": "SCREENER_RANGE_INVALID",
-                    })
-                    issues.append(ConditionValidationIssueDTO(
-                        condition_id=f.condition_id,
-                        filter_id=f.filter_id,
-                        field_path="secondary_value",
-                        code="SCREENER_RANGE_INVALID",
-                        severity="error",
-                        message=reason,
-                    ))
-                    continue
-                try:
-                    d1 = Decimal(str(f.value))
-                    d2 = Decimal(str(f.secondary_value))
-                    if d1 > d2:
-                        reason = f"Range lower bound ({d1}) cannot exceed upper bound ({d2})."
-                        rejected_filters.append({
+                    rejected_filters.append(
+                        {
                             "filter_id": f.filter_id,
                             "condition_id": f.condition_id,
                             "reason": reason,
                             "code": "SCREENER_RANGE_INVALID",
-                        })
-                        issues.append(ConditionValidationIssueDTO(
+                        }
+                    )
+                    issues.append(
+                        ConditionValidationIssueDTO(
                             condition_id=f.condition_id,
                             filter_id=f.filter_id,
                             field_path="secondary_value",
                             code="SCREENER_RANGE_INVALID",
                             severity="error",
                             message=reason,
-                        ))
-                        continue
-                except (InvalidOperation, TypeError, ValueError):
-                    reason = "Numeric values could not be parsed for range comparison."
-                    rejected_filters.append({
-                        "filter_id": f.filter_id,
-                        "condition_id": f.condition_id,
-                        "reason": reason,
-                        "code": "SCREENER_VALUE_TYPE_INVALID",
-                    })
-                    issues.append(ConditionValidationIssueDTO(
-                        condition_id=f.condition_id,
-                        filter_id=f.filter_id,
-                        field_path="value",
-                        code="SCREENER_VALUE_TYPE_INVALID",
-                        severity="error",
-                        message=reason,
-                    ))
+                        )
+                    )
                     continue
-
-            # Validate numeric types
-            if f_def.value_type in [ValueType.NUMERIC, ValueType.CURRENCY, ValueType.PERCENTAGE, ValueType.INTEGER]:
-                if f.operator != FilterOperator.IN:
-                    try:
-                        d_val = Decimal(str(f.value))
-                        if not math.isfinite(float(d_val)):
-                            reason = "Non-finite values (NaN / Inf) are prohibited."
-                            rejected_filters.append({
+                try:
+                    d1 = Decimal(str(f.value))
+                    d2 = Decimal(str(f.secondary_value))
+                    if d1 > d2:
+                        reason = f"Range lower bound ({d1}) cannot exceed upper bound ({d2})."
+                        rejected_filters.append(
+                            {
                                 "filter_id": f.filter_id,
                                 "condition_id": f.condition_id,
                                 "reason": reason,
-                                "code": "SCREENER_VALUE_TYPE_INVALID",
-                            })
-                            issues.append(ConditionValidationIssueDTO(
+                                "code": "SCREENER_RANGE_INVALID",
+                            }
+                        )
+                        issues.append(
+                            ConditionValidationIssueDTO(
                                 condition_id=f.condition_id,
                                 filter_id=f.filter_id,
-                                field_path="value",
-                                code="SCREENER_VALUE_TYPE_INVALID",
+                                field_path="secondary_value",
+                                code="SCREENER_RANGE_INVALID",
                                 severity="error",
                                 message=reason,
-                            ))
-                            continue
-                    except (InvalidOperation, TypeError, ValueError):
-                        reason = f"Expected numeric decimal value for '{f.filter_id}', got '{f.value}'."
-                        rejected_filters.append({
+                            )
+                        )
+                        continue
+                except (InvalidOperation, TypeError, ValueError):
+                    reason = "Numeric values could not be parsed for range comparison."
+                    rejected_filters.append(
+                        {
                             "filter_id": f.filter_id,
                             "condition_id": f.condition_id,
                             "reason": reason,
                             "code": "SCREENER_VALUE_TYPE_INVALID",
-                        })
-                        issues.append(ConditionValidationIssueDTO(
+                        }
+                    )
+                    issues.append(
+                        ConditionValidationIssueDTO(
                             condition_id=f.condition_id,
                             filter_id=f.filter_id,
                             field_path="value",
                             code="SCREENER_VALUE_TYPE_INVALID",
                             severity="error",
                             message=reason,
-                        ))
+                        )
+                    )
+                    continue
+
+            # Validate numeric types
+            if f_def.value_type in [
+                ValueType.NUMERIC,
+                ValueType.CURRENCY,
+                ValueType.PERCENTAGE,
+                ValueType.INTEGER,
+            ]:
+                if f.operator != FilterOperator.IN:
+                    try:
+                        d_val = Decimal(str(f.value))
+                        if not math.isfinite(float(d_val)):
+                            reason = "Non-finite values (NaN / Inf) are prohibited."
+                            rejected_filters.append(
+                                {
+                                    "filter_id": f.filter_id,
+                                    "condition_id": f.condition_id,
+                                    "reason": reason,
+                                    "code": "SCREENER_VALUE_TYPE_INVALID",
+                                }
+                            )
+                            issues.append(
+                                ConditionValidationIssueDTO(
+                                    condition_id=f.condition_id,
+                                    filter_id=f.filter_id,
+                                    field_path="value",
+                                    code="SCREENER_VALUE_TYPE_INVALID",
+                                    severity="error",
+                                    message=reason,
+                                )
+                            )
+                            continue
+                    except (InvalidOperation, TypeError, ValueError):
+                        reason = (
+                            f"Expected numeric decimal value for '{f.filter_id}', got '{f.value}'."
+                        )
+                        rejected_filters.append(
+                            {
+                                "filter_id": f.filter_id,
+                                "condition_id": f.condition_id,
+                                "reason": reason,
+                                "code": "SCREENER_VALUE_TYPE_INVALID",
+                            }
+                        )
+                        issues.append(
+                            ConditionValidationIssueDTO(
+                                condition_id=f.condition_id,
+                                filter_id=f.filter_id,
+                                field_path="value",
+                                code="SCREENER_VALUE_TYPE_INVALID",
+                                severity="error",
+                                message=reason,
+                            )
+                        )
                         continue
 
             # Validate parameters if supplied for parameterized/technical filters
@@ -374,7 +434,9 @@ class ScreenerService:
                 if f_def.allowed_parameters:
                     for k, v in f.parameters.items():
                         if k not in f_def.allowed_parameters:
-                            param_error = f"Parameter '{k}' is not supported for filter '{f.filter_id}'."
+                            param_error = (
+                                f"Parameter '{k}' is not supported for filter '{f.filter_id}'."
+                            )
                             break
                         if k == "period":
                             try:
@@ -386,20 +448,24 @@ class ScreenerService:
                                 param_error = f"Period parameter must be an integer, got '{v}'."
                                 break
                 if param_error:
-                    rejected_filters.append({
-                        "filter_id": f.filter_id,
-                        "condition_id": f.condition_id,
-                        "reason": param_error,
-                        "code": "SCREENER_PARAMETER_INVALID",
-                    })
-                    issues.append(ConditionValidationIssueDTO(
-                        condition_id=f.condition_id,
-                        filter_id=f.filter_id,
-                        field_path="parameters",
-                        code="SCREENER_PARAMETER_INVALID",
-                        severity="error",
-                        message=param_error,
-                    ))
+                    rejected_filters.append(
+                        {
+                            "filter_id": f.filter_id,
+                            "condition_id": f.condition_id,
+                            "reason": param_error,
+                            "code": "SCREENER_PARAMETER_INVALID",
+                        }
+                    )
+                    issues.append(
+                        ConditionValidationIssueDTO(
+                            condition_id=f.condition_id,
+                            filter_id=f.filter_id,
+                            field_path="parameters",
+                            code="SCREENER_PARAMETER_INVALID",
+                            severity="error",
+                            message=param_error,
+                        )
+                    )
                     continue
 
             accepted_filters.append(f)
@@ -409,7 +475,12 @@ class ScreenerService:
         numeric_bounds: Dict[str, Dict[str, Any]] = {}
         for f in accepted_filters:
             f_def = self._repo.get_filter(f.filter_id)
-            if not f_def or f_def.value_type not in [ValueType.NUMERIC, ValueType.CURRENCY, ValueType.PERCENTAGE, ValueType.INTEGER]:
+            if not f_def or f_def.value_type not in [
+                ValueType.NUMERIC,
+                ValueType.CURRENCY,
+                ValueType.PERCENTAGE,
+                ValueType.INTEGER,
+            ]:
                 continue
             if f.operator == FilterOperator.IN:
                 continue
@@ -432,14 +503,22 @@ class ScreenerService:
                 if f.operator in [FilterOperator.GT, FilterOperator.GTE]:
                     val_dec = Decimal(str(f.value))
                     is_strict = f.operator == FilterOperator.GT
-                    if nb["min_val"] is None or val_dec > nb["min_val"] or (val_dec == nb["min_val"] and is_strict):
+                    if (
+                        nb["min_val"] is None
+                        or val_dec > nb["min_val"]
+                        or (val_dec == nb["min_val"] and is_strict)
+                    ):
                         nb["min_val"] = val_dec
                         nb["min_strict"] = is_strict
                         nb["min_condition_id"] = f.condition_id
                 elif f.operator in [FilterOperator.LT, FilterOperator.LTE]:
                     val_dec = Decimal(str(f.value))
                     is_strict = f.operator == FilterOperator.LT
-                    if nb["max_val"] is None or val_dec < nb["max_val"] or (val_dec == nb["max_val"] and is_strict):
+                    if (
+                        nb["max_val"] is None
+                        or val_dec < nb["max_val"]
+                        or (val_dec == nb["max_val"] and is_strict)
+                    ):
                         nb["max_val"] = val_dec
                         nb["max_strict"] = is_strict
                         nb["max_condition_id"] = f.condition_id
@@ -448,19 +527,23 @@ class ScreenerService:
                     if nb["eq_val"] is not None and nb["eq_val"] != val_dec:
                         contradictions_detected = True
                         reason = f"Contradictory equality conditions on '{fid}': cannot equal both {nb['eq_val']} and {val_dec}."
-                        rejected_filters.append({
-                            "filter_id": fid,
-                            "condition_id": f.condition_id,
-                            "reason": reason,
-                            "code": "SCREENER_CONTRADICTORY_CONDITIONS",
-                        })
-                        issues.append(ConditionValidationIssueDTO(
-                            condition_id=f.condition_id,
-                            filter_id=fid,
-                            code="SCREENER_CONTRADICTORY_CONDITIONS",
-                            severity="error",
-                            message=reason,
-                        ))
+                        rejected_filters.append(
+                            {
+                                "filter_id": fid,
+                                "condition_id": f.condition_id,
+                                "reason": reason,
+                                "code": "SCREENER_CONTRADICTORY_CONDITIONS",
+                            }
+                        )
+                        issues.append(
+                            ConditionValidationIssueDTO(
+                                condition_id=f.condition_id,
+                                filter_id=fid,
+                                code="SCREENER_CONTRADICTORY_CONDITIONS",
+                                severity="error",
+                                message=reason,
+                            )
+                        )
                     nb["eq_val"] = val_dec
                     nb["eq_condition_id"] = f.condition_id
                 elif f.operator == FilterOperator.BETWEEN and f.secondary_value is not None:
@@ -485,41 +568,55 @@ class ScreenerService:
                         f"Contradictory conditions on '{fid}': lower bound ({nb['min_val']}) "
                         f"strictly exceeds upper bound ({nb['max_val']}). No securities can satisfy this query."
                     )
-                    rejected_filters.append({
-                        "filter_id": fid,
-                        "condition_id": nb["max_condition_id"],
-                        "reason": reason,
-                        "code": "SCREENER_CONTRADICTORY_CONDITIONS",
-                    })
-                    issues.append(ConditionValidationIssueDTO(
-                        condition_id=nb["max_condition_id"],
-                        filter_id=fid,
-                        code="SCREENER_CONTRADICTORY_CONDITIONS",
-                        severity="error",
-                        message=reason,
-                    ))
+                    rejected_filters.append(
+                        {
+                            "filter_id": fid,
+                            "condition_id": nb["max_condition_id"],
+                            "reason": reason,
+                            "code": "SCREENER_CONTRADICTORY_CONDITIONS",
+                        }
+                    )
+                    issues.append(
+                        ConditionValidationIssueDTO(
+                            condition_id=nb["max_condition_id"],
+                            filter_id=fid,
+                            code="SCREENER_CONTRADICTORY_CONDITIONS",
+                            severity="error",
+                            message=reason,
+                        )
+                    )
                 elif nb["min_val"] == nb["max_val"] and (nb["min_strict"] or nb["max_strict"]):
                     contradictions_detected = True
                     reason = (
                         f"Contradictory conditions on '{fid}': strict inequality on matching boundary ({nb['min_val']}) "
                         f"renders predicate impossible to satisfy."
                     )
-                    rejected_filters.append({
-                        "filter_id": fid,
-                        "condition_id": nb["max_condition_id"] or nb["min_condition_id"],
-                        "reason": reason,
-                        "code": "SCREENER_CONTRADICTORY_CONDITIONS",
-                    })
-                    issues.append(ConditionValidationIssueDTO(
-                        condition_id=nb["max_condition_id"] or nb["min_condition_id"],
-                        filter_id=fid,
-                        code="SCREENER_CONTRADICTORY_CONDITIONS",
-                        severity="error",
-                        message=reason,
-                    ))
+                    rejected_filters.append(
+                        {
+                            "filter_id": fid,
+                            "condition_id": nb["max_condition_id"] or nb["min_condition_id"],
+                            "reason": reason,
+                            "code": "SCREENER_CONTRADICTORY_CONDITIONS",
+                        }
+                    )
+                    issues.append(
+                        ConditionValidationIssueDTO(
+                            condition_id=nb["max_condition_id"] or nb["min_condition_id"],
+                            filter_id=fid,
+                            code="SCREENER_CONTRADICTORY_CONDITIONS",
+                            severity="error",
+                            message=reason,
+                        )
+                    )
 
         # B. Single-valued Enum contradiction detection
-        single_valued_fields = {"sector", "industry", "exchange_mic", "listing_country_code", "issuer_country_code"}
+        single_valued_fields = {
+            "sector",
+            "industry",
+            "exchange_mic",
+            "listing_country_code",
+            "issuer_country_code",
+        }
         enum_eq_seen: Dict[str, Tuple[str, Optional[str]]] = {}
         for f in accepted_filters:
             if f.filter_id in single_valued_fields and f.operator == FilterOperator.EQ:
@@ -532,19 +629,23 @@ class ScreenerService:
                             f"Contradictory equality conditions on single-valued classification '{f.filter_id}': "
                             f"cannot match both '{prev_val}' and '{str_val}' simultaneously."
                         )
-                        rejected_filters.append({
-                            "filter_id": f.filter_id,
-                            "condition_id": f.condition_id,
-                            "reason": reason,
-                            "code": "SCREENER_CONTRADICTORY_CONDITIONS",
-                        })
-                        issues.append(ConditionValidationIssueDTO(
-                            condition_id=f.condition_id,
-                            filter_id=f.filter_id,
-                            code="SCREENER_CONTRADICTORY_CONDITIONS",
-                            severity="error",
-                            message=reason,
-                        ))
+                        rejected_filters.append(
+                            {
+                                "filter_id": f.filter_id,
+                                "condition_id": f.condition_id,
+                                "reason": reason,
+                                "code": "SCREENER_CONTRADICTORY_CONDITIONS",
+                            }
+                        )
+                        issues.append(
+                            ConditionValidationIssueDTO(
+                                condition_id=f.condition_id,
+                                filter_id=f.filter_id,
+                                code="SCREENER_CONTRADICTORY_CONDITIONS",
+                                severity="error",
+                                message=reason,
+                            )
+                        )
                 else:
                     enum_eq_seen[f.filter_id] = (str_val, f.condition_id)
 
@@ -553,34 +654,51 @@ class ScreenerService:
         for f in accepted_filters:
             f_def = self._repo.get_filter(f.filter_id)
             if f_def and f_def.value_type == ValueType.BOOLEAN and f.operator == FilterOperator.EQ:
-                b_val = f.value if isinstance(f.value, bool) else (str(f.value).strip().lower() in ("true", "1", "yes"))
+                b_val = (
+                    f.value
+                    if isinstance(f.value, bool)
+                    else (str(f.value).strip().lower() in ("true", "1", "yes"))
+                )
                 if f.filter_id in bool_eq_seen:
                     prev_b, prev_cid = bool_eq_seen[f.filter_id]
                     if prev_b != b_val:
                         contradictions_detected = True
                         reason = f"Contradictory boolean conditions on '{f.filter_id}': cannot require both True and False simultaneously."
-                        rejected_filters.append({
-                            "filter_id": f.filter_id,
-                            "condition_id": f.condition_id,
-                            "reason": reason,
-                            "code": "SCREENER_CONTRADICTORY_CONDITIONS",
-                        })
-                        issues.append(ConditionValidationIssueDTO(
-                            condition_id=f.condition_id,
-                            filter_id=f.filter_id,
-                            code="SCREENER_CONTRADICTORY_CONDITIONS",
-                            severity="error",
-                            message=reason,
-                        ))
+                        rejected_filters.append(
+                            {
+                                "filter_id": f.filter_id,
+                                "condition_id": f.condition_id,
+                                "reason": reason,
+                                "code": "SCREENER_CONTRADICTORY_CONDITIONS",
+                            }
+                        )
+                        issues.append(
+                            ConditionValidationIssueDTO(
+                                condition_id=f.condition_id,
+                                filter_id=f.filter_id,
+                                code="SCREENER_CONTRADICTORY_CONDITIONS",
+                                severity="error",
+                                message=reason,
+                            )
+                        )
                 else:
                     bool_eq_seen[f.filter_id] = (b_val, f.condition_id)
 
         # Sector applicability warnings
         if request.universe.sectors and "Financial Services" in request.universe.sectors:
-            fin_inapplicable = {"gross_margin", "fcf", "net_debt", "ev_to_ebitda", "current_ratio", "quick_ratio"}
+            fin_inapplicable = {
+                "gross_margin",
+                "fcf",
+                "net_debt",
+                "ev_to_ebitda",
+                "current_ratio",
+                "quick_ratio",
+            }
             for f in accepted_filters:
                 if f.filter_id in fin_inapplicable:
-                    warnings.append(f"Metric '{f.filter_id}' is inapplicable to financial institutions and banks and will evaluate to null/missing.")
+                    warnings.append(
+                        f"Metric '{f.filter_id}' is inapplicable to financial institutions and banks and will evaluate to null/missing."
+                    )
 
         # Universe size calculation
         universe_candidates = self._prefilter_universe(request)
@@ -636,7 +754,11 @@ class ScreenerService:
 
         if request.ranking:
             # Build candidate list for ranking based on cohort policy
-            ranking_targets = candidates if request.ranking.cohort_policy == "all_eligible_universe" else matching_records
+            ranking_targets = (
+                candidates
+                if request.ranking.cohort_policy == "all_eligible_universe"
+                else matching_records
+            )
             cand_dicts = [
                 {
                     "instrument_entity_id": rec.instrument_entity_id,
@@ -647,6 +769,7 @@ class ScreenerService:
                 for rec in ranking_targets
             ]
             if len(cand_dicts) >= 2:
+
                 def metric_extractor(cand: Dict[str, Any], factor_id: str) -> Optional[float]:
                     rec = cand["record"]
                     val = getattr(rec, factor_id, None)
@@ -657,7 +780,9 @@ class ScreenerService:
                             return None
                     return None
 
-                ranking_eval = FactorRankingEngine.evaluate(cand_dicts, request.ranking, metric_extractor)
+                ranking_eval = FactorRankingEngine.evaluate(
+                    cand_dicts, request.ranking, metric_extractor
+                )
                 for r_row in ranking_eval.results:
                     ranking_row_map[r_row.instrument_entity_id] = r_row
 
@@ -750,7 +875,9 @@ class ScreenerService:
     # 4. Internal Filter Evaluation Logic
     # =========================================================================
 
-    def _prefilter_universe(self, request: ScreenerRunRequestDTO) -> List[ScreenerObservationRecord]:
+    def _prefilter_universe(
+        self, request: ScreenerRunRequestDTO
+    ) -> List[ScreenerObservationRecord]:
         """Reduces universe using indexed eligibility criteria before expensive filtering."""
         u_def = self._repo.get_universe(request.universe.universe_id)
         if not u_def:
@@ -790,11 +917,15 @@ class ScreenerService:
 
         allowed_issuer_countries: Optional[Set[str]] = None
         if request.universe.issuer_country_codes:
-            allowed_issuer_countries = {c.upper().strip() for c in request.universe.issuer_country_codes if c.strip()}
+            allowed_issuer_countries = {
+                c.upper().strip() for c in request.universe.issuer_country_codes if c.strip()
+            }
 
         allowed_listing_countries: Optional[Set[str]] = None
         if request.universe.listing_country_codes:
-            allowed_listing_countries = {c.upper().strip() for c in request.universe.listing_country_codes if c.strip()}
+            allowed_listing_countries = {
+                c.upper().strip() for c in request.universe.listing_country_codes if c.strip()
+            }
 
         allowed_sectors: Optional[Set[str]] = None
         if request.universe.sectors:
@@ -802,7 +933,9 @@ class ScreenerService:
 
         allowed_industries: Optional[Set[str]] = None
         if request.universe.industries:
-            allowed_industries = {i.lower().strip() for i in request.universe.industries if i.strip()}
+            allowed_industries = {
+                i.lower().strip() for i in request.universe.industries if i.strip()
+            }
 
         for r in all_records:
             # 1. Asset class / security type check (e.g. exclude ETF from common equity!)
@@ -818,11 +951,17 @@ class ScreenerService:
                 continue
 
             # 4. Issuer Domicile Country scope
-            if allowed_issuer_countries and r.issuer_country_code.upper() not in allowed_issuer_countries:
+            if (
+                allowed_issuer_countries
+                and r.issuer_country_code.upper() not in allowed_issuer_countries
+            ):
                 continue
 
             # 5. Listing Market Country scope
-            if allowed_listing_countries and r.listing_country_code.upper() not in allowed_listing_countries:
+            if (
+                allowed_listing_countries
+                and r.listing_country_code.upper() not in allowed_listing_countries
+            ):
                 continue
 
             # 6. Sector scope
@@ -882,7 +1021,11 @@ class ScreenerService:
 
         # Boolean handling
         if isinstance(val, bool):
-            target_bool = target if isinstance(target, bool) else (str(target).strip().lower() in ("true", "1", "yes"))
+            target_bool = (
+                target
+                if isinstance(target, bool)
+                else (str(target).strip().lower() in ("true", "1", "yes"))
+            )
             if op == FilterOperator.EQ:
                 return val == target_bool
             elif op == FilterOperator.NE:
@@ -967,7 +1110,7 @@ class ScreenerService:
                 field_id = crit.field_id
                 val1 = getattr(r1, field_id, None)
                 val2 = getattr(r2, field_id, None)
-                is_desc = (crit.direction == SortDirection.DESC)
+                is_desc = crit.direction == SortDirection.DESC
                 null_order = crit.null_order
 
                 # Handle null values
@@ -979,7 +1122,9 @@ class ScreenerService:
                     continue
 
                 # Both non-null: compare values
-                if isinstance(val1, (Decimal, int, float)) and isinstance(val2, (Decimal, int, float)):
+                if isinstance(val1, (Decimal, int, float)) and isinstance(
+                    val2, (Decimal, int, float)
+                ):
                     d1 = Decimal(str(val1))
                     d2 = Decimal(str(val2))
                     if d1 != d2:
@@ -1080,8 +1225,12 @@ class ScreenerService:
                 unit=col.unit_kind.value,
                 currency=record.trading_currency if col.data_type == ValueType.CURRENCY else None,
                 status=status.value,
-                observation_period=record.fiscal_period if col.category == FilterCategory.FUNDAMENTALS else None,
-                freshness=record.price_freshness.value if col.category == FilterCategory.MARKET_DATA else None,
+                observation_period=record.fiscal_period
+                if col.category == FilterCategory.FUNDAMENTALS
+                else None,
+                freshness=record.price_freshness.value
+                if col.category == FilterCategory.MARKET_DATA
+                else None,
                 as_of=record.price_timestamp.isoformat() if record.price_timestamp else None,
                 provider=record.provider,
             )
@@ -1115,7 +1264,11 @@ class ScreenerService:
         """Formats cell with compact institutional notation and tabular clarity."""
         if raw_val is None:
             # Special case for P/E on negative earnings
-            if col.column_id == "pe_ratio" and record.net_income is not None and record.net_income <= Decimal("0"):
+            if (
+                col.column_id == "pe_ratio"
+                and record.net_income is not None
+                and record.net_income <= Decimal("0")
+            ):
                 return MetricAvailabilityStatus.NOT_MEANINGFUL, "N/M"
             return MetricAvailabilityStatus.MISSING, "—"
 
@@ -1126,21 +1279,50 @@ class ScreenerService:
             if col.unit_kind == UnitKind.MONETARY:
                 d = Decimal(str(raw_val))
                 curr = record.trading_currency
-                sym = "$" if curr == "USD" else ("₹" if curr == "INR" else ("€" if curr == "EUR" else ("£" if curr == "GBP" else f"{curr} ")))
+                sym = (
+                    "$"
+                    if curr == "USD"
+                    else (
+                        "₹"
+                        if curr == "INR"
+                        else ("€" if curr == "EUR" else ("£" if curr == "GBP" else f"{curr} "))
+                    )
+                )
                 if col.column_id == "market_cap" or col.column_id in [
-                    "revenue", "net_income", "total_assets", "book_equity", "traded_value_latest",
-                    "operating_cash_flow", "capex", "fcf", "total_debt", "net_debt", "ev"
+                    "revenue",
+                    "net_income",
+                    "total_assets",
+                    "book_equity",
+                    "traded_value_latest",
+                    "operating_cash_flow",
+                    "capex",
+                    "fcf",
+                    "total_debt",
+                    "net_debt",
+                    "ev",
                 ]:
                     # Compact scaling for institutional tables
                     abs_d = abs(d)
                     sign = "-" if d < 0 else ""
                     if abs_d >= Decimal("1000000000000"):
-                        return MetricAvailabilityStatus.AVAILABLE, f"{sign}{sym}{(abs_d / Decimal('1000000000000')).quantize(Decimal('0.01'))}T"
+                        return (
+                            MetricAvailabilityStatus.AVAILABLE,
+                            f"{sign}{sym}{(abs_d / Decimal('1000000000000')).quantize(Decimal('0.01'))}T",
+                        )
                     elif abs_d >= Decimal("1000000000"):
-                        return MetricAvailabilityStatus.AVAILABLE, f"{sign}{sym}{(abs_d / Decimal('1000000000')).quantize(Decimal('0.01'))}B"
+                        return (
+                            MetricAvailabilityStatus.AVAILABLE,
+                            f"{sign}{sym}{(abs_d / Decimal('1000000000')).quantize(Decimal('0.01'))}B",
+                        )
                     elif abs_d >= Decimal("1000000"):
-                        return MetricAvailabilityStatus.AVAILABLE, f"{sign}{sym}{(abs_d / Decimal('1000000')).quantize(Decimal('0.01'))}M"
-                    return MetricAvailabilityStatus.AVAILABLE, f"{sign}{sym}{abs_d.quantize(Decimal('0.01'))}"
+                        return (
+                            MetricAvailabilityStatus.AVAILABLE,
+                            f"{sign}{sym}{(abs_d / Decimal('1000000')).quantize(Decimal('0.01'))}M",
+                        )
+                    return (
+                        MetricAvailabilityStatus.AVAILABLE,
+                        f"{sign}{sym}{abs_d.quantize(Decimal('0.01'))}",
+                    )
                 else:
                     # Last price / Moving Average / ATR
                     return MetricAvailabilityStatus.AVAILABLE, f"{sym}{d.quantize(Decimal('0.01'))}"
@@ -1157,15 +1339,29 @@ class ScreenerService:
             elif col.unit_kind == UnitKind.SHARES:
                 d = Decimal(str(raw_val))
                 if d >= Decimal("1000000"):
-                    return MetricAvailabilityStatus.AVAILABLE, f"{(d / Decimal('1000000')).quantize(Decimal('0.1'))}M"
+                    return (
+                        MetricAvailabilityStatus.AVAILABLE,
+                        f"{(d / Decimal('1000000')).quantize(Decimal('0.1'))}M",
+                    )
                 elif d >= Decimal("1000"):
-                    return MetricAvailabilityStatus.AVAILABLE, f"{(d / Decimal('1000')).quantize(Decimal('0.1'))}K"
+                    return (
+                        MetricAvailabilityStatus.AVAILABLE,
+                        f"{(d / Decimal('1000')).quantize(Decimal('0.1'))}K",
+                    )
                 return MetricAvailabilityStatus.AVAILABLE, f"{int(d):,}"
 
             elif col.unit_kind == UnitKind.CURRENCY_PER_SHARE:
                 d = Decimal(str(raw_val))
                 curr = record.trading_currency
-                sym = "$" if curr == "USD" else ("₹" if curr == "INR" else ("€" if curr == "EUR" else ("£" if curr == "GBP" else "")))
+                sym = (
+                    "$"
+                    if curr == "USD"
+                    else (
+                        "₹"
+                        if curr == "INR"
+                        else ("€" if curr == "EUR" else ("£" if curr == "GBP" else ""))
+                    )
+                )
                 return MetricAvailabilityStatus.AVAILABLE, f"{sym}{d.quantize(Decimal('0.01'))}"
 
             return MetricAvailabilityStatus.AVAILABLE, str(raw_val)

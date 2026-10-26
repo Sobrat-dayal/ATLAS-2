@@ -298,7 +298,7 @@ def compute_historical_volatility(
     if lookback <= 1 or len(prices) <= lookback:
         return None
 
-    window = prices[-(lookback + 1):]
+    window = prices[-(lookback + 1) :]
     log_returns: List[float] = []
 
     for i in range(1, len(window)):
@@ -337,8 +337,12 @@ def compute_52w_high_low(prices: Sequence[Decimal]) -> Optional[Dict[str, Decima
     low_val = min(window)
     curr = prices[-1]
 
-    pct_from_high = ((curr - high_val) / high_val * Decimal("100")) if high_val > Decimal("0") else Decimal("0")
-    pct_from_low = ((curr - low_val) / low_val * Decimal("100")) if low_val > Decimal("0") else Decimal("0")
+    pct_from_high = (
+        ((curr - high_val) / high_val * Decimal("100")) if high_val > Decimal("0") else Decimal("0")
+    )
+    pct_from_low = (
+        ((curr - low_val) / low_val * Decimal("100")) if low_val > Decimal("0") else Decimal("0")
+    )
 
     return {
         "high_52w": high_val.quantize(Decimal("0.01")),

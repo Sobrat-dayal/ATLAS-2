@@ -9,6 +9,11 @@ from atlas.screeners import (
     ExchangeOptionDTO,
     FactorRankingEngine,
     FilterCriterionDTO,
+    NLCapabilitiesResponseDTO,
+    NLClarifyRequestDTO,
+    NLScreenerError,
+    NLTranslateRequestDTO,
+    NLTranslationProposalDTO,
     SavedScreenerCreateRequestDTO,
     SavedScreenerDTO,
     SavedScreenerListResponseDTO,
@@ -29,6 +34,7 @@ from atlas.screeners import (
     SectorOptionDTO,
     ValidationResponseDTO,
     export_job_manager,
+    nl_translation_engine,
     saved_screener_repository,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -98,7 +104,10 @@ def get_factor(
     if not factor:
         raise HTTPException(
             status_code=404,
-            detail={"code": "FACTOR_NOT_FOUND", "message": f"Factor '{factor_id}' is not in the canonical registry."},
+            detail={
+                "code": "FACTOR_NOT_FOUND",
+                "message": f"Factor '{factor_id}' is not in the canonical registry.",
+            },
         )
     return factor
 
@@ -116,7 +125,10 @@ def get_factor_parameters(
     if not factor:
         raise HTTPException(
             status_code=404,
-            detail={"code": "FACTOR_NOT_FOUND", "message": f"Factor '{factor_id}' is not in the canonical registry."},
+            detail={
+                "code": "FACTOR_NOT_FOUND",
+                "message": f"Factor '{factor_id}' is not in the canonical registry.",
+            },
         )
     return {
         "factor_id": factor.filter_id,
@@ -285,7 +297,9 @@ def create_saved_screener(
     try:
         return saved_screener_repository.create(user_id, request)
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 @router.get(
@@ -302,7 +316,9 @@ def get_saved_screener(
     try:
         return saved_screener_repository.get(user_id, saved_screen_id)
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 @router.patch(
@@ -320,7 +336,9 @@ def update_saved_screener(
     try:
         return saved_screener_repository.update(user_id, saved_screen_id, request)
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 @router.delete(
@@ -337,7 +355,9 @@ def delete_saved_screener(
         saved_screener_repository.delete(user_id, saved_screen_id)
         return {"status": "DELETED", "saved_screen_id": str(saved_screen_id)}
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 @router.post(
@@ -355,7 +375,9 @@ def duplicate_saved_screener(
     try:
         return saved_screener_repository.duplicate(user_id, saved_screen_id, new_name=new_name)
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 @router.post(
@@ -389,7 +411,9 @@ def run_saved_screener(
         saved_screener_repository.mark_executed(user_id, saved_screen_id)
         return res
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 # =============================================================================
@@ -436,7 +460,9 @@ def evaluate_ranking(
 
         return FactorRankingEngine.evaluate(cand_dicts, request.ranking, extractor)
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 # =============================================================================
@@ -466,15 +492,24 @@ def create_export(
 
         run_res = service.run_screen(export_query)
         columns = request.selected_columns or [
-            "ticker", "canonical_security_name", "last_price", "market_cap", "pe_ratio", "volume_24h"
+            "ticker",
+            "canonical_security_name",
+            "last_price",
+            "market_cap",
+            "pe_ratio",
+            "volume_24h",
         ]
         if export_query.ranking and "rank" not in columns:
             columns = ["rank"] + columns
 
-        completed_job = export_job_manager.execute_job_synchronously(job.export_job_id, run_res, columns)
+        completed_job = export_job_manager.execute_job_synchronously(
+            job.export_job_id, run_res, columns
+        )
         return completed_job
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 @router.get(
@@ -505,7 +540,9 @@ def get_export_status(
     try:
         return export_job_manager.get_job(user_id, export_id)
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 @router.post(
@@ -522,7 +559,9 @@ def cancel_export(
     try:
         return export_job_manager.cancel_job(user_id, export_id)
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 @router.get(
@@ -543,7 +582,9 @@ def download_export(
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
 
 @router.delete(
@@ -560,5 +601,65 @@ def delete_export(
         export_job_manager.delete_job(user_id, export_id)
         return {"status": "DELETED", "export_id": str(export_id)}
     except ScreenerError as e:
-        raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
 
+
+# =============================================================================
+# Stage 98: Natural-Language Screener Translation Endpoints
+# =============================================================================
+
+
+@router.post(
+    "/nl/translate",
+    response_model=NLTranslationProposalDTO,
+    summary="Translate natural-language query into validated screening proposal",
+)
+def translate_nl_query(
+    request: NLTranslateRequestDTO,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> NLTranslationProposalDTO:
+    """Interprets free-form financial instructions into a registry-grounded Screener proposal."""
+    try:
+        return nl_translation_engine.translate(request)
+    except NLScreenerError as e:
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
+    except ScreenerError as e:
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
+
+
+@router.post(
+    "/nl/clarify",
+    response_model=NLTranslationProposalDTO,
+    summary="Resolve an ambiguity in a translation proposal",
+)
+def clarify_nl_query(
+    request: NLClarifyRequestDTO,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> NLTranslationProposalDTO:
+    """Applies a clarification answer to an unresolved proposal, re-compiling into a valid query."""
+    try:
+        return nl_translation_engine.clarify(request)
+    except NLScreenerError as e:
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
+    except ScreenerError as e:
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
+
+
+@router.get(
+    "/nl/capabilities",
+    response_model=NLCapabilitiesResponseDTO,
+    summary="Inspect natural-language screener translation capabilities and grammar",
+)
+def get_nl_capabilities() -> NLCapabilitiesResponseDTO:
+    """Retrieves supported NL metrics, aliases, operators, magnitudes, and example queries."""
+    return nl_translation_engine.get_capabilities()

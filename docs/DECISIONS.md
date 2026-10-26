@@ -9493,6 +9493,33 @@ This document records the major architectural and product decisions established.
 559. Stage 97 passes Stage 94-96 regression tests (66 backend pytest tests, 21 frontend vitest tests).
 560. Stage 98 is the next canonical roadmap stage.
 
+## Stage 98: Natural-Language Financial Screener Translation Engine
+
+### Translation Engine & Architecture
+561. Deterministic translation is the primary implementation: zero external LLM calls or API keys are required for normal operational parsing and validation.
+562. Natural language query processing is strictly an input method; the Stage 94–97 screener schema and execution engine remain the sole authority for query execution.
+563. Translation outputs a validated proposal (`NLTranslationProposalDTO`) containing structured conditions, universe selection, sorting criteria, explanation, and ambiguity resolutions.
+564. Financial lexicon grounds across all 70 canonical catalog filters, covering fundamentals, valuation ratios, technical indicators, and classifications.
+565. Numeric parsing resolves Indian numbering systems (`lakh`, `lakhs`, `crore`, `crores`, `lakh crore`) and international abbreviations (`k`, `m`, `million`, `bn`, `billion`, `tr`, `trillion`).
+566. Currency units (`INR`, `USD`, `EUR`, `GBP`, `₹`, `$`, `€`, `£`) are resolved to ISO currency codes and bound to monetary thresholds.
+567. Range expressions (`between X and Y`) are parsed prior to clause splitting to avoid breaking coordinate pairs.
+568. Percentages and basis points are normalized deterministically (`15%` -> `15.0`, `100 bps` -> `1.0%`).
+
+### Ambiguity Resolution & Guardrails
+569. Ambiguity is treated as a first-class citizen: subjective terms (`cheap`, `profitable`, `oversold`, `large cap`) trigger structured clarification questions with selectable presets rather than silent guesses.
+570. Clarification workflows (`/screeners/nl/clarify`) deterministically merge user selections with existing proposals.
+571. Unsupported requirements are explicitly reported with status `UNSUPPORTED` and clear user explanations; unsupported filters are never silently dropped or substituted.
+572. No metrics, indicators, or security match counts are fabricated.
+573. Prompt-injection and instruction-override detection protects the translation pipeline against adversarial inputs and jailbreak attempts.
+574. Query modification diffing provides granular transparency into added, modified, retained, and removed filters when editing existing screens via natural language.
+
+### Verification & Hand-off
+575. Stage 98 passes comprehensive backend tests (29 test cases covering parsing, currencies, magnitudes, technicals, ambiguities, clarifications, security, and router endpoints).
+576. Stage 98 passes comprehensive frontend tests (27 unit and integration tests covering types, requests, proposals, diffing, and condition conversion).
+577. Stage 98 completes the 5-stage Screener series (Stages 94, 95, 96, 97, 98).
+578. Stage 99 (News module) is the next canonical roadmap stage; no Stage 99 implementation is started during Stage 98.
+
+
 
 
 

@@ -291,3 +291,43 @@ export function getScreenerExportDownloadUrl(exportId: string): string {
   return `${getBaseApiUrl()}/api/v1/screeners/exports/${exportId}/download`;
 }
 
+// =============================================================================
+// Stage 98: Natural-Language Screener Translation API
+// =============================================================================
+
+export async function translateNLQuery(
+  req: import("./types").NLTranslateRequest,
+  signal?: AbortSignal
+): Promise<import("./types").NLTranslationProposal> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/nl/translate`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(req),
+    signal,
+  });
+  return handleResponse<import("./types").NLTranslationProposal>(res);
+}
+
+export async function clarifyNLQuery(
+  req: import("./types").NLClarifyRequest,
+  signal?: AbortSignal
+): Promise<import("./types").NLTranslationProposal> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/nl/clarify`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(req),
+    signal,
+  });
+  return handleResponse<import("./types").NLTranslationProposal>(res);
+}
+
+export async function fetchNLCapabilities(
+  signal?: AbortSignal
+): Promise<import("./types").NLCapabilitiesResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/nl/capabilities`;
+  const res = await fetch(url, { headers: getHeaders(), signal });
+  return handleResponse<import("./types").NLCapabilitiesResponse>(res);
+}
+

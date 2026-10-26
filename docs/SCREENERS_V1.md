@@ -209,9 +209,9 @@ The test suite in `apps/api/tests/test_screeners.py` runs 30 comprehensive autom
 
 - **Stage 94 owns**: Canonical Universes, Basic Fundamental & Market Data Filtering, Server-Side Query Planning, Deterministic Sorting, Bounded Pagination, and Screeners V1 Workspace.
 - **Stage 95 owns**: Institutional-Grade Visual Screener Filter Builder (Advanced Visual Query Construction, Interactive Financial Filter Controls, Dynamic Metric Discovery, Intelligent Validation, Filter Dependency Management, Query Transparency, and Terminal UX). Documented in [VISUAL_SCREENER_FILTERS.md](file:///e:/proooo/Atlas/docs/VISUAL_SCREENER_FILTERS.md).
-- **Stage 96 owns**: Fundamental, Technical, and Multi-Factor Screening Expansion.
-- **Stage 97 owns**: Saved Screens, Advanced Sorting, Ranking, and Exports.
-- **Stage 98 owns**: Natural-Language Screener Translation Hooks.
-- **Stages 99–103 own**: News.
-- **Stage 96 is the next canonical stage.**
+- **Stage 96 owns**: Fundamental, Technical, and Multi-Factor Screening Expansion. Documented in [ADVANCED_SCREENER_FACTORS.md](file:///e:/proooo/Atlas/docs/ADVANCED_SCREENER_FACTORS.md).
+- **Stage 97 owns**: Saved Screens, Advanced Sorting, Factor Ranking, and Professional Financial Data Exports. Documented in [SAVED_SCREENERS_RANKING_EXPORTS.md](file:///e:/proooo/Atlas/docs/SAVED_SCREENERS_RANKING_EXPORTS.md).
+- **Stage 98 owns**: Institutional-Grade Natural-Language Screener Translation Engine, Semantic Mapping, Multi-Factor Query Construction, and Interactive Ambiguity Resolution. Documented in [NATURAL_LANGUAGE_SCREENER.md](file:///e:/proooo/Atlas/docs/NATURAL_LANGUAGE_SCREENER.md).
+- **Stage 98 completes the 5-stage Screener series (Stages 94–98).**
+- **Stage 99 (News Module) is the next canonical roadmap stage.**
 

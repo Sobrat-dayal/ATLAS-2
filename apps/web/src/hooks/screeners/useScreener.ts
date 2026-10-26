@@ -16,6 +16,7 @@ import {
   ScreenerUniverseDefinition,
   SectorOption,
   SortCriterion,
+  UniverseSelection,
 } from "@/lib/screeners/types";
 import {
   fetchScreenerColumns,
@@ -120,7 +121,10 @@ export function useScreener() {
       overrideUniverseId?: string,
       overrideFilters?: FilterCriterion[],
       overrideSort?: SortCriterion[],
-      overrideRanking?: ScreenerRankingSpec | null
+      overrideRanking?: ScreenerRankingSpec | null,
+      overrideExchanges?: string[] | null,
+      overrideCountries?: string[] | null,
+      overrideSectors?: string[] | null
     ) => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -136,13 +140,37 @@ export function useScreener() {
       const targetSort = overrideSort ?? sortCriteria;
       const targetRanking = overrideRanking !== undefined ? overrideRanking : rankingSpec;
       const targetPage = overridePage ?? page;
+      const targetExchanges =
+        overrideExchanges !== undefined
+          ? overrideExchanges && overrideExchanges.length > 0
+            ? overrideExchanges
+            : null
+          : selectedExchanges.length > 0
+          ? selectedExchanges
+          : null;
+      const targetCountries =
+        overrideCountries !== undefined
+          ? overrideCountries && overrideCountries.length > 0
+            ? overrideCountries
+            : null
+          : selectedCountries.length > 0
+          ? selectedCountries
+          : null;
+      const targetSectors =
+        overrideSectors !== undefined
+          ? overrideSectors && overrideSectors.length > 0
+            ? overrideSectors
+            : null
+          : selectedSectors.length > 0
+          ? selectedSectors
+          : null;
 
       const requestPayload: ScreenerRunRequest = {
         universe: {
           universe_id: targetUniverse,
-          exchange_mics: selectedExchanges.length > 0 ? selectedExchanges : null,
-          listing_country_codes: selectedCountries.length > 0 ? selectedCountries : null,
-          sectors: selectedSectors.length > 0 ? selectedSectors : null,
+          exchange_mics: targetExchanges,
+          listing_country_codes: targetCountries,
+          sectors: targetSectors,
         },
         filters: targetFilters,
         sort: targetSort,
@@ -254,6 +282,45 @@ export function useScreener() {
     setPage(1);
     if (currentSavedScreen) setIsDirtyFromSaved(true);
     executeQuery(1, undefined, [], DEFAULT_SORT, null);
+  };
+
+  const handleApplyNLProposal = (
+    filters: FilterCriterion[],
+    universe?: UniverseSelection,
+    sort?: SortCriterion[],
+    execute: boolean = true
+  ) => {
+    setActiveFilters(filters);
+    const targetUni = universe?.universe_id || selectedUniverseId;
+    if (universe?.universe_id) setSelectedUniverseId(universe.universe_id);
+
+    const targetCountries = universe?.listing_country_codes ?? selectedCountries;
+    if (universe?.listing_country_codes) setSelectedCountries(universe.listing_country_codes);
+
+    const targetExchanges = universe?.exchange_mics ?? selectedExchanges;
+    if (universe?.exchange_mics) setSelectedExchanges(universe.exchange_mics);
+
+    const targetSectors = universe?.sectors ?? selectedSectors;
+    if (universe?.sectors) setSelectedSectors(universe.sectors);
+
+    const targetSort = sort && sort.length > 0 ? sort : sortCriteria;
+    if (sort && sort.length > 0) setSortCriteria(sort);
+
+    setPage(1);
+    if (currentSavedScreen) setIsDirtyFromSaved(true);
+
+    if (execute) {
+      executeQuery(
+        1,
+        targetUni,
+        filters,
+        targetSort,
+        rankingSpec,
+        targetExchanges,
+        targetCountries,
+        targetSectors
+      );
+    }
   };
 
   const handleSortToggle = (fieldId: string) => {
@@ -419,5 +486,6 @@ export function useScreener() {
     setIsExportDialogOpen,
     setIsAdvancedSortOpen,
     runScreener: executeQuery,
+    applyNLProposal: handleApplyNLProposal,
   };
 }

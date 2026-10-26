@@ -108,8 +108,7 @@ class FactorRankingEngine:
 
             # Extract list of (instrument_id, raw_value)
             pairs: List[Tuple[UUID, float]] = [
-                (item[0]["instrument_entity_id"], item[1][fid])
-                for item in eligible_items
+                (item[0]["instrument_entity_id"], item[1][fid]) for item in eligible_items
             ]
 
             # Compute ranks for this factor
@@ -129,9 +128,7 @@ class FactorRankingEngine:
                 factor_scores[fid] = pcts
             else:  # RAW_RANK (negated so higher is better for composite)
                 max_rank = eligible_count
-                factor_scores[fid] = {
-                    iid: float(max_rank - r + 1) for iid, r in ranks.items()
-                }
+                factor_scores[fid] = {iid: float(max_rank - r + 1) for iid, r in ranks.items()}
 
         # 4. Compute composite scores and final ranks
         # In single factor mode, primary score is factor_scores of the single factor
@@ -171,9 +168,7 @@ class FactorRankingEngine:
 
             # 5. Assign Final Overall Rank based on composite score descending (highest score = Rank 1)
             # Stable tie-breaker: instrument_entity_id string
-            final_scores.sort(
-                key=lambda x: (-x[2], str(x[0]))
-            )
+            final_scores.sort(key=lambda x: (-x[2], str(x[0])))
 
             final_ranks = cls._assign_ranks(
                 ordered_items=[(x[0], x[2]) for x in final_scores],
@@ -188,7 +183,11 @@ class FactorRankingEngine:
         for iid, cand, score, contribs in final_scores:
             rank = final_ranks[iid]
             pct = final_percentiles[iid]
-            z_sc = factor_z_scores[primary_factor_id].get(iid) if ranking_spec.mode == RankingMode.SINGLE_FACTOR else None
+            z_sc = (
+                factor_z_scores[primary_factor_id].get(iid)
+                if ranking_spec.mode == RankingMode.SINGLE_FACTOR
+                else None
+            )
 
             # Collect raw values for inspection
             raw_vals = {
@@ -206,7 +205,9 @@ class FactorRankingEngine:
                     rank=rank,
                     percentile=round(pct, 2),
                     z_score=round(z_sc, 4) if z_sc is not None else None,
-                    composite_score=round(score, 4) if ranking_spec.mode == RankingMode.MULTI_FACTOR_COMPOSITE else None,
+                    composite_score=round(score, 4)
+                    if ranking_spec.mode == RankingMode.MULTI_FACTOR_COMPOSITE
+                    else None,
                     factor_contributions=contribs,
                     raw_factor_values=raw_vals,
                 )
@@ -244,7 +245,9 @@ class FactorRankingEngine:
             total_weight += w
 
         if total_weight <= 0.0:
-            raise ScreenerRankingWeightInvalidError("Sum of factor weights must be strictly positive.")
+            raise ScreenerRankingWeightInvalidError(
+                "Sum of factor weights must be strictly positive."
+            )
 
     @classmethod
     def _compute_single_factor_stats(
@@ -313,7 +316,11 @@ class FactorRankingEngine:
                 previous_val = val
                 continue
 
-            is_tie = math.isclose(val, previous_val, rel_tol=1e-9, abs_tol=1e-9) if previous_val is not None else False
+            is_tie = (
+                math.isclose(val, previous_val, rel_tol=1e-9, abs_tol=1e-9)
+                if previous_val is not None
+                else False
+            )
             if is_tie:
                 if method == RankingMethod.DENSE_RANK:
                     ranks[iid] = dense_rank

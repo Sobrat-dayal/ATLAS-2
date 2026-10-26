@@ -96,7 +96,11 @@ class ScreenerExportGenerator:
             writer.writerow([f"# Evaluated As Of: {run_response.evaluated_as_of.isoformat()}"])
             writer.writerow([f"# Total Matching Rows: {run_response.total_matching_count}"])
             writer.writerow([f"# Exported Rows: {len(run_response.rows)}"])
-            writer.writerow(["# Notice: Sourced data for professional research; not an investment recommendation."])
+            writer.writerow(
+                [
+                    "# Notice: Sourced data for professional research; not an investment recommendation."
+                ]
+            )
             writer.writerow([])
 
         # 2. Header Row
@@ -194,9 +198,24 @@ class ScreenerExportGenerator:
         ws_method = wb.create_sheet(title="Methodology")
         ws_method.append(["ATLAS Screener Ranking & Factor Methodology"])
         ws_method.append(["Version", "1.0.0"])
-        ws_method.append(["Missing Data Policy", "Complete-case exclusion; missing values are omitted, never imputed as zero."])
-        ws_method.append(["Normalization", "Z-Score: sample standard deviation; Percentiles: 0.0% to 100.0% cross-sectional."])
-        ws_method.append(["Disclaimer", "Quantitative factor ranks represent mathematical relative order, not investment advice."])
+        ws_method.append(
+            [
+                "Missing Data Policy",
+                "Complete-case exclusion; missing values are omitted, never imputed as zero.",
+            ]
+        )
+        ws_method.append(
+            [
+                "Normalization",
+                "Z-Score: sample standard deviation; Percentiles: 0.0% to 100.0% cross-sectional.",
+            ]
+        )
+        ws_method.append(
+            [
+                "Disclaimer",
+                "Quantitative factor ranks represent mathematical relative order, not investment advice.",
+            ]
+        )
 
         # Sheet 3: Sources
         ws_sources = wb.create_sheet(title="Sources")
@@ -291,7 +310,9 @@ class ScreenerExportJobManager:
     RETENTION_HOURS = 24
 
     def __init__(self, storage_dir: Optional[str] = None):
-        self.storage_dir = storage_dir or os.path.join(tempfile.gettempdir(), "atlas_screener_exports")
+        self.storage_dir = storage_dir or os.path.join(
+            tempfile.gettempdir(), "atlas_screener_exports"
+        )
         os.makedirs(self.storage_dir, exist_ok=True)
         # In-memory job registry keyed by export_job_id
         self._jobs: Dict[UUID, ScreenerExportJobDTO] = {}
@@ -307,7 +328,9 @@ class ScreenerExportJobManager:
         Creates and enqueues a new export job subject to user quotas.
         """
         user_jobs = [j for j in self._jobs.values() if j.owner_user_id == owner_user_id]
-        active_jobs = [j for j in user_jobs if j.status in (ExportJobStatus.QUEUED, ExportJobStatus.RUNNING)]
+        active_jobs = [
+            j for j in user_jobs if j.status in (ExportJobStatus.QUEUED, ExportJobStatus.RUNNING)
+        ]
 
         if len(active_jobs) >= self.MAX_CONCURRENT_JOBS_PER_USER:
             raise ScreenerExportQuotaExceededError(
@@ -317,7 +340,16 @@ class ScreenerExportJobManager:
         if len(user_jobs) >= self.MAX_TOTAL_JOBS_PER_USER:
             # Clean up oldest completed job
             completed_jobs = sorted(
-                [j for j in user_jobs if j.status in (ExportJobStatus.COMPLETED, ExportJobStatus.FAILED, ExportJobStatus.CANCELLED)],
+                [
+                    j
+                    for j in user_jobs
+                    if j.status
+                    in (
+                        ExportJobStatus.COMPLETED,
+                        ExportJobStatus.FAILED,
+                        ExportJobStatus.CANCELLED,
+                    )
+                ],
                 key=lambda x: x.created_at,
             )
             if completed_jobs:
@@ -413,7 +445,11 @@ class ScreenerExportJobManager:
 
     def cancel_job(self, owner_user_id: UUID, job_id: UUID) -> ScreenerExportJobDTO:
         job = self.get_job(owner_user_id, job_id)
-        if job.status in (ExportJobStatus.COMPLETED, ExportJobStatus.FAILED, ExportJobStatus.EXPIRED):
+        if job.status in (
+            ExportJobStatus.COMPLETED,
+            ExportJobStatus.FAILED,
+            ExportJobStatus.EXPIRED,
+        ):
             return job
 
         job.status = ExportJobStatus.CANCELLED

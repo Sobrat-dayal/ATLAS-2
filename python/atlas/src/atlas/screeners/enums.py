@@ -257,3 +257,52 @@ class SavedScreenerStatus(CaseInsensitiveStrEnum):
     DELETED = "deleted"
 
 
+# =============================================================================
+# Stage 98: Natural-Language Screener Translation Enums
+# =============================================================================
+
+
+class NLTranslationStatus(CaseInsensitiveStrEnum):
+    """Typed translation lifecycle status for natural language screening queries."""
+
+    VALID = "valid"
+    NEEDS_CLARIFICATION = "needs_clarification"
+    UNSUPPORTED = "unsupported"
+    RESTRICTED = "restricted"
+    UNAVAILABLE = "unavailable"
+    INVALID = "invalid"
+    ERROR = "error"
+
+
+class NLAmbiguityCategory(CaseInsensitiveStrEnum):
+    """Classification of ambiguity detected during natural language parsing."""
+
+    METRIC_AMBIGUITY = "metric_ambiguity"
+    OPERATOR_AMBIGUITY = "operator_ambiguity"
+    CURRENCY_AMBIGUITY = "currency_ambiguity"
+    UNIT_AMBIGUITY = "unit_ambiguity"
+    PERIOD_AMBIGUITY = "period_ambiguity"
+    GEOGRAPHY_AMBIGUITY = "geography_ambiguity"
+    INDUSTRY_AMBIGUITY = "industry_ambiguity"
+    INDICATOR_AMBIGUITY = "indicator_ambiguity"
+    RANKING_AMBIGUITY = "ranking_ambiguity"
+    LOGICAL_AMBIGUITY = "logical_ambiguity"
+    UNIVERSE_AMBIGUITY = "universe_ambiguity"
+
+
+class NLRequirementStatus(CaseInsensitiveStrEnum):
+    """Resolution status of an individual extracted requirement."""
+
+    RESOLVED = "resolved"
+    AMBIGUOUS = "ambiguous"
+    UNSUPPORTED = "unsupported"
+    RESTRICTED = "restricted"
+    DROPPED = "dropped"
+
+
+class NLTranslationMode(CaseInsensitiveStrEnum):
+    """Execution mode for translation."""
+
+    CREATE_NEW_QUERY = "create_new_query"
+    MODIFY_CURRENT_DRAFT = "modify_current_draft"
+    EXPLAIN_CURRENT_QUERY = "explain_current_query"

@@ -71,7 +71,6 @@ class ScreenerFilterDefinition(BaseModel):
     calculation_version: str = "1.0.0"
 
 
-
 class ScreenerColumnDefinition(BaseModel):
     """Presentation column specification for screener tables."""
 

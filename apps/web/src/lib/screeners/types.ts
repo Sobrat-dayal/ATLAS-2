@@ -445,3 +445,132 @@ export interface ScreenerCoverageResponse {
   providers_represented: string[];
   data_freshness_breakdown: Record<string, number>;
 }
+
+// =============================================================================
+// Stage 98: Natural-Language Screener Translation Contracts
+// =============================================================================
+
+export type NLTranslationStatus =
+  | "valid"
+  | "needs_clarification"
+  | "unsupported"
+  | "restricted"
+  | "unavailable"
+  | "invalid"
+  | "error";
+
+export type NLAmbiguityCategory =
+  | "metric_ambiguity"
+  | "operator_ambiguity"
+  | "currency_ambiguity"
+  | "unit_ambiguity"
+  | "period_ambiguity"
+  | "geography_ambiguity"
+  | "industry_ambiguity"
+  | "indicator_ambiguity"
+  | "ranking_ambiguity"
+  | "logical_ambiguity"
+  | "universe_ambiguity";
+
+export type NLRequirementStatus =
+  | "resolved"
+  | "ambiguous"
+  | "unsupported"
+  | "restricted"
+  | "dropped";
+
+export interface NLRequirementResolution {
+  requirement_id: string;
+  source_text: string;
+  interpreted_concept?: string | null;
+  resolved_filter_id?: string | null;
+  status: NLRequirementStatus;
+  explanation: string;
+  alternatives?: string[] | null;
+}
+
+export interface NLAmbiguityOption {
+  id: string;
+  label: string;
+  filter_id?: string;
+  operator?: string;
+  value?: any;
+  description?: string;
+}
+
+export interface NLAmbiguityQuestion {
+  ambiguity_id: string;
+  category: NLAmbiguityCategory;
+  question: string;
+  source_phrase: string;
+  options: NLAmbiguityOption[];
+}
+
+export interface NLQueryModificationDiff {
+  added_conditions: FilterCriterion[];
+  updated_conditions: FilterCriterion[];
+  removed_conditions: string[];
+}
+
+export interface NLTranslationProposal {
+  proposal_id: string;
+  status: NLTranslationStatus;
+  original_text: string;
+  universe: UniverseSelection;
+  filters: FilterCriterion[];
+  sort: SortCriterion[];
+  result_limit?: number | null;
+  requirements: NLRequirementResolution[];
+  ambiguities: NLAmbiguityQuestion[];
+  unsupported: string[];
+  assumptions: string[];
+  modification_diff?: NLQueryModificationDiff | null;
+  ready_for_review: boolean;
+  translator_version: string;
+  registry_revision: string;
+  coverage_count: string;
+}
+
+export interface NLTranslateRequest {
+  text: string;
+  universe_context?: string;
+  current_filters?: FilterCriterion[];
+  currency_policy?: string;
+  period_policy?: string;
+  locale?: string;
+  mode?: "create_new_query" | "modify_current_draft" | "explain_current_query";
+  request_id?: string;
+}
+
+export interface NLClarifyRequest {
+  proposal_id: string;
+  original_text: string;
+  ambiguity_id: string;
+  selected_option_id: string;
+  additional_text?: string;
+  current_universe?: UniverseSelection;
+  current_filters?: FilterCriterion[];
+}
+
+export interface NLCapabilitiesResponse {
+  supported_metrics: Array<{
+    filter_id: string;
+    display_name: string;
+    category: string;
+    unit_kind: string;
+    aliases: string[];
+  }>;
+  supported_operators: string[];
+  supported_currencies: string[];
+  supported_units: string[];
+  supported_indicators: Array<{
+    indicator_id: string;
+    display_name: string;
+    category: string;
+  }>;
+  supported_magnitudes: string[];
+  example_queries: Array<{
+    title: string;
+    query: string;
+  }>;
+}

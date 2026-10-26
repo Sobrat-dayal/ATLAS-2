@@ -50,7 +50,8 @@ class SavedScreenerRepository:
         if search:
             q = search.lower().strip()
             active_screens = [
-                s for s in active_screens
+                s
+                for s in active_screens
                 if q in s.name.lower() or (s.description and q in s.description.lower())
             ]
 
@@ -85,7 +86,9 @@ class SavedScreenerRepository:
         desc = self._validate_description(request.description)
 
         user_store = self._store.setdefault(owner_user_id, {})
-        active_count = sum(1 for s in user_store.values() if s.status != SavedScreenerStatus.DELETED)
+        active_count = sum(
+            1 for s in user_store.values() if s.status != SavedScreenerStatus.DELETED
+        )
         if active_count >= self.MAX_SCREENS_PER_USER:
             raise SavedScreenerQuotaExceededError(self.MAX_SCREENS_PER_USER)
 
@@ -140,7 +143,11 @@ class SavedScreenerRepository:
             )
 
         new_name = self._validate_name(request.name) if request.name is not None else screen.name
-        new_desc = self._validate_description(request.description) if request.description is not None else screen.description
+        new_desc = (
+            self._validate_description(request.description)
+            if request.description is not None
+            else screen.description
+        )
 
         now = datetime.now(timezone.utc)
         updated_screen = screen.model_copy(
@@ -152,8 +159,12 @@ class SavedScreenerRepository:
                 "columns": request.columns if request.columns is not None else screen.columns,
                 "sort": request.sort if request.sort is not None else screen.sort,
                 "ranking": request.ranking if request.ranking is not None else screen.ranking,
-                "period_policy": request.period_policy if request.period_policy is not None else screen.period_policy,
-                "currency_policy": request.currency_policy if request.currency_policy is not None else screen.currency_policy,
+                "period_policy": request.period_policy
+                if request.period_policy is not None
+                else screen.period_policy,
+                "currency_policy": request.currency_policy
+                if request.currency_policy is not None
+                else screen.currency_policy,
                 "revision": screen.revision + 1,
                 "updated_at": now,
             }
@@ -194,7 +205,9 @@ class SavedScreenerRepository:
         screen = self.get(owner_user_id, saved_screen_id)
 
         user_store = self._store.setdefault(owner_user_id, {})
-        active_count = sum(1 for s in user_store.values() if s.status != SavedScreenerStatus.DELETED)
+        active_count = sum(
+            1 for s in user_store.values() if s.status != SavedScreenerStatus.DELETED
+        )
         if active_count >= self.MAX_SCREENS_PER_USER:
             raise SavedScreenerQuotaExceededError(self.MAX_SCREENS_PER_USER)
 
@@ -219,7 +232,9 @@ class SavedScreenerRepository:
     def delete(self, owner_user_id: UUID, saved_screen_id: UUID) -> None:
         screen = self.get(owner_user_id, saved_screen_id)
         # Soft delete
-        updated = screen.model_copy(update={"status": SavedScreenerStatus.DELETED, "updated_at": datetime.now(timezone.utc)})
+        updated = screen.model_copy(
+            update={"status": SavedScreenerStatus.DELETED, "updated_at": datetime.now(timezone.utc)}
+        )
         self._store[owner_user_id][saved_screen_id] = updated
 
     def mark_executed(self, owner_user_id: UUID, saved_screen_id: UUID) -> None:
@@ -244,7 +259,7 @@ class SavedScreenerRepository:
             return None
         clean = desc.strip()
         if len(clean) > self.MAX_DESCRIPTION_LENGTH:
-            clean = clean[:self.MAX_DESCRIPTION_LENGTH]
+            clean = clean[: self.MAX_DESCRIPTION_LENGTH]
         return clean
 
 
