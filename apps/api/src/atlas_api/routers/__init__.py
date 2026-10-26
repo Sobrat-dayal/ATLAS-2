@@ -28,6 +28,7 @@ from .companies import router as companies_router
 from .company_earnings import router as company_earnings_router
 from .company_filings import router as company_filings_router
 from .company_ownership import router as company_ownership_router
+from .company_peers import router as company_peers_router
 from .company_ratios import router as company_ratios_router
 from .company_statements import router as company_statements_router
 from .economics import router as economics_router
@@ -54,6 +55,7 @@ api_router.include_router(companies_router, prefix="")
 api_router.include_router(company_earnings_router, prefix="")
 api_router.include_router(company_filings_router, prefix="")
 api_router.include_router(company_ownership_router, prefix="")
+api_router.include_router(company_peers_router, prefix="")
 api_router.include_router(company_ratios_router, prefix="")
 api_router.include_router(company_statements_router, prefix="")
 api_router.include_router(geography_router, prefix="")

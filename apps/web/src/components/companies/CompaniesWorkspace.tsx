@@ -28,6 +28,7 @@ import { FinancialRatiosWorkspace } from "./ratios/FinancialRatiosWorkspace";
 import { EarningsWorkspace } from "./earnings/EarningsWorkspace";
 import { OwnershipWorkspace } from "./ownership/OwnershipWorkspace";
 import { FilingsWorkspace } from "./filings/FilingsWorkspace";
+import { PeersWorkspace } from "./peers/PeersWorkspace";
 import {
   ArrowLeft,
   Building2,
@@ -39,6 +40,7 @@ import {
   Percent,
   PieChart,
   Search,
+  Users,
 } from "lucide-react";
 
 export interface CompaniesWorkspaceProps {
@@ -178,6 +180,11 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           <span>Filings</span>
                         </TabsTrigger>
 
+                        <TabsTrigger value="peers" className="gap-1.5 text-xs">
+                          <Users className="w-3.5 h-3.5" />
+                          <span>Peers</span>
+                        </TabsTrigger>
+
                         <TabsTrigger value="news" className="gap-1.5 text-xs">
                           <FileText className="w-3.5 h-3.5" />
                           <span>News & Docs ({overview.recent_news.length + overview.documents.length})</span>
@@ -235,6 +242,17 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           onNavigateToRatios={() => setActiveTab("ratios")}
                           onNavigateToEarnings={() => setActiveTab("earnings")}
                           onNavigateToOwnership={() => setActiveTab("ownership")}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="peers">
+                        <PeersWorkspace
+                          companyId={overview.company_entity_id}
+                          companyName={overview.identity.display_name}
+                          ticker={overview.market_summary?.reference_symbol || overview.related_securities?.[0]?.symbol || "AAPL"}
+                          onNavigateToFinancials={() => setActiveTab("financials")}
+                          onNavigateToRatios={() => setActiveTab("ratios")}
+                          onNavigateToFilings={() => setActiveTab("filings")}
                         />
                       </TabsContent>
 

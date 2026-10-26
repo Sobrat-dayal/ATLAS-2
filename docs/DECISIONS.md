@@ -7478,6 +7478,242 @@ This document records the major architectural and product decisions established.
 191. Documentation must match implementation.
 192. Stage 87 is the next canonical stage.
 
+## Stage 87: Company Peers & Comparable Company Analysis
+
+### Product and Scope
+1. Stage 87 implements Company Peers and Comparable Company Analysis.
+2. Peers workspace remains inside `/companies`.
+3. No new global sidebar module is created.
+4. Stage 81 Company identity is reused.
+5. Stage 82 Financial Statements are reused.
+6. Stage 83 Financial Ratios are reused.
+7. No duplicate Fundamental Data system is created.
+8. No fake peer relationships are created.
+9. Peer analysis is not a trading recommendation engine.
+10. Stage 88 Supply Chains remains out of scope.
+
+### Peer Semantics
+11. Comparable candidates are distinguished from verified competitors.
+12. User selections are distinguished from source assertions.
+13. Source-defined peers retain provenance.
+14. Comparable companies are not automatically business competitors.
+15. User-selected peers do not create global relationship graph edges.
+16. Subject Company identity is explicit.
+17. Duplicate issuer entries are removed.
+18. Ticker-only identity is prohibited.
+19. Security identity remains separate from issuer identity.
+20. Peer selection methodology is versioned.
+
+### Industry Classification
+21. Industry taxonomy identity is explicit.
+22. Classification versions are preserved.
+23. Different taxonomies are not silently merged.
+24. Licensing is enforced.
+25. Unknown classifications remain unknown.
+26. Historical classifications are not fabricated.
+27. Sector matching alone does not prove competition.
+28. Business-model comparisons require real data.
+29. Operating geography differs from headquarters.
+30. Missing geographic exposure is not inferred.
+
+### Candidate Selection
+31. Candidate selection is deterministic unless using genuine verified source-defined peers.
+32. Source relationships are distinguished from statistical similarity.
+33. Size filters use real values.
+34. Geography filters use verified attributes.
+35. Candidate ranking methodology is explicit.
+36. Missing factors are handled.
+37. Arbitrary first-N Provider selection is prohibited.
+38. Candidate lists are bounded.
+39. Discovery reasons are inspectable.
+40. No fake confidence percentages are generated.
+
+### Peer Groups
+41. User-defined groups use canonical Company IDs.
+42. Group ownership is enforced.
+43. Private groups are protected by authorization/RLS.
+44. CRUD operations are functional.
+45. Peer group size is limited to 25 companies.
+46. Duplicate Companies are rejected.
+47. The subject Company cannot be a peer of itself.
+48. Changes use revision/concurrency protection.
+49. User groups do not mutate canonical corporate relationships.
+50. No premature global Saved/Workspaces platform is built.
+
+### Financial Statements
+51. Stage 82 remains authoritative.
+52. Reporting Entity identity is verified.
+53. Consolidation scope is validated.
+54. Financial concepts are validated.
+55. Accounting frameworks are qualified.
+56. Fiscal periods are aligned.
+57. Annual and quarterly values remain distinct.
+58. TTM uses qualified Stage 82 inputs.
+59. Source financial revisions are preserved.
+60. Missing financial facts remain missing.
+
+### Currency and Periods
+61. Monetary metrics require compatible currencies.
+62. FX conversion uses verified canonical rates only.
+63. Conversion methodology is explicit.
+64. Different FX treatment may apply to flows and stock values.
+65. Missing FX prevents invalid comparison.
+66. Ratios can be compared across reporting currencies when internally valid.
+67. Non-calendar fiscal years are supported.
+68. 52/53-week calendars are supported where represented.
+69. Latest-available and common-period modes are distinguished.
+70. No silent calendarization occurs.
+71. No quarter-times-four TTM calculation occurs.
+
+### Ratio Methodologies
+72. Stage 83 Formula Registry remains authoritative.
+73. Profitability ratios use registered methodologies.
+74. Liquidity ratios use registered methodologies.
+75. Leverage ratios use registered methodologies.
+76. Efficiency ratios use registered methodologies.
+77. FCF metrics use registered methodologies.
+78. Formula versions are preserved.
+79. Negative/zero denominator rules are reused.
+80. Source lineage is preserved.
+81. No independent duplicate ratio formulas are created.
+
+### Valuation
+82. Market Cap is issuer/security-qualified.
+83. Share classes are respected.
+84. ADR conversion is respected.
+85. Cross-listings are not double-counted.
+86. EV uses canonical Stage 83 methodology.
+87. Missing EV components remain unavailable.
+88. Market price measure is explicit.
+89. Price observation time is explicit.
+90. Different market sessions are handled.
+91. Stale prices are flagged.
+92. Historical valuation requires real historical prices.
+93. Current prices do not fabricate historical P/E.
+94. Negative P/E/EV multiples are handled appropriately.
+95. Forward estimates are never fabricated.
+96. Lower valuation multiples do not automatically imply Buy recommendations.
+
+### Statistics
+97. Peer median is computed from eligible observations.
+98. Peer mean is computed from eligible observations.
+99. Minimum/maximum use valid inputs.
+100. Sample size is explicit.
+101. Coverage is explicit.
+102. Missing observations do not become zero.
+103. Subject inclusion policy is explicit.
+104. Percentile methodology is versioned.
+105. Tie handling is documented.
+106. Small samples are qualified.
+107. Outliers are not silently excluded.
+108. Percentage-point differences are labeled correctly.
+109. Numeric rank is not automatically investment quality.
+
+### Historical Integrity
+110. Historical series use genuine observations.
+111. Fiscal period identity is preserved.
+112. Source restatements are visible.
+113. Point-in-time claims require actual vintages.
+114. Later filings do not leak into earlier historical views.
+115. Historical valuation dates are qualified.
+116. Current peer groups applied retrospectively are labeled.
+117. Historical classification changes are handled where supported.
+118. Survivorship-bias-free claims require appropriate historical universe data.
+119. Missing historical periods remain missing.
+
+### Performance and APIs
+120. Peer APIs are typed.
+121. Canonical financial facts are read in batches.
+122. Source entitlements are enforced.
+123. Group entitlements are enforced.
+124. Restricted aggregates do not leak protected data.
+125. Candidate queries are bounded.
+126. Comparison queries are bounded.
+127. Historical queries are bounded.
+128. Cache keys include input revisions.
+129. Cache keys include methodology versions.
+130. Cache keys include market valuation context.
+131. Group revisions invalidate caches.
+132. No per-cell Provider fanout occurs.
+133. No every-tick global recalculation occurs.
+134. Derived comparison results do not mutate canonical facts.
+
+### UI
+135. Peer Overview is functional.
+136. Candidate discovery is functional where data exists.
+137. Candidate reasons are visible.
+138. Manual peer selection is functional.
+139. Peer-group CRUD is functional.
+140. Financial comparison is functional.
+141. Valuation comparison is functional.
+142. Historical comparison is functional where data exists.
+143. Peer statistics expose counts.
+144. Missing/not-meaningful values are visible.
+145. Source inspector is functional.
+146. Formula inspector uses canonical methodologies.
+147. Charts use genuine observations.
+148. Company navigation is preserved.
+149. Responsive layouts are supported.
+150. Dark/light mode is preserved.
+151. Agent Dock compatibility is preserved.
+152. Bottom Taskbar compatibility is preserved.
+153. Keyboard accessibility is supported.
+154. Screen-reader accessibility is supported.
+155. No purple gradients are introduced.
+156. No emoji icons are introduced.
+157. No fake financial data or peers are introduced.
+
+### Security
+158. Authentication is required.
+159. User groups are access-controlled.
+160. Financial data entitlements are enforced.
+161. Industry classification licenses are enforced.
+162. Restricted aggregation leakage is prevented.
+163. Arbitrary SQL is prohibited.
+164. Arbitrary formulas are prohibited.
+165. Provider credentials remain server-side.
+166. Resource limits are enforced.
+167. No Trading orders occur.
+168. No Broker calls occur.
+169. No Portfolio mutations occur.
+170. No Agents execute.
+171. No Workflows execute.
+172. No LLM calls are required.
+
+### Roadmap Boundaries
+173. Stage 88 owns Supply Chains.
+174. Stages 89–93 own Economics.
+175. Stages 94–98 own Screeners.
+176. Stages 99–103 own News.
+177. Stages 104–109 own Research.
+178. Stages 110–114 own Portfolios.
+179. Stages 115–118 own Risk.
+180. Stages 119–120 own Saved/Workspaces.
+181. Stages 121–128 own Terminal/AI.
+182. Stages 129–140 own Maps/Intelligence.
+183. Stages 141–142 own Options/Quant pricing.
+184. Stage 143 owns Backtesting.
+185. Stage 144 owns Paper Trading.
+186. Stage 145 owns Broker Sandbox.
+187. Stages 146+ own Agents.
+188. No supplier/customer network is implemented.
+189. No complete Screener engine is implemented.
+190. No full Portfolio system is implemented.
+191. No autonomous investment recommendation engine is implemented.
+192. No duplicate Company database is implemented.
+193. No duplicate Financial Ratio engine is implemented.
+194. Stage 87 must pass identity tests.
+195. Stage 87 must pass classification tests.
+196. Stage 87 must pass peer-group authorization tests.
+197. Stage 87 must pass financial compatibility tests.
+198. Stage 87 must pass valuation tests.
+199. Stage 87 must pass statistical tests.
+200. Stage 87 must pass historical point-in-time tests.
+201. Stage 87 must pass Stage 81–86 regressions.
+202. Documentation must match actual code.
+203. Stage 88 is the next canonical stage.
+
+
 
 
 

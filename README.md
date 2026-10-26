@@ -904,6 +904,21 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Linter: `ruff check` on Stage 86 (0 errors).
 - **Documentation**: See `docs/COMPANY_FILINGS.md` and `docs/DECISIONS.md`.
 
+## Company Peers & Comparable Company Analysis (Stage 87)
+- **Architecture**: Institutional-grade comparable company analysis and peer benchmarking workspace within `/companies`. Features deterministic candidate peer discovery, verified multi-taxonomy industry classifications (GICS, ICB, NAICS, SIC), user-scoped custom peer groups with concurrency and revision control, batched cross-company financial benchmarking (Scale, Growth, Profitability, Liquidity, Solvency, Cash Flow), and relative valuation multiples.
+- **Explicit Relationship Semantics**: Enforces rigorous semantic boundaries distinguishing `COMPARABLE_CANDIDATE`, `USER_SELECTED_PEER`, `SOURCE_DEFINED_PEER`, and `VERIFIED_COMPETITOR`. A comparable company is not assumed to be a competitor, and user selections never pollute the global corporate relationship graph.
+- **Canonical Financial & Ratio Reuse**: Directly reuses Stage 82 Financial Statements and Stage 83 Financial Ratio Registry methodologies. Prevents duplicate calculation formulas and enforces non-meaningful (`N/M`) status for negative denominator ratios (e.g. negative equity P/B and ROE).
+- **Period & Currency Alignment**: Supports `LATEST_COMMON_FISCAL_YEAR`, `LATEST_AVAILABLE`, and `QUALIFIED_TTM` modes with visible period-end date annotations. Disallows unnormalized raw multi-currency comparisons and enforces Decimal-safe arithmetic.
+- **Statistical Benchmark Engine**: Calculates cross-sectional distributions (peer median, mean, min/max ranges, sample coverage ratios, subject-relative spreads, percentage-point differences, and Tukey's IQR statistical outlier detection) without silent sample elimination.
+- **Historical Trajectories & Interactive Visualizations**: Multi-period historical trend series (FY2021–FY2024), Growth vs Operating Margin scatter plot matrix with market-cap bubble sizing and median quadrant crosshairs, and cell-level source fact inspection with XBRL filing references.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_company_peers.py` (21/21 passed).
+  - All 168 company module tests passed (`test_companies_v1.py`, `test_company_financial_statements.py`, `test_company_financial_ratios.py`, `test_company_earnings.py`, `test_company_ownership.py`, `test_company_filings.py`, `test_company_peers.py`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors).
+  - Production build: `cmd /c npm run build` (Next.js 16.3.8 Turbopack clean compile, 38/38 routes).
+  - Linter: `ruff check` on Stage 87 (0 errors).
+- **Documentation**: See `docs/COMPANY_PEERS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets
