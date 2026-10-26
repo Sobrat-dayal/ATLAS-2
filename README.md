@@ -1126,6 +1126,39 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly).
 - **Documentation**: See `docs/NEWS_MONITORING_ALERTS_AND_DIGESTS.md` and `docs/DECISIONS.md`.
 
+## Institutional-Grade Financial Research Platform Foundation (Stage 104)
+- **Architecture**: Foundational institutional financial research infrastructure at `/research` (Module 9). Formalizes canonical research entities, verified multi-stage source libraries, structured research investigations, immutable note revisions, epistemic claim categorizations, granular evidence citations, and secure analyst workspaces.
+- **Canonical Research Entities & Lifecycles**:
+  - `ResearchInvestigation`: Root research entity supporting 7 typed scopes (`COMPANY`, `INSTRUMENT`, `INDUSTRY`, `MACROECONOMIC`, `MARKET`, `FINANCIAL_EVENT`, `GENERAL_FINANCIAL`) and 5 lifecycle states (`DRAFT`, `ACTIVE`, `ON_HOLD`, `COMPLETED`, `ARCHIVED`).
+  - Strict optimistic concurrency: Monotonically incrementing `revision` counters on investigations and notes reject conflicting concurrent edits (HTTP 409).
+  - Research Questions (`ResearchQuestion`) track analytical inquiries with explicit analyst answering requirements and priority tiers (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+  - Research Hypotheses (`ResearchHypothesis`) model falsifiable assertions with non-automatic truth verification across 5 evaluation statuses (`UNTESTED`, `SUPPORTED`, `REFUTED`, `INCONCLUSIVE`, `ABANDONED`).
+- **Structured Research Notes & Claim Categorization**:
+  - `ResearchNote`: Typed investment research notes (`INVESTMENT_MEMO`, `EARNINGS_DEBRIEF`, `SECTOR_DEEP_DIVE`, `VALUATION_MODEL_NOTES`, etc.) with editorial statuses (`DRAFT`, `IN_REVIEW`, `PUBLISHED`, `DEPRECATED`).
+  - Immutable point-in-time `ResearchNoteRevision` history tracking author attribution, diff summaries, and content snapshots.
+  - Strict epistemic separation in `ResearchClaim`: Categorizes assertions as `SOURCE_REPORTED_FACT`, `ANALYST_INTERPRETATION`, `ASSUMPTION`, `HYPOTHESIS`, `ESTIMATE`, or `OPEN_QUESTION` to eliminate conflation between facts and subjective forecasts.
+  - HTML/Markdown sanitization via `bleach` mitigating stored XSS vulnerabilities.
+- **Verified Source Libraries, Evidence & Citations**:
+  - Seamlessly links genuine SEC 10-K/10-Q Filings (Stage 86), Financial Facts (Stage 82), News Articles & Events (Stages 99–103), and Economic Releases (Stages 89–93) in `ResearchSourceReference`.
+  - Deterministic SHA-256 deduplication and canonical URI normalization guaranteeing idempotent source ingestion.
+  - Granular `ResearchEvidence` anchoring quotes to exact locations (`PAGE_NUMBER`, `PARAGRAPH`, `TABLE_CELL`, `TIME_OFFSET_SECONDS`, `SECTION_HEADING`).
+  - Auditable `ResearchCitation` tracking with broken/withdrawn citation detection (`VERIFIED`, `UNVERIFIED`, `DISPUTED`, `WITHDRAWN`, `UNREACHABLE`).
+  - Typed claim-evidence relationships (`SUPPORTS`, `REFUTES`, `NEUTRAL`, `INCONCLUSIVE`).
+- **Security, Audit Trails & SSRF Mitigation**:
+  - SSRF protection on external research URLs blocking private subnets, cloud metadata services, loopback, and unauthorized ports.
+  - Append-only `ResearchActivity` audit trail tracking every investigation action, note revision, and citation link.
+  - Zero autonomous AI trading, zero buy/sell order routing, zero fabricated analyst reports/ratings.
+- **Institutional Analyst Workspace (`/research`)**:
+  - 5 View Modes: Overview (KPIs, active investigations, recent activity), Investigations Directory (filterable table), 3-Pane Analyst Console (Scope/Questions Navigator, Notes Editor & Hypotheses/Claims/Evidence Tabs, Context/Source Inspector), Source Library (verified document catalog and preview), and Activity Timeline.
+  - Ergonomic keyboard shortcuts (`Ctrl+S`/`Cmd+S` note saving, `Ctrl+Enter` claim submission).
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_research_foundation_v1.py` (18/18 passed; 62/62 including filings & news suites).
+  - Backend linter: `uv run ruff check` (0 errors).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (71/71 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `cmd /c pnpm --filter web build` (Next.js 16.3.8 Turbopack clean compile).
+- **Documentation**: See `docs/RESEARCH_FOUNDATION.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

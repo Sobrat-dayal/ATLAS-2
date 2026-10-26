@@ -9720,6 +9720,42 @@ This document records the major architectural and product decisions established.
 714. Comprehensive Automated Verification: 108 backend tests (Stages 99–103), 66 frontend unit tests, 0 ruff errors, 0 tsc errors, and clean Next.js production build.
 715. Stage 103 concludes the 5-stage Financial News Intelligence sequence (Stages 99–103); Stage 104 begins the Research module sequence.
 
+## Stage 104: Institutional-Grade Financial Research Platform Foundation
+
+### Canonical Research Entities & Investigation Lifecycle
+716. Canonical Research Investigations: Implemented `ResearchInvestigation` as the foundational research entity with typed investigation scopes (`COMPANY`, `INSTRUMENT`, `INDUSTRY`, `MACROECONOMIC`, `MARKET`, `FINANCIAL_EVENT`, `GENERAL_FINANCIAL`).
+717. Explicit Lifecycle State Machine: Enforced strict lifecycle transitions across `DRAFT`, `ACTIVE`, `ON_HOLD`, `COMPLETED`, and `ARCHIVED`, prohibiting modifications to archived investigations without explicit re-activation.
+718. Optimistic Concurrency & Revision Control: Every mutable research entity (`ResearchInvestigation`, `ResearchNote`) tracks monotonically incrementing integer `revision` counters; updates must supply the matching revision or be rejected with a 409 Conflict.
+719. Research Questions with Non-Automatic Truth: Formalized `ResearchQuestion` entity with explicit priority, status tracking (`UNANSWERED`, `IN_PROGRESS`, `ANSWERED`, `DEFERRED`, `ABANDONED`), and explicit analyst validation requirements.
+720. Research Hypotheses Evaluation Framework: Hypotheses maintain explicit status (`UNTESTED`, `SUPPORTED`, `REFUTED`, `INCONCLUSIVE`, `ABANDONED`) and require tied evidence rather than automated confidence scoring.
+
+### Structured Notes, Point-in-Time Revisions & Claim Categorization
+721. Structured Note Typology: Formalized `ResearchNote` across canonical note types (`INVESTMENT_MEMO`, `EARNINGS_DEBRIEF`, `SECTOR_DEEP_DIVE`, `MANAGEMENT_INTERVIEW`, `VALUATION_MODEL_NOTES`, `CATALYST_TRACKER`, `GENERAL_THESIS`, `SCRATCHPAD`) and editorial statuses (`DRAFT`, `IN_REVIEW`, `PUBLISHED`, `DEPRECATED`).
+722. Immutable Point-in-Time Note Revisions: Every note edit creates an immutable `ResearchNoteRevision` snapshot preserving author, timestamp, change summary, and markdown content history.
+723. Separation of Fact vs. Interpretation in Claims: `ResearchClaim` enforces epistemic categorization: `SOURCE_REPORTED_FACT`, `ANALYST_INTERPRETATION`, `ASSUMPTION`, `HYPOTHESIS`, `ESTIMATE`, and `OPEN_QUESTION`, ensuring subjective projections cannot be conflated with verified facts.
+724. Rich-Text & Markdown XSS Sanitization: All note content and analyst inputs undergo strict HTML sanitization via `bleach` allowing only safe formatting tags and whitelisting safe URI schemes.
+
+### Verified Source Libraries, Evidence & Citations
+725. Verified Canonical Source References: Integrated SEC Filings (Stage 86), Financial Facts (Stage 82), News Articles & Events (Stages 99–103), and Economic Data (Stages 89–93) into a unified `ResearchSourceReference` entity.
+726. Deterministic Source Deduplication: Generated SHA-256 content hashes and canonical URI normalizers across verified financial documents to guarantee idempotency and provenance integrity.
+727. Granular Evidence Excerpts: `ResearchEvidence` anchors source references to precise locations (`PAGE_NUMBER`, `PARAGRAPH`, `TABLE_CELL`, `TIME_OFFSET_SECONDS`, `SECTION_HEADING`, `URI_FRAGMENT`) with exact quote verification.
+728. Broken & Withdrawn Citation Handling: Implemented citation tracking with `ResearchCitation` statuses (`VERIFIED`, `UNVERIFIED`, `DISPUTED`, `WITHDRAWN`, `UNREACHABLE`), ensuring citations remain visible with clear status flags if an underlying source is retracted or altered.
+729. Bilateral Claim-Evidence Linkage: Claims can link multiple evidence items with typed relationships (`SUPPORTS`, `REFUTES`, `NEUTRAL`, `INCONCLUSIVE`), enabling auditable debate and thesis stress-testing.
+
+### Security, Audit Logging & SSRF Mitigation
+730. Comprehensive SSRF Mitigation: Enforced strict URL validation for external research links, blocking private, link-local, loopback, loopback-adjacent, cloud metadata endpoints, and non-standard ports.
+731. Immutable Research Activity Audit Log: Every research action (create, update, status change, citation link, revision save) logs an append-only `ResearchActivity` record capturing actor, action, diff summary, and timestamp.
+732. Role-Based Principal Identity: Standardized user identity extraction via `AuthPrincipal.sub` across all research endpoints, ensuring consistent actor attribution across multi-analyst environments.
+
+### Institutional Analyst Workspace Architecture
+733. Unified Route Preservation: Maintained `/research` as one of the 20 immutable top-level ATLAS routes, providing sub-views for Overview, Investigations Directory, 3-Pane Console, Source Library, and Activity Timeline.
+734. Three-Pane Analyst Investigation Console: Engineered a responsive 3-pane layout featuring Scope & Question Navigator (Left), Markdown Note Editor & Hypothesis/Claim/Evidence Tabs (Center), and Context/Source Inspector (Right).
+735. Keyboard Ergonomics & Auto-Save: Implemented keyboard shortcuts (`Ctrl+S`/`Cmd+S` for note saving, `Ctrl+Enter` for claim submission) and non-destructive conflict alerts.
+736. Zero-Trading Scope Enforcement: Strictly isolated research entities from automated order routing, broker APIs, or portfolio mutations; all research notes and claims remain purely analytical assets.
+737. Zero Hallucination Guarantee: Prohibited autonomous agent generation of synthetic analyst opinions, fictitious price targets, or falsified citation sources; all assertions require explicit human or verified source backing.
+738. Production-Ready Verification: Backed by 18 comprehensive backend pytest integration tests, 5 frontend test suites (71 tests total), 0 ruff lint errors, and 0 TypeScript errors.
+739. Roadmap Continuity: Stage 104 establishes the canonical research data model and institutional workspace, forming the robust foundation for downstream research modeling and analytics in Stage 105.
+
 
 
 
