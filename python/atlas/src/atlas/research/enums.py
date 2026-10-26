@@ -153,3 +153,52 @@ class ResearchActivityAction(str, Enum):
     SOURCE_UNLINKED = "SOURCE_UNLINKED"
     EVIDENCE_ATTACHED = "EVIDENCE_ATTACHED"
     EVIDENCE_REMOVED = "EVIDENCE_REMOVED"
+    DOCUMENT_PROCESSED = "DOCUMENT_PROCESSED"
+    EVIDENCE_CANDIDATE_EXTRACTED = "EVIDENCE_CANDIDATE_EXTRACTED"
+    DOCUMENTS_COMPARED = "DOCUMENTS_COMPARED"
+
+
+class DocumentProcessingStatus(str, Enum):
+    """Status of document parsing, sectioning, and table extraction."""
+    NOT_STARTED = "NOT_STARTED"
+    QUEUED = "QUEUED"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    PARTIAL = "PARTIAL"
+    FAILED = "FAILED"
+    RESTRICTED = "RESTRICTED"
+    UNSUPPORTED = "UNSUPPORTED"
+
+
+class DocumentFormat(str, Enum):
+    """Source media format of financial research documents."""
+    HTML = "HTML"
+    PDF = "PDF"
+    PLAIN_TEXT = "PLAIN_TEXT"
+    MARKDOWN = "MARKDOWN"
+    DOCX = "DOCX"
+    XBRL_DATASET = "XBRL_DATASET"
+
+
+class SearchMode(str, Enum):
+    """Execution mode for research source discovery."""
+    KEYWORD = "KEYWORD"
+    EXACT_PHRASE = "EXACT_PHRASE"
+    HYBRID = "HYBRID"
+
+
+class DocumentComparisonMode(str, Enum):
+    """Comparison scope for two research documents."""
+    FULL_TEXT = "FULL_TEXT"
+    SECTIONS = "SECTIONS"
+    FINANCIAL_TABLES = "FINANCIAL_TABLES"
+
+
+class UnitScale(str, Enum):
+    """Numeric scale of extracted financial tables and disclosures."""
+    EXACT = "EXACT"
+    THOUSANDS = "THOUSANDS"
+    MILLIONS = "MILLIONS"
+    BILLIONS = "BILLIONS"
+    PERCENTAGE = "PERCENTAGE"
+    PER_SHARE = "PER_SHARE"

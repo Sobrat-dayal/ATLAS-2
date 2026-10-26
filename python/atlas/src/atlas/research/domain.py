@@ -6,6 +6,9 @@ from typing import Any, Dict, List, Optional
 
 from atlas.research.enums import (
     ClaimEvidenceRelationship,
+    DocumentComparisonMode,
+    DocumentFormat,
+    DocumentProcessingStatus,
     EvidenceLocationType,
     InvestigationLifecycleStatus,
     ResearchActivityAction,
@@ -18,6 +21,7 @@ from atlas.research.enums import (
     ResearchSourceType,
     ResearchType,
     SourceAvailabilityStatus,
+    UnitScale,
 )
 
 
@@ -198,3 +202,182 @@ class ResearchActivity:
     object_id: str
     details: Dict[str, Any]
     occurred_at: datetime.datetime
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 Document Processing, Structure, Tables, & Search Models
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ResearchDocumentProcessingRecord:
+    """Audit record and execution status of document parsing and text extraction."""
+    processing_id: str
+    canonical_document_id: str
+    source_reference_id: str
+    source_revision: str
+    source_format: DocumentFormat
+    processor_version: str
+    processing_status: DocumentProcessingStatus
+    started_at: datetime.datetime
+    completed_at: Optional[datetime.datetime] = None
+    extracted_section_count: int = 0
+    extracted_table_count: int = 0
+    extracted_span_count: int = 0
+    errors: List[str] = field(default_factory=list)
+    content_rights_status: str = "PERMITTED"
+
+
+@dataclass
+class ResearchDocumentSection:
+    """Hierarchical structural item or section within a research document."""
+    section_id: str
+    canonical_document_id: str
+    source_reference_id: str
+    source_revision: str
+    heading: str
+    section_path: str
+    level: int
+    start_char_offset: int
+    end_char_offset: int
+    parent_section_id: Optional[str] = None
+    page_number: Optional[int] = None
+    text_preview: str = ""
+
+
+@dataclass
+class ResearchDocumentSpan:
+    """Exact source text segment indexed with character offsets and pagination."""
+    span_id: str
+    canonical_document_id: str
+    source_reference_id: str
+    source_revision: str
+    start_char_offset: int
+    end_char_offset: int
+    text: str
+    section_id: Optional[str] = None
+    page_number: Optional[int] = None
+    paragraph_number: Optional[int] = None
+
+
+@dataclass
+class ResearchDocumentTable:
+    """Structured financial or operational table extracted from research sources."""
+    table_id: str
+    canonical_document_id: str
+    source_reference_id: str
+    source_revision: str
+    title: str
+    period_label: str
+    currency: str
+    unit_scale: UnitScale
+    headers: List[str]
+    row_labels: List[str]
+    cells: List[List[str]]
+    raw_values: List[List[Optional[float]]]
+    section_id: Optional[str] = None
+    footnotes: List[str] = field(default_factory=list)
+    associated_fact_ids: List[str] = field(default_factory=list)
+
+
+@dataclass
+class ResearchSearchHit:
+    """Search hit returned by multi-facet research source discovery."""
+    hit_id: str
+    source_reference_id: str
+    source_type: ResearchSourceType
+    source_title: str
+    score: float
+    availability_status: SourceAvailabilityStatus
+    rights_policy: str
+    canonical_document_id: Optional[str] = None
+    canonical_entity_id: Optional[str] = None
+    publisher_id: Optional[str] = None
+    published_at: Optional[datetime.datetime] = None
+    reporting_period: Optional[str] = None
+    matched_snippet: str = ""
+    matched_spans: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class DocumentSearchHit:
+    """Match result for an in-document query."""
+    span_id: str
+    snippet: str
+    match_start: int
+    match_end: int
+    section_id: Optional[str] = None
+    section_heading: Optional[str] = None
+    page_number: Optional[int] = None
+    paragraph_number: Optional[int] = None
+
+
+@dataclass
+class ResearchEvidenceCandidate:
+    """Discovered candidate evidence passage eligible for analyst conversion into evidence."""
+    candidate_id: str
+    source_reference_id: str
+    source_title: str
+    extracted_text: str
+    evidence_type: str
+    location_reference: str
+    canonical_document_id: Optional[str] = None
+    canonical_entity_id: Optional[str] = None
+    section_heading: Optional[str] = None
+    page_number: Optional[int] = None
+    paragraph_number: Optional[int] = None
+    reporting_period: Optional[str] = None
+    unit: Optional[str] = None
+    currency: Optional[str] = None
+    numeric_value: Optional[float] = None
+    source_revision: Optional[str] = None
+    provenance: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class DocumentComparisonSectionDiff:
+    """Aligned textual diff between two document sections."""
+    section_name: str
+    alignment_status: str  # "MATCHED", "ADDED_IN_RIGHT", "REMOVED_IN_RIGHT"
+    added_lines_count: int
+    removed_lines_count: int
+    diff_unified: str
+    left_section_heading: Optional[str] = None
+    right_section_heading: Optional[str] = None
+    left_location_ref: Optional[str] = None
+    right_location_ref: Optional[str] = None
+
+
+@dataclass
+class FinancialFactComparison:
+    """Side-by-side comparison of structured financial metrics across periods."""
+    fact_key: str
+    label: str
+    left_period: str
+    right_period: str
+    currency: str
+    unit_scale: UnitScale
+    left_value: float
+    right_value: float
+    absolute_delta: float
+    percentage_delta: Optional[float]
+    is_restated: bool = False
+    compatibility_status: str = "COMPATIBLE"
+
+
+@dataclass
+class DocumentComparisonResult:
+    """Full comparative analysis between two research documents or filing periods."""
+    comparison_id: str
+    left_document_id: str
+    right_document_id: str
+    left_title: str
+    right_title: str
+    total_added_lines: int
+    total_removed_lines: int
+    section_diffs: List[DocumentComparisonSectionDiff]
+    financial_fact_diffs: List[FinancialFactComparison]
+    compared_at: datetime.datetime
+    left_period: Optional[str] = None
+    right_period: Optional[str] = None
+    comparison_mode: DocumentComparisonMode = DocumentComparisonMode.FULL_TEXT
+    compatibility_warnings: List[str] = field(default_factory=list)

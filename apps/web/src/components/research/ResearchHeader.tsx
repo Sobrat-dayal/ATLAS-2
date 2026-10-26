@@ -27,7 +27,7 @@ export function ResearchHeader({
                 FINANCIAL RESEARCH PLATFORM
               </h1>
               <Badge variant="outline" className="font-mono text-[10px]">
-                STAGE 104 FOUNDATION
+                STAGE 105 DOCUMENT INTELLIGENCE
               </Badge>
               {activeCount > 0 && (
                 <Badge variant="primary" className="text-[10px]">
@@ -36,7 +36,7 @@ export function ResearchHeader({
               )}
             </div>
             <p className="text-xs text-atlas-text-muted">
-              Source-verified financial research, structured notes, evidence management, and canonical citations.
+              Source discovery, document intelligence, multi-document comparison, structured evidence extraction, and citation-anchored research.
             </p>
           </div>
         </div>
@@ -52,6 +52,36 @@ export function ResearchHeader({
               }`}
             >
               Overview
+            </button>
+            <button
+              onClick={() => onTabChange("DISCOVERY")}
+              className={`rounded-xs px-3 py-1 text-xs font-medium transition-colors ${
+                activeTab === "DISCOVERY"
+                  ? "bg-atlas-accent text-white"
+                  : "text-atlas-text-secondary hover:text-atlas-text-primary"
+              }`}
+            >
+              Discovery
+            </button>
+            <button
+              onClick={() => onTabChange("DOCUMENT_VIEWER")}
+              className={`rounded-xs px-3 py-1 text-xs font-medium transition-colors ${
+                activeTab === "DOCUMENT_VIEWER"
+                  ? "bg-atlas-accent text-white"
+                  : "text-atlas-text-secondary hover:text-atlas-text-primary"
+              }`}
+            >
+              Document Viewer
+            </button>
+            <button
+              onClick={() => onTabChange("COMPARE")}
+              className={`rounded-xs px-3 py-1 text-xs font-medium transition-colors ${
+                activeTab === "COMPARE"
+                  ? "bg-atlas-accent text-white"
+                  : "text-atlas-text-secondary hover:text-atlas-text-primary"
+              }`}
+            >
+              Comparison
             </button>
             <button
               onClick={() => onTabChange("INVESTIGATIONS")}

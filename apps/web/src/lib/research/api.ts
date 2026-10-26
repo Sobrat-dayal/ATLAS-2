@@ -29,6 +29,26 @@ import {
   UpdateResearchInvestigationDTO,
   UpdateResearchNoteDTO,
   UpdateResearchQuestionDTO,
+  // Stage 105 Types
+  ConvertEvidenceCandidateDTO,
+  DocumentComparisonMode,
+  DocumentComparisonRequest,
+  DocumentComparisonResult,
+  DocumentSearchRequest,
+  DocumentSearchResponse,
+  EvidenceCandidateListResponse,
+  FinancialFactsCompareRequest,
+  FinancialFactsCompareResponse,
+  ResearchDocumentOutline,
+  ResearchDocumentProcessingStatus,
+  ResearchDocumentSection,
+  ResearchDocumentTable,
+  ResearchDocumentTableListResponse,
+  ResearchSourceDiscoveryQuery,
+  ResearchSourceDiscoveryResponse,
+  ResearchSourceTypeListResponse,
+  ResolveEvidenceLocationRequest,
+  ResolveEvidenceLocationResponse,
 } from "./types";
 
 function getBaseApiUrl(): string {
@@ -436,3 +456,161 @@ export async function listActivity(
   const res = await fetch(url, { headers: getHeaders(), cache: "no-store" });
   return handleResponse<{ items: ResearchActivity[]; total_count: number }>(res);
 }
+
+// ---------------------------------------------------------------------------
+// Stage 105 — Advanced Source Discovery & Document Intelligence
+// ---------------------------------------------------------------------------
+
+export async function discoverSources(
+  query: ResearchSourceDiscoveryQuery
+): Promise<ResearchSourceDiscoveryResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/sources/search`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(query),
+  });
+  return handleResponse<ResearchSourceDiscoveryResponse>(res);
+}
+
+export async function getSourceTypes(): Promise<ResearchSourceTypeListResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/source-types`;
+  const res = await fetch(url, { headers: getHeaders(), cache: "no-store" });
+  return handleResponse<ResearchSourceTypeListResponse>(res);
+}
+
+export async function getDocument(documentId: string): Promise<ResearchSourceReference> {
+  const url = `${getBaseApiUrl()}/api/v1/research/documents/${encodeURIComponent(documentId)}`;
+  const res = await fetch(url, { headers: getHeaders(), cache: "no-store" });
+  return handleResponse<ResearchSourceReference>(res);
+}
+
+export async function getDocumentProcessingStatus(
+  documentId: string
+): Promise<ResearchDocumentProcessingStatus> {
+  const url = `${getBaseApiUrl()}/api/v1/research/documents/${encodeURIComponent(documentId)}/processing-status`;
+  const res = await fetch(url, { headers: getHeaders(), cache: "no-store" });
+  return handleResponse<ResearchDocumentProcessingStatus>(res);
+}
+
+export async function getDocumentOutline(
+  documentId: string
+): Promise<ResearchDocumentOutline> {
+  const url = `${getBaseApiUrl()}/api/v1/research/documents/${encodeURIComponent(documentId)}/outline`;
+  const res = await fetch(url, { headers: getHeaders(), cache: "no-store" });
+  return handleResponse<ResearchDocumentOutline>(res);
+}
+
+export async function getDocumentSections(
+  documentId: string
+): Promise<ResearchDocumentSection[]> {
+  const url = `${getBaseApiUrl()}/api/v1/research/documents/${encodeURIComponent(documentId)}/sections`;
+  const res = await fetch(url, { headers: getHeaders(), cache: "no-store" });
+  return handleResponse<ResearchDocumentSection[]>(res);
+}
+
+export async function getDocumentSection(
+  documentId: string,
+  sectionId: string
+): Promise<ResearchDocumentSection> {
+  const url = `${getBaseApiUrl()}/api/v1/research/documents/${encodeURIComponent(documentId)}/sections/${encodeURIComponent(sectionId)}`;
+  const res = await fetch(url, { headers: getHeaders(), cache: "no-store" });
+  return handleResponse<ResearchDocumentSection>(res);
+}
+
+export async function searchDocument(
+  documentId: string,
+  data: DocumentSearchRequest
+): Promise<DocumentSearchResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/documents/${encodeURIComponent(documentId)}/search`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<DocumentSearchResponse>(res);
+}
+
+export async function getDocumentTables(
+  documentId: string
+): Promise<ResearchDocumentTableListResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/documents/${encodeURIComponent(documentId)}/tables`;
+  const res = await fetch(url, { headers: getHeaders(), cache: "no-store" });
+  return handleResponse<ResearchDocumentTableListResponse>(res);
+}
+
+export async function getDocumentTable(
+  documentId: string,
+  tableId: string
+): Promise<ResearchDocumentTable> {
+  const url = `${getBaseApiUrl()}/api/v1/research/documents/${encodeURIComponent(documentId)}/tables/${encodeURIComponent(tableId)}`;
+  const res = await fetch(url, { headers: getHeaders(), cache: "no-store" });
+  return handleResponse<ResearchDocumentTable>(res);
+}
+
+export async function listEvidenceCandidates(
+  documentId?: string,
+  investigationId?: string,
+  limit: number = 20
+): Promise<EvidenceCandidateListResponse> {
+  const params = new URLSearchParams();
+  if (documentId) params.append("document_id", documentId);
+  if (investigationId) params.append("investigation_id", investigationId);
+  params.append("limit", limit.toString());
+
+  const url = `${getBaseApiUrl()}/api/v1/research/evidence/candidates?${params.toString()}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+  });
+  return handleResponse<EvidenceCandidateListResponse>(res);
+}
+
+export async function resolveEvidenceLocation(
+  data: ResolveEvidenceLocationRequest
+): Promise<ResolveEvidenceLocationResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/evidence/resolve-location`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResolveEvidenceLocationResponse>(res);
+}
+
+export async function convertEvidenceCandidate(
+  data: ConvertEvidenceCandidateDTO
+): Promise<ResearchEvidence> {
+  const url = `${getBaseApiUrl()}/api/v1/research/evidence/convert-candidate`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchEvidence>(res);
+}
+
+export async function compareDocuments(
+  data: DocumentComparisonRequest
+): Promise<DocumentComparisonResult> {
+  const url = `${getBaseApiUrl()}/api/v1/research/documents/compare`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<DocumentComparisonResult>(res);
+}
+
+export async function compareFinancialFacts(
+  data: FinancialFactsCompareRequest
+): Promise<FinancialFactsCompareResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/financial-facts/compare`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<FinancialFactsCompareResponse>(res);
+}
+

@@ -11,20 +11,37 @@ from sqlalchemy.orm import Session
 
 # Keep legacy imports for backwards compatibility
 from atlas.entities.models import Entity
+from atlas.research.documents import (
+    ParsedDocumentData,
+    build_canonical_documents_registry,
+    compute_document_diff,
+    extract_evidence_candidates_from_document,
+    resolve_source_location_anchor,
+    search_within_document,
+)
 from atlas.research.domain import (
+    DocumentComparisonResult,
+    DocumentSearchHit,
+    FinancialFactComparison,
     ResearchActivity,
     ResearchCitation,
     ResearchClaim,
     ResearchClaimEvidence,
+    ResearchDocumentProcessingRecord,
+    ResearchDocumentSection,
+    ResearchDocumentTable,
     ResearchEvidence,
+    ResearchEvidenceCandidate,
     ResearchHypothesis,
     ResearchInvestigation,
     ResearchNote,
     ResearchNoteRevision,
     ResearchQuestion,
+    ResearchSearchHit,
     ResearchSourceReference,
 )
 from atlas.research.enums import (
+    DocumentComparisonMode,
     EvidenceLocationType,
     InvestigationLifecycleStatus,
     ResearchActivityAction,
@@ -36,10 +53,16 @@ from atlas.research.enums import (
     ResearchQuestionStatus,
     ResearchSourceType,
     ResearchType,
+    SearchMode,
     SourceAvailabilityStatus,
 )
 from atlas.research.errors import (
     ResearchClaimNotFoundError,
+    ResearchComparisonIncompatibleError,
+    ResearchDocumentNotFoundError,
+    ResearchDocumentSectionNotFoundError,
+    ResearchDocumentTableNotFoundError,
+    ResearchEvidenceCandidateNotFoundError,
     ResearchEvidenceNotFoundError,
     ResearchEvidenceSourceMissingError,
     ResearchHypothesisNotFoundError,
@@ -108,11 +131,14 @@ class ResearchRepository:
         self._claim_evidence: List[ResearchClaimEvidence] = []
         self._source_links: Dict[str, List[str]] = {}  # investigation_id -> list of source_reference_ids
         self._sources: Dict[str, ResearchSourceReference] = build_canonical_sources_catalog()
+        self._documents: Dict[str, ParsedDocumentData] = build_canonical_documents_registry()
+        self._candidates: Dict[str, ResearchEvidenceCandidate] = {}
         self._evidence: Dict[str, ResearchEvidence] = {}
         self._citations: Dict[str, ResearchCitation] = {}
         self._activity: List[ResearchActivity] = []
 
         self._seed_baseline_investigations()
+        self._seed_initial_evidence_candidates()
 
     # -----------------------------------------------------------------------
     # Baseline Seeding for Developer and Institutional Workflow
@@ -1070,7 +1096,12 @@ class ResearchRepository:
     def get_source(self, source_reference_id: str) -> Optional[ResearchSourceReference]:
         with self._lock:
             src = self._sources.get(source_reference_id)
-            return copy.deepcopy(src) if src else None
+            if src:
+                return copy.deepcopy(src)
+            for s in self._sources.values():
+                if s.canonical_document_id == source_reference_id:
+                    return copy.deepcopy(s)
+            return None
 
     def list_sources(
         self,
@@ -1350,3 +1381,502 @@ class ResearchRepository:
                 "recent_investigations": [copy.deepcopy(x) for x in sorted_invs],
                 "recent_activities": [copy.deepcopy(x) for x in recent_activities[:10]],
             }
+
+    # -----------------------------------------------------------------------
+    # Stage 105 Candidate Seeding & Candidate Management
+    # -----------------------------------------------------------------------
+    def _seed_initial_evidence_candidates(self):
+        """Pre-populate candidate evidence snippets from parsed canonical documents."""
+        for doc in self._documents.values():
+            # Avoid duplicate seeding for alias keys
+            if doc.document_id in self._documents and doc.source_reference_id in self._documents:
+                if self._documents[doc.document_id] is not doc:
+                    continue
+            cands = extract_evidence_candidates_from_document(doc, limit=8)
+            for c in cands:
+                self._candidates[c.candidate_id] = c
+
+    # -----------------------------------------------------------------------
+    # Stage 105 Research Source Discovery
+    # -----------------------------------------------------------------------
+    def discover_sources(
+        self,
+        text_query: Optional[str] = None,
+        entity_ids: Optional[List[str]] = None,
+        instrument_ids: Optional[List[str]] = None,
+        source_type_ids: Optional[List[ResearchSourceType]] = None,
+        publisher_ids: Optional[List[str]] = None,
+        filing_types: Optional[List[str]] = None,
+        reporting_period_range: Optional[str] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        availability_statuses: Optional[List[SourceAvailabilityStatus]] = None,
+        search_mode: SearchMode = SearchMode.KEYWORD,
+        sort_by: str = "RELEVANCE",
+        limit: int = 25,
+        cursor: Optional[str] = None,
+    ) -> Tuple[List[ResearchSearchHit], int, Optional[str], Dict]:
+        """Multi-facet research source discovery and ranking across canonical financial sources."""
+        with self._lock:
+            # Deduplicate canonical sources
+            seen_ids = set()
+            all_sources: List[ResearchSourceReference] = []
+            for s in self._sources.values():
+                if s.source_reference_id not in seen_ids:
+                    seen_ids.add(s.source_reference_id)
+                    all_sources.append(s)
+
+            filtered_hits: List[Tuple[ResearchSourceReference, float, str, List[Dict]]] = []
+
+            q_clean = (text_query or "").strip().lower()
+
+            for src in all_sources:
+                # 1. Entity Filter
+                if entity_ids:
+                    src_ent = (src.canonical_entity_id or "").upper()
+                    if not any(e.upper() == src_ent for e in entity_ids):
+                        continue
+
+                # 2. Source Type Filter
+                if source_type_ids:
+                    if src.source_type not in source_type_ids:
+                        continue
+
+                # 3. Publisher Filter
+                if publisher_ids:
+                    src_pub = (src.publisher_id or "").lower()
+                    if not any(p.lower() in src_pub for p in publisher_ids):
+                        continue
+
+                # 4. Filing Type Filter (e.g. "10-K", "10-Q")
+                if filing_types:
+                    src_title_upper = src.source_title.upper()
+                    src_form = (src.provenance.get("form_type") or "").upper()
+                    if not any(ft.upper() in src_title_upper or ft.upper() == src_form for ft in filing_types):
+                        continue
+
+                # 5. Availability Status Filter
+                if availability_statuses:
+                    if src.availability_status not in availability_statuses:
+                        continue
+
+                # 6. Reporting Period Filter
+                if reporting_period_range:
+                    src_period = (src.reporting_period or "").upper()
+                    if reporting_period_range.upper() not in src_period:
+                        continue
+
+                # 7. Date Filter
+                if date_from and src.published_at:
+                    try:
+                        df = datetime.datetime.fromisoformat(date_from.replace("Z", "+00:00"))
+                        if src.published_at < df:
+                            continue
+                    except Exception:
+                        pass
+                if date_to and src.published_at:
+                    try:
+                        dt = datetime.datetime.fromisoformat(date_to.replace("Z", "+00:00"))
+                        if src.published_at > dt:
+                            continue
+                    except Exception:
+                        pass
+
+                # 8. Text Match & Scoring
+                score = 1.0
+                snippet = ""
+                matched_spans: List[Dict] = []
+
+                if q_clean:
+                    title_lower = src.source_title.lower()
+                    ent_lower = (src.canonical_entity_id or "").lower()
+                    period_lower = (src.reporting_period or "").lower()
+                    pub_lower = (src.publisher_id or "").lower()
+
+                    # Exact matches
+                    if q_clean == ent_lower:
+                        score = 2.0
+                        snippet = f"Canonical issuer symbol: {src.canonical_entity_id}"
+                    elif q_clean in title_lower:
+                        score = 1.8
+                        idx = title_lower.find(q_clean)
+                        snippet = src.source_title[max(0, idx - 30):min(len(src.source_title), idx + len(q_clean) + 40)]
+                    elif q_clean in period_lower:
+                        score = 1.5
+                        snippet = f"Reporting period: {src.reporting_period}"
+                    elif q_clean in pub_lower:
+                        score = 1.4
+                        snippet = f"Publisher: {src.publisher_id}"
+                    else:
+                        # Search in associated document text if available
+                        doc = None
+                        if src.canonical_document_id and src.canonical_document_id in self._documents:
+                            doc = self._documents[src.canonical_document_id]
+                        elif src.source_reference_id in self._documents:
+                            doc = self._documents[src.source_reference_id]
+
+                        if doc:
+                            in_doc_hits = search_within_document(doc, q_clean, limit=2)
+                            if in_doc_hits:
+                                score = 1.2
+                                snippet = in_doc_hits[0].snippet
+                                matched_spans = [
+                                    {
+                                        "span_id": h.span_id,
+                                        "section_heading": h.section_heading,
+                                        "page_number": h.page_number,
+                                    }
+                                    for h in in_doc_hits
+                                ]
+                            else:
+                                continue
+                        else:
+                            continue
+                else:
+                    snippet = src.source_title
+
+                filtered_hits.append((src, score, snippet, matched_spans))
+
+            # Sort results
+            if sort_by == "DATE_DESC":
+                filtered_hits.sort(key=lambda x: x[0].published_at or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc), reverse=True)
+            elif sort_by == "DATE_ASC":
+                filtered_hits.sort(key=lambda x: x[0].published_at or datetime.datetime.max.replace(tzinfo=datetime.timezone.utc))
+            elif sort_by == "TITLE":
+                filtered_hits.sort(key=lambda x: x[0].source_title.lower())
+            else:  # RELEVANCE
+                filtered_hits.sort(key=lambda x: (x[1], x[0].published_at or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)), reverse=True)
+
+            total_count = len(filtered_hits)
+
+            # Pagination
+            start_idx = 0
+            if cursor:
+                try:
+                    start_idx = int(cursor)
+                except ValueError:
+                    start_idx = 0
+
+            page_slice = filtered_hits[start_idx : start_idx + limit]
+            next_cursor = str(start_idx + limit) if (start_idx + limit) < total_count else None
+
+            hit_dtos = [
+                ResearchSearchHit(
+                    hit_id=f"hit-{src.source_reference_id}-{idx}",
+                    source_reference_id=src.source_reference_id,
+                    canonical_document_id=src.canonical_document_id,
+                    canonical_entity_id=src.canonical_entity_id,
+                    source_type=src.source_type,
+                    source_title=src.source_title,
+                    publisher_id=src.publisher_id,
+                    published_at=src.published_at,
+                    reporting_period=src.reporting_period,
+                    matched_snippet=snip,
+                    matched_spans=spans,
+                    score=sc,
+                    availability_status=src.availability_status,
+                    rights_policy=src.rights_policy,
+                )
+                for idx, (src, sc, snip, spans) in enumerate(page_slice)
+            ]
+
+            summary = {
+                "text_query": text_query,
+                "applied_filters_count": sum(bool(x) for x in [entity_ids, source_type_ids, publisher_ids, filing_types, reporting_period_range, date_from, date_to]),
+                "total_matched": total_count,
+            }
+
+            return hit_dtos, total_count, next_cursor, summary
+
+    # -----------------------------------------------------------------------
+    # Stage 105 Source Types Taxonomy
+    # -----------------------------------------------------------------------
+    def get_source_types(self) -> List[Dict]:
+        """Return taxonomic descriptions and rights policies of supported research sources."""
+        return [
+            {
+                "source_type": ResearchSourceType.ANNUAL_REPORT,
+                "display_name": "Annual Report (Form 10-K / 20-F)",
+                "description": "Audited comprehensive financial reporting and regulatory disclosures for full fiscal year.",
+                "rights_classification": "PUBLIC_DOMAIN_REGULATORY",
+                "is_searchable": True,
+            },
+            {
+                "source_type": ResearchSourceType.QUARTERLY_REPORT,
+                "display_name": "Quarterly Report (Form 10-Q)",
+                "description": "Unaudited quarterly financial statements and MD&A progress updates.",
+                "rights_classification": "PUBLIC_DOMAIN_REGULATORY",
+                "is_searchable": True,
+            },
+            {
+                "source_type": ResearchSourceType.REGULATORY_FILING,
+                "display_name": "Current Regulatory Report (Form 8-K / Disclosures)",
+                "description": "Material corporate events, leadership appointments, earnings presentations, and governance filings.",
+                "rights_classification": "PUBLIC_DOMAIN_REGULATORY",
+                "is_searchable": True,
+            },
+            {
+                "source_type": ResearchSourceType.FINANCIAL_STATEMENT,
+                "display_name": "Canonical Financial Statements",
+                "description": "Standardized Income Statement, Balance Sheet, and Cash Flow metrics derived from XBRL filings.",
+                "rights_classification": "LICENSED_FUNDAMENTAL_DATA",
+                "is_searchable": True,
+            },
+            {
+                "source_type": ResearchSourceType.ECONOMIC_RELEASE,
+                "display_name": "Official Economic Release",
+                "description": "Macroeconomic indicator publications (CPI, PPI, Employment, Central Bank Policy Decisions).",
+                "rights_classification": "PUBLIC_DOMAIN_GOV",
+                "is_searchable": True,
+            },
+            {
+                "source_type": ResearchSourceType.NEWS_ARTICLE,
+                "display_name": "Verified Financial News",
+                "description": "Licensed financial news reporting from Bloomberg, Reuters, and verified financial wire services.",
+                "rights_classification": "LICENSED_EXCERPT_ONLY",
+                "is_searchable": True,
+            },
+            {
+                "source_type": ResearchSourceType.MARKET_DATASET,
+                "display_name": "Market & Instrument Dataset",
+                "description": "Exchange-reported trade volumes, price histories, and security master references.",
+                "rights_classification": "LICENSED_MARKET_DATA",
+                "is_searchable": True,
+            },
+        ]
+
+    # -----------------------------------------------------------------------
+    # Stage 105 Document Inspection, Outline, Sections & Tables
+    # -----------------------------------------------------------------------
+    def _resolve_document(self, doc_id_or_src_id: str) -> Optional[ParsedDocumentData]:
+        """Resolve a ParsedDocumentData by document_id or source_reference_id."""
+        with self._lock:
+            if doc_id_or_src_id in self._documents:
+                return self._documents[doc_id_or_src_id]
+            # Try finding by source_reference_id
+            for d in self._documents.values():
+                if d.source_reference_id == doc_id_or_src_id:
+                    return d
+            return None
+
+    def get_document_metadata(self, doc_id: str) -> Optional[ParsedDocumentData]:
+        doc = self._resolve_document(doc_id)
+        return copy.deepcopy(doc) if doc else None
+
+    def get_document_processing_status(self, doc_id: str) -> Optional[ResearchDocumentProcessingRecord]:
+        doc = self._resolve_document(doc_id)
+        if not doc or not doc.processing_record:
+            return None
+        return copy.deepcopy(doc.processing_record)
+
+    def get_document_sections(self, doc_id: str) -> List[ResearchDocumentSection]:
+        doc = self._resolve_document(doc_id)
+        if not doc:
+            raise ResearchDocumentNotFoundError(f"Document '{doc_id}' not found.")
+        return [copy.deepcopy(s) for s in doc.sections]
+
+    def get_document_section(self, doc_id: str, section_id: str) -> ResearchDocumentSection:
+        doc = self._resolve_document(doc_id)
+        if not doc:
+            raise ResearchDocumentNotFoundError(f"Document '{doc_id}' not found.")
+        for s in doc.sections:
+            if s.section_id == section_id:
+                return copy.deepcopy(s)
+        raise ResearchDocumentSectionNotFoundError(f"Section '{section_id}' not found in document '{doc_id}'.")
+
+    def search_document(
+        self,
+        doc_id: str,
+        query: str,
+        section_id: Optional[str] = None,
+        limit: int = 20,
+    ) -> List[DocumentSearchHit]:
+        doc = self._resolve_document(doc_id)
+        if not doc:
+            raise ResearchDocumentNotFoundError(f"Document '{doc_id}' not found.")
+        hits = search_within_document(doc, query=query, section_id=section_id, limit=limit)
+        return hits
+
+    def get_document_tables(self, doc_id: str) -> List[ResearchDocumentTable]:
+        doc = self._resolve_document(doc_id)
+        if not doc:
+            raise ResearchDocumentNotFoundError(f"Document '{doc_id}' not found.")
+        return [copy.deepcopy(t) for t in doc.tables]
+
+    def get_document_table(self, doc_id: str, table_id: str) -> ResearchDocumentTable:
+        doc = self._resolve_document(doc_id)
+        if not doc:
+            raise ResearchDocumentNotFoundError(f"Document '{doc_id}' not found.")
+        for t in doc.tables:
+            if t.table_id == table_id:
+                return copy.deepcopy(t)
+        raise ResearchDocumentTableNotFoundError(f"Table '{table_id}' not found in document '{doc_id}'.")
+
+    # -----------------------------------------------------------------------
+    # Stage 105 Evidence Candidates & Location Validation
+    # -----------------------------------------------------------------------
+    def get_evidence_candidates(
+        self,
+        investigation_id: Optional[str] = None,
+        source_id: Optional[str] = None,
+        limit: int = 20,
+    ) -> List[ResearchEvidenceCandidate]:
+        with self._lock:
+            items = list(self._candidates.values())
+            if source_id:
+                items = [c for c in items if c.source_reference_id == source_id or c.canonical_document_id == source_id]
+            return [copy.deepcopy(c) for c in items[:limit]]
+
+    def resolve_evidence_location(
+        self,
+        source_reference_id: str,
+        location_type: EvidenceLocationType,
+        location_reference: str,
+        page_number: Optional[int] = None,
+        section_name: Optional[str] = None,
+    ) -> Tuple[bool, str, Optional[str], Optional[str]]:
+        doc = self._resolve_document(source_reference_id)
+        if not doc:
+            return (
+                False,
+                location_reference,
+                None,
+                f"Source document '{source_reference_id}' is unavailable or has not been processed.",
+            )
+        return resolve_source_location_anchor(
+            doc=doc,
+            location_type=location_type,
+            location_reference=location_reference,
+            page_number=page_number,
+            section_name=section_name,
+        )
+
+    def convert_evidence_candidate(
+        self,
+        candidate_id: str,
+        investigation_id: str,
+        actor_user_id: str,
+        claim_id: Optional[str] = None,
+        relationship_type: Optional[str] = None,
+    ) -> ResearchEvidence:
+        with self._lock:
+            if candidate_id not in self._candidates:
+                raise ResearchEvidenceCandidateNotFoundError(f"Evidence candidate '{candidate_id}' not found.")
+
+            cand = self._candidates[candidate_id]
+            if not self.get_investigation(investigation_id):
+                raise ResearchInvestigationNotFoundError(f"Investigation '{investigation_id}' not found.")
+
+            # Auto-link source to investigation if not already present
+            linked_sources = self._source_links.get(investigation_id, [])
+            if cand.source_reference_id not in linked_sources:
+                linked_sources.append(cand.source_reference_id)
+                self._source_links[investigation_id] = linked_sources
+
+            # Create persistent ResearchEvidence
+            ev_id = f"ev-{uuid.uuid4().hex[:10]}"
+            ev = ResearchEvidence(
+                evidence_id=ev_id,
+                investigation_id=investigation_id,
+                source_reference_id=cand.source_reference_id,
+                canonical_source_entity_id=cand.canonical_entity_id,
+                evidence_type=cand.evidence_type,
+                source_location_type=EvidenceLocationType.SECTION if cand.section_heading else EvidenceLocationType.PAGE,
+                source_location_reference=cand.location_reference,
+                page_number=cand.page_number,
+                section_name=cand.section_heading,
+                source_revision=cand.source_revision or "1",
+                observation_time=datetime.datetime.now(datetime.timezone.utc),
+                allowed_excerpt=cand.extracted_text,
+                linked_claim_ids=[claim_id] if claim_id else [],
+                created_by=actor_user_id,
+                created_at=datetime.datetime.now(datetime.timezone.utc),
+                availability_status=SourceAvailabilityStatus.AVAILABLE,
+                provenance=cand.provenance,
+            )
+            self._evidence[ev_id] = ev
+
+            # Link Claim if supplied
+            if claim_id:
+                from atlas.research.enums import ClaimEvidenceRelationship
+                rel_enum = ClaimEvidenceRelationship.SUPPORTS
+                if relationship_type:
+                    try:
+                        rel_enum = ClaimEvidenceRelationship(relationship_type)
+                    except ValueError:
+                        pass
+                self.link_evidence_to_claim(claim_id=claim_id, evidence_id=ev_id, relationship_type=rel_enum, linked_by=actor_user_id)
+
+            # Log activity
+            self.record_activity(
+                investigation_id=investigation_id,
+                action_type=ResearchActivityAction.EVIDENCE_CANDIDATE_EXTRACTED,
+                actor_user_id=actor_user_id,
+                object_type="EVIDENCE",
+                object_id=ev_id,
+                details={
+                    "candidate_id": candidate_id,
+                    "source_reference_id": cand.source_reference_id,
+                    "location_reference": cand.location_reference,
+                },
+            )
+
+            # Remove from candidate pool once converted
+            del self._candidates[candidate_id]
+
+            return copy.deepcopy(ev)
+
+    # -----------------------------------------------------------------------
+    # Stage 105 Two-Document & Financial Fact Comparison
+    # -----------------------------------------------------------------------
+    def compare_documents(
+        self,
+        left_doc_id: str,
+        right_doc_id: str,
+        mode: DocumentComparisonMode = DocumentComparisonMode.FULL_TEXT,
+    ) -> DocumentComparisonResult:
+        with self._lock:
+            left_doc = self._resolve_document(left_doc_id)
+            if not left_doc:
+                raise ResearchDocumentNotFoundError(f"Left document '{left_doc_id}' not found.")
+            right_doc = self._resolve_document(right_doc_id)
+            if not right_doc:
+                raise ResearchDocumentNotFoundError(f"Right document '{right_doc_id}' not found.")
+
+            res = compute_document_diff(left_doc, right_doc, mode=mode)
+            return res
+
+    def compare_financial_facts(
+        self,
+        entity_id: str,
+        left_period: str,
+        right_period: str,
+        concepts: Optional[List[str]] = None,
+    ) -> List[FinancialFactComparison]:
+        """Compare financial statement facts for an issuer across two reporting periods."""
+        with self._lock:
+            # Locate parsed filings for this issuer matching left_period and right_period
+            issuer_docs = [
+                d for d in self._documents.values()
+                if (d.canonical_entity_id or "").upper() == entity_id.upper()
+            ]
+
+            left_norm = left_period.replace(" ", "").replace("-", "").upper()
+            right_norm = right_period.replace(" ", "").replace("-", "").upper()
+
+            left_doc = next((d for d in issuer_docs if (d.reporting_period or "").replace(" ", "").replace("-", "").upper() == left_norm), None)
+            right_doc = next((d for d in issuer_docs if (d.reporting_period or "").replace(" ", "").replace("-", "").upper() == right_norm), None)
+
+            if not left_doc or not right_doc:
+                raise ResearchComparisonIncompatibleError(
+                    f"Could not locate comparable filings for {entity_id} across {left_period} and {right_period}."
+                )
+
+            diff_result = compute_document_diff(left_doc, right_doc, mode=DocumentComparisonMode.FINANCIAL_TABLES)
+            facts = diff_result.financial_fact_diffs
+
+            if concepts:
+                concepts_lower = [c.lower() for c in concepts]
+                facts = [f for f in facts if any(c in f.fact_key.lower() or c in f.label.lower() for c in concepts_lower)]
+
+            return facts

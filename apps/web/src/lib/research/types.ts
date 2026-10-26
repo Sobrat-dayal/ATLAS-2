@@ -405,3 +405,305 @@ export interface ResearchOverviewSummary {
   recent_investigations: ResearchInvestigation[];
   recent_activities: ResearchActivity[];
 }
+
+// ---------------------------------------------------------------------------
+// Stage 105 — Document Intelligence & Discovery Types
+// ---------------------------------------------------------------------------
+
+export type DocumentFormat =
+  | "PDF"
+  | "HTML"
+  | "DOCX"
+  | "PLAIN_TEXT"
+  | "XBRL_XML"
+  | "JSON_DATA";
+
+export type DocumentProcessingStatus =
+  | "NOT_STARTED"
+  | "QUEUED"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "PARTIAL"
+  | "FAILED"
+  | "RESTRICTED"
+  | "UNSUPPORTED";
+
+export type SearchMode =
+  | "KEYWORD"
+  | "EXACT_PHRASE"
+  | "SEMANTIC"
+  | "HYBRID";
+
+export type DocumentComparisonMode =
+  | "FULL_TEXT"
+  | "SECTIONS"
+  | "FINANCIAL_TABLES";
+
+export type UnitScale =
+  | "UNITS"
+  | "THOUSANDS"
+  | "MILLIONS"
+  | "BILLIONS"
+  | "PERCENTAGE"
+  | "PER_SHARE"
+  | "INDEX_POINTS"
+  | "BASIS_POINTS";
+
+export interface ResearchSourceDiscoveryQuery {
+  text_query?: string;
+  entity_ids?: string[];
+  instrument_ids?: string[];
+  source_type_ids?: ResearchSourceType[];
+  publisher_ids?: string[];
+  filing_types?: string[];
+  reporting_period_range?: string;
+  date_from?: string;
+  date_to?: string;
+  availability_statuses?: SourceAvailabilityStatus[];
+  search_mode?: SearchMode;
+  sort_by?: "RELEVANCE" | "DATE_DESC" | "DATE_ASC" | "TITLE";
+  limit?: number;
+  cursor?: string;
+}
+
+export interface ResearchSearchHit {
+  hit_id: string;
+  source_reference_id: string;
+  source_type: ResearchSourceType;
+  source_title: string;
+  score: number;
+  availability_status: SourceAvailabilityStatus;
+  rights_policy: string;
+  canonical_document_id?: string;
+  canonical_entity_id?: string;
+  publisher_id?: string;
+  published_at?: string;
+  reporting_period?: string;
+  matched_snippet: string;
+  matched_spans: Array<{
+    span_id?: string;
+    section_heading?: string;
+    page_number?: number;
+  }>;
+}
+
+export interface ResearchSourceDiscoveryResponse {
+  hits: ResearchSearchHit[];
+  total_count: number;
+  next_cursor?: string;
+  query_summary: Record<string, any>;
+}
+
+export interface ResearchSourceTypeItem {
+  source_type: ResearchSourceType;
+  display_name: string;
+  description: string;
+  rights_classification: string;
+  is_searchable: boolean;
+}
+
+export interface ResearchSourceTypeListResponse {
+  items: ResearchSourceTypeItem[];
+  total_count: number;
+}
+
+export interface ResearchDocumentProcessingStatus {
+  processing_id: string;
+  canonical_document_id: string;
+  source_reference_id: string;
+  source_revision: string;
+  source_format: DocumentFormat;
+  processor_version: string;
+  processing_status: DocumentProcessingStatus;
+  started_at: string;
+  completed_at?: string;
+  extracted_section_count: number;
+  extracted_table_count: number;
+  extracted_span_count: number;
+  errors: string[];
+  content_rights_status: string;
+}
+
+export interface ResearchDocumentSection {
+  section_id: string;
+  canonical_document_id: string;
+  source_reference_id: string;
+  source_revision: string;
+  heading: string;
+  section_path: string;
+  level: number;
+  start_char_offset: number;
+  end_char_offset: number;
+  parent_section_id?: string;
+  page_number?: number;
+  text_preview: string;
+}
+
+export interface ResearchDocumentOutline {
+  canonical_document_id: string;
+  source_reference_id: string;
+  document_title: string;
+  sections: ResearchDocumentSection[];
+  total_sections: number;
+}
+
+export interface DocumentSearchRequest {
+  query: string;
+  section_id?: string;
+  limit?: number;
+}
+
+export interface DocumentSearchHit {
+  span_id: string;
+  snippet: string;
+  match_start: number;
+  match_end: number;
+  section_id?: string;
+  section_heading?: string;
+  page_number?: number;
+  paragraph_number?: number;
+}
+
+export interface DocumentSearchResponse {
+  query: string;
+  total_matches: number;
+  hits: DocumentSearchHit[];
+}
+
+export interface ResearchDocumentTable {
+  table_id: string;
+  canonical_document_id: string;
+  source_reference_id: string;
+  source_revision: string;
+  title: string;
+  period_label: string;
+  currency: string;
+  unit_scale: UnitScale;
+  headers: string[];
+  row_labels: string[];
+  cells: string[][];
+  raw_values: Array<Array<number | null>>;
+  section_id?: string;
+  footnotes: string[];
+  associated_fact_ids: string[];
+}
+
+export interface ResearchDocumentTableListResponse {
+  items: ResearchDocumentTable[];
+  total_count: number;
+}
+
+export interface ResearchEvidenceCandidate {
+  candidate_id: string;
+  source_reference_id: string;
+  source_title: string;
+  extracted_text: string;
+  evidence_type: string;
+  location_reference: string;
+  canonical_document_id?: string;
+  canonical_entity_id?: string;
+  section_heading?: string;
+  page_number?: number;
+  paragraph_number?: number;
+  reporting_period?: string;
+  unit?: string;
+  currency?: string;
+  numeric_value?: number;
+  source_revision?: string;
+  provenance: Record<string, any>;
+}
+
+export interface EvidenceCandidateListResponse {
+  items: ResearchEvidenceCandidate[];
+  total_count: number;
+}
+
+export interface ResolveEvidenceLocationRequest {
+  source_reference_id: string;
+  location_type: EvidenceLocationType;
+  location_reference: string;
+  page_number?: number;
+  section_name?: string;
+}
+
+export interface ResolveEvidenceLocationResponse {
+  is_valid: boolean;
+  resolved_anchor: string;
+  context_snippet?: string;
+  error_message?: string;
+}
+
+export interface ConvertEvidenceCandidateDTO {
+  candidate_id: string;
+  investigation_id: string;
+  claim_id?: string;
+  relationship_type?: "SUPPORTS" | "CONTRADICTS" | "CONTEXT";
+}
+
+export interface DocumentComparisonRequest {
+  left_document_id: string;
+  right_document_id: string;
+  left_source_revision?: string;
+  right_source_revision?: string;
+  comparison_mode?: DocumentComparisonMode;
+}
+
+export interface DocumentComparisonSectionDiff {
+  section_name: string;
+  alignment_status: string;
+  added_lines_count: number;
+  removed_lines_count: number;
+  diff_unified: string;
+  left_section_heading?: string;
+  right_section_heading?: string;
+  left_location_ref?: string;
+  right_location_ref?: string;
+}
+
+export interface FinancialFactComparison {
+  fact_key: string;
+  label: string;
+  left_period: string;
+  right_period: string;
+  currency: string;
+  unit_scale: UnitScale;
+  left_value: number;
+  right_value: number;
+  absolute_delta: number;
+  percentage_delta: number | null;
+  is_restated: boolean;
+  compatibility_status: string;
+}
+
+export interface DocumentComparisonResult {
+  comparison_id: string;
+  left_document_id: string;
+  right_document_id: string;
+  left_title: string;
+  right_title: string;
+  total_added_lines: number;
+  total_removed_lines: number;
+  section_diffs: DocumentComparisonSectionDiff[];
+  financial_fact_diffs: FinancialFactComparison[];
+  compared_at: string;
+  left_period?: string;
+  right_period?: string;
+  comparison_mode: DocumentComparisonMode;
+  compatibility_warnings: string[];
+}
+
+export interface FinancialFactsCompareRequest {
+  entity_id: string;
+  left_period: string;
+  right_period: string;
+  concepts?: string[];
+}
+
+export interface FinancialFactsCompareResponse {
+  entity_id: string;
+  left_period: string;
+  right_period: string;
+  fact_diffs: FinancialFactComparison[];
+  total_concepts_compared: number;
+}
+

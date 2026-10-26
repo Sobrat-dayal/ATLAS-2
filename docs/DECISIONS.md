@@ -9756,6 +9756,48 @@ This document records the major architectural and product decisions established.
 738. Production-Ready Verification: Backed by 18 comprehensive backend pytest integration tests, 5 frontend test suites (71 tests total), 0 ruff lint errors, and 0 TypeScript errors.
 739. Roadmap Continuity: Stage 104 establishes the canonical research data model and institutional workspace, forming the robust foundation for downstream research modeling and analytics in Stage 105.
 
+## Stage 105: Institutional-Grade Financial Research Source Discovery, Document Intelligence and Evidence Extraction Platform
+
+### Multi-Facet Research Source Discovery & Search
+740. **Multi-Facet Discovery Engine**: Implemented `POST /api/v1/research/sources/search` with facet filters across `entity_ids`, `filing_types`, `source_type_ids`, `publisher_ids`, `reporting_period_range`, `date_from`, `date_to`, and `search_mode` (`KEYWORD`, `EXACT_PHRASE`, `HYBRID`).
+741. **Relevance Scoring & Snippet Extraction**: Search hits return normalized relevance scores (0.0 to 1.0) along with contextual matched snippets and matched span anchors.
+742. **Canonical Document ID & Accession Number Resolution**: Search seamlessly supports resolution by canonical accession numbers (e.g., `0000320193-24-000106`) and internal source reference IDs (`src-filing-aapl-10k-2024`).
+743. **Source Type Registry**: Implemented `GET /api/v1/research/source-types` to provide controlled taxonomic metadata, searchable flags, and rights classifications.
+
+### Document Processing, Outline Structure & In-Document Search
+744. **Hierarchical Document Outline Navigation**: Formalized `ResearchDocumentSection` and `ResearchDocumentOutline` (`GET /api/v1/research/documents/{document_id}/outline`), extracting section paths, heading levels, character offsets, and page numbers.
+745. **Processing Status & Performance Audit**: `GET /api/v1/research/documents/{document_id}/processing-status` audits document parsing status (`COMPLETED`, `PROCESSING`, `PARTIAL`, `FAILED`, `RESTRICTED`), processor version, and section/table/span counts.
+746. **High-Speed In-Document Search**: `POST /api/v1/research/documents/{document_id}/search` enables fast span search with character offset start/end anchors and parent section identifiers.
+747. **Granular Section Content Retrieval**: `GET /api/v1/research/documents/{document_id}/sections/{section_id}` delivers isolated section text previews and offset bounds without requiring full document re-transmission.
+
+### Structured Financial Table Extraction & Fact Links
+748. **Tabular Matrix Representation**: Tables are structured into matrix columns, row labels, formatted text cells (`cells: string[][]`), and raw numeric representations (`raw_values: (number | null)[][]`).
+749. **Unit Scales & Currencies**: All financial statements enforce explicit numeric unit scales (`EXACT`, `THOUSANDS`, `MILLIONS`, `BILLIONS`, `PERCENTAGE`, `PER_SHARE`) and ISO currency codes.
+750. **Footnotes & Associated Fact IDs**: Extracted tables preserve footnote disclosures and XBRL fact link associations for complete provenance auditability.
+
+### Evidence Candidate Discovery & One-Click Promotion
+751. **Evidence Candidate Extraction**: `POST /api/v1/research/evidence/candidates` dynamically scans documents to extract high-confidence candidate disclosures with exact location references.
+752. **Source Location Verification**: `POST /api/v1/research/evidence/resolve-location` verifies evidence location anchors (page, section, table, paragraph) against physical document spans before linking.
+753. **One-Click Promotion to Canonical Evidence**: `POST /api/v1/research/evidence/convert-candidate` converts an unverified candidate into an immutable Stage 104 `ResearchEvidence` record tied to an investigation, recording an auditable `ResearchActivity`.
+
+### Multi-Document Comparison & Financial Statement Fact Variance
+754. **Two-Document Text Diffing Engine**: `POST /api/v1/research/documents/compare` aligns matching sections between two document revisions and generates standard unified diffs (`diff_unified`) with added/removed line metrics.
+755. **Multi-Period Normalized Period Matching**: Normalizes reporting period strings by stripping whitespace and hyphens (e.g. `"FY 2023"` matches `"FY2023"`).
+756. **Financial Fact Variance Calculation**: Computes absolute dollar variance ($\Delta$) and percentage delta ($\%\Delta$) across matching financial line items.
+757. **Zero-Base Division Protection**: Mathematical variance handles zero or inverted base figures safely, returning `null` with explicit `N/A (Zero Base)` labeling rather than runtime NaN or infinite values.
+758. **Restatement Indicators**: Identifies restated financial line items across comparative filing periods.
+
+### Frontend Institutional Workspace Architecture
+759. **Three New Professional Workspaces**: Added `Discovery`, `Document Viewer`, and `Comparison` sub-views in `/research`, updating navigation tabs and global state in `useResearchWorkspace`.
+760. **Institutional Multi-Facet Search Interface**: `ResearchSourceDiscovery.tsx` renders query bars, facet selects, relevance bars, and direct actions ("View Document", "Compare", "Link to Investigation").
+761. **Three-Pane Document Reader**: `ResearchDocumentViewer.tsx` implements Outline/In-Doc Search (Left), Section Reader / Financial Tables (Center), and Source Metadata / Evidence Candidate Inspector (Right).
+762. **Side-by-Side Comparison Workspace**: `ResearchDocumentComparison.tsx` presents preset comparative pairs (e.g. Apple FY24 vs FY23 Form 10-K), unified diff syntax coloring, and dense variance tables.
+
+### Security, Safety & Roadmap Boundaries
+763. **Strict Non-Trading & Non-Execution Boundary**: Research discovery and document comparison are strictly analytical and evidentiary. Zero order routing, zero broker execution, zero portfolio mutation.
+764. **Zero Fabrication Policy**: All filing text, section outlines, and financial statement matrices are grounded in real SEC EDGAR disclosures (e.g., Apple Form 10-K 2023/2024, Microsoft Form 10-K 2024, BLS CPI, Bloomberg FOMC rate report); synthetic opinions and fabricated metrics are prohibited.
+765. **Stage 105 Roadmap Completion**: Stage 105 concludes the Source Discovery and Document Intelligence phase of the Research module.
+
 
 
 

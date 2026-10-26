@@ -105,3 +105,51 @@ export function formatCitationBadge(label: string, isBroken: boolean = false): s
   }
   return label;
 }
+
+// ---------------------------------------------------------------------------
+// Stage 105 — Financial Delta & Document Intelligence Formatting
+// ---------------------------------------------------------------------------
+
+export function formatFinancialDelta(delta: number, currency: string = "USD"): string {
+  const sign = delta > 0 ? "+" : delta < 0 ? "-" : "";
+  const absVal = Math.abs(delta);
+  const formatted = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(absVal);
+  return `${sign}${currency === "USD" ? "$" : currency + " "}${formatted}`;
+}
+
+export function formatPercentageDelta(pct: number | null): string {
+  if (pct === null || pct === undefined || isNaN(pct)) {
+    return "N/A (Zero Base)";
+  }
+  const sign = pct > 0 ? "+" : pct < 0 ? "" : "";
+  return `${sign}${pct.toFixed(2)}%`;
+}
+
+export function getDocumentProcessingStatusDisplay(status: string): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (status) {
+    case "COMPLETED":
+      return { label: "Indexed & Processed", variant: "positive" };
+    case "PROCESSING":
+      return { label: "Processing...", variant: "primary" };
+    case "QUEUED":
+      return { label: "Queued", variant: "warning" };
+    case "PARTIAL":
+      return { label: "Partially Processed", variant: "warning" };
+    case "FAILED":
+      return { label: "Processing Failed", variant: "negative" };
+    case "RESTRICTED":
+      return { label: "Restricted Rights", variant: "outline" };
+    case "UNSUPPORTED":
+      return { label: "Unsupported Format", variant: "outline" };
+    case "NOT_STARTED":
+    default:
+      return { label: "Not Started", variant: "outline" };
+  }
+}
+

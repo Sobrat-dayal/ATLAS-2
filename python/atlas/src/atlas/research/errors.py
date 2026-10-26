@@ -174,3 +174,67 @@ class ResearchEntityNotFoundError(ResearchDomainError):
 class ResearchSearchQueryInvalidError(ResearchDomainError):
     """Raised when a search query is malformed or invalid."""
     pass
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 Document Intelligence & Comparison Errors
+# ---------------------------------------------------------------------------
+
+class ResearchDiscoveryQueryInvalidError(ResearchDomainError):
+    """Raised when a discovery query or filter set is invalid or exceeds bounds."""
+    pass
+
+
+class ResearchDocumentContentUnavailableError(ResearchDomainError):
+    """Raised when document content is unavailable or restricted by licensing."""
+    pass
+
+
+class ResearchDocumentProcessingPendingError(ResearchDomainError):
+    """Raised when document parsing or indexing is still in progress."""
+    pass
+
+
+class ResearchDocumentProcessingFailedError(ResearchDomainError):
+    """Raised when document parsing encountered unrecoverable errors."""
+    pass
+
+
+class ResearchDocumentFormatUnsupportedError(ResearchDomainError):
+    """Raised when an uploaded or referenced document format is not supported."""
+    pass
+
+
+class ResearchDocumentSectionNotFoundError(ResearchDomainError):
+    """Raised when a requested document section does not exist."""
+    pass
+
+
+class ResearchDocumentSpanInvalidError(ResearchDomainError):
+    """Raised when a character span offset or length is invalid or fabricated."""
+    pass
+
+
+class ResearchDocumentTableNotFoundError(ResearchDomainError):
+    """Raised when a requested extracted financial table does not exist."""
+    pass
+
+
+class ResearchEvidenceCandidateNotFoundError(ResearchDomainError):
+    """Raised when an evidence candidate does not exist or has already been converted."""
+    pass
+
+
+class ResearchComparisonIncompatibleError(ResearchDomainError):
+    """Raised when two documents or metrics are incompatible for comparison."""
+    pass
+
+
+class ResearchComparisonResourceLimitError(ResearchDomainError):
+    """Raised when a comparison request exceeds processing size or line limits."""
+    pass
+
+
+class ResearchSemanticSearchUnavailableError(ResearchDomainError):
+    """Raised when semantic retrieval is requested but unavailable or unlicensed."""
+    pass

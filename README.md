@@ -1159,6 +1159,43 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `cmd /c pnpm --filter web build` (Next.js 16.3.8 Turbopack clean compile).
 - **Documentation**: See `docs/RESEARCH_FOUNDATION.md` and `docs/DECISIONS.md`.
 
+## Institutional-Grade Financial Research Source Discovery, Document Intelligence and Evidence Extraction Platform (Stage 105)
+- **Architecture**: Advanced document intelligence, source discovery, and multi-document comparative analysis platform integrated into `/research` (Module 9). Formalizes hierarchical document outlining, character-offset text span search, financial table matrix extraction, physical evidence location anchor verification, candidate-to-evidence promotion, and mathematical financial fact variance analysis.
+- **Multi-Facet Research Source Discovery**:
+  - `POST /api/v1/research/sources/search` executing multi-facet search across corporate issuers (`entity_ids`), regulatory filing types (`10-K`, `10-Q`, `8-K`), source categories, publisher classes, and reporting periods.
+  - Relevance ranking (0.0–1.0 score) with highlighted textual snippets and matched location span anchors.
+  - Resolves both canonical accession numbers (`0000320193-24-000106`) and internal source reference IDs (`src-filing-aapl-10k-2024`).
+  - Controlled source type taxonomy via `GET /api/v1/research/source-types`.
+- **Document Structure, Outline Navigation & In-Document Search**:
+  - Hierarchical outline navigation tree (`ResearchDocumentSection` and `ResearchDocumentOutline`) exposing section paths, heading levels, character offsets, and page numbers (`GET /api/v1/research/documents/{document_id}/outline`).
+  - Ingestion and structure extraction audit log (`GET /api/v1/research/documents/{document_id}/processing-status`) auditing processor version, section count, table count, and span count.
+  - Granular section retrieval (`GET /api/v1/research/documents/{document_id}/sections/{section_id}`) for low-bandwidth reading.
+  - High-speed in-document keyword/phrase span search (`POST /api/v1/research/documents/{document_id}/search`) returning character start/end offsets and parent section headings.
+- **Structured Financial Table Extraction & XBRL Fact Links**:
+  - Structured financial statement matrix tables (`ResearchDocumentTable`) with row labels, column headers, formatted display cells (`cells: string[][]`), and raw numeric representations (`raw_values: (number | null)[][]`).
+  - Explicit numeric unit scales (`EXACT`, `THOUSANDS`, `MILLIONS`, `BILLIONS`, `PERCENTAGE`, `PER_SHARE`) and ISO currency codes.
+  - Footnote preservation and direct association with XBRL fact IDs.
+- **Evidence Candidate Discovery & Conversion**:
+  - Document-level candidate extraction (`POST /api/v1/research/evidence/candidates`) extracting high-confidence candidate disclosures.
+  - Source location verification (`POST /api/v1/research/evidence/resolve-location`) validating page, section, and table references against physical document spans.
+  - One-click promotion (`POST /api/v1/research/evidence/convert-candidate`) converting unverified candidates into immutable Stage 104 `ResearchEvidence` linked to an active investigation, journaled in `ResearchActivity`.
+- **Two-Document Comparison & Financial Fact Variance**:
+  - Two-document aligned section text diffing (`POST /api/v1/research/documents/compare`) with unified diff representation (`diff_unified`) and added/removed line metrics.
+  - Reporting period normalization (stripping spaces and hyphens) matching historical filings.
+  - Mathematical financial fact variance (`POST /api/v1/research/financial-facts/compare`) computing absolute dollar variance ($\Delta$) and percentage delta ($\%\Delta$) with robust zero-base division protection (`N/A (Zero Base)`).
+  - Restatement tracking across comparative periods.
+- **Institutional Workspaces (`/research`)**:
+  - 3 New Sub-Workspaces: `Discovery` (`ResearchSourceDiscovery.tsx`), `Document Viewer` (`ResearchDocumentViewer.tsx`), and `Comparison` (`ResearchDocumentComparison.tsx`).
+  - 3-Pane Document Reader with Outline/Search (Left), Section Reader/Financial Tables (Center), and Provenance/Candidate Inspector (Right).
+  - Preset comparative pairs (Apple FY24 vs FY23 Form 10-K, Microsoft vs Apple cross-entity).
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_research_document_intelligence_v1.py` + Stage 104 foundation suite (32/32 passed in 6.97s).
+  - Backend linter: `uv run ruff check` on all research code (0 errors).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (74/74 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly).
+- **Documentation**: See `docs/RESEARCH_SOURCE_DISCOVERY_AND_DOCUMENT_INTELLIGENCE.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

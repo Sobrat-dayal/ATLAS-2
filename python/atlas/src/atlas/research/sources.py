@@ -268,6 +268,56 @@ def build_canonical_sources_catalog() -> Dict[str, ResearchSourceReference]:
         )
     )
 
+    # 6. Prior Period Regulatory Filings for Document Comparison
+    add_source(
+        ResearchSourceReference(
+            source_reference_id="src-filing-aapl-10k-2023",
+            canonical_document_id="0000320193-23-000106",
+            canonical_entity_id="AAPL",
+            source_type=ResearchSourceType.ANNUAL_REPORT,
+            provider_id="SEC_EDGAR",
+            publisher_id="U.S. Securities and Exchange Commission",
+            source_title="Apple Inc. Form 10-K Annual Report (Fiscal Year ended September 30, 2023)",
+            source_url="https://www.sec.gov/ix?doc=/Archives/edgar/data/0000320193/000032019323000106/aapl-20230930.htm",
+            published_at=datetime.datetime(2023, 11, 3, 16, 10, tzinfo=datetime.timezone.utc),
+            source_updated_at=datetime.datetime(2023, 11, 3, 16, 10, tzinfo=datetime.timezone.utc),
+            first_observed_at=datetime.datetime(2023, 11, 3, 16, 12, tzinfo=datetime.timezone.utc),
+            registered_at=datetime.datetime(2023, 11, 3, 16, 12, tzinfo=datetime.timezone.utc),
+            reporting_period="FY2023",
+            source_revision="1",
+            rights_policy="PUBLIC_DOMAIN_REGULATORY",
+            availability_status=SourceAvailabilityStatus.AVAILABLE,
+            provenance={
+                "filer_cik": "0000320193",
+                "form_type": "10-K",
+                "filing_date": "2023-11-03",
+                "fiscal_year_end": "2023-09-30",
+            },
+        )
+    )
+
+    add_source(
+        ResearchSourceReference(
+            source_reference_id="src-filing-msft-10k-2023",
+            canonical_document_id="0000789019-23-000055",
+            canonical_entity_id="MSFT",
+            source_type=ResearchSourceType.ANNUAL_REPORT,
+            provider_id="SEC_EDGAR",
+            publisher_id="U.S. Securities and Exchange Commission",
+            source_title="Microsoft Corporation Form 10-K Annual Report (Fiscal Year ended June 30, 2023)",
+            source_url="https://www.sec.gov/ix?doc=/Archives/edgar/data/0000789019/000078901923000055/msft-20230630.htm",
+            published_at=datetime.datetime(2023, 7, 27, 16, 20, tzinfo=datetime.timezone.utc),
+            source_updated_at=datetime.datetime(2023, 7, 27, 16, 20, tzinfo=datetime.timezone.utc),
+            first_observed_at=datetime.datetime(2023, 7, 27, 16, 22, tzinfo=datetime.timezone.utc),
+            registered_at=datetime.datetime(2023, 7, 27, 16, 22, tzinfo=datetime.timezone.utc),
+            reporting_period="FY2023",
+            source_revision="1",
+            rights_policy="PUBLIC_DOMAIN_REGULATORY",
+            availability_status=SourceAvailabilityStatus.AVAILABLE,
+            provenance={"filer_cik": "0000789019", "form_type": "10-K"},
+        )
+    )
+
     return catalog
 
 

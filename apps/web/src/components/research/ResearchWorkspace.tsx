@@ -4,9 +4,12 @@ import React, { useState } from "react";
 import { InvestigationWorkspace } from "./InvestigationWorkspace";
 import { NewInvestigationDialog } from "./NewInvestigationDialog";
 import { ResearchActivityTimeline } from "./ResearchActivityTimeline";
+import { ResearchDocumentComparison } from "./ResearchDocumentComparison";
+import { ResearchDocumentViewer } from "./ResearchDocumentViewer";
 import { ResearchHeader } from "./ResearchHeader";
 import { ResearchInvestigationsTable } from "./ResearchInvestigationsTable";
 import { ResearchOverview } from "./ResearchOverview";
+import { ResearchSourceDiscovery } from "./ResearchSourceDiscovery";
 import { ResearchSourceLibrary } from "./ResearchSourceLibrary";
 import { useResearchWorkspace } from "@/hooks/research/useResearchWorkspace";
 
@@ -55,6 +58,43 @@ export function ResearchWorkspace() {
     setSelectedEvidence,
     selectedSource,
     setSelectedSource,
+
+    // Stage 105: Source Discovery
+    discoveryQuery,
+    discoveryResults,
+    discoveryTotal,
+    isDiscoveryLoading,
+    sourceTypes,
+    searchDiscovery,
+
+    // Stage 105: Document Viewer
+    activeDocumentId,
+    activeDocument,
+    documentProcessingStatus,
+    documentOutline,
+    activeDocumentSectionId,
+    activeDocumentSection,
+    documentTables,
+    documentSearchQuery,
+    documentSearchHits,
+    isDocSearchLoading,
+    candidates,
+    isDocumentLoading,
+    selectDocumentSection,
+    searchInDocument,
+    convertCandidate,
+
+    // Stage 105: Document Comparison
+    compareLeftDocId,
+    compareRightDocId,
+    compareMode,
+    comparisonResult,
+    isComparing,
+    executeDocumentComparison,
+
+    // Shortcuts
+    openDocument,
+    openComparison,
 
     globalError,
     clearError,
@@ -143,6 +183,53 @@ export function ResearchWorkspace() {
               onViewAllInvestigations={() => setActiveTab("INVESTIGATIONS")}
             />
           </div>
+        )}
+
+        {activeTab === "DISCOVERY" && (
+          <ResearchSourceDiscovery
+            query={discoveryQuery}
+            results={discoveryResults}
+            totalMatches={discoveryTotal}
+            isLoading={isDiscoveryLoading}
+            sourceTypes={sourceTypes}
+            onSearch={(q) => searchDiscovery(q)}
+            onOpenDocument={(docId) => openDocument(docId)}
+            onCompareDocument={(docId) => openComparison(undefined, docId)}
+          />
+        )}
+
+        {activeTab === "DOCUMENT_VIEWER" && (
+          <ResearchDocumentViewer
+            documentId={activeDocumentId}
+            document={activeDocument}
+            processingStatus={documentProcessingStatus}
+            outline={documentOutline}
+            activeSectionId={activeDocumentSectionId}
+            activeSection={activeDocumentSection}
+            tables={documentTables}
+            searchQuery={documentSearchQuery}
+            searchHits={documentSearchHits}
+            isSearching={isDocSearchLoading}
+            candidates={candidates}
+            isLoading={isDocumentLoading}
+            investigations={investigations}
+            onSelectSection={selectDocumentSection}
+            onSearchInDocument={searchInDocument}
+            onConvertCandidate={convertCandidate}
+            onCompareWithAnother={(docId) => openComparison(undefined, docId)}
+          />
+        )}
+
+        {activeTab === "COMPARE" && (
+          <ResearchDocumentComparison
+            leftDocId={compareLeftDocId}
+            rightDocId={compareRightDocId}
+            comparisonMode={compareMode}
+            comparisonResult={comparisonResult}
+            isLoading={isComparing}
+            onCompare={(l, r, m) => executeDocumentComparison(l, r, m)}
+            onOpenDocument={(docId) => openDocument(docId)}
+          />
         )}
 
         {activeTab === "INVESTIGATIONS" && (

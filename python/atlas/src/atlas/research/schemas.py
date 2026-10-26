@@ -7,6 +7,9 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from atlas.research.enums import (
+    DocumentComparisonMode,
+    DocumentFormat,
+    DocumentProcessingStatus,
     EvidenceLocationType,
     InvestigationLifecycleStatus,
     ResearchActivityAction,
@@ -18,7 +21,9 @@ from atlas.research.enums import (
     ResearchQuestionStatus,
     ResearchSourceType,
     ResearchType,
+    SearchMode,
     SourceAvailabilityStatus,
+    UnitScale,
 )
 from atlas.research.types import ResearchDocumentKind
 
@@ -413,3 +418,301 @@ class ResearchOverviewSummaryDTO(BaseModel):
     total_evidence_count: int
     recent_investigations: List[ResearchInvestigationDTO]
     recent_activities: List[ResearchActivityDTO]
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 Research Source Discovery & Search DTOs
+# ---------------------------------------------------------------------------
+
+class ResearchSourceDiscoveryQueryDTO(BaseModel):
+    """Multi-facet query specification for finding research sources."""
+    text_query: Optional[str] = None
+    entity_ids: List[str] = Field(default_factory=list)
+    instrument_ids: List[str] = Field(default_factory=list)
+    source_type_ids: List[ResearchSourceType] = Field(default_factory=list)
+    publisher_ids: List[str] = Field(default_factory=list)
+    filing_types: List[str] = Field(default_factory=list)
+    reporting_period_range: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    availability_statuses: List[SourceAvailabilityStatus] = Field(default_factory=list)
+    search_mode: SearchMode = SearchMode.KEYWORD
+    sort_by: str = "RELEVANCE"  # "RELEVANCE", "DATE_DESC", "DATE_ASC", "TITLE"
+    limit: int = Field(default=25, ge=1, le=100)
+    cursor: Optional[str] = None
+
+
+class ResearchSearchHitDTO(BaseModel):
+    """Ranked search hit from source discovery with matched excerpts."""
+    hit_id: str
+    source_reference_id: str
+    source_type: ResearchSourceType
+    source_title: str
+    score: float
+    availability_status: SourceAvailabilityStatus
+    rights_policy: str
+    canonical_document_id: Optional[str] = None
+    canonical_entity_id: Optional[str] = None
+    publisher_id: Optional[str] = None
+    published_at: Optional[datetime.datetime] = None
+    reporting_period: Optional[str] = None
+    matched_snippet: str = ""
+    matched_spans: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class ResearchSourceDiscoveryResponseDTO(BaseModel):
+    """Paginated source discovery search results with query audit summary."""
+    hits: List[ResearchSearchHitDTO]
+    total_count: int
+    next_cursor: Optional[str] = None
+    query_summary: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ResearchSourceTypeItemDTO(BaseModel):
+    """Taxonomic description and rights classification of a source category."""
+    source_type: ResearchSourceType
+    display_name: str
+    description: str
+    rights_classification: str
+    is_searchable: bool = True
+
+
+class ResearchSourceTypeListResponseDTO(BaseModel):
+    """List of supported canonical research source categories."""
+    items: List[ResearchSourceTypeItemDTO]
+    total_count: int
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 Document Processing, Outline & Section DTOs
+# ---------------------------------------------------------------------------
+
+class ResearchDocumentProcessingStatusDTO(BaseModel):
+    """Status and performance audit of document structure extraction."""
+    processing_id: str
+    canonical_document_id: str
+    source_reference_id: str
+    source_revision: str
+    source_format: DocumentFormat
+    processor_version: str
+    processing_status: DocumentProcessingStatus
+    started_at: datetime.datetime
+    completed_at: Optional[datetime.datetime] = None
+    extracted_section_count: int
+    extracted_table_count: int
+    extracted_span_count: int
+    errors: List[str] = Field(default_factory=list)
+    content_rights_status: str = "PERMITTED"
+
+
+class ResearchDocumentSectionDTO(BaseModel):
+    """Hierarchical section node in a research document."""
+    section_id: str
+    canonical_document_id: str
+    source_reference_id: str
+    source_revision: str
+    heading: str
+    section_path: str
+    level: int
+    start_char_offset: int
+    end_char_offset: int
+    parent_section_id: Optional[str] = None
+    page_number: Optional[int] = None
+    text_preview: str = ""
+
+
+class ResearchDocumentOutlineDTO(BaseModel):
+    """Structured outline navigation tree of a document."""
+    canonical_document_id: str
+    source_reference_id: str
+    document_title: str
+    sections: List[ResearchDocumentSectionDTO]
+    total_sections: int
+
+
+class DocumentSearchRequestDTO(BaseModel):
+    """Search request within a single research document."""
+    query: str = Field(min_length=1, max_length=200)
+    section_id: Optional[str] = None
+    limit: int = Field(default=20, ge=1, le=50)
+
+
+class DocumentSearchHitDTO(BaseModel):
+    """In-document keyword or phrase match with location anchor."""
+    span_id: str
+    snippet: str
+    match_start: int
+    match_end: int
+    section_id: Optional[str] = None
+    section_heading: Optional[str] = None
+    page_number: Optional[int] = None
+    paragraph_number: Optional[int] = None
+
+
+class DocumentSearchResponseDTO(BaseModel):
+    """Matches within a specific research document."""
+    query: str
+    total_matches: int
+    hits: List[DocumentSearchHitDTO]
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 Financial Table Extraction DTOs
+# ---------------------------------------------------------------------------
+
+class ResearchDocumentTableDTO(BaseModel):
+    """Structured financial or operational data table extracted from source."""
+    table_id: str
+    canonical_document_id: str
+    source_reference_id: str
+    source_revision: str
+    title: str
+    period_label: str
+    currency: str
+    unit_scale: UnitScale
+    headers: List[str]
+    row_labels: List[str]
+    cells: List[List[str]]
+    raw_values: List[List[Optional[float]]]
+    section_id: Optional[str] = None
+    footnotes: List[str] = Field(default_factory=list)
+    associated_fact_ids: List[str] = Field(default_factory=list)
+
+
+class ResearchDocumentTableListResponseDTO(BaseModel):
+    """List of extracted tables for a research document."""
+    items: List[ResearchDocumentTableDTO]
+    total_count: int
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 Evidence Candidates & Location Validation DTOs
+# ---------------------------------------------------------------------------
+
+class ResearchEvidenceCandidateDTO(BaseModel):
+    """Candidate evidence snippet extracted from search or document inspection."""
+    candidate_id: str
+    source_reference_id: str
+    source_title: str
+    extracted_text: str
+    evidence_type: str
+    location_reference: str
+    canonical_document_id: Optional[str] = None
+    canonical_entity_id: Optional[str] = None
+    section_heading: Optional[str] = None
+    page_number: Optional[int] = None
+    paragraph_number: Optional[int] = None
+    reporting_period: Optional[str] = None
+    unit: Optional[str] = None
+    currency: Optional[str] = None
+    numeric_value: Optional[float] = None
+    source_revision: Optional[str] = None
+    provenance: Dict[str, Any] = Field(default_factory=dict)
+
+
+class EvidenceCandidateListResponseDTO(BaseModel):
+    """List of evidence candidates discovered across research sources."""
+    items: List[ResearchEvidenceCandidateDTO]
+    total_count: int
+
+
+class ResolveEvidenceLocationRequestDTO(BaseModel):
+    """Request to validate an evidence location anchor against original source text."""
+    source_reference_id: str
+    location_type: EvidenceLocationType
+    location_reference: str
+    page_number: Optional[int] = None
+    section_name: Optional[str] = None
+
+
+class ResolveEvidenceLocationResponseDTO(BaseModel):
+    """Validation outcome for a citation or evidence location anchor."""
+    is_valid: bool
+    resolved_anchor: str
+    context_snippet: Optional[str] = None
+    error_message: Optional[str] = None
+
+
+class ConvertEvidenceCandidateDTO(BaseModel):
+    """Request to convert a discovered candidate into a persistent ResearchEvidence record."""
+    candidate_id: str
+    investigation_id: str
+    claim_id: Optional[str] = None
+    relationship_type: Optional[str] = None  # "SUPPORTS", "CONTRADICTS", "CONTEXT"
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 Two-Document & Financial Fact Comparison DTOs
+# ---------------------------------------------------------------------------
+
+class DocumentComparisonRequestDTO(BaseModel):
+    """Request to compare two research documents or filing periods side-by-side."""
+    left_document_id: str
+    right_document_id: str
+    left_source_revision: Optional[str] = None
+    right_source_revision: Optional[str] = None
+    comparison_mode: DocumentComparisonMode = DocumentComparisonMode.FULL_TEXT
+
+
+class DocumentComparisonSectionDiffDTO(BaseModel):
+    """Line-by-line diff for an aligned section across two documents."""
+    section_name: str
+    alignment_status: str
+    added_lines_count: int
+    removed_lines_count: int
+    diff_unified: str
+    left_section_heading: Optional[str] = None
+    right_section_heading: Optional[str] = None
+    left_location_ref: Optional[str] = None
+    right_location_ref: Optional[str] = None
+
+
+class FinancialFactComparisonDTO(BaseModel):
+    """Side-by-side metric comparison between two periods or filings."""
+    fact_key: str
+    label: str
+    left_period: str
+    right_period: str
+    currency: str
+    unit_scale: UnitScale
+    left_value: float
+    right_value: float
+    absolute_delta: float
+    percentage_delta: Optional[float]
+    is_restated: bool = False
+    compatibility_status: str = "COMPATIBLE"
+
+
+class DocumentComparisonResultDTO(BaseModel):
+    """Comprehensive comparison output including section diffs and financial variance."""
+    comparison_id: str
+    left_document_id: str
+    right_document_id: str
+    left_title: str
+    right_title: str
+    total_added_lines: int
+    total_removed_lines: int
+    section_diffs: List[DocumentComparisonSectionDiffDTO]
+    financial_fact_diffs: List[FinancialFactComparisonDTO]
+    compared_at: datetime.datetime
+    left_period: Optional[str] = None
+    right_period: Optional[str] = None
+    comparison_mode: DocumentComparisonMode = DocumentComparisonMode.FULL_TEXT
+    compatibility_warnings: List[str] = Field(default_factory=list)
+
+
+class FinancialFactsCompareRequestDTO(BaseModel):
+    """Request to compare financial statement facts for a company across two periods."""
+    entity_id: str
+    left_period: str
+    right_period: str
+    concepts: List[str] = Field(default_factory=list)
+
+
+class FinancialFactsCompareResponseDTO(BaseModel):
+    """Variance analysis across canonical financial statement facts."""
+    entity_id: str
+    left_period: str
+    right_period: str
+    fact_diffs: List[FinancialFactComparisonDTO]
+    total_concepts_compared: int

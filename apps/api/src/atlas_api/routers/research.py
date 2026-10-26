@@ -56,7 +56,13 @@ from atlas.research.enums import (
 )
 from atlas.research.errors import (
     ResearchClaimNotFoundError,
+    ResearchComparisonIncompatibleError,
+    ResearchComparisonResourceLimitError,
+    ResearchDiscoveryQueryInvalidError,
     ResearchDocumentNotFoundError,
+    ResearchDocumentSectionNotFoundError,
+    ResearchDocumentTableNotFoundError,
+    ResearchEvidenceCandidateNotFoundError,
     ResearchEvidenceNotFoundError,
     ResearchEvidenceSourceMissingError,
     ResearchHypothesisNotFoundError,
@@ -68,22 +74,36 @@ from atlas.research.errors import (
     ResearchNoteNotFoundError,
     ResearchNoteRevisionConflictError,
     ResearchQuestionNotFoundError,
+    ResearchSemanticSearchUnavailableError,
     ResearchSourceNotFoundError,
     ResearchSourceUrlUnsafeError,
 )
 from atlas.research.schemas import (
     AttachResearchEvidenceDTO,
+    ConvertEvidenceCandidateDTO,
     CreateResearchClaimDTO,
     CreateResearchHypothesisDTO,
     CreateResearchInvestigationDTO,
     CreateResearchNoteDTO,
     CreateResearchQuestionDTO,
+    DocumentComparisonRequestDTO,
+    DocumentComparisonResultDTO,
+    DocumentSearchRequestDTO,
+    DocumentSearchResponseDTO,
+    EvidenceCandidateListResponseDTO,
+    FinancialFactsCompareRequestDTO,
+    FinancialFactsCompareResponseDTO,
     LinkResearchSourceDTO,
     ResearchActivityTimelineResponseDTO,
     ResearchCitationListResponseDTO,
     ResearchClaimDTO,
     ResearchClaimListResponseDTO,
+    ResearchDocumentOutlineDTO,
+    ResearchDocumentProcessingStatusDTO,
     ResearchDocumentResponse,
+    ResearchDocumentSectionDTO,
+    ResearchDocumentTableDTO,
+    ResearchDocumentTableListResponseDTO,
     ResearchEvidenceDTO,
     ResearchEvidenceListResponseDTO,
     ResearchHypothesisDTO,
@@ -96,8 +116,13 @@ from atlas.research.schemas import (
     ResearchOverviewSummaryDTO,
     ResearchQuestionDTO,
     ResearchQuestionListResponseDTO,
+    ResearchSourceDiscoveryQueryDTO,
+    ResearchSourceDiscoveryResponseDTO,
     ResearchSourceListResponseDTO,
     ResearchSourceReferenceDTO,
+    ResearchSourceTypeListResponseDTO,
+    ResolveEvidenceLocationRequestDTO,
+    ResolveEvidenceLocationResponseDTO,
     UpdateResearchClaimDTO,
     UpdateResearchHypothesisDTO,
     UpdateResearchInvestigationDTO,
@@ -894,6 +919,306 @@ def list_citations(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ResearchInvestigationAccessDeniedError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 — Advanced Research Source Discovery
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/research/sources/search",
+    response_model=ResearchSourceDiscoveryResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Advanced multi-facet discovery across canonical research sources",
+)
+def discover_sources(
+    payload: ResearchSourceDiscoveryQueryDTO,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.discover_sources(payload, user_id=user_id)
+    except ResearchDiscoveryQueryInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except ResearchSemanticSearchUnavailableError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/research/source-types",
+    response_model=ResearchSourceTypeListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get canonical research source type taxonomy and distribution metadata",
+)
+def get_source_types(
+    service: ResearchService = Depends(get_research_service),
+    _user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.list_source_types()
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 — Document Intelligence & Processing
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/research/documents/{document_id}",
+    response_model=ResearchSourceReferenceDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get canonical document metadata, origin, and source provenance",
+)
+def get_document(
+    document_id: str = Path(...),
+    service: ResearchService = Depends(get_research_service),
+    _user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_source(document_id)
+    except ResearchSourceNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/research/documents/{document_id}/processing-status",
+    response_model=ResearchDocumentProcessingStatusDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get document processing audit lifecycle, parsing statistics, and status",
+)
+def get_document_processing_status(
+    document_id: str = Path(...),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_document_processing_status(document_id, user_id=user_id)
+    except ResearchDocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/research/documents/{document_id}/outline",
+    response_model=ResearchDocumentOutlineDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get structured hierarchical document outline with section anchors and paths",
+)
+def get_document_outline(
+    document_id: str = Path(...),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_document_outline(document_id, user_id=user_id)
+    except ResearchDocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/research/documents/{document_id}/sections",
+    response_model=List[ResearchDocumentSectionDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get all extracted sections with character span offsets for a document",
+)
+def list_document_sections(
+    document_id: str = Path(...),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.list_document_sections(document_id, user_id=user_id)
+    except ResearchDocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/research/documents/{document_id}/sections/{section_id}",
+    response_model=ResearchDocumentSectionDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get specific section text, heading path, and span location",
+)
+def get_document_section(
+    document_id: str = Path(...),
+    section_id: str = Path(...),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_document_section(document_id, section_id, user_id=user_id)
+    except ResearchDocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchDocumentSectionNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/research/documents/{document_id}/search",
+    response_model=DocumentSearchResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Execute in-document keyword search with snippet highlighting and section anchors",
+)
+def search_document(
+    payload: DocumentSearchRequestDTO,
+    document_id: str = Path(...),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.search_document(document_id, payload, user_id=user_id)
+    except ResearchDocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchDiscoveryQueryInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.get(
+    "/research/documents/{document_id}/tables",
+    response_model=ResearchDocumentTableListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get structured financial tables extracted from filing with unit and currency qualification",
+)
+def list_document_tables(
+    document_id: str = Path(...),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.list_document_tables(document_id, user_id=user_id)
+    except ResearchDocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/research/documents/{document_id}/tables/{table_id}",
+    response_model=ResearchDocumentTableDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get specific financial table matrix with cells, headers, and footnotes",
+)
+def get_document_table(
+    document_id: str = Path(...),
+    table_id: str = Path(...),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_document_table(document_id, table_id, user_id=user_id)
+    except ResearchDocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchDocumentTableNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 — Evidence Candidate Discovery & Anchor Resolution
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/research/evidence/candidates",
+    response_model=EvidenceCandidateListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Discover pre-extracted evidence candidates from source filings and reports",
+)
+def list_evidence_candidates(
+    document_id: Optional[str] = Query(None, description="Filter candidates by document ID"),
+    investigation_id: Optional[str] = Query(None, description="Optional target investigation ID"),
+    limit: int = Query(20, ge=1, le=100),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.list_evidence_candidates(
+        investigation_id=investigation_id,
+        source_id=document_id,
+        user_id=user_id,
+        limit=limit,
+    )
+
+
+@router.post(
+    "/research/evidence/resolve-location",
+    response_model=ResolveEvidenceLocationResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Validate that a source location anchor (page, section, span) exists and points to actual text",
+)
+def resolve_evidence_location(
+    payload: ResolveEvidenceLocationRequestDTO,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.resolve_evidence_location(payload, user_id=user_id)
+
+
+@router.post(
+    "/research/evidence/convert-candidate",
+    response_model=ResearchEvidenceDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Promote an evidence candidate into verified Stage 104 ResearchEvidence for an investigation",
+)
+def convert_evidence_candidate(
+    payload: ConvertEvidenceCandidateDTO,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.convert_evidence_candidate(payload, user_id=user_id)
+    except ResearchInvestigationNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestigationAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchEvidenceCandidateNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 105 — Document Comparison & Financial Fact Variance
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/research/documents/compare",
+    response_model=DocumentComparisonResultDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Execute two-document comparison with aligned section text diffs and change detection",
+)
+def compare_documents_endpoint(
+    payload: DocumentComparisonRequestDTO,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.compare_documents(payload, user_id=user_id)
+    except ResearchDocumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchComparisonIncompatibleError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except ResearchComparisonResourceLimitError as e:
+        raise HTTPException(status_code=status.HTTP_413_PAYLOAD_TOO_LARGE, detail=str(e))
+
+
+@router.post(
+    "/research/financial-facts/compare",
+    response_model=FinancialFactsCompareResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Compare financial statement facts across periods with delta, percentage delta, and zero-base validation",
+)
+def compare_financial_facts_endpoint(
+    payload: FinancialFactsCompareRequestDTO,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.compare_financial_facts(payload, user_id=user_id)
+    except ResearchComparisonIncompatibleError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
 
 # ---------------------------------------------------------------------------
