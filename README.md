@@ -919,6 +919,22 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Linter: `ruff check` on Stage 87 (0 errors).
 - **Documentation**: See `docs/COMPANY_PEERS.md` and `docs/DECISIONS.md`.
 
+## Company Supply Chain Intelligence (Stage 88)
+- **Architecture**: Institutional-grade corporate supply chain network and commercial intelligence workspace within `/companies`. Features canonical entity resolution (UUID-based, legal entity vs. brand distinction, parent vs. subsidiary qualification, and public/private company compatibility), strictly directed commercial relationship modeling (`SUPPLIER -> CUSTOMER`), and verifiable source evidence lineage from SEC Form 10-K, 8-K, and corporate disclosures.
+- **Commercial Relationship Taxonomy**: 12 controlled commercial edge categories including component supply (`SUPPLIES_COMPONENTS_TO`), raw materials, contract manufacturing (Foundry/OSAT), OEM, ODM, retail/carrier distribution channels, and technology licensing.
+- **Verifiable Evidence & Zero-Inference Standard**: Every asserted edge is linked to traceable regulatory filings with document IDs, exact section anchors (e.g. *Item 1. Business - Supply Agreements*), filing timestamps, and quoted disclosure text. Zero LLM-hallucinated edges or speculative associations based on industry similarity.
+- **Bounded Multi-Tier Traversal**: BFS network traversal supporting Tier-1 direct suppliers, Tier-1 customers/channels, and Tier-2 precursor suppliers (e.g. photolithography capital equipment and semiconductor raw silicon), with cycle protection, visited set tracking, and strict server-side resource limits ($\text{depth} \le 3$, $\text{max nodes} \le 150$, $\text{max edges} \le 300$).
+- **Customer & Supplier Concentration Analysis**: Source-reported dependency metrics under ASC 280 / Regulation S-K Item 101 rules. Preserves anonymous customer disclosures (e.g. Customer A = 87% of net sales) without guessing company identities, and documents critical single-source supplier dependencies.
+- **Point-in-Time Historical Timeline**: Audit trail of announced supply agreements, multi-year expansions, and supplier changes strictly bounded by filing publication timestamps without look-ahead bias.
+- **Interactive SVG Network Graph**: Dense terminal-grade directed network explorer displaying Tier-2 precursors, Tier-1 suppliers, subject entity, and downstream distribution channels with directional bezier flow arrows, zoom/pan controls, edge inspection, and tier depth toggles.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_company_supply_chain.py` (23/23 passed).
+  - All 191 company module tests passed (`test_companies_v1.py`, `test_company_financial_statements.py`, `test_company_financial_ratios.py`, `test_company_earnings.py`, `test_company_ownership.py`, `test_company_filings.py`, `test_company_peers.py`, `test_company_supply_chain.py`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors).
+  - Production build: `cmd /c npm run build` (Next.js 16.3.8 Turbopack clean compile, 38/38 routes).
+  - Linter: `ruff check` on Stage 88 (0 errors).
+- **Documentation**: See `docs/COMPANY_SUPPLY_CHAIN.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

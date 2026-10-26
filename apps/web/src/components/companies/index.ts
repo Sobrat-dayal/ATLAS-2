@@ -13,3 +13,5 @@ export * from "./earnings";
 export * from "./ownership";
 export * from "./filings";
 export * from "./peers";
+export * from "./supply-chain";
+

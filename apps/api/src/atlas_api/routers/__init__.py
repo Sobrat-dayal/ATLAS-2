@@ -31,6 +31,7 @@ from .company_ownership import router as company_ownership_router
 from .company_peers import router as company_peers_router
 from .company_ratios import router as company_ratios_router
 from .company_statements import router as company_statements_router
+from .company_supply_chain import router as company_supply_chain_router
 from .economics import router as economics_router
 from .geography import router as geography_router
 from .health import router as health_router
@@ -58,6 +59,7 @@ api_router.include_router(company_ownership_router, prefix="")
 api_router.include_router(company_peers_router, prefix="")
 api_router.include_router(company_ratios_router, prefix="")
 api_router.include_router(company_statements_router, prefix="")
+api_router.include_router(company_supply_chain_router, prefix="")
 api_router.include_router(geography_router, prefix="")
 api_router.include_router(economics_router, prefix="")
 api_router.include_router(research_router, prefix="")

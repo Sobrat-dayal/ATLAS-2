@@ -29,6 +29,7 @@ import { EarningsWorkspace } from "./earnings/EarningsWorkspace";
 import { OwnershipWorkspace } from "./ownership/OwnershipWorkspace";
 import { FilingsWorkspace } from "./filings/FilingsWorkspace";
 import { PeersWorkspace } from "./peers/PeersWorkspace";
+import { SupplyChainWorkspace } from "./supply-chain/SupplyChainWorkspace";
 import {
   ArrowLeft,
   Building2,
@@ -37,6 +38,7 @@ import {
   FileText,
   Layers,
   Loader2,
+  Network,
   Percent,
   PieChart,
   Search,
@@ -185,6 +187,11 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           <span>Peers</span>
                         </TabsTrigger>
 
+                        <TabsTrigger value="supply-chain" className="gap-1.5 text-xs">
+                          <Network className="w-3.5 h-3.5" />
+                          <span>Supply Chains</span>
+                        </TabsTrigger>
+
                         <TabsTrigger value="news" className="gap-1.5 text-xs">
                           <FileText className="w-3.5 h-3.5" />
                           <span>News & Docs ({overview.recent_news.length + overview.documents.length})</span>
@@ -253,6 +260,14 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           onNavigateToFinancials={() => setActiveTab("financials")}
                           onNavigateToRatios={() => setActiveTab("ratios")}
                           onNavigateToFilings={() => setActiveTab("filings")}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="supply-chain">
+                        <SupplyChainWorkspace
+                          companyId={overview.company_entity_id}
+                          companyName={overview.identity.display_name}
+                          ticker={overview.market_summary?.reference_symbol || overview.related_securities?.[0]?.symbol || "AAPL"}
                         />
                       </TabsContent>
 

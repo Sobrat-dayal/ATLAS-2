@@ -7713,6 +7713,215 @@ This document records the major architectural and product decisions established.
 202. Documentation must match actual code.
 203. Stage 88 is the next canonical stage.
 
+## Stage 88: Institutional Company Supply Chain Intelligence
+
+### Product
+1. Stage 88 implements Company Supply Chains.
+2. Supply Chains remains inside `/companies`.
+3. No global module is created.
+4. Canonical Company identity is reused.
+5. Canonical Relationship Graph is reused.
+6. Source Provenance remains authoritative.
+7. Existing Filings are reused.
+8. No speculative relationship assertions are created.
+9. No new full News/Research platform is created.
+10. No Maps/Intelligence stages are implemented prematurely.
+
+### Relationship Semantics
+11. Supplier-to-customer direction is explicit.
+12. Relationship type taxonomy is controlled.
+13. Direct/indirect relations are distinguished.
+14. Product/service context is qualified.
+15. Commercial edges are distinct from ownership.
+16. Commercial edges are distinct from peers.
+17. Commercial edges are distinct from competitor relations.
+18. Relationships may be multitype.
+19. Relationship validity is time-aware.
+20. No universal complete-network claim is made.
+
+### Entity Resolution
+21. All verified counterparties use canonical Entity IDs.
+22. Public/private companies are supported.
+23. Brands and legal entities are distinguished.
+24. Parents and subsidiaries are distinguished.
+25. Unresolved entities are not guessed.
+26. Tickers are not authoritative relationship identifiers.
+27. Entity alias changes are handled.
+28. Group-level disclosures preserve scope.
+
+### Evidence
+29. Every asserted edge has actual evidence.
+30. Filing source IDs are preserved.
+31. Section/page references are genuine.
+32. Official corporate reports can support relationships.
+33. Authorized structured Provider data can support relationships.
+34. News mentions alone do not prove supply.
+35. Prospective agreements are distinct from completed supply.
+36. Evidence review/qualification status is explicit.
+37. Corroboration does not double-count syndicated copies.
+38. Contradictory evidence is preserved.
+39. Arbitrary confidence scores are prohibited.
+40. LLM assertions are not authoritative source evidence.
+
+### Historical Relationships
+41. Publication time is preserved.
+42. Reporting date is preserved.
+43. Business validity time is qualified.
+44. First publication is not automatically inception.
+45. Missing recent evidence does not prove termination.
+46. Confirmed termination requires evidence.
+47. Historical as-known-at uses genuine source vintages.
+48. Later filing amendments do not leak backward.
+49. Historical gaps are not filled synthetically.
+50. Relationship source revisions are preserved.
+
+### Graph
+51. Stage 23 remains canonical.
+52. Directed traversal is implemented.
+53. First-tier upstream is supported.
+54. First-tier downstream is supported.
+55. Bounded second-tier traversal is supported.
+56. Deeper traversal is controlled.
+57. Graph cycles are handled.
+58. Expansion limits are enforced.
+59. Paths retain edge-level evidence.
+60. Indirect paths do not imply direct contracts.
+61. Indirect paths do not imply a numerical economic exposure.
+62. Source coverage is exposed.
+63. The browser does not load the entire global graph.
+
+### Concentration
+64. Customer Revenue concentration is source-qualified.
+65. Supplier procurement concentration is source-qualified.
+66. Monetary scope is validated.
+67. Fiscal periods are validated.
+68. Currencies are validated.
+69. Consolidation is validated.
+70. Segment Revenue differs from consolidated Revenue.
+71. Spend differs from Cost of Sales.
+72. Contract value differs from recognized Revenue.
+73. Reported and derived percentages are distinct.
+74. Anonymous counterparties remain anonymous.
+75. Missing denominators produce unavailable results.
+76. Overlapping exposures are not summed.
+77. No artificial other-customer remainder is fabricated.
+78. No unsupported financial impact forecast is generated.
+
+### Geography
+79. Stage 19 Geographic Entities are reused.
+80. Company location differs from factory location.
+81. Facility references require verified identity.
+82. Headquarters is not substituted for manufacturing facilities.
+83. Facility coordinates are not invented.
+84. Country/region filters use real metadata.
+85. Maps/Cesium/H3 remain later stages.
+
+### Source and Ingestion
+86. Existing ingestion pipelines are reused.
+87. Source Provider rights are enforced.
+88. Structured relationship observations preserve Provider IDs.
+89. Ambiguous filing mentions remain unverified.
+90. UI reads do not launch new crawling.
+91. Ingestion is idempotent.
+92. Source revisions are preserved.
+93. No broad scraper is introduced.
+94. Normal operation requires no LLM calls.
+
+### APIs and Performance
+95. Supply-chain APIs are typed.
+96. Graph limits are server-enforced.
+97. Relationship lists are paginated.
+98. Evidence lists are bounded.
+99. Graph requests include source/revision context.
+100. Cache keys include authorization scope.
+101. Entity corrections invalidate affected caches.
+102. Filing amendments invalidate impacted edges.
+103. Financial fact revisions invalidate concentration.
+104. No N×M Provider fanout occurs.
+105. No unbounded traversal is permitted.
+106. Browser graph rendering is bounded.
+107. Graph cycles do not cause infinite loops.
+108. Concurrent expansions are controlled.
+
+### UI
+109. Supply Chain Overview is functional.
+110. Suppliers workspace is functional.
+111. Customers workspace is functional.
+112. Network Explorer is functional.
+113. Source-backed edge details are functional.
+114. Direct/indirect views are distinguished.
+115. Concentration panels are qualified.
+116. Historical views are source-backed.
+117. Evidence inspector is functional.
+118. Data coverage is visible.
+119. Missing states are explicit.
+120. Mobile table alternative is provided.
+121. Dark/light mode is preserved.
+122. Agent Dock compatibility is preserved.
+123. Bottom Taskbar compatibility is preserved.
+124. Keyboard accessibility is supported.
+125. Screen-reader accessibility is supported.
+126. No purple gradients are introduced.
+127. No emoji icons are introduced.
+128. No fake network nodes/edges are displayed.
+
+### Security
+129. Authentication is enforced.
+130. Data entitlements are enforced.
+131. Restricted source exposure is protected.
+132. Derived aggregate leakage is prevented.
+133. Arbitrary SQL is prohibited.
+134. Unbounded graph queries are prohibited.
+135. Unsafe URLs are rejected.
+136. Provider credentials remain server-side.
+137. Resource quotas are enforced.
+138. Ordinary reads do not mutate source observations.
+139. No Trading orders occur.
+140. No Broker actions occur.
+141. No Portfolio mutations occur.
+142. No Agents execute.
+143. No Workflows execute.
+144. No LLM calls are required.
+
+### Roadmap Boundaries
+145. Stage 89 owns Economics V1.
+146. Stage 90 owns Country Economics.
+147. Stage 91 owns Central Banks.
+148. Stage 92 owns Economic Calendar.
+149. Stage 93 owns Macro Comparisons.
+150. Stages 94–98 own Screeners.
+151. Stages 99–103 own News.
+152. Stages 104–109 own Research.
+153. Stages 110–114 own Portfolios.
+154. Stages 115–118 own Risk.
+155. Stages 119–120 own Saved/Workspaces.
+156. Stages 121–128 own Terminal/AI.
+157. Stages 129–134 own Maps/geospatial capabilities.
+158. Stages 135–140 own universal-event/intelligence capabilities.
+159. Stages 141–142 own Options/Quant pricing.
+160. Stage 143 owns Backtesting.
+161. Stage 144 owns Paper Trading.
+162. Stage 145 owns Broker Sandbox.
+163. Stages 146+ own Agents.
+164. No full Economics module is introduced.
+165. No full Screener is introduced.
+166. No full global Map is introduced.
+167. No live shipment/physical telemetry system is introduced.
+168. No worldwide disruption-prediction engine is introduced.
+169. No agent-based supply-chain speculation is introduced.
+170. No duplicate Relationship Graph is introduced.
+171. Stage 88 must pass directionality tests.
+172. Stage 88 must pass source evidence tests.
+173. Stage 88 must pass identity tests.
+174. Stage 88 must pass multi-tier traversal tests.
+175. Stage 88 must pass concentration tests.
+176. Stage 88 must pass historical temporal tests.
+177. Stage 88 must pass entitlement tests.
+178. Stage 88 must pass Stage 81–87 regressions.
+179. Documentation must match the actual implementation.
+180. Stage 89 is the next canonical stage.
+
+
 
 
 
