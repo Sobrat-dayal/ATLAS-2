@@ -6,25 +6,29 @@ import {
   TrendingUp,
   Building2,
   LineChart,
-  Landmark,
-  Scale,
-  Cpu,
+  Tag,
+  Factory,
+  Eye,
 } from "lucide-react";
-import { NewsTabKey } from "@/lib/news/types";
+import { NewsDiscoveryMode } from "@/lib/news/types";
 
 interface NewsCategoryTabsProps {
-  activeTab: NewsTabKey;
-  onTabChange: (tab: NewsTabKey) => void;
+  activeTab: NewsDiscoveryMode | string;
+  onTabChange: (mode: NewsDiscoveryMode) => void;
 }
 
-const TABS: Array<{ key: NewsTabKey; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+const TABS: Array<{
+  key: NewsDiscoveryMode;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
   { key: "ALL", label: "All News", icon: Globe },
   { key: "MARKETS", label: "Markets", icon: TrendingUp },
   { key: "COMPANIES", label: "Companies", icon: Building2 },
-  { key: "ECONOMICS", label: "Economics", icon: LineChart },
-  { key: "CENTRAL_BANKS", label: "Central Banks", icon: Landmark },
-  { key: "REGULATION", label: "Regulation", icon: Scale },
-  { key: "TECHNOLOGY", label: "Technology", icon: Cpu },
+  { key: "SECURITIES", label: "Securities", icon: LineChart },
+  { key: "TOPICS", label: "Topics", icon: Tag },
+  { key: "INDUSTRIES", label: "Industries", icon: Factory },
+  { key: "WATCHLIST", label: "Watchlist News", icon: Eye },
 ];
 
 export function NewsCategoryTabs({ activeTab, onTabChange }: NewsCategoryTabsProps) {

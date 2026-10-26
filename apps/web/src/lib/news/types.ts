@@ -79,6 +79,8 @@ export interface NewsArticleDTO {
   is_corrected: boolean;
   syndicated_from_id?: string | null;
   correction_details?: string | null;
+  topic_ids?: string[];
+  industries?: string[];
 }
 
 export interface NewsFeedResponseDTO {
@@ -156,3 +158,120 @@ export type NewsTabKey =
   | "CENTRAL_BANKS"
   | "REGULATION"
   | "TECHNOLOGY";
+
+// ---------------------------------------------------------------------------
+// Stage 100 Discovery, Facets, and Timeline Types
+// ---------------------------------------------------------------------------
+
+export type NewsDiscoveryMode =
+  | "ALL"
+  | "MARKETS"
+  | "COMPANIES"
+  | "SECURITIES"
+  | "TOPICS"
+  | "INDUSTRIES"
+  | "WATCHLIST";
+
+export type NewsTimelineInterval = "DAY" | "WEEK" | "MONTH";
+
+export type NewsSortOrder =
+  | "PUBLISHED_DESC"
+  | "PUBLISHED_ASC"
+  | "RELEVANCE_DESC";
+
+export type NewsDatePreset =
+  | "ALL_TIME"
+  | "TODAY"
+  | "PAST_24H"
+  | "PAST_7D"
+  | "PAST_30D"
+  | "CUSTOM";
+
+export interface NewsTopicDTO {
+  topic_id: string;
+  name: string;
+  category: string;
+  description: string;
+  keywords: string[];
+  importance: string;
+  status: string;
+}
+
+export interface NewsFacetItemDTO {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface NewsFacetsResponseDTO {
+  sources: NewsFacetItemDTO[];
+  publishers: NewsFacetItemDTO[];
+  categories: NewsFacetItemDTO[];
+  topics: NewsFacetItemDTO[];
+  countries: NewsFacetItemDTO[];
+  article_types: NewsFacetItemDTO[];
+  as_of: string;
+}
+
+export interface NewsTimelineBucketDTO {
+  bucket_id: string;
+  start_time: string;
+  end_time: string;
+  label: string;
+  article_count: number;
+  articles: NewsArticleDTO[];
+}
+
+export interface NewsTimelineRequestDTO {
+  query?: NewsDiscoveryQueryDTO;
+  interval?: NewsTimelineInterval;
+  timezone?: string;
+}
+
+export interface NewsTimelineResponseDTO {
+  interval: string;
+  timezone: string;
+  total_articles: number;
+  total_buckets: number;
+  buckets: NewsTimelineBucketDTO[];
+  as_of: string;
+}
+
+export interface NewsSearchSuggestionDTO {
+  suggestion_type: "COMPANY" | "TICKER" | "TOPIC" | "PUBLISHER" | "CATEGORY";
+  key: string;
+  label: string;
+  secondary_label?: string | null;
+  category?: string | null;
+}
+
+export interface NewsDiscoveryQueryDTO {
+  mode?: NewsDiscoveryMode;
+  entity_ids?: string[];
+  tickers?: string[];
+  topic_ids?: string[];
+  industries?: string[];
+  source_ids?: string[];
+  publisher_ids?: string[];
+  categories?: string[];
+  countries?: string[];
+  languages?: string[];
+  article_types?: string[];
+  query?: string;
+  date_preset?: NewsDatePreset;
+  start_date?: string;
+  end_date?: string;
+  sort_order?: NewsSortOrder;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface NewsDiscoveryResponseDTO {
+  articles: NewsArticleDTO[];
+  total_count: number;
+  next_cursor?: string | null;
+  has_more: boolean;
+  as_of: string;
+  facets?: NewsFacetsResponseDTO | null;
+  active_filters?: Record<string, unknown> | null;
+}

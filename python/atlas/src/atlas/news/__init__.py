@@ -10,10 +10,15 @@ from atlas.news.enums import (
     NewsAvailabilityStatus,
     NewsCategory,
     NewsChangeType,
+    NewsDatePreset,
+    NewsDiscoveryMode,
+    NewsIndustrySector,
     NewsLatencyClass,
     NewsLicensingStatus,
     NewsProviderType,
     NewsPublisherType,
+    NewsSortOrder,
+    NewsTimelineInterval,
 )
 from atlas.news.errors import (
     InvalidNewsEventKindError,
@@ -50,6 +55,7 @@ from atlas.news.publishers import (
 from atlas.news.repository import (
     IngestionBatchResult,
     NewsCoverageReport,
+    NewsDiscoveryQuery,
     NewsEventRepository,
     NewsFeedQuery,
     NewsFeedResult,
@@ -61,15 +67,24 @@ from atlas.news.responses import NewsResponse
 from atlas.news.schemas import (
     NewsArticleDTO,
     NewsCoverageResponseDTO,
+    NewsDiscoveryQueryDTO,
+    NewsDiscoveryResponseDTO,
     NewsEntityMentionDTO,
     NewsEventResponse,
+    NewsFacetItemDTO,
+    NewsFacetsResponseDTO,
     NewsFeedResponseDTO,
     NewsFreshnessResponseDTO,
     NewsIngestionItemDTO,
     NewsIngestionRequestDTO,
     NewsIngestionResponseDTO,
     NewsPublisherDTO,
+    NewsSearchSuggestionDTO,
     NewsSourceDTO,
+    NewsTimelineBucketDTO,
+    NewsTimelineRequestDTO,
+    NewsTimelineResponseDTO,
+    NewsTopicDTO,
 )
 from atlas.news.service import (
     NewsEventService,
@@ -80,6 +95,13 @@ from atlas.news.sources import (
     NewsSource,
     get_news_source,
     list_news_sources,
+)
+from atlas.news.topics import (
+    NewsTopic,
+    classify_topics_for_article,
+    get_topic,
+    list_topics,
+    resolve_industries_for_article,
 )
 from atlas.news.types import NewsEventKind, NewsEventStatus
 
@@ -159,4 +181,26 @@ __all__ = [
     "NewsIngestionItemDTO",
     "NewsIngestionRequestDTO",
     "NewsIngestionResponseDTO",
+    # Stage 100 Discovery & Timelines
+    "NewsDiscoveryMode",
+    "NewsTimelineInterval",
+    "NewsSortOrder",
+    "NewsDatePreset",
+    "NewsIndustrySector",
+    "NewsDiscoveryQuery",
+    "NewsTopic",
+    "get_topic",
+    "list_topics",
+    "classify_topics_for_article",
+    "resolve_industries_for_article",
+    "NewsTopicDTO",
+    "NewsDiscoveryQueryDTO",
+    "NewsDiscoveryResponseDTO",
+    "NewsFacetItemDTO",
+    "NewsFacetsResponseDTO",
+    "NewsTimelineBucketDTO",
+    "NewsTimelineRequestDTO",
+    "NewsTimelineResponseDTO",
+    "NewsSearchSuggestionDTO",
 ]
+

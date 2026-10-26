@@ -9549,6 +9549,45 @@ This document records the major architectural and product decisions established.
 599. The frontend delivers an institutional Bloomberg-style financial news workspace with high-density feed tables, split article previews, category tabs, source/publisher/geography filters, entity navigation chips, latency class indicators, keyboard navigation, and full accessibility.
 600. Stage 99 establishes the foundational News data layer; advanced intelligence, AI summarization, market impact scoring, and automated event clustering are deferred to Stages 100–103. Stage 100 is the next canonical roadmap stage.
 
+## Stage 100: Financial News Discovery, Search and Timeline System
+
+### Scope, Roadmaps & Core Directives
+601. Stage 100 builds the institutional-grade News Discovery, Search, and Timeline system on top of Stage 99's canonical news infrastructure at primary route `/news`.
+602. The canonical frozen roadmap confirms Stages 99–103 belong to the News sequence; Stage 100 owns the discovery, multi-dimensional search, faceted counts, and chronological timelines layer.
+603. Stage 100 strictly reuses Stage 99's canonical `NewsArticle` data and `NewsRepository` as the single authoritative read model; no second master news store or shadow database is introduced.
+604. Advanced AI summarization, LLM article synthesis, sentiment classification, predictive market impact scores, automated news-driven trading, and autonomous monitoring agents remain strictly deferred to later stages.
+605. All 20 canonical top-level routes (`/home`, `/markets`, `/charts`, `/watchlists`, `/screeners`, `/companies`, `/economics`, `/news`, `/research`, etc.) remain intact and untouched.
+
+### Discovery Modes & Taxonomy
+606. News Discovery operates across seven canonical modes: `ALL`, `MARKETS`, `COMPANIES`, `SECURITIES`, `TOPICS`, `INDUSTRIES`, and `WATCHLIST`.
+607. Canonical Topic Taxonomy establishes 14 controlled topics (`EARNINGS_RELEASES`, `MERGERS_ACQUISITIONS`, `DIVIDENDS_DISTRIBUTIONS`, `SHARE_BUYBACKS`, `CAPITAL_RAISING`, `INTEREST_RATES_MONETARY_POLICY`, `INFLATION_PRICES`, `EMPLOYMENT_LABOR`, `FOREIGN_EXCHANGE_CURRENCIES`, `COMMODITIES_ENERGY`, `FINANCIAL_REGULATION_COMPLIANCE`, `CORPORATE_GOVERNANCE_BOARD`, `TECHNOLOGY_AI_INNOVATION`, `SUPPLY_CHAIN_LOGISTICS`).
+608. Topic classification is deterministic, rule-backed, and grounded in article categories and source-reported metadata; arbitrary keyword hallucination is prohibited.
+609. Industry sector associations use canonical GICS/ICB classification (`NewsIndustrySector`); company-derived sector associations are cleanly qualified and distinguishable from direct article industry tags.
+610. Watchlist-scoped news aggregates eligible articles matching instruments in the user's authenticated watchlists; zero watchlist mutations or background alerts are created.
+
+### Search, Relevance & Highlighting
+611. Advanced search parses quoted exact phrases (`"..."`) and multi-token queries over source-licensed headlines and permitted excerpts; unauthorized full-text indexing is prohibited.
+612. Search relevance scoring uses an explainable, deterministic term-weighting methodology (+100 headline exact match, +40 excerpt exact match, +50 quoted phrase in headline, +20 quoted phrase in excerpt, +15 token in headline, +5 token in excerpt, +30 all-token overlap bonus, +10 topic alignment).
+613. Text search relevance is strictly decoupled from financial materiality; relevance scores are never represented to users as market impact scores or probability of price movement.
+614. Search inputs are treated as untrusted text, sanitized against SQL injection, search DSL abuse, and XSS; search highlights use text escaping to prevent arbitrary script execution.
+615. Search suggestions provide prefix autocomplete for companies, tickers, topics, publishers, and categories from verified system metadata with zero LLM inference cost.
+
+### Faceted Search & Aggregation
+616. Faceted search aggregates discrete counts for Sources, Publishers, Categories, Topics, Countries, and Article Types under active filters.
+617. Facet counts strictly respect source licensing and user entitlement scopes; restricted articles are never leaked through aggregate counts.
+618. Deduplication semantics ensure facet counts represent discrete canonical articles rather than raw fetch attempts or syndicated duplicates.
+
+### Chronological Timelines & Timezones
+619. News timelines group genuine canonical articles chronologically by `DAY`, `WEEK`, or `MONTH` intervals.
+620. Timeline grouping explicitly converts publication timestamps to the requested IANA timezone (e.g. `UTC`, `America/New_York`, `Asia/Kolkata`, `Asia/Tokyo`) using timezone-aware arithmetic.
+621. Publication time is strictly separated from first-seen and ingestion timestamps; missing or date-only timestamps are preserved without artificial precision fabrication.
+622. Empty timeline periods remain honestly empty; no synthetic events or price-causality arrows are invented.
+
+### Quality Gates, Performance & Hand-off
+623. Keyset cursor pagination (`published_at DESC, article_id DESC` or `score DESC, published_at DESC, article_id DESC`) provides stable, disjoint page navigation.
+624. Ordinary news discovery causes zero mutations across securities, companies, fundamentals, economic indicators, portfolios, watchlists, or broker accounts.
+625. Stage 100 passes all automated test suites (58 backend tests across Stage 99 and 100 passing cleanly with 0 ruff errors; 40 frontend tests passing cleanly; TypeScript compile passing with 0 errors; Next.js production build passing with 0 errors). Stage 101 is the next canonical stage.
+
 
 
 

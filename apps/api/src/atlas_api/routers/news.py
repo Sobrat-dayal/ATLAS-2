@@ -34,13 +34,20 @@ from atlas.news.repository import NewsFeedQuery
 from atlas.news.schemas import (
     NewsArticleDTO,
     NewsCoverageResponseDTO,
+    NewsDiscoveryQueryDTO,
+    NewsDiscoveryResponseDTO,
     NewsEventResponse,
+    NewsFacetsResponseDTO,
     NewsFeedResponseDTO,
     NewsFreshnessResponseDTO,
     NewsIngestionRequestDTO,
     NewsIngestionResponseDTO,
     NewsPublisherDTO,
+    NewsSearchSuggestionDTO,
     NewsSourceDTO,
+    NewsTimelineRequestDTO,
+    NewsTimelineResponseDTO,
+    NewsTopicDTO,
 )
 from atlas.news.service import (
     NewsEventService,
@@ -271,8 +278,114 @@ def ingest_news(
 
 
 # ---------------------------------------------------------------------------
+# Stage 100 Discovery, Facets, Timelines & Topics Endpoints
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/api/v1/news/discover",
+    response_model=NewsDiscoveryResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Advanced multi-dimensional news discovery, search, and filtering",
+)
+def discover_news(
+    query: NewsDiscoveryQueryDTO,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.discover_news(query, is_entitled=True)
+    except NewsSearchInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"News discovery failed: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="News discovery query failed")
+
+
+@router.post(
+    "/api/v1/news/facets",
+    response_model=NewsFacetsResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get multi-dimensional facet counts for news discovery query",
+)
+def get_news_facets(
+    query: NewsDiscoveryQueryDTO,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_facets(query, is_entitled=True)
+    except Exception as e:
+        logger.error(f"News facet calculation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Facet calculation failed")
+
+
+@router.post(
+    "/api/v1/news/timeline",
+    response_model=NewsTimelineResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Generate chronological news timeline with timezone-aware grouping",
+)
+def get_news_timeline(
+    request: NewsTimelineRequestDTO,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_timeline(request, is_entitled=True)
+    except Exception as e:
+        logger.error(f"News timeline generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Timeline generation failed")
+
+
+@router.get(
+    "/api/v1/news/topics",
+    response_model=List[NewsTopicDTO],
+    status_code=status.HTTP_200_OK,
+    summary="List canonical financial news topics and taxonomy definitions",
+)
+def list_news_topics(
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.list_topics()
+
+
+@router.get(
+    "/api/v1/news/topics/{topic_id}",
+    response_model=NewsTopicDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get canonical financial news topic details",
+)
+def get_news_topic(
+    topic_id: str = Path(..., description="Canonical topic slug (e.g. 'EARNINGS_RELEASES')"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_topic(topic_id)
+    except NewsCategoryUnsupportedError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/suggestions",
+    response_model=List[NewsSearchSuggestionDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Get metadata-backed autocomplete suggestions for news search combobox",
+)
+def get_news_search_suggestions(
+    q: str = Query(..., min_length=1, max_length=100, description="Prefix search string"),
+    limit: int = Query(8, ge=1, le=20, description="Max suggestions to return"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.get_suggestions(prefix=q, limit=limit)
+
+
+# ---------------------------------------------------------------------------
 # Stage 20 / Stage 36 Legacy Compatibility Endpoint
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/api/v1/news-events/{entity_id}",

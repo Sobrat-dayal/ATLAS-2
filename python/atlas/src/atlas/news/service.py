@@ -40,6 +40,7 @@ from atlas.news.normalization import (
 from atlas.news.origin import NewsDataOrigin
 from atlas.news.publishers import get_verified_publisher
 from atlas.news.repository import (
+    NewsDiscoveryQuery,
     NewsEventRepository,
     NewsFeedQuery,
     NewsFeedResult,
@@ -48,15 +49,24 @@ from atlas.news.repository import (
 from atlas.news.schemas import (
     NewsArticleDTO,
     NewsCoverageResponseDTO,
+    NewsDiscoveryQueryDTO,
+    NewsDiscoveryResponseDTO,
     NewsEntityMentionDTO,
     NewsEventResponse,
+    NewsFacetsResponseDTO,
     NewsFeedResponseDTO,
     NewsFreshnessResponseDTO,
     NewsIngestionRequestDTO,
     NewsIngestionResponseDTO,
     NewsPublisherDTO,
+    NewsSearchSuggestionDTO,
     NewsSourceDTO,
+    NewsTimelineBucketDTO,
+    NewsTimelineRequestDTO,
+    NewsTimelineResponseDTO,
+    NewsTopicDTO,
 )
+from atlas.news.topics import get_topic, list_topics
 from atlas.news.types import NewsEventKind, NewsEventStatus
 
 
@@ -305,6 +315,201 @@ class NewsService:
         query = NewsFeedQuery(q=clean_q, category=category, limit=limit)
         return self.get_feed(query, is_entitled=is_entitled)
 
+    def discover_news(
+        self,
+        query: NewsDiscoveryQueryDTO,
+        is_entitled: bool = True,
+    ) -> NewsDiscoveryResponseDTO:
+        """
+        Executes institutional multi-dimensional discovery search,
+        category/topic/entity filtering, and optional facet calculation.
+        """
+        clean_q = query.query.strip() if query.query else None
+        if clean_q and len(clean_q) > 200:
+            raise NewsSearchInvalidError("Search query exceeds maximum allowed length of 200 characters.")
+
+        repo_query = NewsDiscoveryQuery(
+            mode=query.mode,
+            query=clean_q,
+            publisher_ids=query.publisher_ids,
+            source_ids=query.source_ids,
+            categories=query.categories,
+            topic_ids=query.topic_ids,
+            company_ids=query.company_ids,
+            instrument_ids=query.instrument_ids,
+            country_ids=query.country_ids,
+            industry_ids=query.industry_ids,
+            language_codes=query.language_codes,
+            article_types=query.article_types,
+            date_preset=query.date_preset,
+            start_date=query.start_date,
+            end_date=query.end_date,
+            sort_order=query.sort_order,
+            limit=query.limit,
+            cursor=query.cursor,
+        )
+
+        result = self._repository.discover_news(repo_query)
+        article_dtos = [self._map_article_to_dto(art, is_entitled=is_entitled) for art in result.articles]
+        facets = self._repository.get_facets(repo_query)
+
+        return NewsDiscoveryResponseDTO(
+            articles=article_dtos,
+            total_count=result.total_count,
+            next_cursor=result.next_cursor,
+            has_more=result.has_more,
+            as_of=datetime.datetime.now(datetime.timezone.utc),
+            active_filters=query.model_dump(exclude_none=True),
+            facets=facets,
+        )
+
+    def get_facets(
+        self,
+        query: NewsDiscoveryQueryDTO,
+        is_entitled: bool = True,
+    ) -> NewsFacetsResponseDTO:
+        repo_query = NewsDiscoveryQuery(
+            mode=query.mode,
+            query=query.query,
+            publisher_ids=query.publisher_ids,
+            source_ids=query.source_ids,
+            categories=query.categories,
+            topic_ids=query.topic_ids,
+            company_ids=query.company_ids,
+            instrument_ids=query.instrument_ids,
+            country_ids=query.country_ids,
+            industry_ids=query.industry_ids,
+            language_codes=query.language_codes,
+            article_types=query.article_types,
+            date_preset=query.date_preset,
+            start_date=query.start_date,
+            end_date=query.end_date,
+        )
+        return self._repository.get_facets(repo_query)
+
+    def get_timeline(
+        self,
+        request: NewsTimelineRequestDTO,
+        is_entitled: bool = True,
+    ) -> NewsTimelineResponseDTO:
+        repo_query = NewsDiscoveryQuery(
+            mode=request.query.mode,
+            query=request.query.query,
+            publisher_ids=request.query.publisher_ids,
+            source_ids=request.query.source_ids,
+            categories=request.query.categories,
+            topic_ids=request.query.topic_ids,
+            company_ids=request.query.company_ids,
+            instrument_ids=request.query.instrument_ids,
+            country_ids=request.query.country_ids,
+            industry_ids=request.query.industry_ids,
+            language_codes=request.query.language_codes,
+            article_types=request.query.article_types,
+            date_preset=request.query.date_preset,
+            start_date=request.query.start_date,
+            end_date=request.query.end_date,
+            sort_order=request.query.sort_order,
+        )
+        timeline = self._repository.get_timeline(repo_query, interval=request.interval, tz_name=request.timezone)
+
+        masked_buckets = []
+        for b in timeline.buckets:
+            masked_articles = [
+                self._map_article_to_dto(
+                    self._repository.get_article(a.article_id) or NewsArticle.model_validate(a),
+                    is_entitled=is_entitled,
+                )
+                for a in b.articles
+            ]
+            masked_buckets.append(
+                NewsTimelineBucketDTO(
+                    bucket_id=b.bucket_id,
+                    start_time=b.start_time,
+                    end_time=b.end_time,
+                    label=b.label,
+                    article_count=b.article_count,
+                    articles=masked_articles,
+                )
+            )
+
+        return NewsTimelineResponseDTO(
+            interval=timeline.interval,
+            timezone=timeline.timezone,
+            total_articles=timeline.total_articles,
+            total_buckets=len(masked_buckets),
+            buckets=masked_buckets,
+            as_of=datetime.datetime.now(datetime.timezone.utc),
+        )
+
+    def list_topics(self) -> List[NewsTopicDTO]:
+        return [
+            NewsTopicDTO(
+                topic_id=t.topic_id,
+                canonical_name=t.canonical_name,
+                description=t.description,
+                parent_topic_id=t.parent_topic_id,
+                category=t.category.value,
+            )
+            for t in list_topics()
+        ]
+
+    def get_topic(self, topic_id: str) -> NewsTopicDTO:
+        top = get_topic(topic_id)
+        if not top:
+            raise NewsCategoryUnsupportedError(f"Topic '{topic_id}' not found.")
+        return NewsTopicDTO(
+            topic_id=top.topic_id,
+            canonical_name=top.canonical_name,
+            description=top.description,
+            parent_topic_id=top.parent_topic_id,
+            category=top.category.value,
+        )
+
+    def get_suggestions(self, prefix: str, limit: int = 8) -> List[NewsSearchSuggestionDTO]:
+        return self._repository.get_suggestions(prefix, limit=limit)
+
+    def get_watchlist_news(
+        self,
+        user_id: str,
+        watchlist_id: str,
+        watched_symbols: List[str],
+        limit: int = 30,
+        cursor: Optional[str] = None,
+        is_entitled: bool = True,
+    ) -> NewsFeedResponseDTO:
+        """
+        Discovers news articles linked to any of the user's watched symbols.
+        Preserves user watchlist privacy with 0 watchlist mutations.
+        """
+        if not watched_symbols:
+            return NewsFeedResponseDTO(
+                articles=[],
+                total_count=0,
+                next_cursor=None,
+                has_more=False,
+                as_of=datetime.datetime.now(datetime.timezone.utc),
+                active_filters={"watchlist_id": watchlist_id},
+            )
+
+        discovery_query = NewsDiscoveryQuery(
+            mode="WATCHLIST",
+            instrument_ids=[s.lower() for s in watched_symbols],
+            limit=limit,
+            cursor=cursor,
+        )
+        result = self._repository.discover_news(discovery_query)
+        article_dtos = [self._map_article_to_dto(art, is_entitled=is_entitled) for art in result.articles]
+
+        return NewsFeedResponseDTO(
+            articles=article_dtos,
+            total_count=result.total_count,
+            next_cursor=result.next_cursor,
+            has_more=result.has_more,
+            as_of=datetime.datetime.now(datetime.timezone.utc),
+            active_filters={"watchlist_id": watchlist_id, "symbol_count": len(watched_symbols)},
+        )
+
+
     def ingest_articles(self, request: NewsIngestionRequestDTO) -> NewsIngestionResponseDTO:
         """Processes an incoming ingestion payload."""
         articles_to_ingest: List[NewsArticle] = []
@@ -428,6 +633,8 @@ class NewsService:
             categories=[c.value for c in art.categories],
             linked_entities=entity_dtos,
             geographies=list(art.geographies),
+            topic_ids=list(art.topic_ids),
+            industries=list(art.industries),
             authors=list(art.authors),
             tags=list(art.tags),
             revision=art.revision,

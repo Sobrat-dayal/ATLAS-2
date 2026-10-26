@@ -55,6 +55,8 @@ class NewsArticle(BaseModel):
     categories: tuple[NewsCategory, ...] = Field(default_factory=tuple, description="Financial taxonomy categories.")
     linked_entities: tuple[NewsEntityMention, ...] = Field(default_factory=tuple, description="Canonical entity links.")
     geographies: tuple[str, ...] = Field(default_factory=tuple, description="Geographic regions (ISO country codes).")
+    topic_ids: tuple[str, ...] = Field(default_factory=tuple, description="Canonical topic identifiers (Stage 100).")
+    industries: tuple[str, ...] = Field(default_factory=tuple, description="Canonical industry sector codes (Stage 100).")
 
     authors: tuple[str, ...] = Field(default_factory=tuple, description="Authors or bylines.")
     tags: tuple[str, ...] = Field(default_factory=tuple, description="Tags, keywords, or topics.")

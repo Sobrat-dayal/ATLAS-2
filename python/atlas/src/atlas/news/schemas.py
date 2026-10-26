@@ -70,6 +70,8 @@ class NewsArticleDTO(BaseModel):
     categories: List[str] = Field(default_factory=list)
     linked_entities: List[NewsEntityMentionDTO] = Field(default_factory=list)
     geographies: List[str] = Field(default_factory=list)
+    topic_ids: List[str] = Field(default_factory=list, description="Canonical topic identifiers.")
+    industries: List[str] = Field(default_factory=list, description="Industry sector codes.")
     authors: List[str] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
     revision: int = Field(default=1)
@@ -77,6 +79,116 @@ class NewsArticleDTO(BaseModel):
     is_corrected: bool = Field(default=False)
     syndicated_from_id: Optional[str] = Field(default=None)
     correction_details: Optional[str] = Field(default=None)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Stage 100 Discovery & Timeline DTOs
+# ---------------------------------------------------------------------------
+
+class NewsTopicDTO(BaseModel):
+    topic_id: str
+    canonical_name: str
+    description: str
+    parent_topic_id: Optional[str] = None
+    category: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsDiscoveryQueryDTO(BaseModel):
+    mode: str = Field(default="ALL", description="NewsDiscoveryMode ('ALL', 'MARKETS', 'COMPANIES', 'SECURITIES', 'TOPICS', 'INDUSTRIES', 'WATCHLIST').")
+    query: Optional[str] = Field(default=None, max_length=200, description="Headline or excerpt keyword search.")
+    publisher_ids: Optional[List[str]] = Field(default=None, description="Filter by publisher IDs.")
+    source_ids: Optional[List[str]] = Field(default=None, description="Filter by provider source IDs.")
+    categories: Optional[List[str]] = Field(default=None, description="Filter by category slugs.")
+    topic_ids: Optional[List[str]] = Field(default=None, description="Filter by canonical topic IDs.")
+    company_ids: Optional[List[str]] = Field(default=None, description="Filter by canonical company UUIDs.")
+    instrument_ids: Optional[List[str]] = Field(default=None, description="Filter by canonical instrument UUIDs or tickers.")
+    country_ids: Optional[List[str]] = Field(default=None, description="Filter by ISO country codes.")
+    industry_ids: Optional[List[str]] = Field(default=None, description="Filter by industry sectors.")
+    language_codes: Optional[List[str]] = Field(default=None, description="Filter by ISO language codes.")
+    article_types: Optional[List[str]] = Field(default=None, description="Filter by article types.")
+    date_preset: str = Field(default="ALL_TIME", description="NewsDatePreset ('ALL_TIME', 'TODAY', 'PAST_24H', 'PAST_7D', 'PAST_30D', 'CUSTOM').")
+    start_date: Optional[datetime.datetime] = Field(default=None, description="Custom range start date (UTC).")
+    end_date: Optional[datetime.datetime] = Field(default=None, description="Custom range end date (UTC).")
+    sort_order: str = Field(default="PUBLISHED_DESC", description="Sort order ('PUBLISHED_DESC', 'PUBLISHED_ASC', 'RELEVANCE_DESC').")
+    limit: int = Field(default=30, ge=1, le=100, description="Articles per page.")
+    cursor: Optional[str] = Field(default=None, description="Keyset pagination cursor.")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsFacetItemDTO(BaseModel):
+    key: str
+    label: str
+    count: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsFacetsResponseDTO(BaseModel):
+    sources: List[NewsFacetItemDTO] = Field(default_factory=list)
+    publishers: List[NewsFacetItemDTO] = Field(default_factory=list)
+    categories: List[NewsFacetItemDTO] = Field(default_factory=list)
+    topics: List[NewsFacetItemDTO] = Field(default_factory=list)
+    countries: List[NewsFacetItemDTO] = Field(default_factory=list)
+    article_types: List[NewsFacetItemDTO] = Field(default_factory=list)
+    as_of: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc))
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsTimelineBucketDTO(BaseModel):
+    bucket_id: str
+    start_time: datetime.datetime
+    end_time: datetime.datetime
+    label: str
+    article_count: int
+    articles: List[NewsArticleDTO] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsTimelineRequestDTO(BaseModel):
+    query: NewsDiscoveryQueryDTO = Field(default_factory=NewsDiscoveryQueryDTO)
+    interval: str = Field(default="DAY", description="Interval: 'DAY', 'WEEK', 'MONTH'.")
+    timezone: str = Field(default="UTC", description="IANA timezone identifier (e.g. 'UTC', 'America/New_York', 'Asia/Kolkata').")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsTimelineResponseDTO(BaseModel):
+    interval: str
+    timezone: str
+    total_articles: int
+    total_buckets: int
+    buckets: List[NewsTimelineBucketDTO] = Field(default_factory=list)
+    as_of: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc))
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsSearchSuggestionDTO(BaseModel):
+    suggestion_id: str
+    title: str
+    subtitle: str
+    type: str = Field(..., description="Type: 'COMPANY', 'INSTRUMENT', 'TOPIC', 'PUBLISHER', 'CATEGORY', 'KEYWORD'")
+    filter_key: str
+    filter_value: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsDiscoveryResponseDTO(BaseModel):
+    articles: List[NewsArticleDTO] = Field(default_factory=list)
+    total_count: int = Field(default=0)
+    next_cursor: Optional[str] = Field(default=None)
+    has_more: bool = Field(default=False)
+    as_of: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc))
+    active_filters: Dict[str, Any] = Field(default_factory=dict)
+    facets: Optional[NewsFacetsResponseDTO] = Field(default=None)
 
     model_config = ConfigDict(from_attributes=True)
 

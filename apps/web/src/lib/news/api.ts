@@ -165,3 +165,79 @@ export async function getNewsStatus(): Promise<NewsFreshnessResponseDTO> {
   });
   return handleResponse<NewsFreshnessResponseDTO>(res);
 }
+
+// ---------------------------------------------------------------------------
+// Stage 100 Discovery, Facets, and Timeline Endpoints
+// ---------------------------------------------------------------------------
+
+export async function discoverNews(
+  query: import("./types").NewsDiscoveryQueryDTO
+): Promise<import("./types").NewsDiscoveryResponseDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/discover`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(query),
+  });
+  return handleResponse<import("./types").NewsDiscoveryResponseDTO>(res);
+}
+
+export async function getNewsFacets(
+  query: import("./types").NewsDiscoveryQueryDTO
+): Promise<import("./types").NewsFacetsResponseDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/facets`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(query),
+  });
+  return handleResponse<import("./types").NewsFacetsResponseDTO>(res);
+}
+
+export async function getNewsTimeline(
+  request: import("./types").NewsTimelineRequestDTO
+): Promise<import("./types").NewsTimelineResponseDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/timeline`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(request),
+  });
+  return handleResponse<import("./types").NewsTimelineResponseDTO>(res);
+}
+
+export async function getNewsTopics(): Promise<import("./types").NewsTopicDTO[]> {
+  const url = `${getBaseApiUrl()}/api/v1/news/topics`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsTopicDTO[]>(res);
+}
+
+export async function getNewsTopic(
+  topicId: string
+): Promise<import("./types").NewsTopicDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/topics/${encodeURIComponent(topicId)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsTopicDTO>(res);
+}
+
+export async function getNewsSuggestions(
+  q: string,
+  limit: number = 8
+): Promise<import("./types").NewsSearchSuggestionDTO[]> {
+  const url = new URL("/api/v1/news/suggestions", getBaseApiUrl());
+  url.searchParams.set("q", q);
+  url.searchParams.set("limit", String(limit));
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<import("./types").NewsSearchSuggestionDTO[]>(res);
+}
+

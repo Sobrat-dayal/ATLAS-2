@@ -1003,6 +1003,34 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Linter: `uv run ruff check` on Stage 99 (0 errors).
 - **Documentation**: See `docs/NEWS_V1.md` and `docs/DECISIONS.md`.
 
+## Advanced Financial News Discovery, Search and Timeline System (Stage 100)
+- **Architecture**: Advanced financial news exploration, search, and timeline system at `/news` (Module 8). Expands the canonical Stage 99 News foundation into a multi-dimensional discovery terminal with 7 discovery modes (`ALL`, `MARKETS`, `COMPANIES`, `SECURITIES`, `TOPICS`, `INDUSTRIES`, `WATCHLIST`), quoted exact phrase search, explainable term relevance scoring, dynamic faceted search, and chronological timeline event bucketing.
+- **Canonical Topic Taxonomy & Classification**: Establishes 14 controlled topics (`EARNINGS_RELEASES`, `MERGERS_ACQUISITIONS`, `DIVIDENDS_DISTRIBUTIONS`, `SHARE_BUYBACKS`, `CAPITAL_RAISING`, `INTEREST_RATES_MONETARY_POLICY`, `INFLATION_PRICES`, `EMPLOYMENT_LABOR`, `FOREIGN_EXCHANGE_CURRENCIES`, `COMMODITIES_ENERGY`, `FINANCIAL_REGULATION_COMPLIANCE`, `CORPORATE_GOVERNANCE_BOARD`, `TECHNOLOGY_AI_INNOVATION`, `SUPPLY_CHAIN_LOGISTICS`) and GICS/ICB sector resolution (`NewsIndustrySector`) with deterministic rule-based classifiers.
+- **Advanced Search & Transparent Relevance**:
+  - Quoted phrase matching (`"..."`) and multi-token queries over source-licensed headlines and excerpts.
+  - Transparent relevance scoring: +100 headline exact, +40 excerpt exact, +50 quoted phrase in headline, +20 quoted phrase in excerpt, +15 token in headline, +5 token in excerpt, +30 all-token overlap bonus, +10 topic alignment.
+  - Relevance strictly measures text matching density; it is never represented to users as a market impact score.
+  - Prefix autocomplete suggestions for tickers, companies, topics, publishers, and categories from verified metadata.
+- **Entitlement-Aware Faceted Search**: Aggregates live article counts across Sources, Publishers, Categories, Topics, Countries, and Article Types matching active query filters without leaking unauthorized counts.
+- **Chronological News Timelines**:
+  - Groups articles into chronological buckets by `DAY`, `WEEK`, or `MONTH`.
+  - Full timezone awareness using standard IANA timezones (UTC, America/New_York, Europe/London, Asia/Kolkata, Asia/Tokyo) with daylight saving handling.
+  - Gaps in coverage remain honestly empty with zero synthetic event fabrication.
+  - Accurate publication vs first-seen timestamp distinctions.
+- **Terminal Workspace**:
+  - High-density dual view: interactive Feed Table and visual Chronological Timeline.
+  - Fast search combobox with grouped suggestion badges and keyboard navigation.
+  - Multi-dimensional filter sidebar with date range presets, timezone selector, sort order, and facet count pills.
+  - Source-qualified article inspector and seamless entity navigation chips.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_news_discovery_v1.py` and `test_news_v1.py` (58/58 passed).
+  - Regression suite: 111 passed across news, economics, and screeners.
+  - Frontend unit tests: `cmd /c pnpm test` (40/40 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors).
+  - Production build: `cmd /c pnpm build` (Next.js 16.3.8 Turbopack clean compile).
+  - Linter: `uv run ruff check` (0 errors).
+- **Documentation**: See `docs/NEWS_DISCOVERY_AND_TIMELINES.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

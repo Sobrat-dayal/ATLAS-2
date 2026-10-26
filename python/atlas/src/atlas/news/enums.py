@@ -110,3 +110,58 @@ class NewsChangeType(StrEnum):
     ENTITY_LINK_ADDED = "ENTITY_LINK_ADDED"
     WITHDRAWAL = "WITHDRAWAL"
     REMOVAL = "REMOVAL"
+
+
+class NewsDiscoveryMode(StrEnum):
+    """Exploration mode for financial news discovery."""
+
+    ALL = "ALL"
+    MARKETS = "MARKETS"
+    COMPANIES = "COMPANIES"
+    SECURITIES = "SECURITIES"
+    TOPICS = "TOPICS"
+    INDUSTRIES = "INDUSTRIES"
+    WATCHLIST = "WATCHLIST"
+
+
+class NewsTimelineInterval(StrEnum):
+    """Aggregation bucket duration for chronological news timelines."""
+
+    DAY = "DAY"
+    WEEK = "WEEK"
+    MONTH = "MONTH"
+
+
+class NewsSortOrder(StrEnum):
+    """Sort criteria for news feeds and discovery searches."""
+
+    PUBLISHED_DESC = "PUBLISHED_DESC"
+    PUBLISHED_ASC = "PUBLISHED_ASC"
+    RELEVANCE_DESC = "RELEVANCE_DESC"
+
+
+class NewsDatePreset(StrEnum):
+    """Standardized relative publication date filters."""
+
+    ALL_TIME = "ALL_TIME"
+    TODAY = "TODAY"
+    PAST_24H = "PAST_24H"
+    PAST_7D = "PAST_7D"
+    PAST_30D = "PAST_30D"
+    CUSTOM = "CUSTOM"
+
+
+class NewsIndustrySector(StrEnum):
+    """Canonical GICS/ICB economic industry sectors for news tagging."""
+
+    TECHNOLOGY = "TECHNOLOGY"
+    COMMUNICATION_SERVICES = "COMMUNICATION_SERVICES"
+    CONSUMER_DISCRETIONARY = "CONSUMER_DISCRETIONARY"
+    CONSUMER_STAPLES = "CONSUMER_STAPLES"
+    ENERGY = "ENERGY"
+    FINANCIALS = "FINANCIALS"
+    HEALTHCARE = "HEALTHCARE"
+    INDUSTRIALS = "INDUSTRIALS"
+    MATERIALS = "MATERIALS"
+    REAL_ESTATE = "REAL_ESTATE"
+    UTILITIES = "UTILITIES"
