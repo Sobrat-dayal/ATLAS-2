@@ -9109,7 +9109,124 @@ This document records the major architectural and product decisions established.
 231. Sorting is deterministic with primary field ordering (NULLS LAST) and a stable tie-breaker on (instrument_entity_id, listing_id).
 232. Pagination is server-side bounded (default 50, maximum 100) with opaque cursor integrity.
 233. Cell-level provenance, observation period, and freshness metadata are enriched on every response.
-234. Stage 95 is the next canonical stage for advanced financial screener capabilities.
+234. Stage 95 implements Visual Screener Filters.
+
+## Stage 95: Institutional-Grade Visual Screener Filter Builder
+
+### Product and Scope
+235. Stage 95 implements the Visual Screener Filter Builder subsystem.
+236. Stage 94 core screener engine remains the authoritative source of truth for filter semantics and query execution.
+237. The feature lives strictly within the existing `/screeners` route; no new global navigation route is created.
+238. Global navigation, sidebar, agent dock, and bottom taskbar integrations remain strictly preserved.
+239. The Visual Builder is a presentation, validation, and typed query-construction interface.
+240. No duplicate or parallel screener backend is created.
+241. No new financial indicator calculations (e.g. RSI, MACD) are created; technical factors remain deferred to Stage 96.
+242. No arbitrary SQL or executable formula query language is exposed to users.
+243. Stage 96 (fundamental, technical, and multi-factor screening expansion) remains deferred.
+244. Stage 97 (saved screens library, ranking formulas, exports) remains deferred.
+245. Stage 98 (natural-language screener translation hooks) remains deferred.
+
+### Filter Registry Integration
+246. Filter definitions are source-backed by the canonical Stage 94 Filter Registry.
+247. Stable, typed filter identifiers (`filter_id`) are preserved across all interactions.
+248. Categorization is source-backed (Market Data, Fundamentals, Valuation, Profitability, Listing, Geography, Industry).
+249. Operator eligibility is explicit per filter definition; invalid operators cannot be chosen.
+250. Value types are explicit (CURRENCY, NUMERIC, PERCENTAGE, INTEGER, ENUM, BOOLEAN).
+251. Measurement units are explicit (MONETARY, PERCENT, MULTIPLE, SHARES, CURRENCY_PER_SHARE, DIMENSIONLESS).
+252. Metric applicability across security types and industries is explicit.
+253. Source coverage summaries and provenance audit references are disclosed.
+254. Entitlement states are enforced server-side; client cannot bypass licensing rules.
+255. Disabled or unsupported filters are clearly labeled and cannot be executed.
+256. No fabricated financial metrics or indicators appear in the catalog.
+
+### Visual Condition Identity & Construction
+257. Condition instances carry stable client-side identities (`conditionId`), strictly distinct from `filterId`.
+258. Multiple conditions may refer to the same metric (e.g. price floor and price ceiling).
+259. Adding a condition creates an editable draft with default operator without inventing false numeric values.
+260. Editing condition metric, operator, value, currency, or magnitude is reactive and type-safe.
+261. Removing a condition instantly updates draft query state.
+262. Duplicating a condition safely creates a distinct condition instance with fresh client ID.
+263. Visual reordering is supported for usability without altering Boolean semantics.
+264. Visual category grouping organizes condition rows without secretly altering Boolean logic.
+265. Query preview reflects actual serialized predicates deterministically.
+
+### Typed Input Controls & Precision
+266. Exact decimal text precision is preserved without IEEE 754 floating-point corruption.
+267. Monetary inputs are currency-qualified (`USD`, `EUR`, `GBP`, `INR`, `JPY`) with explicit magnitude multipliers (`K`, `M`, `B`, `T`).
+268. Percentage conventions are human-friendly (`15` = 15%) and clearly differentiated from valuation multiples (`20x`).
+269. Financial ratios use canonical dimensionless multiple representations (`x`).
+270. Numeric range controls enforce exact boundary validation (`min <= max`) with inclusive bounds.
+271. Enumeration and multi-select filters use canonical registry identifiers rather than free-text names.
+272. Empty input fields remain incomplete drafts and are never coerced to zero.
+273. Non-finite values (`NaN`, `Infinity`, `-Infinity`) are rejected immediately.
+274. Intermediate typing states (`-`, `12.`) are treated as incomplete drafts rather than fatal errors.
+275. Magnitude factors normalize to canonical base values during query serialization.
+276. Metric round-trips preserve numerical meaning without loss of precision.
+
+### Dependency Management & Applicability
+277. Universe selection changes re-evaluate all active draft conditions.
+278. Incompatible filters are flagged with explanatory notices; conditions are never silently deleted.
+279. Source availability directly influences metric eligibility.
+280. Security type eligibility is enforced (e.g. ETF fundamentals excluded from operating equities).
+281. Industry-specific ratio applicability is respected.
+282. Reporting period policies (annual, quarterly, TTM) are explicitly labeled.
+283. Currency conversion policies require explicit normalization.
+284. Entitlements block unauthorized metric evaluation at the server level.
+
+### Contradiction Detection
+285. Provable numeric boundary contradictions are evaluated deterministically (`lower > upper`).
+286. Strict inequality contradictions on matching boundaries (`> 100` AND `< 100`) are flagged.
+287. Conflicting equality constraints on single-valued classifications (e.g. `sector == Tech` AND `sector == Healthcare`) are flagged.
+288. Overlapping valid ranges are permitted and never falsely labeled impossible.
+289. Missing data values are not treated as satisfying contradictory conditions.
+290. Currency compatibility is checked prior to boundary comparison.
+291. Scope and financial periods must match before asserting contradiction.
+292. Valid empty-result queries are distinguished from mathematically contradictory predicates.
+
+### State Management & Query Execution
+293. Draft Query and Applied Query states are strictly separated.
+294. Dirty state is explicitly indicated ("Changes not applied").
+295. Apply Filters validates client state, executes server query, and updates results atomically.
+296. Discard Changes restores the last successfully applied query state.
+297. Clear All clears active draft conditions cleanly.
+298. Results table retains association with the previously applied query while edits occur.
+299. Failed execution preserves draft state and displays actionable error messages.
+300. Rapid user edits and obsolete responses are rejected via query revision matching.
+301. Active in-flight requests are cancelled using `AbortController` when superseded.
+302. URL state synchronizes query parameters safely with schema versioning.
+303. URL state reconstruction validates all filter IDs and operators against the registry.
+
+### Security & Governance
+304. Server-side validation remains mandatory and authoritative.
+305. Filter IDs are strictly allowlisted against the approved registry.
+306. Operators are strictly allowlisted per filter definition.
+307. Enum identifiers are validated against canonical catalogs.
+308. Active condition count is capped at 20 per query.
+309. Input text, numbers, and query payload sizes are bounded.
+310. SQL injection and arbitrary code execution vectors are completely eliminated.
+311. Client-side state cannot bypass source licensing or user entitlements.
+312. Restricted financial data cannot leak through filter discovery or metadata counts.
+313. No provider secrets, credentials, or private keys are serialized in URL state.
+314. No trading orders or broker interactions can be executed from screeners.
+315. No portfolio mutations are triggered by screener edits.
+316. No autonomous background monitoring or screening agents are dispatched.
+317. Normal Stage 95 screener operations require exactly 0 LLM calls.
+
+### Performance & Terminal Ergonomics
+318. Local editing performs zero full-universe network requests on keystroke.
+319. Filter catalog and enum option lists are memoized by registry revision.
+320. Condition row updates isolate React re-renders using stable condition IDs.
+321. Network validation is triggered on Apply, Review, or explicit user action.
+322. Obsolete network requests are aborted immediately.
+323. Server screening executes with zero external provider RPC fanout on read.
+324. Large categorical lists (exchanges, countries) render efficiently.
+325. Institutional dark UI surfaces, fine borders, and tabular numerals maintain Bloomberg terminal aesthetic.
+326. Full keyboard navigation is supported (search shortcut, arrow traversal, Enter to add, Escape to close).
+327. Screen-reader accessible input labels, error announcements, and focus restoration are enforced.
+328. Responsive layouts operate seamlessly across desktop (1920px), tablet (768px), and mobile (320px).
+329. Stage 95 satisfies all test requirements, passing 35 backend tests and 13 frontend tests.
+330. Stage 96 is the next canonical stage for fundamental, technical, and multi-factor screening expansion.
+
 
 
 

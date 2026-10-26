@@ -56,6 +56,17 @@ export type UnitKind =
   | "currency_per_share"
   | "dimensionless";
 
+export type EditorType =
+  | "decimal_input"
+  | "monetary_input"
+  | "percent_input"
+  | "multiple_input"
+  | "number_range"
+  | "enum_select"
+  | "enum_multi_select"
+  | "boolean_select"
+  | "date_input";
+
 export type SortDirection = "asc" | "desc";
 
 export interface ScreenerUniverseDefinition {
@@ -84,6 +95,14 @@ export interface ScreenerFilterDefinition {
   is_range_supported: boolean;
   min_value?: number | null;
   max_value?: number | null;
+  editor_type?: EditorType;
+  currency_options?: string[];
+  magnitude_options?: string[];
+  aliases?: string[];
+  methodology_reference?: string;
+  decimal_precision?: number;
+  entitlement_state?: string;
+  source_coverage_summary?: string;
 }
 
 export interface ScreenerColumnDefinition {
@@ -99,12 +118,15 @@ export interface ScreenerColumnDefinition {
 }
 
 export interface FilterCriterion {
+  condition_id?: string;
   filter_id: string;
   operator: FilterOperator;
   value: string | number;
   secondary_value?: string | number | null;
   currency?: string | null;
+  unit?: string | null;
 }
+
 
 export interface SortCriterion {
   field_id: string;
@@ -185,17 +207,58 @@ export interface ScreenerRunResponse {
   warnings: string[];
 }
 
+export interface ConditionValidationIssue {
+  condition_id?: string | null;
+  filter_id?: string | null;
+  field_path?: string | null;
+  code: string;
+  severity: "error" | "warning";
+  message: string;
+}
+
 export interface ValidationResponse {
   valid: boolean;
   accepted_filters: FilterCriterion[];
   rejected_filters: Array<{
     filter_id: string;
+    condition_id?: string;
     reason: string;
     code: string;
   }>;
+  issues?: ConditionValidationIssue[];
   warnings: string[];
+  contradictions_detected?: boolean;
   eligible_universe_size: number;
 }
+
+export type ConditionStatus = "valid" | "incomplete" | "invalid";
+
+export interface VisualFilterCondition {
+  conditionId: string;
+  filterId: string;
+  operator: FilterOperator;
+  value: string;
+  secondaryValue?: string | null;
+  currency?: string | null;
+  magnitude?: "UNITS" | "THOUSANDS" | "MILLIONS" | "BILLIONS" | "TRILLIONS";
+  status: ConditionStatus;
+  validationMessage?: string | null;
+  fieldErrors?: Record<string, string>;
+  isDirty?: boolean;
+}
+
+export interface QueryPreviewSummary {
+  universeId: string;
+  universeName: string;
+  conditionsCount: number;
+  plainEnglishPredicates: string[];
+  periodPolicy: string;
+  currencyPolicy: string;
+  isValid: boolean;
+  contradictionsDetected: boolean;
+  warnings: string[];
+}
+
 
 export interface ExchangeOption {
   mic: string;

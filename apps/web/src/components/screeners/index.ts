@@ -10,3 +10,5 @@ export * from "./ScreenerSourceInspector";
 export * from "./ScreenerCoveragePanel";
 export * from "./ScreenerEmptyState";
 export * from "./ScreenerErrorState";
+export * from "./visual-builder";
+

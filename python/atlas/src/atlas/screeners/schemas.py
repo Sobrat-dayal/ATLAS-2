@@ -18,11 +18,14 @@ class FilterCriterionDTO(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    condition_id: Optional[str] = None
     filter_id: str
     operator: FilterOperator = FilterOperator.GTE
     value: Any
     secondary_value: Optional[Any] = None
     currency: Optional[str] = None
+    unit: Optional[str] = None
+
 
 
 class SortCriterionDTO(BaseModel):
@@ -128,6 +131,19 @@ class ScreenerRunResponseDTO(BaseModel):
     warnings: List[str] = Field(default_factory=list)
 
 
+class ConditionValidationIssueDTO(BaseModel):
+    """Attributed validation issue for visual filter condition."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    condition_id: Optional[str] = None
+    filter_id: Optional[str] = None
+    field_path: Optional[str] = None
+    code: str
+    severity: str = "error"  # error | warning
+    message: str
+
+
 class ValidationResponseDTO(BaseModel):
     """Result of validating a candidate screener query."""
 
@@ -136,8 +152,11 @@ class ValidationResponseDTO(BaseModel):
     valid: bool
     accepted_filters: List[FilterCriterionDTO] = Field(default_factory=list)
     rejected_filters: List[Dict[str, Any]] = Field(default_factory=list)
+    issues: List[ConditionValidationIssueDTO] = Field(default_factory=list)
     warnings: List[str] = Field(default_factory=list)
+    contradictions_detected: bool = False
     eligible_universe_size: int = 0
+
 
 
 class ExchangeOptionDTO(BaseModel):

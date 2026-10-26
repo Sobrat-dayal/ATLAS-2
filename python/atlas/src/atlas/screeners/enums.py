@@ -141,3 +141,18 @@ class ResultGrain(CaseInsensitiveStrEnum):
 
     SECURITY_LISTING = "security_listing"
     SECURITY_INSTRUMENT = "security_instrument"
+
+
+class EditorType(CaseInsensitiveStrEnum):
+    """Visual builder input control type (Stage 95)."""
+
+    DECIMAL_INPUT = "decimal_input"
+    MONETARY_INPUT = "monetary_input"
+    PERCENT_INPUT = "percent_input"
+    MULTIPLE_INPUT = "multiple_input"
+    NUMBER_RANGE = "number_range"
+    ENUM_SELECT = "enum_select"
+    ENUM_MULTI_SELECT = "enum_multi_select"
+    BOOLEAN_SELECT = "boolean_select"
+    DATE_INPUT = "date_input"
+

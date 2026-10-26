@@ -212,13 +212,21 @@ export function useScreener() {
     setPage(1);
   };
 
+  const handleSetFilters = (filters: FilterCriterion[]) => {
+    setActiveFilters(filters);
+    setPage(1);
+    executeQuery(1, undefined, filters);
+  };
+
   const handleClearFilters = () => {
     setActiveFilters([]);
     setSelectedExchanges([]);
     setSelectedCountries([]);
     setSelectedSectors([]);
     setPage(1);
+    executeQuery(1, undefined, []);
   };
+
 
   const handleSortToggle = (fieldId: string) => {
     setSortCriteria((prev) => {
@@ -296,6 +304,7 @@ export function useScreener() {
     toggleCountry: handleToggleCountry,
     toggleSector: handleToggleSector,
     addFilter: handleAddFilter,
+    setFilters: handleSetFilters,
     removeFilter: handleRemoveFilter,
     clearFilters: handleClearFilters,
     setSorting: handleSortToggle,

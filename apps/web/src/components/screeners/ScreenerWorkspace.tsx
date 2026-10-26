@@ -4,7 +4,7 @@ import React from "react";
 import { useScreener } from "@/hooks/screeners/useScreener";
 import { ScreenerHeader } from "./ScreenerHeader";
 import { ScreenerToolbar } from "./ScreenerToolbar";
-import { ScreenerFilterBuilder } from "./ScreenerFilterBuilder";
+import { VisualScreenerBuilder } from "./visual-builder/VisualScreenerBuilder";
 import { ScreenerActiveFilters } from "./ScreenerActiveFilters";
 import { ScreenerResultsTable } from "./ScreenerResultsTable";
 import { ScreenerPagination } from "./ScreenerPagination";
@@ -43,6 +43,7 @@ export function ScreenerWorkspace() {
     toggleCountry,
     toggleSector,
     addFilter,
+    setFilters,
     removeFilter,
     clearFilters,
     setSorting,
@@ -103,12 +104,19 @@ export function ScreenerWorkspace() {
         onToggleSector={toggleSector}
       />
 
-      {/* 4. Filter Builder with Presets */}
-      <ScreenerFilterBuilder
+      {/* 4. Institutional Visual Screener Filter Builder (Stage 95) */}
+      <VisualScreenerBuilder
         filtersRegistry={filtersRegistry}
-        activeFilterCount={activeFilters.length}
-        onAddFilter={addFilter}
+        universes={universes}
+        selectedUniverseId={selectedUniverseId}
+        exchanges={exchanges}
+        geographies={geographies}
+        industries={industries}
+        appliedFilters={activeFilters}
+        onApplyFilters={setFilters}
+        isLoading={loading}
       />
+
 
       {/* 5. Active Filter Badges with Quick Removal */}
       <ScreenerActiveFilters

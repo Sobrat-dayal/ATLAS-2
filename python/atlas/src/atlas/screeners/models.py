@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from atlas.screeners.enums import (
     ConsolidationScope,
+    EditorType,
     FilterCategory,
     FilterOperator,
     FreshnessStatus,
@@ -54,6 +55,15 @@ class ScreenerFilterDefinition(BaseModel):
     is_range_supported: bool = True
     min_value: Optional[Decimal] = None
     max_value: Optional[Decimal] = None
+    editor_type: EditorType = EditorType.DECIMAL_INPUT
+    currency_options: Optional[List[str]] = None
+    magnitude_options: Optional[List[str]] = None
+    aliases: List[str] = Field(default_factory=list)
+    methodology_reference: Optional[str] = None
+    decimal_precision: Optional[int] = 2
+    entitlement_state: str = "PUBLIC"
+    source_coverage_summary: Optional[str] = None
+
 
 
 class ScreenerColumnDefinition(BaseModel):

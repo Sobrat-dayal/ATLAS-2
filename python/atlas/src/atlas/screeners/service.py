@@ -37,6 +37,7 @@ from atlas.screeners.models import (
 )
 from atlas.screeners.repository import ScreenerRepository
 from atlas.screeners.schemas import (
+    ConditionValidationIssueDTO,
     CountryOptionDTO,
     ExchangeOptionDTO,
     FilterCriterionDTO,
@@ -177,7 +178,7 @@ class ScreenerService:
     # =========================================================================
 
     def validate_query(self, request: ScreenerRunRequestDTO) -> ValidationResponseDTO:
-        """Validates candidate screener query conditions without executing full search."""
+        """Validates candidate screener query conditions without executing full search (Stage 95)."""
         u_def = self._repo.get_universe(request.universe.universe_id)
         if not u_def:
             raise ScreenerUniverseNotFoundError(request.universe.universe_id)
@@ -187,51 +188,121 @@ class ScreenerService:
 
         accepted_filters: List[FilterCriterionDTO] = []
         rejected_filters: List[Dict[str, Any]] = []
+        issues: List[ConditionValidationIssueDTO] = []
         warnings: List[str] = []
+        contradictions_detected = False
 
+        # 1. Per-condition syntactic and semantic validation
         for f in request.filters:
             f_def = self._repo.get_filter(f.filter_id)
             if not f_def:
+                reason = f"Filter '{f.filter_id}' is not in approved filter registry."
                 rejected_filters.append({
                     "filter_id": f.filter_id,
-                    "reason": f"Filter '{f.filter_id}' is not in approved filter registry.",
+                    "condition_id": f.condition_id,
+                    "reason": reason,
                     "code": "SCREENER_FILTER_NOT_FOUND",
                 })
+                issues.append(ConditionValidationIssueDTO(
+                    condition_id=f.condition_id,
+                    filter_id=f.filter_id,
+                    field_path="filter_id",
+                    code="SCREENER_FILTER_NOT_FOUND",
+                    severity="error",
+                    message=reason,
+                ))
                 continue
 
+            # Check universe eligibility
+            if f_def.eligible_security_types:
+                overlap = set(f_def.eligible_security_types).intersection(set(u_def.eligible_security_types))
+                if not overlap:
+                    warning_msg = (
+                        f"Metric '{f_def.display_name}' applies to security types {[st.value for st in f_def.eligible_security_types]}, "
+                        f"which are not included in selected universe '{u_def.name}'."
+                    )
+                    warnings.append(warning_msg)
+                    issues.append(ConditionValidationIssueDTO(
+                        condition_id=f.condition_id,
+                        filter_id=f.filter_id,
+                        code="SCREENER_UNIVERSE_INCOMPATIBILITY",
+                        severity="warning",
+                        message=warning_msg,
+                    ))
+
             if f.operator not in f_def.allowed_operators:
+                reason = f"Operator '{f.operator}' not allowed for '{f.filter_id}'. Allowed: {[op.value for op in f_def.allowed_operators]}."
                 rejected_filters.append({
                     "filter_id": f.filter_id,
-                    "reason": f"Operator '{f.operator}' not allowed for '{f.filter_id}'. Allowed: {[op.value for op in f_def.allowed_operators]}.",
+                    "condition_id": f.condition_id,
+                    "reason": reason,
                     "code": "SCREENER_OPERATOR_NOT_SUPPORTED",
                 })
+                issues.append(ConditionValidationIssueDTO(
+                    condition_id=f.condition_id,
+                    filter_id=f.filter_id,
+                    field_path="operator",
+                    code="SCREENER_OPERATOR_NOT_SUPPORTED",
+                    severity="error",
+                    message=reason,
+                ))
                 continue
 
             # Validate range
             if f.operator == FilterOperator.BETWEEN:
-                if f.secondary_value is None:
+                if f.secondary_value is None or str(f.secondary_value).strip() == "":
+                    reason = "Operator BETWEEN requires both a lower value and a secondary_value upper bound."
                     rejected_filters.append({
                         "filter_id": f.filter_id,
-                        "reason": "Operator BETWEEN requires both a lower value and a secondary_value upper bound.",
+                        "condition_id": f.condition_id,
+                        "reason": reason,
                         "code": "SCREENER_RANGE_INVALID",
                     })
+                    issues.append(ConditionValidationIssueDTO(
+                        condition_id=f.condition_id,
+                        filter_id=f.filter_id,
+                        field_path="secondary_value",
+                        code="SCREENER_RANGE_INVALID",
+                        severity="error",
+                        message=reason,
+                    ))
                     continue
                 try:
                     d1 = Decimal(str(f.value))
                     d2 = Decimal(str(f.secondary_value))
                     if d1 > d2:
+                        reason = f"Range lower bound ({d1}) cannot exceed upper bound ({d2})."
                         rejected_filters.append({
                             "filter_id": f.filter_id,
-                            "reason": f"Range lower bound ({d1}) cannot exceed upper bound ({d2}).",
+                            "condition_id": f.condition_id,
+                            "reason": reason,
                             "code": "SCREENER_RANGE_INVALID",
                         })
+                        issues.append(ConditionValidationIssueDTO(
+                            condition_id=f.condition_id,
+                            filter_id=f.filter_id,
+                            field_path="secondary_value",
+                            code="SCREENER_RANGE_INVALID",
+                            severity="error",
+                            message=reason,
+                        ))
                         continue
                 except (InvalidOperation, TypeError, ValueError):
+                    reason = "Numeric values could not be parsed for range comparison."
                     rejected_filters.append({
                         "filter_id": f.filter_id,
-                        "reason": "Numeric values could not be parsed for range comparison.",
+                        "condition_id": f.condition_id,
+                        "reason": reason,
                         "code": "SCREENER_VALUE_TYPE_INVALID",
                     })
+                    issues.append(ConditionValidationIssueDTO(
+                        condition_id=f.condition_id,
+                        filter_id=f.filter_id,
+                        field_path="value",
+                        code="SCREENER_VALUE_TYPE_INVALID",
+                        severity="error",
+                        message=reason,
+                    ))
                     continue
 
             # Validate numeric types
@@ -240,31 +311,197 @@ class ScreenerService:
                     try:
                         d_val = Decimal(str(f.value))
                         if not math.isfinite(float(d_val)):
+                            reason = "Non-finite values (NaN / Inf) are prohibited."
                             rejected_filters.append({
                                 "filter_id": f.filter_id,
-                                "reason": "Non-finite values (NaN / Inf) are prohibited.",
+                                "condition_id": f.condition_id,
+                                "reason": reason,
                                 "code": "SCREENER_VALUE_TYPE_INVALID",
                             })
+                            issues.append(ConditionValidationIssueDTO(
+                                condition_id=f.condition_id,
+                                filter_id=f.filter_id,
+                                field_path="value",
+                                code="SCREENER_VALUE_TYPE_INVALID",
+                                severity="error",
+                                message=reason,
+                            ))
                             continue
                     except (InvalidOperation, TypeError, ValueError):
+                        reason = f"Expected numeric decimal value for '{f.filter_id}', got '{f.value}'."
                         rejected_filters.append({
                             "filter_id": f.filter_id,
-                            "reason": f"Expected numeric decimal value for '{f.filter_id}', got '{f.value}'.",
+                            "condition_id": f.condition_id,
+                            "reason": reason,
                             "code": "SCREENER_VALUE_TYPE_INVALID",
                         })
+                        issues.append(ConditionValidationIssueDTO(
+                            condition_id=f.condition_id,
+                            filter_id=f.filter_id,
+                            field_path="value",
+                            code="SCREENER_VALUE_TYPE_INVALID",
+                            severity="error",
+                            message=reason,
+                        ))
                         continue
 
             accepted_filters.append(f)
 
+        # 2. Contradiction Detection across active conditions
+        # A. Numeric boundary contradiction detection
+        numeric_bounds: Dict[str, Dict[str, Any]] = {}
+        for f in accepted_filters:
+            f_def = self._repo.get_filter(f.filter_id)
+            if not f_def or f_def.value_type not in [ValueType.NUMERIC, ValueType.CURRENCY, ValueType.PERCENTAGE, ValueType.INTEGER]:
+                continue
+            if f.operator == FilterOperator.IN:
+                continue
+
+            fid = f.filter_id
+            if fid not in numeric_bounds:
+                numeric_bounds[fid] = {
+                    "min_val": None,
+                    "min_strict": False,
+                    "min_condition_id": None,
+                    "max_val": None,
+                    "max_strict": False,
+                    "max_condition_id": None,
+                    "eq_val": None,
+                    "eq_condition_id": None,
+                }
+            nb = numeric_bounds[fid]
+
+            try:
+                if f.operator in [FilterOperator.GT, FilterOperator.GTE]:
+                    val_dec = Decimal(str(f.value))
+                    is_strict = f.operator == FilterOperator.GT
+                    if nb["min_val"] is None or val_dec > nb["min_val"] or (val_dec == nb["min_val"] and is_strict):
+                        nb["min_val"] = val_dec
+                        nb["min_strict"] = is_strict
+                        nb["min_condition_id"] = f.condition_id
+                elif f.operator in [FilterOperator.LT, FilterOperator.LTE]:
+                    val_dec = Decimal(str(f.value))
+                    is_strict = f.operator == FilterOperator.LT
+                    if nb["max_val"] is None or val_dec < nb["max_val"] or (val_dec == nb["max_val"] and is_strict):
+                        nb["max_val"] = val_dec
+                        nb["max_strict"] = is_strict
+                        nb["max_condition_id"] = f.condition_id
+                elif f.operator == FilterOperator.EQ:
+                    val_dec = Decimal(str(f.value))
+                    if nb["eq_val"] is not None and nb["eq_val"] != val_dec:
+                        contradictions_detected = True
+                        reason = f"Contradictory equality conditions on '{fid}': cannot equal both {nb['eq_val']} and {val_dec}."
+                        rejected_filters.append({
+                            "filter_id": fid,
+                            "condition_id": f.condition_id,
+                            "reason": reason,
+                            "code": "SCREENER_CONTRADICTORY_CONDITIONS",
+                        })
+                        issues.append(ConditionValidationIssueDTO(
+                            condition_id=f.condition_id,
+                            filter_id=fid,
+                            code="SCREENER_CONTRADICTORY_CONDITIONS",
+                            severity="error",
+                            message=reason,
+                        ))
+                    nb["eq_val"] = val_dec
+                    nb["eq_condition_id"] = f.condition_id
+                elif f.operator == FilterOperator.BETWEEN and f.secondary_value is not None:
+                    d_low = Decimal(str(f.value))
+                    d_high = Decimal(str(f.secondary_value))
+                    if nb["min_val"] is None or d_low > nb["min_val"]:
+                        nb["min_val"] = d_low
+                        nb["min_strict"] = False
+                        nb["min_condition_id"] = f.condition_id
+                    if nb["max_val"] is None or d_high < nb["max_val"]:
+                        nb["max_val"] = d_high
+                        nb["max_strict"] = False
+                        nb["max_condition_id"] = f.condition_id
+            except (InvalidOperation, TypeError, ValueError):
+                pass
+
+        for fid, nb in numeric_bounds.items():
+            if nb["min_val"] is not None and nb["max_val"] is not None:
+                if nb["min_val"] > nb["max_val"]:
+                    contradictions_detected = True
+                    reason = (
+                        f"Contradictory conditions on '{fid}': lower bound ({nb['min_val']}) "
+                        f"strictly exceeds upper bound ({nb['max_val']}). No securities can satisfy this query."
+                    )
+                    rejected_filters.append({
+                        "filter_id": fid,
+                        "condition_id": nb["max_condition_id"],
+                        "reason": reason,
+                        "code": "SCREENER_CONTRADICTORY_CONDITIONS",
+                    })
+                    issues.append(ConditionValidationIssueDTO(
+                        condition_id=nb["max_condition_id"],
+                        filter_id=fid,
+                        code="SCREENER_CONTRADICTORY_CONDITIONS",
+                        severity="error",
+                        message=reason,
+                    ))
+                elif nb["min_val"] == nb["max_val"] and (nb["min_strict"] or nb["max_strict"]):
+                    contradictions_detected = True
+                    reason = (
+                        f"Contradictory conditions on '{fid}': strict inequality on matching boundary ({nb['min_val']}) "
+                        f"renders predicate impossible to satisfy."
+                    )
+                    rejected_filters.append({
+                        "filter_id": fid,
+                        "condition_id": nb["max_condition_id"] or nb["min_condition_id"],
+                        "reason": reason,
+                        "code": "SCREENER_CONTRADICTORY_CONDITIONS",
+                    })
+                    issues.append(ConditionValidationIssueDTO(
+                        condition_id=nb["max_condition_id"] or nb["min_condition_id"],
+                        filter_id=fid,
+                        code="SCREENER_CONTRADICTORY_CONDITIONS",
+                        severity="error",
+                        message=reason,
+                    ))
+
+        # B. Single-valued Enum contradiction detection
+        single_valued_fields = {"sector", "industry", "exchange_mic", "listing_country_code", "issuer_country_code"}
+        enum_eq_seen: Dict[str, Tuple[str, Optional[str]]] = {}
+        for f in accepted_filters:
+            if f.filter_id in single_valued_fields and f.operator == FilterOperator.EQ:
+                str_val = str(f.value).strip().lower()
+                if f.filter_id in enum_eq_seen:
+                    prev_val, prev_cid = enum_eq_seen[f.filter_id]
+                    if prev_val != str_val:
+                        contradictions_detected = True
+                        reason = (
+                            f"Contradictory equality conditions on single-valued classification '{f.filter_id}': "
+                            f"cannot match both '{prev_val}' and '{str_val}' simultaneously."
+                        )
+                        rejected_filters.append({
+                            "filter_id": f.filter_id,
+                            "condition_id": f.condition_id,
+                            "reason": reason,
+                            "code": "SCREENER_CONTRADICTORY_CONDITIONS",
+                        })
+                        issues.append(ConditionValidationIssueDTO(
+                            condition_id=f.condition_id,
+                            filter_id=f.filter_id,
+                            code="SCREENER_CONTRADICTORY_CONDITIONS",
+                            severity="error",
+                            message=reason,
+                        ))
+                else:
+                    enum_eq_seen[f.filter_id] = (str_val, f.condition_id)
+
         # Universe size calculation
         universe_candidates = self._prefilter_universe(request)
 
-        is_valid = len(rejected_filters) == 0
+        is_valid = len(rejected_filters) == 0 and not contradictions_detected
         return ValidationResponseDTO(
             valid=is_valid,
-            accepted_filters=accepted_filters,
+            accepted_filters=accepted_filters if is_valid else [],
             rejected_filters=rejected_filters,
+            issues=issues,
             warnings=warnings,
+            contradictions_detected=contradictions_detected,
             eligible_universe_size=len(universe_candidates),
         )
 
