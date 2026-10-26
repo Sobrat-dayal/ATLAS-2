@@ -655,6 +655,28 @@ def clarify_nl_query(
         )
 
 
+@router.post(
+    "/nl/modify",
+    response_model=NLTranslationProposalDTO,
+    summary="Propose changes to an existing screener draft via natural language",
+)
+def modify_nl_query(
+    request: NLTranslateRequestDTO,
+    principal: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> NLTranslationProposalDTO:
+    """Modifies an existing screener draft, calculating additions, updates, and removals."""
+    try:
+        return nl_translation_engine.modify(request)
+    except NLScreenerError as e:
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
+    except ScreenerError as e:
+        raise HTTPException(
+            status_code=e.status_code, detail={"code": e.code, "message": e.message}
+        )
+
+
 @router.get(
     "/nl/capabilities",
     response_model=NLCapabilitiesResponseDTO,

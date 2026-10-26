@@ -66,13 +66,14 @@ MAX_REQUEST_LENGTH = 1000
 # Security & Prompt-Injection Patterns
 # =============================================================================
 _ADVERSARIAL_PATTERNS = [
-    re.compile(r"ignore\s+(all\s+)?(previous|prior)\s+instructions", re.IGNORECASE),
+    re.compile(r"ignore\s+(all\s+)?(previous\s+|prior\s+)?instructions", re.IGNORECASE),
     re.compile(r"reveal\s+(system\s+prompt|credentials|api\s*keys?)", re.IGNORECASE),
     re.compile(r"(select\s+.*\s+from\s+|drop\s+table|delete\s+from|insert\s+into)", re.IGNORECASE),
     re.compile(r"(\bexec\b|\beval\b|\bexecute\s+sql\b|<script[\s>])", re.IGNORECASE),
     re.compile(r"buy\s+the\s+matched\s+stocks|place\s+order|execute\s+trade", re.IGNORECASE),
-    re.compile(r"disable\s+(the\s+)?(entitlement|authorization|security|check)", re.IGNORECASE),
+    re.compile(r"disable\s+(the\s+)?(screener\s+)?(entitlement|authorization|security|check)", re.IGNORECASE),
     re.compile(r"print\s+(your\s+)?system\s+prompt", re.IGNORECASE),
+    re.compile(r"return\s+(every|all)\s+user('?s)?\s+saved\s+screens", re.IGNORECASE),
 ]
 
 
@@ -143,6 +144,11 @@ CANONICAL_FILTER_SYNONYMS: Dict[str, str] = {
     "closing price": "last_price",
     "close price": "last_price",
     "price": "last_price",
+    "priced": "last_price",
+    "priced at": "last_price",
+    "priced under": "last_price",
+    "priced below": "last_price",
+    "priced above": "last_price",
     "price change": "price_change_pct",
     "return": "price_change_pct",
     "price change %": "price_change_pct",
@@ -650,7 +656,13 @@ class NLScreenerTranslationEngine:
         # Sectors (handles same-field OR cleanly, e.g. "Technology or Healthcare")
         matched_sectors: Set[str] = set()
         for s_term, s_name in CANONICAL_SECTORS.items():
-            if re.search(rf"\b{s_term}\b", lower_text):
+            if s_term == "financial":
+                if re.search(
+                    r"\bfinancial\s+(sector|services|industry|stocks?|companies|equity|equities)\b",
+                    lower_text,
+                ):
+                    matched_sectors.add(s_name)
+            elif re.search(rf"\b{s_term}\b", lower_text):
                 matched_sectors.add(s_name)
 
         if matched_sectors:
@@ -1205,6 +1217,32 @@ class NLScreenerTranslationEngine:
                     break
 
             if not matched_metric:
+                if any(
+                    w in c_lower
+                    for w in [
+                        "metric",
+                        "indicator",
+                        "factor",
+                        "score",
+                        "guaranteed",
+                        "forecast",
+                        "predict",
+                        "called",
+                    ]
+                ):
+                    unsupported.append(
+                        f"Unsupported or unapproved financial metric: '{clause}'"
+                    )
+                    requirements.append(
+                        NLRequirementResolutionDTO(
+                            requirement_id=f"req_{len(requirements) + 1}",
+                            source_text=clause,
+                            interpreted_concept=None,
+                            resolved_filter_id=None,
+                            status=NLRequirementStatus.UNSUPPORTED,
+                            explanation="Metric is not registered in the canonical 70-filter catalog.",
+                        )
+                    )
                 continue
 
             # Find operator in clause
@@ -1307,6 +1345,20 @@ class NLScreenerTranslationEngine:
                 removed_conditions=removed,
             )
 
+            # Build the modified active filter set
+            merged_filters: List[FilterCriterionDTO] = []
+            for ef in request.current_filters:
+                if ef.filter_id in removed:
+                    continue
+                upd = next((uf for uf in updated if uf.filter_id == ef.filter_id), None)
+                if upd:
+                    merged_filters.append(upd)
+                else:
+                    merged_filters.append(ef)
+            for af in added:
+                merged_filters.append(af)
+            filters = merged_filters
+
         # 9. Determine Status & Readiness
         if ambiguities:
             status = NLTranslationStatus.NEEDS_CLARIFICATION
@@ -1408,6 +1460,11 @@ class NLScreenerTranslationEngine:
             f"Clarified '{request.ambiguity_id}' using option '{request.selected_option_id}'."
         )
         return updated_proposal
+
+    def modify(self, request: NLTranslateRequestDTO) -> NLTranslationProposalDTO:
+        """Modifies an existing screener draft using natural language instructions."""
+        request.mode = NLTranslationMode.MODIFY_CURRENT_DRAFT
+        return self.translate(request)
 
 
 # Singleton natural language translation engine

@@ -196,6 +196,13 @@ export function ScreenerWorkspace() {
         />
       ) : (
         <NaturalLanguageScreener
+          activeFilters={activeFilters}
+          currentUniverse={{
+            universe_id: selectedUniverseId,
+            exchange_mics: selectedExchanges,
+            listing_country_codes: selectedCountries,
+            sectors: selectedSectors,
+          }}
           onTransferToBuilder={(filters, universe) => {
             applyNLProposal(filters, universe, undefined, false);
             setFilterMode("visual");

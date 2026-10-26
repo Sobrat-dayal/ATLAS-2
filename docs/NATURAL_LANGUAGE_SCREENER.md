@@ -209,14 +209,29 @@ Resolves ambiguous requirements with explicit user selections.
 **Request (`NLClarifyRequestDTO`)**:
 ```json
 {
-  "proposal_id": "nl-54e7d4bc-87c2",
-  "selected_options": {
-    "ambig-valuation-pe": "pe_lt_15"
-  }
+  "proposal_id": "nlp_54e7d4bc87c2",
+  "original_text": "Find cheap Indian banking stocks",
+  "ambiguity_id": "amb_cheap",
+  "selected_option_id": "opt_pe_20"
 }
 ```
 
-### 6.3 `GET /screeners/nl/capabilities`
+### 6.3 `POST /screeners/nl/modify`
+Proposes natural language additions, updates, and removals against an active screener draft.
+
+**Request (`NLTranslateRequestDTO`)**:
+```json
+{
+  "text": "Change P/E to below 18 and remove market cap and add RSI below 30",
+  "mode": "modify_current_draft",
+  "current_filters": [
+    {"filter_id": "pe_ratio", "operator": "lt", "value": 25.0},
+    {"filter_id": "market_cap", "operator": "gte", "value": 10000000000.0}
+  ]
+}
+```
+
+### 6.4 `GET /screeners/nl/capabilities`
 Returns the translation engine's supported filters, aliases, indicators, and capabilities manifest.
 
 ---
@@ -225,15 +240,15 @@ Returns the translation engine's supported filters, aliases, indicators, and cap
 
 The web client integrates Stage 98 into the `/screeners` workspace:
 1. **Mode Switcher**: Easily toggle between **Visual Filters** (manual rule builder) and **Natural Language (AI)** translation.
-2. **Interactive Prompt Console**: Input natural language financial queries with quick-fill institutional examples.
-3. **Translation Review Panel**:
-   - Status badge (`COMPLETE`, `AMBIGUOUS`, `UNSUPPORTED`).
-   - Confidence indicator ($0\%$ to $100\%$).
-   - Plain-English interpretation overview.
-   - Disambiguation questions with instant selectable options.
+2. **Draft Modification Support**: Seamlessly toggle between "New Screen" and "Modify Draft" when active filters are present on the canvas.
+3. **Interactive Prompt Console**: Input natural language financial queries with quick-fill institutional examples.
+4. **Translation Review Panel**:
+   - Status badge (`VALID`, `NEEDS_CLARIFICATION`, `UNSUPPORTED`).
+   - Plain-English interpretation overview and coverage count.
+   - Disambiguation questions with instant selectable options (`TranslationAmbiguityPanel`).
+   - Query Modification Diff (`TranslationDiff`) rendering added, updated, and removed conditions.
    - Filter preview chips showing metric, operator, value, currency, and parameters.
-   - Diff badges for query modification (Added, Modified, Removed, Retained).
-4. **Action Handlers**:
+5. **Action Handlers**:
    - **Apply & Run Screener**: Immediately executes the translated proposal and populates the results table.
    - **Transfer to Visual Builder**: Hands off the generated filters to the visual builder for manual fine-tuning.
 
@@ -243,12 +258,13 @@ The web client integrates Stage 98 into the `/screeners` workspace:
 
 Stage 98 has been verified across both backend and frontend test suites:
 - **Backend (Pytest)**:
-  - `apps/api/tests/test_screener_nl_translation.py`: 29 test cases covering golden queries, magnitudes (crores, lakhs, billions), currency resolution, technical indicators, ambiguity prompts, interactive clarification, security validation, and API endpoints. All 29 passed.
-  - Complete Screener Suite (Stages 94–98): 95 test cases across `python/atlas` and `apps/api` all passing cleanly.
-  - Ruff Linter & Formatter: 0 errors.
+  - `apps/api/tests/test_screener_nl_translation.py`: 36 test cases covering golden queries, magnitudes (crores, lakhs, billions), currency resolution, technical indicators, boundary semantics, ambiguity prompts, interactive clarification, draft modification diffs, security validation, and all 4 API endpoints (`/nl/translate`, `/nl/clarify`, `/nl/modify`, `/nl/capabilities`). All 36 passed.
+  - Complete Screener Suite (Stages 94–98): 102 test cases across `python/atlas` and `apps/api` all passing cleanly.
+  - Ruff Linter & Formatter: 0 errors across screener routers and translation modules.
 - **Frontend (Node/TSX)**:
   - `apps/web/src/lib/screeners/__tests__/stage98_nl_translation.test.ts`: 27 tests covering request construction, proposal validation, ambiguity rendering, unsupported handling, diff calculation, and execution compilation. All 27 passed.
   - TypeScript Compilation: `tsc --noEmit` exits with 0 errors.
+  - Production Build: `pnpm build` creates an optimized production build with 0 errors across all routes.
 
 ---
 

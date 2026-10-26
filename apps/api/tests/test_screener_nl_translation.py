@@ -442,3 +442,109 @@ def test_api_nl_clarify_authenticated(test_client):
     data = resp.json()
     assert data["status"] == "valid"
     assert any(f["filter_id"] == "pe_ratio" for f in data["filters"])
+
+
+def test_api_nl_modify_authenticated(test_client):
+    """POST /api/v1/screeners/nl/modify calculates diff and returns merged proposal."""
+    payload = {
+        "text": "Change P/E to below 18 and remove market cap and add RSI below 30",
+        "current_filters": [
+            {"filter_id": "pe_ratio", "operator": "lt", "value": 25.0},
+            {"filter_id": "market_cap", "operator": "gte", "value": 10000000000.0},
+        ],
+    }
+    resp = test_client.post("/api/v1/screeners/nl/modify", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "valid"
+    assert data["modification_diff"] is not None
+    diff = data["modification_diff"]
+    assert any(f["filter_id"] == "pe_ratio" and f["value"] == 18.0 for f in diff["updated_conditions"])
+    assert any(f["filter_id"] == "rsi_14" and f["value"] == 30.0 for f in diff["added_conditions"])
+    assert "market_cap" in diff["removed_conditions"]
+    assert any(f["filter_id"] == "pe_ratio" and f["value"] == 18.0 for f in data["filters"])
+    assert any(f["filter_id"] == "rsi_14" and f["value"] == 30.0 for f in data["filters"])
+    assert not any(f["filter_id"] == "market_cap" for f in data["filters"])
+
+
+# =============================================================================
+# 10. Single Factor and Boundary Tests (Section 383, 384)
+# =============================================================================
+
+
+def test_single_factor_queries():
+    """Validates single-factor requests across valuation, revenue, price, and dividend."""
+    # Stocks with P/E below 20
+    p1 = nl_translation_engine.translate(NLTranslateRequestDTO(text="Stocks with P/E below 20"))
+    assert p1.status == NLTranslationStatus.VALID
+    assert any(f.filter_id == "pe_ratio" and f.operator == FilterOperator.LT and f.value == 20.0 for f in p1.filters)
+
+    # Companies with revenue above 1 billion USD
+    p2 = nl_translation_engine.translate(NLTranslateRequestDTO(text="Companies with revenue above 1 billion USD"))
+    assert p2.status == NLTranslationStatus.VALID
+    assert any(f.filter_id == "revenue" and f.operator == FilterOperator.GT and f.value == 1000000000.0 for f in p2.filters)
+
+    # Stocks priced below 100 INR
+    p3 = nl_translation_engine.translate(NLTranslateRequestDTO(text="Stocks priced below 100 INR"))
+    assert p3.status == NLTranslationStatus.VALID
+    assert any(f.filter_id == "last_price" and f.operator == FilterOperator.LT and f.value == 100.0 for f in p3.filters)
+
+    # Equities with market cap above 10 billion USD
+    p4 = nl_translation_engine.translate(NLTranslateRequestDTO(text="Equities with market cap above 10 billion USD"))
+    assert p4.status == NLTranslationStatus.VALID
+    assert any(f.filter_id == "market_cap" and f.operator == FilterOperator.GT and f.value == 10000000000.0 for f in p4.filters)
+
+    # Stocks with dividend yield above 3%
+    p5 = nl_translation_engine.translate(NLTranslateRequestDTO(text="Stocks with dividend yield above 3%"))
+    assert p5.status == NLTranslationStatus.VALID
+    assert any(f.filter_id == "dividend_yield" and f.operator == FilterOperator.GT and f.value == 3.0 for f in p5.filters)
+
+
+def test_boundary_operator_semantics():
+    """Validates boundary semantics: above, at least, below, at most, exactly."""
+    p_gt = nl_translation_engine.translate(NLTranslateRequestDTO(text="P/E above 10"))
+    assert p_gt.filters[0].operator == FilterOperator.GT
+
+    p_gte = nl_translation_engine.translate(NLTranslateRequestDTO(text="P/E at least 10"))
+    assert p_gte.filters[0].operator == FilterOperator.GTE
+
+    p_lt = nl_translation_engine.translate(NLTranslateRequestDTO(text="P/E below 10"))
+    assert p_lt.filters[0].operator == FilterOperator.LT
+
+    p_lte = nl_translation_engine.translate(NLTranslateRequestDTO(text="P/E at most 10"))
+    assert p_lte.filters[0].operator == FilterOperator.LTE
+
+    p_eq = nl_translation_engine.translate(NLTranslateRequestDTO(text="P/E exactly 10"))
+    assert p_eq.filters[0].operator == FilterOperator.EQ
+
+
+def test_international_units_extended():
+    """Verifies additional international units like 2.5 billion EUR."""
+    v1, c1, _ = parse_financial_number("2.5 billion EUR")
+    assert v1 == Decimal("2500000000")
+    assert c1 == "EUR"
+
+
+def test_malformed_and_nonfinite_numbers_rejected():
+    """Verifies rejection of non-numeric, NaN, or Infinity strings."""
+    with pytest.raises(ValueError):
+        parse_financial_number("unparsable_text")
+    with pytest.raises(ValueError):
+        parse_financial_number("NaN")
+    with pytest.raises(ValueError):
+        parse_financial_number("Infinity")
+
+
+def test_nonexistent_financial_metric_reported():
+    """A nonexistent metric is reported with status INVALID or UNSUPPORTED, never hallucinated."""
+    p = nl_translation_engine.translate(NLTranslateRequestDTO(text="Use a nonexistent financial metric called guaranteed_profit"))
+    assert p.status in [NLTranslationStatus.UNSUPPORTED, NLTranslationStatus.INVALID]
+    assert p.ready_for_review is False
+    assert len(p.filters) == 0
+
+
+def test_read_only_side_effects():
+    """Verifies translation is completely read-only and causes zero side-effects."""
+    req = NLTranslateRequestDTO(text="Find Indian companies with market cap above 50000 crore INR")
+    prop = nl_translation_engine.translate(req)
+    assert prop.status == NLTranslationStatus.VALID

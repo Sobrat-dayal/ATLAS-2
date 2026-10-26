@@ -9514,10 +9514,11 @@ This document records the major architectural and product decisions established.
 574. Query modification diffing provides granular transparency into added, modified, retained, and removed filters when editing existing screens via natural language.
 
 ### Verification & Hand-off
-575. Stage 98 passes comprehensive backend tests (29 test cases covering parsing, currencies, magnitudes, technicals, ambiguities, clarifications, security, and router endpoints).
-576. Stage 98 passes comprehensive frontend tests (27 unit and integration tests covering types, requests, proposals, diffing, and condition conversion).
-577. Stage 98 completes the 5-stage Screener series (Stages 94, 95, 96, 97, 98).
-578. Stage 99 (News module) is the next canonical roadmap stage; no Stage 99 implementation is started during Stage 98.
+575. Stage 98 passes comprehensive backend tests (36 test cases in test_screener_nl_translation.py covering parsing, currencies, magnitudes, technicals, single-factor queries, boundary semantics, ambiguities, clarifications, draft modifications, security injections, and all 4 router endpoints).
+576. Stage 98 passes full regression testing across Stages 94–98 (102 backend tests in apps/api passing cleanly, 0 ruff errors).
+577. Stage 98 passes comprehensive frontend tests (27 unit and integration tests in apps/web covering types, requests, proposals, diffing, and condition conversion; tsc --noEmit passes with 0 errors; pnpm build passes with 0 errors).
+578. Stage 98 completes the 5-stage Screener series (Stages 94, 95, 96, 97, 98).
+579. Stage 99 (News module) is the next canonical roadmap stage; no Stage 99 implementation is started during Stage 98.
 
 
 

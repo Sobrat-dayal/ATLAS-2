@@ -323,6 +323,20 @@ export async function clarifyNLQuery(
   return handleResponse<import("./types").NLTranslationProposal>(res);
 }
 
+export async function modifyNLQuery(
+  req: import("./types").NLTranslateRequest,
+  signal?: AbortSignal
+): Promise<import("./types").NLTranslationProposal> {
+  const url = `${getBaseApiUrl()}/api/v1/screeners/nl/modify`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(req),
+    signal,
+  });
+  return handleResponse<import("./types").NLTranslationProposal>(res);
+}
+
 export async function fetchNLCapabilities(
   signal?: AbortSignal
 ): Promise<import("./types").NLCapabilitiesResponse> {

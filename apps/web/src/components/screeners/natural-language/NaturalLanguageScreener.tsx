@@ -14,7 +14,7 @@ import {
   SortCriterion,
   UniverseSelection,
 } from "@/lib/screeners/types";
-import { clarifyNLQuery, translateNLQuery } from "@/lib/screeners/api";
+import { clarifyNLQuery, modifyNLQuery, translateNLQuery } from "@/lib/screeners/api";
 import { TranslationReviewPanel } from "./TranslationReviewPanel";
 
 interface NaturalLanguageScreenerProps {
@@ -25,6 +25,8 @@ interface NaturalLanguageScreenerProps {
     sort: SortCriterion[]
   ) => void;
   currencyPolicy?: string;
+  activeFilters?: FilterCriterion[];
+  currentUniverse?: UniverseSelection;
 }
 
 const EXAMPLE_PROMPTS = [
@@ -48,6 +50,11 @@ const EXAMPLE_PROMPTS = [
     prompt:
       "Find Indian stocks with market cap between 5000 crore and 20000 crore INR, revenue growth over 20% and relative volume above 1.5.",
   },
+  {
+    title: "Modify Active Screen",
+    prompt:
+      "Change P/E to below 18 and remove market cap and add RSI below 30",
+  },
 ];
 
 const MAX_CHARS = 1000;
@@ -56,12 +63,15 @@ export function NaturalLanguageScreener({
   onTransferToBuilder,
   onApplyAndRun,
   currencyPolicy = "USD",
+  activeFilters = [],
+  currentUniverse,
 }: NaturalLanguageScreenerProps) {
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
   const [isClarifying, setIsClarifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [proposal, setProposal] = useState<NLTranslationProposal | null>(null);
+  const [mode, setMode] = useState<"create_new_query" | "modify_current_draft">("create_new_query");
 
   const handleTranslate = async (textToTranslate?: string) => {
     const q = (textToTranslate ?? inputText).trim();
@@ -78,10 +88,19 @@ export function NaturalLanguageScreener({
     setError(null);
 
     try {
-      const res = await translateNLQuery({
-        text: q,
-        currency_policy: currencyPolicy,
-      });
+      const isModify = mode === "modify_current_draft";
+      const res = isModify
+        ? await modifyNLQuery({
+            text: q,
+            mode: "modify_current_draft",
+            current_filters: activeFilters,
+            currency_policy: currencyPolicy,
+          })
+        : await translateNLQuery({
+            text: q,
+            mode: "create_new_query",
+            currency_policy: currencyPolicy,
+          });
       setProposal(res);
     } catch (err: any) {
       setError(err?.message || "Failed to translate natural-language screening instructions.");
@@ -137,6 +156,32 @@ export function NaturalLanguageScreener({
             <h2 className="text-sm font-semibold tracking-tight text-foreground">
               Natural-Language Financial Screen Translation
             </h2>
+            {activeFilters.length > 0 && (
+              <div className="flex items-center gap-1 ml-2 rounded-md border border-border/60 bg-muted/40 p-0.5 text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => setMode("create_new_query")}
+                  className={`rounded px-2.5 py-0.5 text-[11px] transition-colors ${
+                    mode === "create_new_query"
+                      ? "bg-card text-foreground shadow-xs border border-border/80"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  New Screen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("modify_current_draft")}
+                  className={`rounded px-2.5 py-0.5 text-[11px] transition-colors ${
+                    mode === "modify_current_draft"
+                      ? "bg-card text-primary font-semibold shadow-xs border border-primary/30"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Modify Draft ({activeFilters.length})
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
@@ -157,7 +202,11 @@ export function NaturalLanguageScreener({
               if (error) setError(null);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Describe the stocks you want to find using financial conditions (e.g. Find Indian large-cap stocks with revenue growth above 15%, positive free cash flow, P/E below 25 and price above the 200-day moving average)..."
+            placeholder={
+              mode === "modify_current_draft"
+                ? "Describe modifications to your active screen (e.g. Change P/E to below 18, remove market cap, add RSI below 30)..."
+                : "Describe the stocks you want to find using financial conditions (e.g. Find Indian large-cap stocks with revenue growth above 15%, positive free cash flow, P/E below 25 and price above the 200-day moving average)..."
+            }
             rows={3}
             className="w-full resize-none rounded-md border border-border/80 bg-background/80 p-3 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-primary focus:bg-background focus:outline-none focus:ring-1 focus:ring-primary font-sans"
           />

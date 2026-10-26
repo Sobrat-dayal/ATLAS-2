@@ -405,6 +405,7 @@ CANONICAL_FILTERS: List[ScreenerFilterDefinition] = [
             FilterOperator.GTE,
             FilterOperator.LT,
             FilterOperator.LTE,
+            FilterOperator.EQ,
             FilterOperator.BETWEEN,
         ],
         default_operator=FilterOperator.LTE,
