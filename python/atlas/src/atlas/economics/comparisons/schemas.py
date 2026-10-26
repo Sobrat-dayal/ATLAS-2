@@ -60,6 +60,13 @@ class CountryMetricObservationDTO(BaseModel):
     methodology_qualifications: List[str] = Field(default_factory=list)
 
 
+class ComparisonEligibilityRequestDTO(BaseModel):
+    """Request payload for checking metric comparability."""
+    geography_id: Optional[str] = None
+    geography_ids: Optional[List[str]] = None
+    metric_kind: ComparisonMetricKind
+
+
 class ComparisonEligibilityRecordDTO(BaseModel):
     """Comparability evaluation DTO."""
     model_config = ConfigDict(from_attributes=True)
@@ -70,6 +77,7 @@ class ComparisonEligibilityRecordDTO(BaseModel):
     is_eligible: bool
     reasons: List[str] = Field(default_factory=list)
     caveats: List[str] = Field(default_factory=list)
+
 
 
 class MatrixCellDTO(BaseModel):
@@ -285,3 +293,32 @@ class MacroCoverageSummaryDTO(BaseModel):
     total_observations_count: int
     harmonized_sources: List[str]
     methodology_qualifications: List[str]
+
+
+class CohortAggregateRequestDTO(BaseModel):
+    """Request payload for group and regional aggregate computations."""
+    cohort_id: Optional[str] = None
+    geography_ids: Optional[List[str]] = None
+    metric_kind: ComparisonMetricKind
+    period: Optional[str] = None
+    weighting_policy: WeightingPolicy = WeightingPolicy.EQUAL_WEIGHT
+
+
+class CohortAggregateResponseDTO(BaseModel):
+    """Response payload for regional and cohort economic aggregation."""
+    model_config = ConfigDict(from_attributes=True)
+
+    cohort_id: Optional[str] = None
+    metric_kind: ComparisonMetricKind
+    aggregate_type: str  # "SUM", "WEIGHTED_AVERAGE", "OFFICIAL_PUBLISHED"
+    reference_period: str
+    value: Optional[float] = None
+    formatted_value: str
+    unit: str
+    is_official_source: bool = False
+    is_valid: bool = True
+    contributing_geographies: List[str] = Field(default_factory=list)
+    excluded_geographies: List[str] = Field(default_factory=list)
+    notes: List[str] = Field(default_factory=list)
+    overlap_warnings: List[str] = Field(default_factory=list)
+

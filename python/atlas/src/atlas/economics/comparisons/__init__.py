@@ -18,8 +18,10 @@ from .enums import (
 )
 from .errors import (
     MacroComparisonError,
+    MacroComparisonGeographicOverlapError,
     MacroComparisonIndicatorUnavailableError,
     MacroComparisonInsufficientSampleError,
+    MacroComparisonInvalidAggregationError,
     MacroComparisonInvalidGeographyError,
     MacroComparisonPeriodMismatchError,
     MacroComparisonQueryLimitExceededError,
@@ -41,8 +43,11 @@ from .models import (
 )
 from .repository import MacroComparisonsRepository
 from .schemas import (
+    CohortAggregateRequestDTO,
+    CohortAggregateResponseDTO,
     ComparableIndicatorDTO,
     ComparisonEligibilityRecordDTO,
+    ComparisonEligibilityRequestDTO,
     ComparisonMatrixRequestDTO,
     ComparisonMatrixResponseDTO,
     CorrelationAnalysisRequestDTO,
@@ -79,8 +84,10 @@ __all__ = [
     "WeightingPolicy",
     # Errors
     "MacroComparisonError",
+    "MacroComparisonGeographicOverlapError",
     "MacroComparisonIndicatorUnavailableError",
     "MacroComparisonInsufficientSampleError",
+    "MacroComparisonInvalidAggregationError",
     "MacroComparisonInvalidGeographyError",
     "MacroComparisonPeriodMismatchError",
     "MacroComparisonQueryLimitExceededError",
@@ -102,8 +109,11 @@ __all__ = [
     "MacroComparisonsRepository",
     "MacroComparisonsService",
     # Schemas
+    "CohortAggregateRequestDTO",
+    "CohortAggregateResponseDTO",
     "ComparableIndicatorDTO",
     "ComparisonEligibilityRecordDTO",
+    "ComparisonEligibilityRequestDTO",
     "ComparisonMatrixRequestDTO",
     "ComparisonMatrixResponseDTO",
     "CorrelationAnalysisRequestDTO",

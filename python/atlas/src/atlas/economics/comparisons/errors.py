@@ -88,3 +88,26 @@ class MacroComparisonQueryLimitExceededError(MacroComparisonError):
         self.entity_type = entity_type
         self.count = count
         self.max_limit = max_limit
+
+
+class MacroComparisonGeographicOverlapError(MacroComparisonError):
+    """Raised when attempting naive aggregation across overlapping entities (e.g. Euro Area and Germany)."""
+    def __init__(self, parent_area: str, member_entities: List[str]):
+        super().__init__(
+            f"Geographic overlap detected: '{parent_area}' contains {', '.join(member_entities)}. Naive summation causes double counting.",
+            code="MACRO_COMPARISON_GEOGRAPHIC_OVERLAP",
+        )
+        self.parent_area = parent_area
+        self.member_entities = member_entities
+
+
+class MacroComparisonInvalidAggregationError(MacroComparisonError):
+    """Raised when attempting invalid mathematical aggregation (e.g. summing GDP growth rates or headline inflation)."""
+    def __init__(self, metric_name: str, reason: str):
+        super().__init__(
+            f"Invalid aggregation for metric '{metric_name}': {reason}",
+            code="MACRO_COMPARISON_INVALID_AGGREGATION",
+        )
+        self.metric_name = metric_name
+        self.reason = reason
+

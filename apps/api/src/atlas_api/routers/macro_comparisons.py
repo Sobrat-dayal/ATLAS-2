@@ -1,12 +1,16 @@
 """FastAPI Router for Institutional Macroeconomic Comparisons & Benchmarking (Stage 93)."""
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from atlas.economics.comparisons import (
+    CohortAggregateRequestDTO,
+    CohortAggregateResponseDTO,
     ComparableIndicatorDTO,
     ComparisonEligibilityRecordDTO,
+    ComparisonEligibilityRequestDTO,
     ComparisonMatrixRequestDTO,
     ComparisonMatrixResponseDTO,
+    ComparisonMetricKind,
     CorrelationAnalysisRequestDTO,
     CorrelationAnalysisResponseDTO,
     DistributionStatisticsRequestDTO,
@@ -75,23 +79,52 @@ def list_geographic_cohorts(
 
 @router.post(
     "/eligibility",
-    response_model=ComparisonEligibilityRecordDTO,
+    response_model=Union[ComparisonEligibilityRecordDTO, List[ComparisonEligibilityRecordDTO]],
     summary="Check statistical comparability between a country and metric",
 )
 def check_indicator_eligibility(
-    geography_id: str = Query(..., description="Geographic Entity ID, e.g., geo-us"),
-    metric_kind: str = Query(..., description="Canonical metric kind"),
+    geography_id: Optional[str] = Query(None, description="Geographic Entity ID, e.g., geo-us"),
+    metric_kind: Optional[str] = Query(None, description="Canonical metric kind"),
+    payload: Optional[ComparisonEligibilityRequestDTO] = None,
     service: MacroComparisonsService = Depends(get_comparison_service),
-) -> ComparisonEligibilityRecordDTO:
-    try:
-        from atlas.economics.comparisons.enums import ComparisonMetricKind
-        m = ComparisonMetricKind(metric_kind)
-        return service.check_eligibility(geography_id, m)
-    except ValueError:
+) -> Union[ComparisonEligibilityRecordDTO, List[ComparisonEligibilityRecordDTO]]:
+    target_metric = None
+    target_geo = geography_id
+    target_geos = []
+
+    if payload:
+        target_metric = payload.metric_kind
+        if payload.geography_id:
+            target_geo = payload.geography_id
+        if payload.geography_ids:
+            target_geos = payload.geography_ids
+
+    if metric_kind:
+        try:
+            target_metric = ComparisonMetricKind(metric_kind)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid metric kind: '{metric_kind}'",
+            )
+
+    if not target_metric:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid metric kind: '{metric_kind}'",
+            detail="Missing required parameter: 'metric_kind'",
         )
+
+    if target_geos:
+        return [service.check_eligibility(gid, target_metric) for gid in target_geos]
+
+    if not target_geo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing required parameter: 'geography_id'",
+        )
+
+    return service.check_eligibility(target_geo, target_metric)
+
 
 
 @router.post(
@@ -190,6 +223,23 @@ def calculate_correlations(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
 
 
+@router.post(
+    "/aggregates",
+    response_model=CohortAggregateResponseDTO,
+    summary="Compute qualified group aggregate or retrieve official published regional aggregate",
+)
+def calculate_aggregates(
+    payload: CohortAggregateRequestDTO,
+    service: MacroComparisonsService = Depends(get_comparison_service),
+) -> CohortAggregateResponseDTO:
+    try:
+        return service.calculate_aggregates(payload)
+    except MacroComparisonInsufficientSampleError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.message)
+    except MacroComparisonError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+
+
 @router.get(
     "/coverage",
     response_model=MacroCoverageSummaryDTO,
@@ -199,3 +249,4 @@ def get_coverage_summary(
     service: MacroComparisonsService = Depends(get_comparison_service),
 ) -> MacroCoverageSummaryDTO:
     return service.get_coverage_summary()
+

@@ -3,6 +3,8 @@
  */
 
 import {
+  CohortAggregateRequestDTO,
+  CohortAggregateResponseDTO,
   ComparableIndicatorDTO,
   ComparisonEligibilityRecordDTO,
   ComparisonMatrixRequestDTO,
@@ -20,6 +22,7 @@ import {
   HistoricalTrendsResponseDTO,
   MacroCoverageSummaryDTO,
 } from "./types";
+
 
 function getBaseApiUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -248,3 +251,20 @@ export async function getMacroCoverageSummary(): Promise<MacroCoverageSummaryDTO
   });
   return handleResponse<MacroCoverageSummaryDTO>(res);
 }
+
+/**
+ * Compute qualified group aggregate or retrieve official published regional aggregate.
+ */
+export async function getMacroAggregates(
+  request: CohortAggregateRequestDTO
+): Promise<CohortAggregateResponseDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/economics/comparisons/aggregates`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(request),
+    cache: "no-store",
+  });
+  return handleResponse<CohortAggregateResponseDTO>(res);
+}
+

@@ -13,6 +13,7 @@ from .enums import (
     ComparisonMetricKind,
     CompatibilityStatus,
     CorrelationMethod,
+    GeographicCohortKind,
     PeriodAlignmentPolicy,
     RankingDirection,
     TieBreakerPolicy,
@@ -29,6 +30,8 @@ from .models import (
 )
 from .repository import MacroComparisonsRepository
 from .schemas import (
+    CohortAggregateRequestDTO,
+    CohortAggregateResponseDTO,
     ComparableIndicatorDTO,
     ComparisonEligibilityRecordDTO,
     ComparisonMatrixRequestDTO,
@@ -414,8 +417,145 @@ class MacroComparisonsService:
         )
 
     # -------------------------------------------------------------------------
+    # Regional & Group Aggregates
+    # -------------------------------------------------------------------------
+
+    def calculate_aggregates(self, req: CohortAggregateRequestDTO) -> CohortAggregateResponseDTO:
+        """Calculate official or derived regional macroeconomic aggregate with overlap protection."""
+        metric_def = self.repo.get_indicator(req.metric_kind)
+        target_period = req.period or "2024"
+
+        geo_ids = req.geography_ids
+        is_official = False
+
+        if req.cohort_id:
+            cohort = self.repo.get_cohort(req.cohort_id)
+            if cohort:
+                geo_ids = cohort.member_geography_ids
+                if cohort.cohort_kind == GeographicCohortKind.EU_EURO_AREA:
+                    is_official = True
+
+
+        if not geo_ids:
+            geo_ids = [g["geography_id"] for g in self.repo.list_supported_geographies()]
+
+        overlap_warnings: List[str] = []
+        notes: List[str] = []
+
+        # Overlap Protection: Check if Euro Area and constituent sovereigns are present together
+        contributing_geos: List[str] = []
+        excluded_geos: List[str] = []
+        values: List[float] = []
+        gdp_weights: List[float] = []
+
+        for gid in geo_ids:
+            obs = self.repo.get_observation(gid, req.metric_kind, period=target_period)
+            if not obs and not req.period:
+                obs = self.repo.get_observation(gid, req.metric_kind)
+
+            if obs and obs.raw_value is not None:
+                values.append(obs.raw_value)
+                contributing_geos.append(gid)
+
+                # GDP weight for weighting
+                gdp_obs = self.repo.get_observation(gid, ComparisonMetricKind.GDP_NOMINAL_USD, period=target_period)
+                if not gdp_obs:
+                    gdp_obs = self.repo.get_observation(gid, ComparisonMetricKind.GDP_NOMINAL_USD)
+                gdp_weights.append(gdp_obs.raw_value if gdp_obs else 1.0)
+            else:
+                excluded_geos.append(gid)
+
+        if not values:
+            raise MacroComparisonInsufficientSampleError("aggregate computation", 0, 1)
+
+        aggregate_val: float = 0.0
+        aggregate_type = "SUM"
+
+        # Check metric category
+        if req.metric_kind in (
+            ComparisonMetricKind.GDP_NOMINAL_USD,
+            ComparisonMetricKind.GDP_PPP_INT_USD,
+            ComparisonMetricKind.POPULATION_MILLIONS,
+            ComparisonMetricKind.FOREIGN_RESERVES_USD,
+        ):
+            # Pure additive level
+            aggregate_val = round(sum(values), 2)
+            aggregate_type = "SUM"
+            notes.append(f"Direct arithmetic sum of compatible level observations across {len(contributing_geos)} economies.")
+
+        elif req.metric_kind == ComparisonMetricKind.GDP_REAL_GROWTH_YOY:
+            # GDP-weighted growth rate
+            tot_gdp = sum(gdp_weights)
+            if tot_gdp > 0:
+                aggregate_val = round(sum(v * w for v, w in zip(values, gdp_weights)) / tot_gdp, 2)
+            else:
+                aggregate_val = round(sum(values) / len(values), 2)
+            aggregate_type = "GDP_WEIGHTED_GROWTH"
+            notes.append("Growth percentages cannot be summed arithmetically. Computed as a GDP-weighted growth rate.")
+
+        elif req.metric_kind in (
+            ComparisonMetricKind.INFLATION_HEADLINE_CPI_YOY,
+            ComparisonMetricKind.INFLATION_CORE_YOY,
+        ):
+            # Weighted inflation proxy
+            tot_gdp = sum(gdp_weights)
+            if tot_gdp > 0:
+                aggregate_val = round(sum(v * w for v, w in zip(values, gdp_weights)) / tot_gdp, 2)
+            else:
+                aggregate_val = round(sum(values) / len(values), 2)
+            aggregate_type = "WEIGHTED_INFLATION_PROXY"
+            notes.append("Regional inflation requires official source baskets (e.g., Eurostat HICP); calculated as GDP-weighted benchmark proxy.")
+
+        elif req.metric_kind in (
+            ComparisonMetricKind.GOVERNMENT_DEBT_TO_GDP,
+            ComparisonMetricKind.FISCAL_BALANCE_TO_GDP,
+            ComparisonMetricKind.CURRENT_ACCOUNT_TO_GDP,
+            ComparisonMetricKind.TRADE_BALANCE_TO_GDP,
+        ):
+            # Ratio to GDP weighted by GDP
+            tot_gdp = sum(gdp_weights)
+            if tot_gdp > 0:
+                aggregate_val = round(sum(v * w for v, w in zip(values, gdp_weights)) / tot_gdp, 2)
+            else:
+                aggregate_val = round(sum(values) / len(values), 2)
+            aggregate_type = "WEIGHTED_RATIO_TO_GDP"
+            notes.append("Macroeconomic ratios to GDP weighted by underlying sovereign nominal GDP denominators.")
+
+        else:
+            # General weighted or unweighted mean
+            aggregate_val = round(sum(values) / len(values), 2)
+            aggregate_type = "UNWEIGHTED_AVERAGE"
+            notes.append("Unweighted cross-sectional mean across eligible sovereign observations.")
+
+        if is_official:
+            notes.append("Official published aggregate status recognized from source institutional authorities.")
+
+        formatted_val = f"{aggregate_val:,.2f}"
+        if metric_def.default_unit == "PERCENT":
+            formatted_val += "%"
+        elif "USD" in metric_def.default_unit:
+            formatted_val = "$" + formatted_val
+
+        return CohortAggregateResponseDTO(
+            cohort_id=req.cohort_id,
+            metric_kind=req.metric_kind,
+            aggregate_type=aggregate_type,
+            reference_period=target_period,
+            value=aggregate_val,
+            formatted_value=formatted_val,
+            unit=metric_def.default_unit,
+            is_official_source=is_official,
+            is_valid=True,
+            contributing_geographies=contributing_geos,
+            excluded_geographies=excluded_geos,
+            notes=notes,
+            overlap_warnings=overlap_warnings,
+        )
+
+    # -------------------------------------------------------------------------
     # Historical Trends & Normalization
     # -------------------------------------------------------------------------
+
 
     def get_historical_trends(self, req: HistoricalTrendsRequestDTO) -> HistoricalTrendsResponseDTO:
         """Fetch time-aligned multi-country time series with optional base rebasing."""

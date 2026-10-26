@@ -2,6 +2,7 @@
 
 import pytest
 from atlas.economics.comparisons import (
+    CohortAggregateRequestDTO,
     ComparisonMatrixRequestDTO,
     ComparisonMetricKind,
     CompatibilityStatus,
@@ -19,6 +20,7 @@ from atlas.economics.comparisons import (
     TieBreakerPolicy,
     WeightingPolicy,
 )
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -407,3 +409,69 @@ def test_zero_read_side_effects(client: TestClient, repo: MacroComparisonsReposi
     client.post("/api/v1/economics/comparisons/matrix", json={})
     client.post("/api/v1/economics/comparisons/rankings", json={"metric_kind": "GDP_REAL_GROWTH_YOY"})
     assert len(repo._observations) == initial_count
+
+
+# =============================================================================
+# 12. Regional Aggregates & Overlap Protection
+# =============================================================================
+
+def test_cohort_aggregates_computation(service: MacroComparisonsService, client: TestClient):
+    """Test regional and group macroeconomic aggregation with overlap protection."""
+    # 1. Level sum (Nominal GDP USD for G7 economies)
+    req_sum = CohortAggregateRequestDTO(
+        cohort_id="cohort-g7",
+        metric_kind=ComparisonMetricKind.GDP_NOMINAL_USD,
+        period="2024",
+    )
+    agg_sum = service.calculate_aggregates(req_sum)
+    assert agg_sum.is_valid is True
+    assert agg_sum.aggregate_type == "SUM"
+    # US (28781.1) + GB (3495.0) + JP (4210.0) = 36486.1
+    assert pytest.approx(agg_sum.value, 0.1) == 36486.1
+
+    # 2. Growth rate (GDP-weighted growth, not arithmetic sum!)
+    req_growth = CohortAggregateRequestDTO(
+        cohort_id="cohort-g7",
+        metric_kind=ComparisonMetricKind.GDP_REAL_GROWTH_YOY,
+        period="2024",
+    )
+    agg_growth = service.calculate_aggregates(req_growth)
+    assert agg_growth.is_valid is True
+    assert agg_growth.aggregate_type == "GDP_WEIGHTED_GROWTH"
+    assert any("cannot be summed arithmetically" in n for n in agg_growth.notes)
+
+    # 3. HTTP endpoint POST /api/v1/economics/comparisons/aggregates
+    res_agg = client.post(
+        "/api/v1/economics/comparisons/aggregates",
+        json={"cohort_id": "cohort-g7", "metric_kind": "GDP_NOMINAL_USD"},
+    )
+    assert res_agg.status_code == 200
+    assert res_agg.json()["value"] > 30000.0
+
+
+# =============================================================================
+# 13. Case-Insensitive Enums & Aliases
+# =============================================================================
+
+def test_case_insensitive_enum_resolution(service: MacroComparisonsService, client: TestClient):
+    """Test case-insensitive resolution of metric kinds, policies, and aliases."""
+    # Lowercase in REST matrix query
+    res_mat = client.post(
+        "/api/v1/economics/comparisons/matrix",
+        json={
+            "geography_ids": ["geo-us", "geo-gb"],
+            "metric_kinds": ["gdp_real_growth_yoy", "cpi_headline_yoy"],
+            "period_policy": "latest_per_country",
+        },
+    )
+    assert res_mat.status_code == 200
+    assert len(res_mat.json()["cells"]) == 4
+
+    # POST body eligibility check
+    res_elig = client.post(
+        "/api/v1/economics/comparisons/eligibility",
+        json={"geography_id": "geo-us", "metric_kind": "gdp_nominal_usd"},
+    )
+    assert res_elig.status_code == 200
+    assert res_elig.json()["is_eligible"] is True
+

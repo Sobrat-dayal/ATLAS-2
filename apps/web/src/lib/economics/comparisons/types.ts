@@ -274,3 +274,28 @@ export interface MacroCoverageSummaryDTO {
   harmonized_sources: string[];
   methodology_qualifications: string[];
 }
+
+export interface CohortAggregateRequestDTO {
+  cohort_id?: string | null;
+  geography_ids?: string[];
+  metric_kind: ComparisonMetricKind;
+  period?: string | null;
+  weighting_policy?: WeightingPolicy;
+}
+
+export interface CohortAggregateResponseDTO {
+  cohort_id?: string | null;
+  metric_kind: ComparisonMetricKind;
+  aggregate_type: string;
+  reference_period: string;
+  value?: number | null;
+  formatted_value: string;
+  unit: string;
+  is_official_source: boolean;
+  is_valid: boolean;
+  contributing_geographies: string[];
+  excluded_geographies: string[];
+  notes: string[];
+  overlap_warnings: string[];
+}
+

@@ -7,7 +7,19 @@ geographic cohorts, period alignment policies, ranking directions, and weighting
 from enum import StrEnum
 
 
-class ComparisonMetricKind(StrEnum):
+class CaseInsensitiveStrEnum(StrEnum):
+    """Base StrEnum that supports case-insensitive and delimiter-insensitive lookup."""
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            val_norm = value.strip().upper().replace("-", "_")
+            for member in cls:
+                if member.value == val_norm or member.name == val_norm:
+                    return member
+        return super()._missing_(value)
+
+
+class ComparisonMetricKind(CaseInsensitiveStrEnum):
     """Canonical macroeconomic comparison metrics across sovereign economies."""
     # National Accounts & Economic Output
     GDP_NOMINAL_USD = "GDP_NOMINAL_USD"                   # Current USD Billions (Market Exchange Rates)
@@ -39,8 +51,37 @@ class ComparisonMetricKind(StrEnum):
     # Demographics
     POPULATION_MILLIONS = "POPULATION_MILLIONS"           # Total population (Millions of persons)
 
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            val_norm = value.strip().upper().replace("-", "_")
+            # Specific alias mappings
+            aliases = {
+                "CPI_HEADLINE_YOY": cls.INFLATION_HEADLINE_CPI_YOY,
+                "HEADLINE_CPI_YOY": cls.INFLATION_HEADLINE_CPI_YOY,
+                "CPI_YOY": cls.INFLATION_HEADLINE_CPI_YOY,
+                "CPI_CORE_YOY": cls.INFLATION_CORE_YOY,
+                "CORE_CPI_YOY": cls.INFLATION_CORE_YOY,
+                "CENTRAL_BANK_POLICY_RATE": cls.POLICY_INTEREST_RATE,
+                "POLICY_RATE": cls.POLICY_INTEREST_RATE,
+                "INTEREST_RATE": cls.POLICY_INTEREST_RATE,
+                "LABOR_PARTICIPATION_RATE": cls.LABOR_FORCE_PARTICIPATION,
+                "LFP": cls.LABOR_FORCE_PARTICIPATION,
+                "GDP_PPP_INTL_DOLLARS": cls.GDP_PPP_INT_USD,
+                "GDP_PPP": cls.GDP_PPP_INT_USD,
+                "GDP_PPP_PER_CAPITA_INTL": cls.GDP_PPP_PER_CAPITA,
+                "FOREIGN_EXCHANGE_RESERVES_USD": cls.FOREIGN_RESERVES_USD,
+                "FX_RESERVES": cls.FOREIGN_RESERVES_USD,
+            }
+            if val_norm in aliases:
+                return aliases[val_norm]
+            for member in cls:
+                if member.value == val_norm or member.name == val_norm:
+                    return member
+        return super()._missing_(value)
 
-class CompatibilityStatus(StrEnum):
+
+class CompatibilityStatus(CaseInsensitiveStrEnum):
     """Statistical comparability classification between cross-country series."""
     DIRECTLY_COMPARABLE = "DIRECTLY_COMPARABLE"               # Aligned concepts, units, and methodology
     COMPARABLE_WITH_QUALIFICATION = "COMPARABLE_WITH_QUALIFICATION" # Usable with explicit methodological caveats
@@ -49,7 +90,7 @@ class CompatibilityStatus(StrEnum):
     INSUFFICIENT_METADATA = "INSUFFICIENT_METADATA"           # Missing source documentation to establish compatibility
 
 
-class GeographicCohortKind(StrEnum):
+class GeographicCohortKind(CaseInsensitiveStrEnum):
     """Standardized geopolitical and economic grouping presets."""
     G7 = "G7"                         # Group of Seven (US, UK, Japan, Germany, France, Italy, Canada)
     G20 = "G20"                       # Group of Twenty major economies
@@ -59,39 +100,74 @@ class GeographicCohortKind(StrEnum):
     CUSTOM_SELECTION = "CUSTOM_SELECTION" # User-defined multi-country selection
 
 
-class PeriodAlignmentPolicy(StrEnum):
+class PeriodAlignmentPolicy(CaseInsensitiveStrEnum):
     """Temporal alignment policy for multi-country observation matrices."""
     EXACT_PERIOD = "EXACT_PERIOD"             # Strict matching on reference period (e.g., 2024-Q3)
     LATEST_COMMON = "LATEST_COMMON"           # Latest period where ALL selected countries have data
     LATEST_PER_COUNTRY = "LATEST_PER_COUNTRY" # Most recent available observation per country (with date badges)
 
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            val_norm = value.strip().upper().replace("-", "_")
+            if val_norm in ("LATEST_COMMON_PERIOD", "LATEST_COMMON"):
+                return cls.LATEST_COMMON
+            if val_norm in ("LATEST_PER_COUNTRY", "LATEST"):
+                return cls.LATEST_PER_COUNTRY
+            if val_norm in ("EXACT_PERIOD", "EXACT"):
+                return cls.EXACT_PERIOD
+        return super()._missing_(value)
 
-class RankingDirection(StrEnum):
+
+class RankingDirection(CaseInsensitiveStrEnum):
     """Directional ordering for economic rankings."""
     DESCENDING = "DESCENDING" # Highest value ranked #1 (e.g., GDP level, growth rate)
     ASCENDING = "ASCENDING"   # Lowest value ranked #1 (e.g., inflation rate, debt ratio, unemployment)
 
 
-class TieBreakerPolicy(StrEnum):
+class TieBreakerPolicy(CaseInsensitiveStrEnum):
     """Policy for handling ties in economic ranking computations."""
     STANDARD_COMPETITION = "STANDARD_COMPETITION" # 1, 2, 2, 4 (Standard Olympics / competition ranking)
     DENSE = "DENSE"                               # 1, 2, 2, 3 (Dense ranking)
 
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            val_norm = value.strip().upper().replace("-", "_")
+            if "DENSE" in val_norm:
+                return cls.DENSE
+            if "COMPETITION" in val_norm or "STANDARD" in val_norm:
+                return cls.STANDARD_COMPETITION
+        return super()._missing_(value)
 
-class WeightingPolicy(StrEnum):
+
+class WeightingPolicy(CaseInsensitiveStrEnum):
     """Weighting scheme for aggregate and distribution calculations."""
     EQUAL_WEIGHT = "EQUAL_WEIGHT"           # Arithmetic unweighted average across countries
     POPULATION_WEIGHT = "POPULATION_WEIGHT" # Weighted by sovereign population
     GDP_WEIGHT = "GDP_WEIGHT"               # Weighted by nominal GDP (USD)
 
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            val_norm = value.strip().upper().replace("-", "_")
+            if val_norm.startswith("POPULATION"):
+                return cls.POPULATION_WEIGHT
+            if val_norm.startswith("GDP"):
+                return cls.GDP_WEIGHT
+            if val_norm.startswith("EQUAL"):
+                return cls.EQUAL_WEIGHT
+        return super()._missing_(value)
 
-class CorrelationMethod(StrEnum):
+
+class CorrelationMethod(CaseInsensitiveStrEnum):
     """Statistical correlation algorithm for paired economic time series."""
     PEARSON = "PEARSON"   # Linear correlation coefficient
     SPEARMAN = "SPEARMAN" # Rank-order non-parametric correlation coefficient
 
 
-class VintagePolicy(StrEnum):
+class VintagePolicy(CaseInsensitiveStrEnum):
     """Historical data vintage retrieval policy."""
     LATEST_REVISED = "LATEST_REVISED" # Current historical observations with all revisions
     AS_KNOWN_AT = "AS_KNOWN_AT"       # Point-in-time observations as known on a specified historical date
+
