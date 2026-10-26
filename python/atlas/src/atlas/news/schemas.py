@@ -13,9 +13,13 @@ from atlas.news.enums import (
     EventParticipantRole,
     EventTimePrecision,
     FinancialEventType,
+    NewsAlertMatchStatus,
+    NewsAlertPriority,
     NewsArticleType,
     NewsAvailabilityStatus,
     NewsClassificationMethod,
+    NewsDeliveryChannel,
+    NewsDigestCadence,
     NewsEntityRelevanceClass,
     NewsEventAssertionStatus,
     NewsEventLifecycleStatus,
@@ -25,10 +29,12 @@ from atlas.news.enums import (
     NewsLatencyClass,
     NewsLicensingStatus,
     NewsMarketReactionWindow,
+    NewsMonitoringRuleType,
     NewsSentimentLabel,
     NewsStoryMembershipReason,
     NewsStoryMembershipStatus,
     NewsStoryStatus,
+    NewsTriggerPolicy,
 )
 from atlas.news.types import NewsEventKind, NewsEventStatus
 
@@ -626,5 +632,270 @@ class SentimentEvaluationResultDTO(BaseModel):
     evaluation_timestamp: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Stage 103 Personalized News Monitoring, Custom Feeds, Alerts & Digests DTOs
+# ---------------------------------------------------------------------------
+
+class NewsSentimentConditionDTO(BaseModel):
+    sentiment_label: Optional[NewsSentimentLabel] = None
+    min_score: Optional[float] = None
+    aspect: Optional[NewsFinancialAspect] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsMonitoringRuleDTO(BaseModel):
+    rule_id: str
+    owner_user_id: str
+    name: str
+    description: Optional[str] = None
+    rule_type: NewsMonitoringRuleType
+    target_entity_ids: List[str] = Field(default_factory=list)
+    target_tickers: List[str] = Field(default_factory=list)
+    target_watchlist_ids: List[str] = Field(default_factory=list)
+    target_topics: List[str] = Field(default_factory=list)
+    target_event_types: List[str] = Field(default_factory=list)
+    target_publisher_ids: List[str] = Field(default_factory=list)
+    target_story_id: Optional[str] = None
+    target_custom_feed_id: Optional[str] = None
+    sentiment_condition: Optional[NewsSentimentConditionDTO] = None
+    priority: NewsAlertPriority = NewsAlertPriority.NORMAL
+    trigger_policy: NewsTriggerPolicy = NewsTriggerPolicy.ON_NEW_ARTICLE
+    cooldown_minutes: int = 0
+    delivery_channels: List[NewsDeliveryChannel] = Field(default_factory=lambda: [NewsDeliveryChannel.IN_APP])
+    quiet_hours_enabled: bool = False
+    quiet_hours_start_utc: Optional[str] = None
+    quiet_hours_end_utc: Optional[str] = None
+    user_timezone: str = "UTC"
+    is_active: bool = True
+    rule_revision: int = 1
+    last_matched_at: Optional[datetime.datetime] = None
+    match_count: int = 0
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CreateNewsMonitoringRuleDTO(BaseModel):
+    name: str
+    description: Optional[str] = None
+    rule_type: NewsMonitoringRuleType
+    target_entity_ids: List[str] = Field(default_factory=list)
+    target_tickers: List[str] = Field(default_factory=list)
+    target_watchlist_ids: List[str] = Field(default_factory=list)
+    target_topics: List[str] = Field(default_factory=list)
+    target_event_types: List[str] = Field(default_factory=list)
+    target_publisher_ids: List[str] = Field(default_factory=list)
+    target_story_id: Optional[str] = None
+    target_custom_feed_id: Optional[str] = None
+    sentiment_condition: Optional[NewsSentimentConditionDTO] = None
+    priority: NewsAlertPriority = NewsAlertPriority.NORMAL
+    trigger_policy: NewsTriggerPolicy = NewsTriggerPolicy.ON_NEW_ARTICLE
+    cooldown_minutes: int = 0
+    delivery_channels: List[NewsDeliveryChannel] = Field(default_factory=lambda: [NewsDeliveryChannel.IN_APP])
+    quiet_hours_enabled: bool = False
+    quiet_hours_start_utc: Optional[str] = None
+    quiet_hours_end_utc: Optional[str] = None
+    user_timezone: str = "UTC"
+    is_active: bool = True
+
+
+class UpdateNewsMonitoringRuleDTO(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    target_entity_ids: Optional[List[str]] = None
+    target_tickers: Optional[List[str]] = None
+    target_watchlist_ids: Optional[List[str]] = None
+    target_topics: Optional[List[str]] = None
+    target_event_types: Optional[List[str]] = None
+    target_publisher_ids: Optional[List[str]] = None
+    target_story_id: Optional[str] = None
+    target_custom_feed_id: Optional[str] = None
+    sentiment_condition: Optional[NewsSentimentConditionDTO] = None
+    priority: Optional[NewsAlertPriority] = None
+    trigger_policy: Optional[NewsTriggerPolicy] = None
+    cooldown_minutes: Optional[int] = None
+    delivery_channels: Optional[List[NewsDeliveryChannel]] = None
+    quiet_hours_enabled: Optional[bool] = None
+    quiet_hours_start_utc: Optional[str] = None
+    quiet_hours_end_utc: Optional[str] = None
+    user_timezone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class NewsRuleValidationRequestDTO(BaseModel):
+    rule: CreateNewsMonitoringRuleDTO
+
+
+class NewsRuleValidationResponseDTO(BaseModel):
+    is_valid: bool
+    errors: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+    estimated_coverage: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsRulePreviewRequestDTO(BaseModel):
+    rule: CreateNewsMonitoringRuleDTO
+    limit: int = 10
+
+
+class NewsRulePreviewResponseDTO(BaseModel):
+    matched_articles: List[Dict[str, Any]] = Field(default_factory=list)
+    total_potential_matches: int = 0
+    sample_coverage_window_hours: int = 72
+    disclaimer: str = "Historical preview results reflect current news data and do not trigger retroactive notifications."
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsAlertMatchDTO(BaseModel):
+    match_id: str
+    rule_id: str
+    rule_name: str
+    rule_revision: int
+    owner_user_id: str
+    trigger_type: NewsTriggerPolicy
+    source_object_type: str
+    source_object_id: str
+    headline_or_title: str
+    publisher_name: str
+    target_entity_id: Optional[str] = None
+    target_ticker: Optional[str] = None
+    matched_conditions: List[str] = Field(default_factory=list)
+    evidence_snippet: Optional[str] = None
+    source_published_at: datetime.datetime
+    evaluated_at: datetime.datetime
+    priority: NewsAlertPriority
+    delivery_channel: NewsDeliveryChannel
+    status: NewsAlertMatchStatus
+    suppression_reason: Optional[str] = None
+    deduplication_key: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NewsAlertFeedResponseDTO(BaseModel):
+    alerts: List[NewsAlertMatchDTO]
+    total_count: int
+    delivered_count: int
+    suppressed_count: int
+    as_of: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CustomNewsFeedDTO(BaseModel):
+    feed_id: str
+    owner_user_id: str
+    title: str
+    description: Optional[str] = None
+    query_config: Dict[str, Any] = Field(default_factory=dict)
+    is_alert_enabled: bool = False
+    linked_rule_id: Optional[str] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CreateCustomNewsFeedDTO(BaseModel):
+    title: str
+    description: Optional[str] = None
+    query_config: Dict[str, Any] = Field(default_factory=dict)
+    is_alert_enabled: bool = False
+
+
+class UpdateCustomNewsFeedDTO(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    query_config: Optional[Dict[str, Any]] = None
+    is_alert_enabled: Optional[bool] = None
+
+
+class NewsDigestSubscriptionDTO(BaseModel):
+    digest_id: str
+    owner_user_id: str
+    title: str
+    cadence: NewsDigestCadence
+    preferred_time_local: str
+    timezone: str
+    delivery_channel: NewsDeliveryChannel
+    include_empty: bool
+    max_items: int
+    target_entity_ids: List[str] = Field(default_factory=list)
+    target_watchlist_ids: List[str] = Field(default_factory=list)
+    target_topics: List[str] = Field(default_factory=list)
+    is_active: bool
+    last_run_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CreateNewsDigestSubscriptionDTO(BaseModel):
+    title: str
+    cadence: NewsDigestCadence = NewsDigestCadence.DAILY
+    preferred_time_local: str = "08:00"
+    timezone: str = "UTC"
+    delivery_channel: NewsDeliveryChannel = NewsDeliveryChannel.IN_APP
+    include_empty: bool = False
+    max_items: int = 15
+    target_entity_ids: List[str] = Field(default_factory=list)
+    target_watchlist_ids: List[str] = Field(default_factory=list)
+    target_topics: List[str] = Field(default_factory=list)
+    is_active: bool = True
+
+
+class UpdateNewsDigestSubscriptionDTO(BaseModel):
+    title: Optional[str] = None
+    cadence: Optional[NewsDigestCadence] = None
+    preferred_time_local: Optional[str] = None
+    timezone: Optional[str] = None
+    delivery_channel: Optional[NewsDeliveryChannel] = None
+    include_empty: Optional[bool] = None
+    max_items: Optional[int] = None
+    target_entity_ids: Optional[List[str]] = None
+    target_watchlist_ids: Optional[List[str]] = None
+    target_topics: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+
+
+class NewsDigestRunDTO(BaseModel):
+    run_id: str
+    digest_id: str
+    owner_user_id: str
+    title: str
+    interval_start: datetime.datetime
+    interval_end: datetime.datetime
+    executed_at: datetime.datetime
+    eligible_article_count: int
+    unique_story_count: int
+    verified_event_count: int
+    status: str
+    summary_sections: List[Dict[str, Any]] = Field(default_factory=list)
+    attribution_disclaimer: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MonitoringHealthStatusDTO(BaseModel):
+    is_healthy: bool
+    active_rules_count: int
+    evaluated_matches_24h: int
+    delivered_alerts_24h: int
+    delivery_success_rate: float
+    last_processed_ingestion_watermark: Optional[datetime.datetime] = None
+    queue_lag_seconds: float = 0.0
+    p95_evaluation_latency_ms: float = 0.0
+    as_of: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 

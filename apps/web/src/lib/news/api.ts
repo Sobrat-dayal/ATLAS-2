@@ -3,24 +3,41 @@
  */
 
 import {
+  CreateCustomNewsFeedDTO,
+  CreateNewsDigestSubscriptionDTO,
+  CreateNewsMonitoringRuleDTO,
+  CustomNewsFeedDTO,
   EntitySentimentAggregateDTO,
   EventSentimentProfileDTO,
   FinancialEventTypeDefinitionDTO,
   MarketReactionRequestDTO,
+  MonitoringHealthStatusDTO,
+  NewsAlertFeedResponseDTO,
+  NewsAlertMatchDTO,
   NewsArticleDTO,
   NewsCoverageResponseDTO,
+  NewsDigestRunDTO,
+  NewsDigestSubscriptionDTO,
   NewsEntityRelevanceDTO,
   NewsFeedQueryParams,
   NewsFeedResponseDTO,
   NewsFinancialEventDTO,
   NewsFreshnessResponseDTO,
+  NewsMonitoringRuleDTO,
   NewsPublisherDTO,
+  NewsRulePreviewRequestDTO,
+  NewsRulePreviewResponseDTO,
+  NewsRuleValidationRequestDTO,
+  NewsRuleValidationResponseDTO,
   NewsSentimentAnnotationDTO,
   NewsSourceDTO,
   ObservedNewsMarketContextDTO,
   SentimentEvaluationResultDTO,
   SentimentTimelineResponseDTO,
   StorySentimentProfileDTO,
+  UpdateCustomNewsFeedDTO,
+  UpdateNewsDigestSubscriptionDTO,
+  UpdateNewsMonitoringRuleDTO,
 } from "./types";
 
 function getBaseApiUrl(): string {
@@ -553,6 +570,293 @@ export async function getSentimentEvaluation(): Promise<SentimentEvaluationResul
   });
   return handleResponse<SentimentEvaluationResultDTO>(res);
 }
+
+// ============================================================================
+// Stage 103: Monitoring Rules, Custom Feeds, Alerts & Digests
+// ============================================================================
+
+export async function getMonitoringRules(params?: {
+  is_active?: boolean;
+  rule_type?: string;
+}): Promise<NewsMonitoringRuleDTO[]> {
+  const url = new URL("/api/v1/news/monitoring/rules", getBaseApiUrl());
+  if (params?.is_active !== undefined) {
+    url.searchParams.set("is_active", String(params.is_active));
+  }
+  if (params?.rule_type) {
+    url.searchParams.set("rule_type", params.rule_type);
+  }
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsMonitoringRuleDTO[]>(res);
+}
+
+export async function getMonitoringRule(
+  ruleId: string
+): Promise<NewsMonitoringRuleDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/monitoring/rules/${encodeURIComponent(ruleId)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsMonitoringRuleDTO>(res);
+}
+
+export async function createMonitoringRule(
+  dto: CreateNewsMonitoringRuleDTO
+): Promise<NewsMonitoringRuleDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/monitoring/rules`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(dto),
+  });
+  return handleResponse<NewsMonitoringRuleDTO>(res);
+}
+
+export async function updateMonitoringRule(
+  ruleId: string,
+  dto: UpdateNewsMonitoringRuleDTO
+): Promise<NewsMonitoringRuleDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/monitoring/rules/${encodeURIComponent(ruleId)}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(dto),
+  });
+  return handleResponse<NewsMonitoringRuleDTO>(res);
+}
+
+export async function deleteMonitoringRule(ruleId: string): Promise<void> {
+  const url = `${getBaseApiUrl()}/api/v1/news/monitoring/rules/${encodeURIComponent(ruleId)}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+  if (!res.ok) {
+    throw new NewsApiError(`HTTP ${res.status}: ${res.statusText}`, res.status);
+  }
+}
+
+export async function validateMonitoringRule(
+  req: NewsRuleValidationRequestDTO
+): Promise<NewsRuleValidationResponseDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/monitoring/rules/validate`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(req),
+  });
+  return handleResponse<NewsRuleValidationResponseDTO>(res);
+}
+
+export async function previewMonitoringRule(
+  req: NewsRulePreviewRequestDTO
+): Promise<NewsRulePreviewResponseDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/monitoring/rules/preview`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(req),
+  });
+  return handleResponse<NewsRulePreviewResponseDTO>(res);
+}
+
+export async function getAlertMatches(params?: {
+  rule_id?: string;
+  match_status?: string;
+  priority?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<NewsAlertFeedResponseDTO> {
+  const url = new URL("/api/v1/news/monitoring/alerts", getBaseApiUrl());
+  if (params?.rule_id) url.searchParams.set("rule_id", params.rule_id);
+  if (params?.match_status) url.searchParams.set("match_status", params.match_status);
+  if (params?.priority) url.searchParams.set("priority", params.priority);
+  if (params?.limit) url.searchParams.set("limit", String(params.limit));
+  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsAlertFeedResponseDTO>(res);
+}
+
+export async function getMonitoringHealth(): Promise<MonitoringHealthStatusDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/monitoring/status`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<MonitoringHealthStatusDTO>(res);
+}
+
+export async function getCustomFeeds(): Promise<CustomNewsFeedDTO[]> {
+  const url = `${getBaseApiUrl()}/api/v1/news/custom-feeds`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<CustomNewsFeedDTO[]>(res);
+}
+
+export async function getCustomFeed(feedId: string): Promise<CustomNewsFeedDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/custom-feeds/${encodeURIComponent(feedId)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<CustomNewsFeedDTO>(res);
+}
+
+export async function createCustomFeed(
+  dto: CreateCustomNewsFeedDTO
+): Promise<CustomNewsFeedDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/custom-feeds`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(dto),
+  });
+  return handleResponse<CustomNewsFeedDTO>(res);
+}
+
+export async function updateCustomFeed(
+  feedId: string,
+  dto: UpdateCustomNewsFeedDTO
+): Promise<CustomNewsFeedDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/custom-feeds/${encodeURIComponent(feedId)}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(dto),
+  });
+  return handleResponse<CustomNewsFeedDTO>(res);
+}
+
+export async function deleteCustomFeed(feedId: string): Promise<void> {
+  const url = `${getBaseApiUrl()}/api/v1/news/custom-feeds/${encodeURIComponent(feedId)}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+  if (!res.ok) {
+    throw new NewsApiError(`HTTP ${res.status}: ${res.statusText}`, res.status);
+  }
+}
+
+export async function executeCustomFeedArticles(
+  feedId: string,
+  limit: number = 20
+): Promise<{ feed: CustomNewsFeedDTO; articles: NewsArticleDTO[]; total_count: number }> {
+  const url = new URL(
+    `/api/v1/news/custom-feeds/${encodeURIComponent(feedId)}/articles`,
+    getBaseApiUrl()
+  );
+  url.searchParams.set("limit", String(limit));
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<{ feed: CustomNewsFeedDTO; articles: NewsArticleDTO[]; total_count: number }>(res);
+}
+
+export async function getDigests(): Promise<NewsDigestSubscriptionDTO[]> {
+  const url = `${getBaseApiUrl()}/api/v1/news/digests`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsDigestSubscriptionDTO[]>(res);
+}
+
+export async function getDigest(
+  digestId: string
+): Promise<NewsDigestSubscriptionDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/digests/${encodeURIComponent(digestId)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsDigestSubscriptionDTO>(res);
+}
+
+export async function createDigest(
+  dto: CreateNewsDigestSubscriptionDTO
+): Promise<NewsDigestSubscriptionDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/digests`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(dto),
+  });
+  return handleResponse<NewsDigestSubscriptionDTO>(res);
+}
+
+export async function updateDigest(
+  digestId: string,
+  dto: UpdateNewsDigestSubscriptionDTO
+): Promise<NewsDigestSubscriptionDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/digests/${encodeURIComponent(digestId)}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(dto),
+  });
+  return handleResponse<NewsDigestSubscriptionDTO>(res);
+}
+
+export async function deleteDigest(digestId: string): Promise<void> {
+  const url = `${getBaseApiUrl()}/api/v1/news/digests/${encodeURIComponent(digestId)}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+  if (!res.ok) {
+    throw new NewsApiError(`HTTP ${res.status}: ${res.statusText}`, res.status);
+  }
+}
+
+export async function previewDigest(
+  digestId: string
+): Promise<NewsDigestRunDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/digests/${encodeURIComponent(digestId)}/preview`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsDigestRunDTO>(res);
+}
+
+export async function triggerDigest(
+  digestId: string
+): Promise<NewsDigestRunDTO> {
+  const url = `${getBaseApiUrl()}/api/v1/news/digests/${encodeURIComponent(digestId)}/trigger`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsDigestRunDTO>(res);
+}
+
+export async function getDigestHistory(
+  digestId: string,
+  limit: number = 20
+): Promise<NewsDigestRunDTO[]> {
+  const url = new URL(
+    `/api/v1/news/digests/${encodeURIComponent(digestId)}/history`,
+    getBaseApiUrl()
+  );
+  url.searchParams.set("limit", String(limit));
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  return handleResponse<NewsDigestRunDTO[]>(res);
+}
+
 
 
 

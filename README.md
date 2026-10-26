@@ -1095,6 +1095,37 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `cmd /c pnpm --filter web build` (Next.js 16.3.8 Turbopack clean compile).
 - **Documentation**: See `docs/NEWS_SENTIMENT_AND_REACTION_ANALYTICS.md` and `docs/DECISIONS.md`.
 
+## Personalized Financial News Monitoring, Custom Feeds, Rule-Based Alerts, and News Digests (Stage 103)
+- **Institutional News Monitoring Rules**:
+  - Persistent, user-scoped rule definitions supporting typed criteria across 7 scopes: `COMPANY` (tickers/entities), `INSTRUMENT`, `WATCHLIST`, `TOPIC`, `PUBLISHER`, `EVENT_TYPE`, and `COMPOSITE`.
+  - Optimistic concurrency revisioning (`rule_revision`) and per-user quota enforcement (50 rules max).
+  - Target-aware sentiment condition integration binding to Stage 102 polarity (`POSITIVE`, `NEGATIVE`, `NEUTRAL`, `MIXED`), aspect (`EARNINGS_PERFORMANCE`), and minimum score.
+- **Evaluation Engine & Alert Deduplication**:
+  - Pure deterministic evaluation in `NewsRuleMatcher` running in sub-5ms latency budgets.
+  - Verbatim condition evidence citation (`matched_conditions`) on every alert match.
+  - Syndication-aware duplicate suppression collapsing wire republications under a SHA-256 hash (`SUPPRESSED_SYNDICATION`).
+  - Rule cooldown suppression (5–1440m) preventing flood spam (`SUPPRESSED_COOLDOWN`).
+  - Quiet-hours suppression (`SUPPRESSED_QUIET_HOURS`) holding off-hour alerts for scheduled morning digests.
+  - Instant dispatch triggers Stage 49 durable notifications (`NotificationService.create_notification`) via `/news`.
+- **Custom Discovery Feeds & Scheduled Digests**:
+  - Persistent `CustomNewsFeed` entities compiling dynamically into canonical discovery `NewsFeedQuery` parameters.
+  - Scheduled daily/weekly `NewsDigestSubscription` with local timezone alignment, multi-story grouping, event highlights, and idempotent execution tokens (`idemp-digest-{digest_id}-{timestamp}`).
+- **Terminal Workspace Integration**:
+  - Added `[Monitoring & Alerts]` view mode toggle in the News workspace (`/news`).
+  - Real-time pipeline health telemetry banner (`MonitoringHealthBanner`) reporting engine status, active counts, latency, and event watermarks.
+  - Active Rules Table with active/paused toggle, priority chips, cooldown badges, and rule revision indicators.
+  - Rule Builder Modal featuring real-time live validation and bounded non-retroactive historical preview.
+  - Alert History Table auditing match timestamps, priorities, matched conditions, delivery status, and dedup keys.
+  - Custom Feeds Panel with one-click live article query execution.
+  - News Digest Panel with instant preview and on-demand manual trigger.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_news_monitoring_alerts_v1.py` + full news regression suite (108/108 passed in 10.99s).
+  - Backend linter: `uv run ruff check` on all news code (0 errors).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (66/66 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly).
+- **Documentation**: See `docs/NEWS_MONITORING_ALERTS_AND_DIGESTS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

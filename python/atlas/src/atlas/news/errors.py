@@ -183,3 +183,53 @@ class NewsMarketReactionWindowUnsupportedError(NewsDomainError):
     pass
 
 
+# Stage 103 Monitoring, Custom Feeds & Digests Errors
+class NewsMonitoringRuleNotFoundError(NewsDomainError):
+    """Raised when a specified monitoring rule ID is not found or not owned by user."""
+
+    pass
+
+
+class NewsMonitoringRuleInvalidError(NewsDomainError):
+    """Raised when proposed rule parameters or condition configurations fail validation."""
+
+    pass
+
+
+class NewsMonitoringRuleLimitExceededError(NewsDomainError):
+    """Raised when user exceeds active monitoring rules quota."""
+
+    pass
+
+
+class NewsCustomFeedNotFoundError(NewsDomainError):
+    """Raised when a custom news feed configuration is not found."""
+
+    pass
+
+
+class NewsCustomFeedLimitExceededError(NewsDomainError):
+    """Raised when user exceeds maximum saved custom news feeds."""
+
+    pass
+
+
+class NewsDigestNotFoundError(NewsDomainError):
+    """Raised when a news digest subscription is not found."""
+
+    pass
+
+
+class NewsDigestSchedulingError(NewsDomainError):
+    """Raised when digest schedule timing or timezone parameters are invalid."""
+
+    pass
+
+
+class NewsNotificationChannelUnavailableError(NewsDomainError):
+    """Raised when a delivery channel is not available or not configured."""
+
+    pass
+
+
+

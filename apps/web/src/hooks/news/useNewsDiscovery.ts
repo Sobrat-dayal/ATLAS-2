@@ -29,7 +29,7 @@ import {
   NewsTopicDTO,
 } from "@/lib/news/types";
 
-export type NewsViewMode = "FEED" | "STORIES" | "EVENTS" | "SENTIMENT" | "TIMELINE";
+export type NewsViewMode = "FEED" | "STORIES" | "EVENTS" | "SENTIMENT" | "TIMELINE" | "MONITORING";
 
 export function useNewsDiscovery() {
   // Discovery and View Mode

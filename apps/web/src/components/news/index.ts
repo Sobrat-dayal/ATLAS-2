@@ -14,5 +14,4 @@ export { NewsStoryInspector } from "./NewsStoryInspector";
 export { NewsFinancialEventTable } from "./NewsFinancialEventTable";
 export { NewsEventInspector } from "./NewsEventInspector";
 export { NewsSentimentWorkspace } from "./sentiment/NewsSentimentWorkspace";
-
-
+export { NewsMonitoringWorkspace } from "./monitoring/NewsMonitoringWorkspace";

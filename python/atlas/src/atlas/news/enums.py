@@ -385,3 +385,64 @@ class NewsMarketReactionWindow(StrEnum):
     MULTI_DAY_T_0_TO_PLUS_3 = "MULTI_DAY_T_0_TO_PLUS_3"
 
 
+# ---------------------------------------------------------------------------
+# Stage 103 News Monitoring, Alerts & Digests Enums
+# ---------------------------------------------------------------------------
+
+class NewsMonitoringRuleType(StrEnum):
+    """Categorization of monitoring scope targets."""
+
+    COMPANY = "COMPANY"
+    INSTRUMENT = "INSTRUMENT"
+    WATCHLIST = "WATCHLIST"
+    TOPIC = "TOPIC"
+    EVENT_TYPE = "EVENT_TYPE"
+    STORY = "STORY"
+    CUSTOM_FEED = "CUSTOM_FEED"
+    ALL_WATCHED = "ALL_WATCHED"
+
+
+class NewsAlertPriority(StrEnum):
+    """User-selected urgency level for news monitoring alerts."""
+
+    HIGH = "HIGH"
+    NORMAL = "NORMAL"
+    LOW = "LOW"
+
+
+class NewsTriggerPolicy(StrEnum):
+    """Triggering event criteria determining when a rule fires."""
+
+    ON_NEW_ARTICLE = "ON_NEW_ARTICLE"
+    ON_EVENT_VERIFIED = "ON_EVENT_VERIFIED"
+    ON_STATUS_CHANGE = "ON_STATUS_CHANGE"
+    ON_STORY_UPDATE = "ON_STORY_UPDATE"
+    DAILY_DIGEST_ONLY = "DAILY_DIGEST_ONLY"
+
+
+class NewsDeliveryChannel(StrEnum):
+    """Destination delivery mechanism for alert notifications."""
+
+    IN_APP = "IN_APP"
+    EMAIL = "EMAIL"
+    BROWSER_PUSH = "BROWSER_PUSH"
+
+
+class NewsAlertMatchStatus(StrEnum):
+    """Lifecycle disposition of an evaluated monitoring match."""
+
+    DELIVERED = "DELIVERED"
+    COOLDOWN_ACTIVE = "COOLDOWN_ACTIVE"
+    SUPPRESSED_SYNDICATION = "SUPPRESSED_SYNDICATION"
+    DEFERRED_QUIET_HOURS = "DEFERRED_QUIET_HOURS"
+    FAILED = "FAILED"
+
+
+class NewsDigestCadence(StrEnum):
+    """Periodic schedule cadence for aggregated news digests."""
+
+    DAILY = "DAILY"
+    WEEKLY = "WEEKLY"
+
+
+

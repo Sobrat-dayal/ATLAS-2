@@ -26,20 +26,35 @@ from atlas.news.errors import (
     NewsArticleRestrictedError,
     NewsArticleWithdrawnError,
     NewsCategoryUnsupportedError,
+    NewsCustomFeedLimitExceededError,
+    NewsCustomFeedNotFoundError,
+    NewsDigestNotFoundError,
     NewsEventNotFoundError,
     NewsFinancialEventNotFoundError,
+    NewsMonitoringRuleInvalidError,
+    NewsMonitoringRuleLimitExceededError,
+    NewsMonitoringRuleNotFoundError,
     NewsQueryInvalidError,
     NewsSearchInvalidError,
     NewsStoryNotFoundError,
 )
 from atlas.news.repository import NewsFeedQuery
 from atlas.news.schemas import (
+    # Stage 103 Monitoring, Custom Feeds, Alerts & Digests
+    CreateCustomNewsFeedDTO,
+    CreateNewsDigestSubscriptionDTO,
+    CreateNewsMonitoringRuleDTO,
+    CustomNewsFeedDTO,
     EntitySentimentAggregateDTO,
     EventSentimentProfileDTO,
     FinancialEventTypeDefinitionDTO,
     MarketReactionRequestDTO,
+    MonitoringHealthStatusDTO,
+    NewsAlertFeedResponseDTO,
     NewsArticleDTO,
     NewsCoverageResponseDTO,
+    NewsDigestRunDTO,
+    NewsDigestSubscriptionDTO,
     NewsDiscoveryQueryDTO,
     NewsDiscoveryResponseDTO,
     NewsEntityRelevanceDTO,
@@ -52,7 +67,12 @@ from atlas.news.schemas import (
     NewsFreshnessResponseDTO,
     NewsIngestionRequestDTO,
     NewsIngestionResponseDTO,
+    NewsMonitoringRuleDTO,
     NewsPublisherDTO,
+    NewsRulePreviewRequestDTO,
+    NewsRulePreviewResponseDTO,
+    NewsRuleValidationRequestDTO,
+    NewsRuleValidationResponseDTO,
     NewsSearchSuggestionDTO,
     NewsSentimentAnnotationDTO,
     NewsSourceDTO,
@@ -65,6 +85,9 @@ from atlas.news.schemas import (
     SentimentEvaluationResultDTO,
     SentimentTimelineResponseDTO,
     StorySentimentProfileDTO,
+    UpdateCustomNewsFeedDTO,
+    UpdateNewsDigestSubscriptionDTO,
+    UpdateNewsMonitoringRuleDTO,
 )
 from atlas.news.service import (
     NewsEventService,
@@ -771,6 +794,414 @@ def get_sentiment_evaluation(
     user: AuthPrincipal = Depends(get_current_user),
 ):
     return service.get_sentiment_evaluation()
+
+
+# ---------------------------------------------------------------------------
+# Stage 103 Personalized News Monitoring, Alerts, Custom Feeds & Digests
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/api/v1/news/monitoring/rules",
+    response_model=List[NewsMonitoringRuleDTO],
+    status_code=status.HTTP_200_OK,
+    summary="List authenticated user's news monitoring rules",
+)
+def list_monitoring_rules(
+    active_only: bool = Query(False, description="Filter for active rules only"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    return service.list_monitoring_rules(owner_user_id=user_id, active_only=active_only)
+
+
+@router.post(
+    "/api/v1/news/monitoring/rules",
+    response_model=NewsMonitoringRuleDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new news monitoring rule",
+)
+def create_monitoring_rule(
+    dto: CreateNewsMonitoringRuleDTO,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.create_monitoring_rule(dto, owner_user_id=user_id)
+    except NewsMonitoringRuleInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except NewsMonitoringRuleLimitExceededError as e:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to create monitoring rule: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/monitoring/rules/{rule_id}",
+    response_model=NewsMonitoringRuleDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get single news monitoring rule detail",
+)
+def get_monitoring_rule(
+    rule_id: str = Path(..., description="Rule ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.get_monitoring_rule(rule_id, owner_user_id=user_id)
+    except NewsMonitoringRuleNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.patch(
+    "/api/v1/news/monitoring/rules/{rule_id}",
+    response_model=NewsMonitoringRuleDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Update or toggle an existing news monitoring rule",
+)
+def update_monitoring_rule(
+    rule_id: str = Path(..., description="Rule ID"),
+    dto: UpdateNewsMonitoringRuleDTO = ...,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.update_monitoring_rule(rule_id, owner_user_id=user_id, dto=dto)
+    except NewsMonitoringRuleNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.delete(
+    "/api/v1/news/monitoring/rules/{rule_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Permanently delete a news monitoring rule",
+)
+def delete_monitoring_rule(
+    rule_id: str = Path(..., description="Rule ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        service.delete_monitoring_rule(rule_id, owner_user_id=user_id)
+        return None
+    except NewsMonitoringRuleNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/api/v1/news/monitoring/rules/validate",
+    response_model=NewsRuleValidationResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Validate proposed monitoring rule without saving",
+)
+def validate_monitoring_rule(
+    req: NewsRuleValidationRequestDTO,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.validate_monitoring_rule(req)
+
+
+@router.post(
+    "/api/v1/news/monitoring/rules/preview",
+    response_model=NewsRulePreviewResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Preview historical matches for a proposed rule without notifications",
+)
+def preview_monitoring_rule(
+    req: NewsRulePreviewRequestDTO,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.preview_monitoring_rule(req)
+
+
+@router.get(
+    "/api/v1/news/monitoring/alerts",
+    response_model=NewsAlertFeedResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get alert match and audit history for current user",
+)
+def list_alert_matches(
+    limit: int = Query(50, ge=1, le=200, description="Max alerts to return"),
+    rule_id: Optional[str] = Query(None, description="Filter alerts by rule ID"),
+    status_filter: Optional[str] = Query(None, alias="status", description="Filter by match status"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    return service.list_alert_matches(
+        owner_user_id=user_id,
+        limit=limit,
+        rule_id=rule_id,
+        status=status_filter,
+    )
+
+
+@router.get(
+    "/api/v1/news/monitoring/status",
+    response_model=MonitoringHealthStatusDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get news monitoring pipeline health, lag, and delivery metrics",
+)
+def get_monitoring_status(
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.get_monitoring_health()
+
+
+@router.get(
+    "/api/v1/news/custom-feeds",
+    response_model=List[CustomNewsFeedDTO],
+    status_code=status.HTTP_200_OK,
+    summary="List saved custom news feeds for user",
+)
+def list_custom_feeds(
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    return service.list_custom_feeds(owner_user_id=user_id)
+
+
+@router.post(
+    "/api/v1/news/custom-feeds",
+    response_model=CustomNewsFeedDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new saved custom news feed",
+)
+def create_custom_feed(
+    dto: CreateCustomNewsFeedDTO,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.create_custom_feed(dto, owner_user_id=user_id)
+    except NewsMonitoringRuleInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except NewsCustomFeedLimitExceededError as e:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/custom-feeds/{feed_id}",
+    response_model=CustomNewsFeedDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get single custom news feed definition",
+)
+def get_custom_feed(
+    feed_id: str = Path(..., description="Feed ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.get_custom_feed(feed_id, owner_user_id=user_id)
+    except NewsCustomFeedNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.patch(
+    "/api/v1/news/custom-feeds/{feed_id}",
+    response_model=CustomNewsFeedDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Update saved custom news feed configuration",
+)
+def update_custom_feed(
+    feed_id: str = Path(..., description="Feed ID"),
+    dto: UpdateCustomNewsFeedDTO = ...,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.update_custom_feed(feed_id, owner_user_id=user_id, dto=dto)
+    except NewsCustomFeedNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.delete(
+    "/api/v1/news/custom-feeds/{feed_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a saved custom news feed",
+)
+def delete_custom_feed(
+    feed_id: str = Path(..., description="Feed ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        service.delete_custom_feed(feed_id, owner_user_id=user_id)
+        return None
+    except NewsCustomFeedNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/custom-feeds/{feed_id}/articles",
+    response_model=NewsFeedResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Execute canonical search and retrieve articles matching custom feed",
+)
+def get_custom_feed_articles(
+    feed_id: str = Path(..., description="Feed ID"),
+    limit: int = Query(30, ge=1, le=100),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.execute_custom_feed(feed_id, owner_user_id=user_id, limit=limit)
+    except NewsCustomFeedNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/digests",
+    response_model=List[NewsDigestSubscriptionDTO],
+    status_code=status.HTTP_200_OK,
+    summary="List news digest subscriptions for user",
+)
+def list_digests(
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    return service.list_digest_subscriptions(owner_user_id=user_id)
+
+
+@router.post(
+    "/api/v1/news/digests",
+    response_model=NewsDigestSubscriptionDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new scheduled news digest subscription",
+)
+def create_digest(
+    dto: CreateNewsDigestSubscriptionDTO,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.create_digest_subscription(dto, owner_user_id=user_id)
+    except NewsMonitoringRuleInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/digests/{digest_id}",
+    response_model=NewsDigestSubscriptionDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get single news digest subscription",
+)
+def get_digest(
+    digest_id: str = Path(..., description="Digest ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.get_digest_subscription(digest_id, owner_user_id=user_id)
+    except NewsDigestNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.patch(
+    "/api/v1/news/digests/{digest_id}",
+    response_model=NewsDigestSubscriptionDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Update digest configuration or cadence",
+)
+def update_digest(
+    digest_id: str = Path(..., description="Digest ID"),
+    dto: UpdateNewsDigestSubscriptionDTO = ...,
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.update_digest_subscription(digest_id, owner_user_id=user_id, dto=dto)
+    except NewsDigestNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.delete(
+    "/api/v1/news/digests/{digest_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a news digest subscription",
+)
+def delete_digest(
+    digest_id: str = Path(..., description="Digest ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        service.delete_digest_subscription(digest_id, owner_user_id=user_id)
+        return None
+    except NewsDigestNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/digests/{digest_id}/preview",
+    response_model=NewsDigestRunDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Preview currently eligible content for a digest without running dispatch",
+)
+def preview_digest(
+    digest_id: str = Path(..., description="Digest ID"),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.preview_digest(digest_id, owner_user_id=user_id)
+    except NewsDigestNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/api/v1/news/digests/{digest_id}/trigger",
+    response_model=NewsDigestRunDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Trigger on-demand execution and dispatch for a news digest",
+)
+def trigger_digest(
+    digest_id: str = Path(..., description="Digest ID"),
+    session: Session = Depends(get_db_session),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    try:
+        return service.generate_and_dispatch_digest(digest_id, owner_user_id=user_id, session=session)
+    except NewsDigestNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/api/v1/news/digests/{digest_id}/history",
+    response_model=List[NewsDigestRunDTO],
+    status_code=status.HTTP_200_OK,
+    summary="List past digest runs and dispatch history",
+)
+def list_digest_history(
+    digest_id: str = Path(..., description="Digest ID"),
+    limit: int = Query(20, ge=1, le=100),
+    service: NewsService = Depends(get_news_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = getattr(user, "sub", None) or getattr(user, "user_id", None) or "usr-dev-atlas"
+    return service.list_digest_runs(owner_user_id=user_id, digest_id=digest_id, limit=limit)
 
 
 # ---------------------------------------------------------------------------

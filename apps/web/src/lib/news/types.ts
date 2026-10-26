@@ -728,4 +728,284 @@ export interface SentimentEvaluationResultDTO {
   methodology: string;
 }
 
+// ============================================================================
+// Stage 103: Monitoring Rules, Custom Feeds, Alerts & Digests
+// ============================================================================
+
+export type NewsMonitoringRuleType =
+  | "COMPANY"
+  | "INSTRUMENT"
+  | "WATCHLIST"
+  | "TOPIC"
+  | "PUBLISHER"
+  | "EVENT_TYPE"
+  | "COMPOSITE";
+
+export type NewsAlertPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export type NewsTriggerPolicy =
+  | "ON_NEW_ARTICLE"
+  | "ON_EVENT_VERIFIED"
+  | "ON_SENTIMENT_CHANGE"
+  | "BATCH_HOURLY"
+  | "SCHEDULED_DIGEST_ONLY";
+
+export type NewsDeliveryChannel =
+  | "IN_APP"
+  | "DURABLE_NOTIFICATION"
+  | "EMAIL"
+  | "DIGEST";
+
+export type NewsAlertMatchStatus =
+  | "MATCHED"
+  | "DISPATCHED"
+  | "SUPPRESSED_COOLDOWN"
+  | "SUPPRESSED_SYNDICATION"
+  | "SUPPRESSED_QUIET_HOURS"
+  | "SUPPRESSED_MUTED"
+  | "DISPATCH_FAILED";
+
+export type NewsDigestCadence = "DAILY" | "WEEKLY" | "CUSTOM";
+
+export interface NewsSentimentConditionDTO {
+  sentiment_label: NewsSentimentLabel;
+  min_score?: number | null;
+  aspect?: NewsFinancialAspect | null;
+  require_high_confidence?: boolean;
+}
+
+export interface NewsMonitoringRuleDTO {
+  rule_id: string;
+  owner_user_id: string;
+  name: string;
+  description?: string | null;
+  rule_type: NewsMonitoringRuleType;
+  is_active: boolean;
+  target_entity_ids: string[];
+  target_tickers: string[];
+  target_watchlist_id?: string | null;
+  target_topic_ids: string[];
+  target_publisher_ids: string[];
+  target_event_types: string[];
+  sentiment_condition?: NewsSentimentConditionDTO | null;
+  priority: NewsAlertPriority;
+  trigger_policy: NewsTriggerPolicy;
+  delivery_channels: NewsDeliveryChannel[];
+  cooldown_minutes: number;
+  quiet_hours_enabled: boolean;
+  quiet_hours_start_utc?: string | null;
+  quiet_hours_end_utc?: string | null;
+  rule_revision: number;
+  created_at: string;
+  updated_at: string;
+  last_triggered_at?: string | null;
+  total_matches_count: number;
+}
+
+export interface CreateNewsMonitoringRuleDTO {
+  name: string;
+  description?: string | null;
+  rule_type: NewsMonitoringRuleType;
+  target_entity_ids?: string[];
+  target_tickers?: string[];
+  target_watchlist_id?: string | null;
+  target_topic_ids?: string[];
+  target_publisher_ids?: string[];
+  target_event_types?: string[];
+  sentiment_condition?: NewsSentimentConditionDTO | null;
+  priority?: NewsAlertPriority;
+  trigger_policy?: NewsTriggerPolicy;
+  delivery_channels?: NewsDeliveryChannel[];
+  cooldown_minutes?: number;
+  quiet_hours_enabled?: boolean;
+  quiet_hours_start_utc?: string | null;
+  quiet_hours_end_utc?: string | null;
+  is_active?: boolean;
+}
+
+export interface UpdateNewsMonitoringRuleDTO {
+  name?: string | null;
+  description?: string | null;
+  is_active?: boolean | null;
+  target_entity_ids?: string[] | null;
+  target_tickers?: string[] | null;
+  target_watchlist_id?: string | null;
+  target_topic_ids?: string[] | null;
+  target_publisher_ids?: string[] | null;
+  target_event_types?: string[] | null;
+  sentiment_condition?: NewsSentimentConditionDTO | null;
+  priority?: NewsAlertPriority | null;
+  trigger_policy?: NewsTriggerPolicy | null;
+  delivery_channels?: NewsDeliveryChannel[] | null;
+  cooldown_minutes?: number | null;
+  quiet_hours_enabled?: boolean | null;
+  quiet_hours_start_utc?: string | null;
+  quiet_hours_end_utc?: string | null;
+}
+
+export interface NewsRuleValidationRequestDTO {
+  rule: CreateNewsMonitoringRuleDTO;
+}
+
+export interface NewsRuleValidationResponseDTO {
+  is_valid: boolean;
+  validation_errors: string[];
+  validation_warnings: string[];
+  normalized_summary?: string | null;
+  rule_id?: string | null;
+}
+
+export interface NewsRulePreviewRequestDTO {
+  rule: CreateNewsMonitoringRuleDTO;
+  limit?: number;
+}
+
+export interface NewsRulePreviewResponseDTO {
+  preview_sample_articles: NewsArticleDTO[];
+  preview_sample_events: NewsFinancialEventDTO[];
+  estimated_matching_volume_per_week: number;
+  is_rule_valid: boolean;
+  warnings: string[];
+  disclaimer: string;
+}
+
+export interface NewsAlertMatchDTO {
+  alert_id: string;
+  rule_id: string;
+  rule_name: string;
+  owner_user_id: string;
+  source_object_type: "ARTICLE" | "EVENT";
+  source_object_id: string;
+  headline_or_title: string;
+  publisher_name?: string | null;
+  source_published_at: string;
+  matched_at: string;
+  priority: NewsAlertPriority;
+  delivery_channels: NewsDeliveryChannel[];
+  match_status: NewsAlertMatchStatus;
+  deduplication_key: string;
+  matched_conditions: string[];
+  evidence_summary?: string | null;
+  notification_id?: string | null;
+  error_detail?: string | null;
+  action_url: string;
+}
+
+export interface NewsAlertFeedResponseDTO {
+  alerts: NewsAlertMatchDTO[];
+  total_count: number;
+  unread_count: number;
+  as_of: string;
+}
+
+export interface CustomNewsFeedDTO {
+  feed_id: string;
+  owner_user_id: string;
+  title: string;
+  description?: string | null;
+  query_config: Record<string, unknown>;
+  is_alert_enabled: boolean;
+  priority: NewsAlertPriority;
+  created_at: string;
+  updated_at: string;
+  total_matching_articles_cached?: number | null;
+  last_accessed_at?: string | null;
+}
+
+export interface CreateCustomNewsFeedDTO {
+  title: string;
+  description?: string | null;
+  query_config: Record<string, unknown>;
+  is_alert_enabled?: boolean;
+  priority?: NewsAlertPriority;
+}
+
+export interface UpdateCustomNewsFeedDTO {
+  title?: string | null;
+  description?: string | null;
+  query_config?: Record<string, unknown> | null;
+  is_alert_enabled?: boolean | null;
+  priority?: NewsAlertPriority | null;
+}
+
+export interface NewsDigestSubscriptionDTO {
+  digest_id: string;
+  owner_user_id: string;
+  title: string;
+  cadence: NewsDigestCadence;
+  schedule_cron_or_time: string;
+  timezone: string;
+  delivery_channels: NewsDeliveryChannel[];
+  source_rule_ids: string[];
+  custom_feed_ids: string[];
+  top_stories_limit: number;
+  include_event_highlights: boolean;
+  include_sentiment_summary: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  last_dispatched_at?: string | null;
+  next_scheduled_at?: string | null;
+  total_runs_count: number;
+}
+
+export interface CreateNewsDigestSubscriptionDTO {
+  title: string;
+  cadence: NewsDigestCadence;
+  schedule_cron_or_time?: string;
+  timezone?: string;
+  delivery_channels?: NewsDeliveryChannel[];
+  source_rule_ids?: string[];
+  custom_feed_ids?: string[];
+  top_stories_limit?: number;
+  include_event_highlights?: boolean;
+  include_sentiment_summary?: boolean;
+  is_active?: boolean;
+}
+
+export interface UpdateNewsDigestSubscriptionDTO {
+  title?: string | null;
+  cadence?: NewsDigestCadence | null;
+  schedule_cron_or_time?: string | null;
+  timezone?: string | null;
+  delivery_channels?: NewsDeliveryChannel[] | null;
+  source_rule_ids?: string[] | null;
+  custom_feed_ids?: string[] | null;
+  top_stories_limit?: number | null;
+  include_event_highlights?: boolean | null;
+  include_sentiment_summary?: boolean | null;
+  is_active?: boolean | null;
+}
+
+export interface NewsDigestRunDTO {
+  run_id: string;
+  digest_id: string;
+  owner_user_id: string;
+  cadence: NewsDigestCadence;
+  started_at: string;
+  completed_at?: string | null;
+  status: "PENDING" | "GENERATING" | "DISPATCHED" | "FAILED" | "SKIPPED_EMPTY";
+  total_articles_included: number;
+  top_stories_included: Array<Record<string, unknown>>;
+  event_highlights: Array<Record<string, unknown>>;
+  delivery_channels: NewsDeliveryChannel[];
+  notification_id?: string | null;
+  error_message?: string | null;
+  idempotency_token: string;
+}
+
+export interface MonitoringHealthStatusDTO {
+  is_healthy: boolean;
+  active_rules_count: number;
+  active_custom_feeds_count: number;
+  active_digests_count: number;
+  alerts_last_24h: number;
+  deduplicated_last_24h: number;
+  average_eval_latency_ms: number;
+  last_evaluation_timestamp?: string | null;
+  engine_version: string;
+  watermark_timestamp?: string | null;
+}
+
+
 

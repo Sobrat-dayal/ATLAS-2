@@ -9674,6 +9674,52 @@ This document records the major architectural and product decisions established.
 684. Comprehensive automated verification: 94 passing backend tests (test_news_sentiment_analytics_v1.py, test_news_story_intelligence_v1.py, test_news_discovery_v1.py, test_news_v1.py), 0 ruff errors, 55 passing web unit tests, 0 TypeScript errors (`tsc --noEmit`), and clean Next.js production build.
 685. Stage 102 is complete; Stage 103 is the next canonical roadmap stage.
 
+## Stage 103: Personalized Financial News Monitoring, Custom Feeds, Rule-Based Alerts, and News Digests
+
+### Monitoring Rules Architecture & Condition Typing
+686. User-Owned Monitoring Rules: Rules are persistent, isolated to individual authenticated principals (`owner_user_id`), and enforce maximum quota constraints (50 rules per user).
+687. Typed Rule Dimensions: Rules support typed criteria: `COMPANY` (tickers/entities), `INSTRUMENT` (asset classes), `WATCHLIST` (Stage 39 watchlist binding), `TOPIC` (Stage 100 discovery taxonomy), `PUBLISHER` (wire sources), `EVENT_TYPE` (Stage 101 event taxonomy), and `COMPOSITE` (multi-criteria conjunction).
+688. Optimistic Concurrency Revisioning: Every update increments an integer `rule_revision`, preventing race conditions across multiple client tabs.
+689. Target-Aware Sentiment Condition Integration: Optional rule condition binds to Stage 102 polarity isolation (`POSITIVE`, `NEGATIVE`, `NEUTRAL`, `MIXED`), minimum confidence score, and financial aspect (`EARNINGS_PERFORMANCE`, etc.).
+690. Bounded Historical Rule Preview: Rule creation modal includes historical validation preview against bounded recent articles and events to estimate match frequency without retroactive alert floods.
+691. Non-Retroactive Alert Guarantee: Historical rule preview and rule activation strictly evaluate forward-going events; retroactive alert flood dispatch is prohibited by design.
+
+### Evaluation Engine, Deduplication & Suppression
+692. Pure Deterministic Evaluation: The `NewsRuleMatcher` evaluates rules as pure functions of ingested article metadata, resolved entities, and verified events.
+693. Evidence-Grounded Alert Records: Every alert match stores explicit human-readable condition evidence spans in `matched_conditions`.
+694. Syndication-Aware Deduplication: Identical articles syndicated across multiple wires collapse under a unified SHA-256 deduplication key, recording duplicates as `SUPPRESSED_SYNDICATION`.
+695. Rule Cooldown Policy: Rules enforce configurable cooldown periods (default: 30m, 5–1440m); matches within active cooldown are recorded as `SUPPRESSED_COOLDOWN`.
+696. Quiet-Hours Suppression: Configurable UTC quiet hours suppress instant notification dispatch during off-hours (`SUPPRESSED_QUIET_HOURS`), holding items for scheduled morning digests.
+697. Alert Severity Stratification: Explicit priority levels (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) control routing channels and UI visual treatment.
+698. Evaluation Latency Budget: The rule-matching engine evaluates rules within sub-5ms latency budgets per ingested item, tracked via real-time telemetry.
+
+### Custom Feeds & Canonical Discovery Alignment
+699. Persistent Custom Discovery Feeds: Users can save discovery search criteria (`q`, `category`, `topics`, `publishers`, `entities`) as persistent `CustomNewsFeed` objects (quota: 25 feeds/user).
+700. Query Re-Compilation: Custom feeds compile dynamically into canonical Stage 100 `NewsFeedQuery` discovery executions, preventing divergent query syntax.
+701. Custom Feed Alert Integration: Custom feeds can be flagged as `is_alert_enabled`, automatically evaluating inbound articles for new additions.
+
+### Scheduled Digests & Durable Notification Integration
+702. Scheduled News Digest Subscriptions: Users can configure `DAILY` or `WEEKLY` digests with local timezone and delivery schedule time.
+703. Multi-Story Grouping & Topic Balancing: Digests group top stories by importance, balancing corporate actions, macro trends, and verified event highlights.
+704. Idempotent Digest Execution: Every digest execution run generates a deterministic idempotency token (`idemp-digest-{digest_id}-{timestamp}`), guaranteeing exactly-once dispatch.
+705. Stage 49 Durable Notification Integration: Real-time alert dispatch directly invokes `NotificationService.create_notification` via canonical action routes `/news`.
+706. Email & Digest Channels: Multi-channel delivery supports in-app, durable notifications, email dispatch markers, and scheduled digest summaries.
+
+### Telemetry, Health & Observability
+707. Pipeline Telemetry Service: Real-time health endpoint `/api/v1/news/monitoring/status` reports active rules count, active custom feeds, active digests, 24h alert volume, 24h deduplicated volume, evaluation latency, and watermark timestamp.
+708. Engine Version Pinning: The monitoring engine explicitly publishes its version (`v103.0-institutional`) in all telemetry payloads.
+
+### User Experience & Institutional Design
+709. Frontend News Workspace Sub-Tabs: The `/news` workspace integrates `[Monitoring & Alerts]` view mode, rendering sub-tabs for Rules, Custom Feeds, Alert History, Digests, and Health.
+710. Real-Time Live Validation: The Rule Builder Modal validates rule syntax and detects broad/unbounded filters in real-time as the user types.
+711. Interactive One-Click Feed Execution: The Custom Feeds panel allows one-click execution and browsing of matching articles in real-time.
+712. Manual Digest Triggering: Users can test and trigger digest generation on-demand with instant run history logging.
+
+### Security, Safety & Roadmap Boundaries
+713. Strict Non-Trading Boundary: Zero automated order placement, zero buy/sell signals, zero portfolio mutations. The News module is an analytical research surface.
+714. Comprehensive Automated Verification: 108 backend tests (Stages 99–103), 66 frontend unit tests, 0 ruff errors, 0 tsc errors, and clean Next.js production build.
+715. Stage 103 concludes the 5-stage Financial News Intelligence sequence (Stages 99–103); Stage 104 begins the Research module sequence.
+
 
 
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -27,9 +27,13 @@ from atlas.news.errors import (
     NewsArticleRestrictedError,
     NewsArticleWithdrawnError,
     NewsCategoryUnsupportedError,
+    NewsCustomFeedNotFoundError,
+    NewsDigestNotFoundError,
     NewsEventDataInconsistentError,
     NewsEventNotFoundError,
     NewsFinancialEventNotFoundError,
+    NewsMonitoringRuleInvalidError,
+    NewsMonitoringRuleNotFoundError,
     NewsSearchInvalidError,
     NewsStoryNotFoundError,
 )
@@ -38,6 +42,14 @@ from atlas.news.events import (
     NewsFinancialEvent,
 )
 from atlas.news.market_reaction import ObservedNewsMarketContext
+from atlas.news.monitoring import (
+    CustomNewsFeed,
+    NewsAlertMatch,
+    NewsDigestRun,
+    NewsDigestSubscription,
+    NewsMonitoringRule,
+    NewsSentimentCondition,
+)
 from atlas.news.normalization import (
     normalize_canonical_url,
     normalize_timestamp,
@@ -56,14 +68,24 @@ from atlas.news.repository import (
     NewsStoryQuery,
 )
 from atlas.news.schemas import (
+    # Stage 103 DTOs
+    CreateCustomNewsFeedDTO,
+    CreateNewsDigestSubscriptionDTO,
+    CreateNewsMonitoringRuleDTO,
+    CustomNewsFeedDTO,
     EntitySentimentAggregateDTO,
     EventAmountDTO,
     EventParticipantDTO,
     EventSentimentProfileDTO,
     FinancialEventTypeDefinitionDTO,
     MarketReactionRequestDTO,
+    MonitoringHealthStatusDTO,
+    NewsAlertFeedResponseDTO,
+    NewsAlertMatchDTO,
     NewsArticleDTO,
     NewsCoverageResponseDTO,
+    NewsDigestRunDTO,
+    NewsDigestSubscriptionDTO,
     NewsDiscoveryQueryDTO,
     NewsDiscoveryResponseDTO,
     NewsEntityMentionDTO,
@@ -78,9 +100,15 @@ from atlas.news.schemas import (
     NewsFreshnessResponseDTO,
     NewsIngestionRequestDTO,
     NewsIngestionResponseDTO,
+    NewsMonitoringRuleDTO,
     NewsPublisherDTO,
+    NewsRulePreviewRequestDTO,
+    NewsRulePreviewResponseDTO,
+    NewsRuleValidationRequestDTO,
+    NewsRuleValidationResponseDTO,
     NewsSearchSuggestionDTO,
     NewsSentimentAnnotationDTO,
+    NewsSentimentConditionDTO,
     NewsSourceDTO,
     NewsStoryFeedResponseDTO,
     NewsStoryThreadDTO,
@@ -94,6 +122,9 @@ from atlas.news.schemas import (
     SentimentTimelineBucketDTO,
     SentimentTimelineResponseDTO,
     StorySentimentProfileDTO,
+    UpdateCustomNewsFeedDTO,
+    UpdateNewsDigestSubscriptionDTO,
+    UpdateNewsMonitoringRuleDTO,
 )
 from atlas.news.sentiment import (
     EntitySentimentAggregate,
@@ -1168,6 +1199,529 @@ class NewsService:
             noncausal_disclaimer=ctx.noncausal_disclaimer,
             limitations=ctx.limitations,
         )
+
+    # -----------------------------------------------------------------------
+    # Stage 103: Monitoring Rules, Alerts, Custom Feeds & Digests
+    # -----------------------------------------------------------------------
+
+    def _map_rule_to_dto(self, rule: NewsMonitoringRule) -> NewsMonitoringRuleDTO:
+        sc_dto = None
+        if rule.sentiment_condition:
+            sc_dto = NewsSentimentConditionDTO(
+                sentiment_label=rule.sentiment_condition.sentiment_label,
+                min_score=rule.sentiment_condition.min_score,
+                aspect=rule.sentiment_condition.aspect,
+            )
+        return NewsMonitoringRuleDTO(
+            rule_id=rule.rule_id,
+            owner_user_id=rule.owner_user_id,
+            name=rule.name,
+            description=rule.description,
+            rule_type=rule.rule_type,
+            target_entity_ids=rule.target_entity_ids,
+            target_tickers=rule.target_tickers,
+            target_watchlist_ids=rule.target_watchlist_ids,
+            target_topics=rule.target_topics,
+            target_event_types=rule.target_event_types,
+            target_publisher_ids=rule.target_publisher_ids,
+            target_story_id=rule.target_story_id,
+            target_custom_feed_id=rule.target_custom_feed_id,
+            sentiment_condition=sc_dto,
+            priority=rule.priority,
+            trigger_policy=rule.trigger_policy,
+            cooldown_minutes=rule.cooldown_minutes,
+            delivery_channels=rule.delivery_channels,
+            quiet_hours_enabled=rule.quiet_hours_enabled,
+            quiet_hours_start_utc=rule.quiet_hours_start_utc,
+            quiet_hours_end_utc=rule.quiet_hours_end_utc,
+            user_timezone=rule.user_timezone,
+            is_active=rule.is_active,
+            rule_revision=rule.rule_revision,
+            last_matched_at=rule.last_matched_at,
+            match_count=rule.match_count,
+            created_at=rule.created_at,
+            updated_at=rule.updated_at,
+        )
+
+    def _map_match_to_dto(self, match: NewsAlertMatch) -> NewsAlertMatchDTO:
+        return NewsAlertMatchDTO(
+            match_id=match.match_id,
+            rule_id=match.rule_id,
+            rule_name=match.rule_name,
+            rule_revision=match.rule_revision,
+            owner_user_id=match.owner_user_id,
+            trigger_type=match.trigger_type,
+            source_object_type=match.source_object_type,
+            source_object_id=match.source_object_id,
+            headline_or_title=match.headline_or_title,
+            publisher_name=match.publisher_name,
+            target_entity_id=match.target_entity_id,
+            target_ticker=match.target_ticker,
+            matched_conditions=match.matched_conditions,
+            evidence_snippet=match.evidence_snippet,
+            source_published_at=match.source_published_at,
+            evaluated_at=match.evaluated_at,
+            priority=match.priority,
+            delivery_channel=match.delivery_channel,
+            status=match.status,
+            suppression_reason=match.suppression_reason,
+            deduplication_key=match.deduplication_key,
+        )
+
+    def _map_custom_feed_to_dto(self, feed: CustomNewsFeed) -> CustomNewsFeedDTO:
+        return CustomNewsFeedDTO(
+            feed_id=feed.feed_id,
+            owner_user_id=feed.owner_user_id,
+            title=feed.title,
+            description=feed.description,
+            query_config=feed.query_config,
+            is_alert_enabled=feed.is_alert_enabled,
+            linked_rule_id=feed.linked_rule_id,
+            created_at=feed.created_at,
+            updated_at=feed.updated_at,
+        )
+
+    _map_feed_to_dto = _map_custom_feed_to_dto
+
+    def _map_digest_sub_to_dto(self, sub: NewsDigestSubscription) -> NewsDigestSubscriptionDTO:
+        return NewsDigestSubscriptionDTO(
+            digest_id=sub.digest_id,
+            owner_user_id=sub.owner_user_id,
+            title=sub.title,
+            cadence=sub.cadence,
+            preferred_time_local=sub.preferred_time_local,
+            timezone=sub.timezone,
+            delivery_channel=sub.delivery_channel,
+            include_empty=sub.include_empty,
+            max_items=sub.max_items,
+            target_entity_ids=sub.target_entity_ids,
+            target_watchlist_ids=sub.target_watchlist_ids,
+            target_topics=sub.target_topics,
+            is_active=sub.is_active,
+            last_run_at=sub.last_run_at,
+            created_at=sub.created_at,
+            updated_at=sub.updated_at,
+        )
+
+    def _map_digest_run_to_dto(self, run: NewsDigestRun) -> NewsDigestRunDTO:
+        return NewsDigestRunDTO(
+            run_id=run.run_id,
+            digest_id=run.digest_id,
+            owner_user_id=run.owner_user_id,
+            title=run.title,
+            interval_start=run.interval_start,
+            interval_end=run.interval_end,
+            executed_at=run.executed_at,
+            eligible_article_count=run.eligible_article_count,
+            unique_story_count=run.unique_story_count,
+            verified_event_count=run.verified_event_count,
+            status=run.status,
+            summary_sections=run.summary_sections,
+            attribution_disclaimer=run.attribution_disclaimer,
+        )
+
+    def create_monitoring_rule(
+        self,
+        dto: CreateNewsMonitoringRuleDTO,
+        owner_user_id: str,
+    ) -> NewsMonitoringRuleDTO:
+        if not dto.name or len(dto.name.strip()) < 2:
+            raise NewsMonitoringRuleInvalidError("Rule name must be at least 2 characters.")
+
+        sc = None
+        if dto.sentiment_condition:
+            sc = NewsSentimentCondition(
+                sentiment_label=dto.sentiment_condition.sentiment_label,
+                min_score=dto.sentiment_condition.min_score,
+                aspect=dto.sentiment_condition.aspect,
+            )
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        rule = NewsMonitoringRule(
+            rule_id=f"rule-{uuid.uuid4().hex[:8]}",
+            owner_user_id=owner_user_id,
+            name=dto.name.strip(),
+            description=dto.description.strip() if dto.description else None,
+            rule_type=dto.rule_type,
+            target_entity_ids=dto.target_entity_ids,
+            target_tickers=[t.upper() for t in dto.target_tickers],
+            target_watchlist_ids=dto.target_watchlist_ids,
+            target_topics=[top.upper() for top in dto.target_topics],
+            target_event_types=[et.upper() for et in dto.target_event_types],
+            target_publisher_ids=dto.target_publisher_ids,
+            target_story_id=dto.target_story_id,
+            target_custom_feed_id=dto.target_custom_feed_id,
+            sentiment_condition=sc,
+            priority=dto.priority,
+            trigger_policy=dto.trigger_policy,
+            cooldown_minutes=dto.cooldown_minutes,
+            delivery_channels=dto.delivery_channels,
+            quiet_hours_enabled=dto.quiet_hours_enabled,
+            quiet_hours_start_utc=dto.quiet_hours_start_utc,
+            quiet_hours_end_utc=dto.quiet_hours_end_utc,
+            user_timezone=dto.user_timezone,
+            is_active=dto.is_active,
+            created_at=now,
+            updated_at=now,
+        )
+
+        created = self._repository.create_monitoring_rule(rule)
+        return self._map_rule_to_dto(created)
+
+    def get_monitoring_rule(self, rule_id: str, owner_user_id: str) -> NewsMonitoringRuleDTO:
+        rule = self._repository.get_monitoring_rule(rule_id, owner_user_id)
+        if not rule:
+            raise NewsMonitoringRuleNotFoundError(rule_id)
+        return self._map_rule_to_dto(rule)
+
+    def list_monitoring_rules(
+        self, owner_user_id: str, active_only: bool = False
+    ) -> List[NewsMonitoringRuleDTO]:
+        rules = self._repository.list_monitoring_rules(owner_user_id, active_only=active_only)
+        return [self._map_rule_to_dto(r) for r in rules]
+
+    def update_monitoring_rule(
+        self,
+        rule_id: str,
+        owner_user_id: str,
+        dto: UpdateNewsMonitoringRuleDTO,
+    ) -> NewsMonitoringRuleDTO:
+        updates = dto.model_dump(exclude_unset=True)
+        if "sentiment_condition" in updates and updates["sentiment_condition"]:
+            sc_data = updates["sentiment_condition"]
+            updates["sentiment_condition"] = NewsSentimentCondition(
+                sentiment_label=sc_data.get("sentiment_label"),
+                min_score=sc_data.get("min_score"),
+                aspect=sc_data.get("aspect"),
+            )
+        updated = self._repository.update_monitoring_rule(rule_id, owner_user_id, updates)
+        return self._map_rule_to_dto(updated)
+
+    def delete_monitoring_rule(self, rule_id: str, owner_user_id: str) -> bool:
+        return self._repository.delete_monitoring_rule(rule_id, owner_user_id)
+
+    def validate_monitoring_rule(
+        self, req: NewsRuleValidationRequestDTO
+    ) -> NewsRuleValidationResponseDTO:
+        rule = req.rule
+        errors: List[str] = []
+        warnings: List[str] = []
+
+        if not rule.name or len(rule.name.strip()) < 2:
+            errors.append("Rule name must be at least 2 characters.")
+
+        if rule.rule_type.value == "COMPANY" and not rule.target_entity_ids and not rule.target_tickers:
+            errors.append("Company monitoring rules must specify at least one target entity ID or ticker.")
+
+        if rule.rule_type.value == "TOPIC" and not rule.target_topics:
+            errors.append("Topic monitoring rules must specify at least one target topic.")
+
+        if rule.rule_type.value == "WATCHLIST" and not rule.target_watchlist_ids:
+            errors.append("Watchlist monitoring rules must specify at least one target watchlist ID.")
+
+        if rule.cooldown_minutes < 0 or rule.cooldown_minutes > 1440:
+            errors.append("Cooldown minutes must be between 0 and 1440 (24 hours).")
+
+        if not rule.delivery_channels:
+            warnings.append("No delivery channels selected; alerts will be generated but not delivered.")
+
+        if rule.sentiment_condition and rule.sentiment_condition.min_score is not None:
+            if rule.sentiment_condition.min_score < 0.0 or rule.sentiment_condition.min_score > 1.0:
+                errors.append("Sentiment minimum confidence score must be between 0.0 and 1.0.")
+
+        is_valid = len(errors) == 0
+        coverage = "Comprehensive" if is_valid and not warnings else ("Degraded" if warnings else "Invalid")
+
+        return NewsRuleValidationResponseDTO(
+            is_valid=is_valid,
+            errors=errors,
+            warnings=warnings,
+            estimated_coverage=f"{coverage} Coverage across verified institutional providers.",
+        )
+
+    def preview_monitoring_rule(
+        self, req: NewsRulePreviewRequestDTO
+    ) -> NewsRulePreviewResponseDTO:
+        rule_dto = req.rule
+        sc = None
+        if rule_dto.sentiment_condition:
+            sc = NewsSentimentCondition(
+                sentiment_label=rule_dto.sentiment_condition.sentiment_label,
+                min_score=rule_dto.sentiment_condition.min_score,
+                aspect=rule_dto.sentiment_condition.aspect,
+            )
+
+        transient_rule = NewsMonitoringRule(
+            rule_id="preview-rule",
+            owner_user_id="transient-preview",
+            name=rule_dto.name,
+            rule_type=rule_dto.rule_type,
+            target_entity_ids=rule_dto.target_entity_ids,
+            target_tickers=[t.upper() for t in rule_dto.target_tickers],
+            target_watchlist_ids=rule_dto.target_watchlist_ids,
+            target_topics=[top.upper() for top in rule_dto.target_topics],
+            target_event_types=[et.upper() for et in rule_dto.target_event_types],
+            target_publisher_ids=rule_dto.target_publisher_ids,
+            target_story_id=rule_dto.target_story_id,
+            target_custom_feed_id=rule_dto.target_custom_feed_id,
+            sentiment_condition=sc,
+            priority=rule_dto.priority,
+            trigger_policy=rule_dto.trigger_policy,
+            cooldown_minutes=0,
+            delivery_channels=rule_dto.delivery_channels,
+            is_active=True,
+            created_at=datetime.datetime.now(datetime.timezone.utc),
+            updated_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+
+        all_articles = list(self._repository._dedup._articles_by_id.values())
+        matched_samples: List[Dict[str, Any]] = []
+
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        for article in sorted(all_articles, key=lambda a: a.published_at, reverse=True):
+            sentiment_anns = self._repository._sentiment_by_article.get(article.article_id, [])
+            match = self._repository._rule_matcher.match_article(
+                rule=transient_rule,
+                article=article,
+                sentiment_annotations=sentiment_anns,
+                current_time_utc=now_utc,
+            )
+            if match:
+                matched_samples.append({
+                    "article_id": article.article_id,
+                    "headline": article.headline,
+                    "publisher_name": article.publisher_name,
+                    "published_at": article.published_at.isoformat(),
+                    "matched_conditions": match.matched_conditions,
+                    "evidence_snippet": match.evidence_snippet,
+                })
+                if len(matched_samples) >= req.limit:
+                    break
+
+        return NewsRulePreviewResponseDTO(
+            matched_articles=matched_samples,
+            total_potential_matches=len(matched_samples),
+            sample_coverage_window_hours=72,
+            disclaimer="Historical preview results reflect current news data and do not trigger retroactive notifications.",
+        )
+
+    def list_alert_matches(
+        self,
+        owner_user_id: str,
+        limit: int = 50,
+        rule_id: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> NewsAlertFeedResponseDTO:
+        matches = self._repository.list_alert_matches(
+            owner_user_id=owner_user_id,
+            limit=limit,
+            rule_id=rule_id,
+            status=status,
+        )
+        dtos = [self._map_match_to_dto(m) for m in matches]
+        delivered_count = sum(1 for d in dtos if d.status.value == "DELIVERED")
+        suppressed_count = sum(1 for d in dtos if d.status.value != "DELIVERED")
+
+        return NewsAlertFeedResponseDTO(
+            alerts=dtos,
+            total_count=len(dtos),
+            delivered_count=delivered_count,
+            suppressed_count=suppressed_count,
+            as_of=datetime.datetime.now(datetime.timezone.utc),
+        )
+
+    def get_monitoring_health(self) -> MonitoringHealthStatusDTO:
+        health = self._repository.get_monitoring_health()
+        return MonitoringHealthStatusDTO(
+            is_healthy=health.is_healthy,
+            active_rules_count=health.active_rules_count,
+            evaluated_matches_24h=health.evaluated_matches_24h,
+            delivered_alerts_24h=health.delivered_alerts_24h,
+            delivery_success_rate=health.delivery_success_rate,
+            last_processed_ingestion_watermark=health.last_processed_ingestion_watermark,
+            queue_lag_seconds=health.queue_lag_seconds,
+            p95_evaluation_latency_ms=health.p95_evaluation_latency_ms,
+            as_of=health.as_of,
+        )
+
+    def create_custom_feed(
+        self, dto: CreateCustomNewsFeedDTO, owner_user_id: str
+    ) -> CustomNewsFeedDTO:
+        if not dto.title or len(dto.title.strip()) < 2:
+            raise NewsMonitoringRuleInvalidError("Custom feed title must be at least 2 characters.")
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        feed = CustomNewsFeed(
+            feed_id=f"feed-{uuid.uuid4().hex[:8]}",
+            owner_user_id=owner_user_id,
+            title=dto.title.strip(),
+            description=dto.description.strip() if dto.description else None,
+            query_config=dto.query_config,
+            is_alert_enabled=dto.is_alert_enabled,
+            created_at=now,
+            updated_at=now,
+        )
+        created = self._repository.create_custom_feed(feed)
+        return self._map_feed_to_dto(created)
+
+    def get_custom_feed(self, feed_id: str, owner_user_id: str) -> CustomNewsFeedDTO:
+        feed = self._repository.get_custom_feed(feed_id, owner_user_id)
+        if not feed:
+            raise NewsCustomFeedNotFoundError(feed_id)
+        return self._map_feed_to_dto(feed)
+
+    def list_custom_feeds(self, owner_user_id: str) -> List[CustomNewsFeedDTO]:
+        feeds = self._repository.list_custom_feeds(owner_user_id)
+        return [self._map_feed_to_dto(f) for f in feeds]
+
+    def update_custom_feed(
+        self, feed_id: str, owner_user_id: str, dto: UpdateCustomNewsFeedDTO
+    ) -> CustomNewsFeedDTO:
+        updates = dto.model_dump(exclude_unset=True)
+        updated = self._repository.update_custom_feed(feed_id, owner_user_id, updates)
+        return self._map_feed_to_dto(updated)
+
+    def delete_custom_feed(self, feed_id: str, owner_user_id: str) -> bool:
+        return self._repository.delete_custom_feed(feed_id, owner_user_id)
+
+    def execute_custom_feed(
+        self, feed_id: str, owner_user_id: str, limit: int = 30
+    ) -> NewsFeedResponseDTO:
+        feed = self._repository.get_custom_feed(feed_id, owner_user_id)
+        if not feed:
+            raise NewsCustomFeedNotFoundError(feed_id)
+        qc = feed.query_config
+        query = NewsFeedQuery(
+            q=qc.get("q"),
+            category=qc.get("category"),
+            source_id=qc.get("source_id"),
+            publisher_id=qc.get("publisher_id"),
+            entity_id=qc.get("entity_id"),
+            geography=qc.get("geography"),
+            limit=limit,
+        )
+        return self.get_feed(query)
+
+    def create_digest_subscription(
+        self, dto: CreateNewsDigestSubscriptionDTO, owner_user_id: str
+    ) -> NewsDigestSubscriptionDTO:
+        if not dto.title or len(dto.title.strip()) < 2:
+            raise NewsMonitoringRuleInvalidError("Digest title must be at least 2 characters.")
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        sub = NewsDigestSubscription(
+            digest_id=f"digest-{uuid.uuid4().hex[:8]}",
+            owner_user_id=owner_user_id,
+            title=dto.title.strip(),
+            cadence=dto.cadence,
+            preferred_time_local=dto.preferred_time_local,
+            timezone=dto.timezone,
+            delivery_channel=dto.delivery_channel,
+            include_empty=dto.include_empty,
+            max_items=dto.max_items,
+            target_entity_ids=dto.target_entity_ids,
+            target_watchlist_ids=dto.target_watchlist_ids,
+            target_topics=dto.target_topics,
+            is_active=dto.is_active,
+            created_at=now,
+            updated_at=now,
+        )
+        created = self._repository.create_digest_subscription(sub)
+        return self._map_digest_sub_to_dto(created)
+
+    def get_digest_subscription(self, digest_id: str, owner_user_id: str) -> NewsDigestSubscriptionDTO:
+        sub = self._repository.get_digest_subscription(digest_id, owner_user_id)
+        if not sub:
+            raise NewsDigestNotFoundError(digest_id)
+        return self._map_digest_sub_to_dto(sub)
+
+    def list_digest_subscriptions(self, owner_user_id: str) -> List[NewsDigestSubscriptionDTO]:
+        subs = self._repository.list_digest_subscriptions(owner_user_id)
+        return [self._map_digest_sub_to_dto(s) for s in subs]
+
+    def update_digest_subscription(
+        self, digest_id: str, owner_user_id: str, dto: UpdateNewsDigestSubscriptionDTO
+    ) -> NewsDigestSubscriptionDTO:
+        updates = dto.model_dump(exclude_unset=True)
+        updated = self._repository.update_digest_subscription(digest_id, owner_user_id, updates)
+        return self._map_digest_sub_to_dto(updated)
+
+    def delete_digest_subscription(self, digest_id: str, owner_user_id: str) -> bool:
+        return self._repository.delete_digest_subscription(digest_id, owner_user_id)
+
+    def preview_digest(self, digest_id: str, owner_user_id: str) -> NewsDigestRunDTO:
+        sub = self._repository.get_digest_subscription(digest_id, owner_user_id)
+        if not sub:
+            raise NewsDigestNotFoundError(digest_id)
+
+        all_articles = list(self._repository._dedup._articles_by_id.values())
+        all_stories = self._repository._stories_by_id
+        all_events = self._repository._events_by_id
+
+        run = self._repository._digest_engine.generate_digest(
+            subscription=sub,
+            all_articles=all_articles,
+            all_stories=all_stories,
+            all_events=all_events,
+        )
+        return self._map_digest_run_to_dto(run)
+
+    def generate_and_dispatch_digest(
+        self, digest_id: str, owner_user_id: str, session: Optional[Session] = None
+    ) -> NewsDigestRunDTO:
+        sub = self._repository.get_digest_subscription(digest_id, owner_user_id)
+        if not sub:
+            raise NewsDigestNotFoundError(digest_id)
+
+        all_articles = list(self._repository._dedup._articles_by_id.values())
+        all_stories = self._repository._stories_by_id
+        all_events = self._repository._events_by_id
+
+        run = self._repository._digest_engine.generate_digest(
+            subscription=sub,
+            all_articles=all_articles,
+            all_stories=all_stories,
+            all_events=all_events,
+        )
+
+        self._repository.record_digest_run(run)
+        sub.last_run_at = run.executed_at
+
+        # Optional Stage 49 notification dispatch if session is available
+        if session is not None and run.eligible_article_count > 0:
+            try:
+                from atlas.notifications.enums import NotificationActionKind, NotificationCategory
+                from atlas.notifications.schemas import CreateNotification
+                from atlas.notifications.service import NotificationService
+
+                try:
+                    recip_uuid = uuid.UUID(owner_user_id)
+                except (ValueError, AttributeError):
+                    recip_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, str(owner_user_id))
+
+                notif_svc = NotificationService(session)
+                notif_svc.create_notification(
+                    CreateNotification(
+                        recipient_user_id=recip_uuid,
+                        category=NotificationCategory.MARKET,
+                        title=f"Digest: {sub.title[:100]}",
+                        message=f"{run.eligible_article_count} articles across {run.unique_story_count} stories compiled.",
+                        producer_key="news_monitoring",
+                        dedupe_key=f"digest-{sub.digest_id}-{run.run_id}",
+                        action_kind=NotificationActionKind.INTERNAL_ROUTE,
+                        action_route="/news",
+                    )
+                )
+            except Exception:
+                pass  # Notifications service failure must not break digest generation
+
+        return self._map_digest_run_to_dto(run)
+
+    def list_digest_runs(
+        self, owner_user_id: str, digest_id: Optional[str] = None, limit: int = 20
+    ) -> List[NewsDigestRunDTO]:
+        runs = self._repository.list_digest_runs(owner_user_id, digest_id=digest_id, limit=limit)
+        return [self._map_digest_run_to_dto(r) for r in runs]
 
 
 _news_service_singleton: Optional[NewsService] = None

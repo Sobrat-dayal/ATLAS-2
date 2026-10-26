@@ -19,7 +19,8 @@ import { NewsStoryInspector } from "./NewsStoryInspector";
 import { NewsFinancialEventTable } from "./NewsFinancialEventTable";
 import { NewsEventInspector } from "./NewsEventInspector";
 import { NewsSentimentWorkspace } from "./sentiment/NewsSentimentWorkspace";
-import { LayoutList, Clock, SlidersHorizontal, Layers, ShieldCheck, BarChart3 } from "lucide-react";
+import { NewsMonitoringWorkspace } from "./monitoring/NewsMonitoringWorkspace";
+import { LayoutList, Clock, SlidersHorizontal, Layers, ShieldCheck, BarChart3, Bell } from "lucide-react";
 
 export function NewsWorkspace() {
   const router = useRouter();
@@ -201,6 +202,17 @@ export function NewsWorkspace() {
               <Clock className="w-3.5 h-3.5" />
               <span>Timelines</span>
             </button>
+            <button
+              onClick={() => setView("MONITORING")}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded transition-colors ${
+                view === "MONITORING"
+                  ? "bg-cyan-500 text-white font-semibold shadow-sm"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+              }`}
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>Monitoring & Alerts</span>
+            </button>
           </div>
 
           {/* Sidebar Toggle (visible in Feed and Timeline modes) */}
@@ -227,6 +239,8 @@ export function NewsWorkspace() {
       {/* Main Content Area */}
       {error ? (
         <NewsEmptyState isError={true} errorMessage={error} onRetry={refresh} />
+      ) : view === "MONITORING" ? (
+        <NewsMonitoringWorkspace />
       ) : view === "SENTIMENT" ? (
         <NewsSentimentWorkspace />
       ) : view === "STORIES" ? (
