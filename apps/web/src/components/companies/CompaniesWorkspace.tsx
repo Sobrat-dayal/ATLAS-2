@@ -27,6 +27,7 @@ import { CompanySecuritiesTab } from "./CompanySecuritiesTab";
 import { FinancialRatiosWorkspace } from "./ratios/FinancialRatiosWorkspace";
 import { EarningsWorkspace } from "./earnings/EarningsWorkspace";
 import { OwnershipWorkspace } from "./ownership/OwnershipWorkspace";
+import { FilingsWorkspace } from "./filings/FilingsWorkspace";
 import {
   ArrowLeft,
   Building2,
@@ -172,6 +173,11 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           <span>Ownership</span>
                         </TabsTrigger>
 
+                        <TabsTrigger value="filings" className="gap-1.5 text-xs">
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Filings</span>
+                        </TabsTrigger>
+
                         <TabsTrigger value="news" className="gap-1.5 text-xs">
                           <FileText className="w-3.5 h-3.5" />
                           <span>News & Docs ({overview.recent_news.length + overview.documents.length})</span>
@@ -218,6 +224,17 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           onNavigateToFinancials={() => setActiveTab("financials")}
                           onNavigateToRatios={() => setActiveTab("ratios")}
                           onNavigateToEarnings={() => setActiveTab("earnings")}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="filings">
+                        <FilingsWorkspace
+                          companyId={overview.company_entity_id}
+                          companyName={overview.identity.display_name}
+                          onNavigateToStatements={() => setActiveTab("financials")}
+                          onNavigateToRatios={() => setActiveTab("ratios")}
+                          onNavigateToEarnings={() => setActiveTab("earnings")}
+                          onNavigateToOwnership={() => setActiveTab("ownership")}
                         />
                       </TabsContent>
 

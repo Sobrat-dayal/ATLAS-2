@@ -890,6 +890,20 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Linter: `ruff check` on Stage 85 (0 errors).
 - **Documentation**: See `docs/COMPANY_OWNERSHIP.md` and `docs/DECISIONS.md`.
 
+## Company Filings Intelligence (Stage 86)
+- **Architecture**: Institutional-grade regulatory filings intelligence workspace inside `/companies` integrating official SEC EDGAR disclosures, Annual Reports (10-K, 20-F), Quarterly Reports (10-Q), Current Material Events (8-K), Proxy Statements (DEF 14A), Ownership & Insider References (13F, Form 4), structured XBRL financial facts extraction, full-text document search, revision tracking, and side-by-side filing comparison.
+- **Regulatory Source & Fair Access Compliance**: Enforces official SEC EDGAR Fair Access policy with configured User-Agent identifying technical contact email, token-bucket shared rate limiting (<= 10 req/s), exponential retry backoff, and direct links to immutable SEC web archives.
+- **Safe Document Processing & Multi-Stage Sanitization**: Defuses script tags, inline event handlers, iframes, unsafe URL schemes, and active content from untrusted regulatory HTML. Prohibits XML external entity (XXE) attacks and quadratic expansion on XBRL instance documents.
+- **Structured XBRL Financial Fact Extraction**: Extracts US-GAAP taxonomy concepts with exact context duration/instant qualifications, standard unit classifications (USD, SHARES), decimal precision, and reporting dimensions. Feeds canonical fact provenance into Financial Statements (Stage 82) and Financial Ratios (Stage 83).
+- **Revision & Amendment Comparison**: Unifies line-by-line textual diffing across modified sections and calculates structured XBRL financial fact variances (absolute and percentage differences) with restatement status detection.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_company_filings.py` (14/14 passed).
+  - All 147 company module tests passed (`test_companies_v1.py`, `test_company_financial_statements.py`, `test_company_financial_ratios.py`, `test_company_earnings.py`, `test_company_ownership.py`, `test_company_filings.py`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors).
+  - Production build: `cmd /c npm run build` (Next.js 16.3.8 Turbopack clean compile).
+  - Linter: `ruff check` on Stage 86 (0 errors).
+- **Documentation**: See `docs/COMPANY_FILINGS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

@@ -7256,6 +7256,228 @@ This document records the major architectural and product decisions established.
 184. Documentation must match implementation.
 185. Stage 86 is the next canonical stage.
 
+## Stage 86: Company Filings Intelligence
+
+### Product and Scope
+1. Stage 86 implements Company Filings Intelligence.
+2. Filings remains inside `/companies`.
+3. No new global module is created.
+4. Stage 20 Document Entities are reused.
+5. Stage 18 Company Entities are reused.
+6. Stage 21 regulatory identifiers are reused.
+7. Stage 24 provenance remains authoritative.
+8. No fabricated filings are created.
+9. No new broad Research platform is introduced.
+10. No autonomous AI filing analysis is introduced.
+
+### Source Identity
+11. Regulatory source identity is explicit.
+12. Official filing identifier is preserved.
+13. Filer and issuer are distinct.
+14. CIK is not derived from ticker formatting.
+15. Filing type is source-defined.
+16. Reporting period is distinct from filing date.
+17. Publication time is distinct from ingestion time.
+18. Filing amendment identity is preserved.
+19. Original source documents remain immutable.
+20. Parser revisions are distinct from official amendments.
+
+### Regulator Adapters
+21. SEC EDGAR is integrated only through permitted methods.
+22. Regulator policies are verified before deployment.
+23. Access identification requirements are configured.
+24. Shared rate limits are enforced.
+25. Backoff and retries are bounded.
+26. Source permissions are respected.
+27. Indian regulator integrations remain source-specific.
+28. No protected source access is bypassed.
+29. Unavailable adapters are not advertised as operational.
+30. Source URLs use verified trusted domains.
+
+### Filing Categories
+31. Annual filing types are supported where available.
+32. Quarterly filing types are supported where available.
+33. Current-event filings are supported where available.
+34. Ownership disclosures are supported where available.
+35. Insider filings are supported where available.
+36. Proxy/prospectus types are source-qualified.
+37. Official form codes are preserved.
+38. Amendments are not automatically equivalent to full replacement.
+39. Unknown form types remain explicit.
+
+### Ingestion
+40. Ingestion uses background workers.
+41. User page loads do not trigger unbounded crawls.
+42. Jobs are idempotent.
+43. Filing discovery has stable checkpoints.
+44. Duplicate source records are prevented.
+45. Partial failures are recoverable.
+46. Source quotas are globally respected.
+47. Parsing is bounded.
+48. Ingestion states are explicit.
+49. Parser errors do not destroy source metadata.
+50. Source revisions trigger controlled updates.
+
+### Storage and Security
+51. Original document bytes are preserved where authorized.
+52. Cryptographic hashes verify integrity.
+53. Restricted documents require authorization.
+54. Secure storage is reused.
+55. HTML source is treated as untrusted.
+56. JavaScript execution is prohibited in filing content.
+57. XML external entities are disabled.
+58. Archive decompression is bounded.
+59. Unsafe URLs are rejected.
+60. Path traversal is blocked.
+61. PDF active content is not executed.
+62. CSP and viewer isolation are enforced.
+63. Parser CPU/memory limits are enforced.
+64. Provider credentials remain server-side.
+
+### XBRL
+65. XBRL uses standards-aware parsing.
+66. Original source facts are preserved.
+67. Taxonomy namespaces are preserved.
+68. Taxonomy versions are preserved.
+69. Context identity is preserved.
+70. Dimensions are preserved.
+71. Instant and duration periods remain distinct.
+72. Currency and share units remain distinct.
+73. Decimals/precision are preserved.
+74. Source sign semantics are respected.
+75. Duplicate facts require complete context matching.
+76. Custom extension concepts are not guessed.
+77. Canonical mapping uses Stage 34/82.
+78. Restated facts preserve source vintages.
+79. No fabricated financial line items are created.
+80. No duplicate Fundamental Data store is introduced.
+
+### Search and Viewing
+81. Search is based on genuine indexed text.
+82. Search snippets are source-grounded.
+83. Search entitlements apply.
+84. Filing metadata filters are functional.
+85. Search pagination is bounded.
+86. Original source documents are verifiable.
+87. HTML rendering is sanitized.
+88. PDF viewers are access-controlled.
+89. XBRL facts are inspectable.
+90. Attachment lists use genuine source records.
+91. Page/section references are not fabricated.
+92. Citation controls identify official sources.
+
+### Comparison
+93. Original/amended comparison is supported where available.
+94. Text differences use deterministic algorithms.
+95. Structured financial facts require compatible contexts.
+96. Comparison source IDs/hashes are preserved.
+97. Extraction changes are distinct from filing amendments.
+98. Missing extracted text does not imply deleted source text.
+99. No unverified semantic materiality judgments are generated.
+
+### Cross-Module Integration
+100. Stage 82 Financial Statements remain authoritative.
+101. Stage 83 Ratio Engine remains authoritative.
+102. Stage 84 Earnings remains authoritative.
+103. Stage 85 Ownership remains authoritative.
+104. Filing-source references integrate with these modules.
+105. Extracted accounting facts use existing canonical ingestion contracts.
+106. Existing source revisions invalidate affected financial caches.
+107. No separate Earnings or Ownership engine is created.
+108. Global selected Company context is preserved.
+109. Existing Markets and Charts navigation is preserved.
+
+### Performance
+110. Catalog queries are indexed.
+111. Full-text search is bounded.
+112. Document retrieval is size-limited.
+113. Parsing is asynchronous.
+114. Search indexing is asynchronous.
+115. Cache keys include document hashes.
+116. Cache keys include parser versions.
+117. XBRL cache keys include taxonomy versions.
+118. Comparison caches include both source documents.
+119. Entitlements scope restricted caches.
+120. No regulator fanout occurs on ordinary page loads.
+121. No unbounded worker queues are permitted.
+
+### UI and Accessibility
+122. Filings Overview is functional.
+123. Filing Catalog is functional.
+124. Filing filters are functional.
+125. Document search is functional.
+126. Filing detail is functional.
+127. Safe document viewing is functional.
+128. Attachments are listed where available.
+129. XBRL facts are inspectable where available.
+130. Amendment history is visible.
+131. Filing comparison is functional where supported.
+132. Source provenance is visible.
+133. Error/partial states are supported.
+134. Dark/light modes are preserved.
+135. Agent Dock compatibility is preserved.
+136. Bottom Taskbar compatibility is preserved.
+137. Responsive layouts are supported.
+138. Keyboard navigation is supported.
+139. Screen-reader accessibility is supported.
+140. No purple gradients are introduced.
+141. No emoji icons are introduced.
+142. No fake filing records are displayed.
+
+### Authorization
+143. Authentication is enforced.
+144. Filing metadata entitlements are enforced where applicable.
+145. Full-text entitlements are enforced.
+146. Download entitlements are enforced.
+147. XBRL/extracted-data rights are enforced.
+148. Search snippets do not leak restricted content.
+149. Comparisons do not leak restricted content.
+150. Arbitrary SQL is prohibited.
+151. Unsafe arbitrary URL fetching is prohibited.
+152. Sensitive personal data is minimized.
+153. No Trading orders occur.
+154. No Portfolio mutations occur.
+155. No Broker calls occur.
+156. No Agents execute.
+157. No Workflows execute.
+158. No LLM calls are required.
+
+### Roadmap Boundaries
+159. Stage 87 owns Peers.
+160. Stage 88 owns Supply Chains.
+161. Stages 89–93 own Economics.
+162. Stages 94–98 own Screeners.
+163. Stages 99–103 own News.
+164. Stages 104–109 own Research.
+165. Stages 110–114 own Portfolios.
+166. Stages 115–118 own Risk.
+167. Stages 119–120 own Saved/Workspaces.
+168. Stages 121–128 own Terminal/AI.
+169. Stages 129–140 own Maps/Intelligence.
+170. Stages 141–142 own Options/Quant pricing.
+171. Stage 143 owns Backtesting.
+172. Stage 144 owns Paper Trading.
+173. Stage 145 owns Broker Sandbox.
+174. Stages 146+ own Agents.
+175. No automated Peer discovery is implemented.
+176. No supplier/customer graph is implemented.
+177. No broad News sentiment pipeline is implemented.
+178. No semantic Research RAG is implemented.
+179. No investment recommendation engine is implemented.
+180. No autonomous filing research Agent is implemented.
+181. Stage 86 must pass filing identity tests.
+182. Stage 86 must pass regulator adapter tests.
+183. Stage 86 must pass ingestion tests.
+184. Stage 86 must pass document security tests.
+185. Stage 86 must pass XBRL tests.
+186. Stage 86 must pass search tests.
+187. Stage 86 must pass amendment comparison tests.
+188. Stage 86 must pass temporal tests.
+189. Stage 86 must pass authorization tests.
+190. Stage 86 must pass Stage 81–85 regressions.
+191. Documentation must match implementation.
+192. Stage 87 is the next canonical stage.
+
 
 
 
