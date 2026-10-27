@@ -12,6 +12,7 @@ import { ResearchOverview } from "./ResearchOverview";
 import { ResearchSourceDiscovery } from "./ResearchSourceDiscovery";
 import { ResearchSourceLibrary } from "./ResearchSourceLibrary";
 import { ResearchAnalysisWorkspace } from "./analysis/ResearchAnalysisWorkspace";
+import { ResearchReportsWorkspace } from "./reports/ResearchReportsWorkspace";
 import { useResearchWorkspace } from "@/hooks/research/useResearchWorkspace";
 
 export function ResearchWorkspace() {
@@ -128,6 +129,50 @@ export function ResearchWorkspace() {
     executeSensitivity,
     evaluateHypothesis,
 
+    // Stage 107: Reports & Theses
+    reports,
+    reportsTotal,
+    isReportsLoading,
+    selectedReportId,
+    selectReport,
+    currentReport,
+    reportSections,
+    selectedSectionId,
+    setSelectedSectionId,
+    reportTemplates,
+    reportRevisions,
+    verificationResult,
+    isVerifying,
+    reportExports,
+    theses,
+    selectedThesisId,
+    selectThesis,
+    currentThesis,
+    thesisArguments,
+    isThesesLoading,
+    reportStatusFilter,
+    setReportStatusFilter,
+    reportTypeFilter,
+    setReportTypeFilter,
+    reportSearchQuery,
+    setReportSearchQuery,
+    createReport,
+    updateReport,
+    finalizeReport,
+    deleteReport,
+    createReportSection,
+    updateReportSection,
+    deleteReportSection,
+    reorderReportSections,
+    compareReportRevisions,
+    verifyReport,
+    createReportExport,
+    createThesis,
+    updateThesis,
+    deleteThesis,
+    createThesisArgument,
+    deleteThesisArgument,
+
     globalError,
     clearError,
   } = useResearchWorkspace();
@@ -215,6 +260,54 @@ export function ResearchWorkspace() {
               onViewAllInvestigations={() => setActiveTab("INVESTIGATIONS")}
             />
           </div>
+        )}
+
+        {(activeTab === "REPORTS" || activeTab === "THESES") && (
+          <ResearchReportsWorkspace
+            reports={reports}
+            reportsTotal={reportsTotal}
+            isReportsLoading={isReportsLoading}
+            selectedReportId={selectedReportId}
+            currentReport={currentReport}
+            reportSections={reportSections}
+            selectedSectionId={selectedSectionId}
+            reportTemplates={reportTemplates}
+            reportRevisions={reportRevisions}
+            verificationResult={verificationResult}
+            isVerifying={isVerifying}
+            reportExports={reportExports}
+            reportStatusFilter={reportStatusFilter}
+            onStatusFilterChange={setReportStatusFilter}
+            reportTypeFilter={reportTypeFilter}
+            onTypeFilterChange={setReportTypeFilter}
+            reportSearchQuery={reportSearchQuery}
+            onReportSearchChange={setReportSearchQuery}
+            theses={theses}
+            selectedThesisId={selectedThesisId}
+            currentThesis={currentThesis}
+            thesisArguments={thesisArguments}
+            isThesesLoading={isThesesLoading}
+            onSelectReport={selectReport}
+            onCreateReport={createReport}
+            onUpdateReport={updateReport}
+            onFinalizeReport={finalizeReport}
+            onDeleteReport={deleteReport}
+            onSelectSection={setSelectedSectionId}
+            onCreateSection={createReportSection}
+            onUpdateSection={updateReportSection}
+            onDeleteSection={deleteReportSection}
+            onReorderSections={reorderReportSections}
+            onVerifyReport={verifyReport}
+            onCompareRevisions={compareReportRevisions}
+            onCreateExport={createReportExport}
+            onSelectThesis={selectThesis}
+            onCreateThesis={createThesis}
+            onUpdateThesis={updateThesis}
+            onDeleteThesis={deleteThesis}
+            onCreateThesisArgument={createThesisArgument}
+            onDeleteThesisArgument={deleteThesisArgument}
+            onOpenSource={(srcId) => openDocument(srcId)}
+          />
         )}
 
         {activeTab === "ANALYSIS" && (

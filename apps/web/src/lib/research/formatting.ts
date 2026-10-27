@@ -5,6 +5,17 @@
 import {
   InvestigationLifecycleStatus,
   ResearchClaimCategory,
+  AnalysisExecutionStatus,
+  ResearchFindingType,
+  ResearchFindingReviewStatus,
+  ResearchAnalysisType,
+  // Stage 107 Types
+  ResearchReportType,
+  ReportLifecycleStatus,
+  ThesisLifecycleStatus,
+  ThesisArgumentType,
+  ExportFormat,
+  VerificationIssueSeverity,
 } from "./types";
 
 /**
@@ -154,11 +165,7 @@ export function getDocumentProcessingStatusDisplay(status: string): {
 // ---------------------------------------------------------------------------
 
 import {
-  AnalysisExecutionStatus,
   HypothesisEvaluationOutcome,
-  ResearchAnalysisType,
-  ResearchFindingReviewStatus,
-  ResearchFindingType,
 } from "./types";
 
 export function formatCAGR(cagr: number | null | undefined): string {
@@ -290,6 +297,128 @@ export function getAnalysisTypeLabel(type: ResearchAnalysisType): string {
       return "Descriptive Statistical Analysis";
     case "ASSUMPTION_SENSITIVITY_ANALYSIS":
       return "Scenario Sensitivity Matrix";
+  }
+}
+
+export function getReportStatusDisplay(status: ReportLifecycleStatus): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (status) {
+    case "FINALIZED":
+      return { label: "Finalized", variant: "positive" };
+    case "PUBLISHED":
+      return { label: "Published", variant: "positive" };
+    case "UNDER_REVIEW":
+      return { label: "Under Review", variant: "warning" };
+    case "ARCHIVED":
+      return { label: "Archived", variant: "outline" };
+    case "SUPERSEDED":
+      return { label: "Superseded", variant: "negative" };
+    case "DRAFT":
+    default:
+      return { label: "Draft", variant: "outline" };
+  }
+}
+
+export function getReportTypeDisplay(type: ResearchReportType): string {
+  switch (type) {
+    case "COMPANY_RESEARCH":
+      return "Company Research Report";
+    case "EQUITY_INITIATION":
+      return "Equity Initiation Coverage";
+    case "EARNINGS_REVIEW":
+      return "Earnings Review Note";
+    case "MACROECONOMIC_REPORT":
+      return "Macroeconomic Outlook";
+    case "INDUSTRY_PRIMER":
+      return "Industry Primer";
+    case "INVESTMENT_THESIS":
+      return "Investment Thesis Memo";
+    case "EVENT_MEMO":
+      return "Event Reaction Memo";
+    case "RISK_BRIEF":
+      return "Risk Assessment Brief";
+    case "CUSTOM":
+    default:
+      return "Custom Research Report";
+  }
+}
+
+export function getThesisStatusDisplay(status: ThesisLifecycleStatus): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (status) {
+    case "ACTIVE":
+      return { label: "Active Thesis", variant: "positive" };
+    case "VALIDATED":
+      return { label: "Validated", variant: "primary" };
+    case "DISPROVEN":
+      return { label: "Disproven", variant: "negative" };
+    case "UNDER_REVIEW":
+      return { label: "Under Review", variant: "warning" };
+    case "ARCHIVED":
+      return { label: "Archived", variant: "outline" };
+    case "DRAFT":
+    default:
+      return { label: "Draft", variant: "outline" };
+  }
+}
+
+export function getThesisArgumentTypeDisplay(type: ThesisArgumentType): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (type) {
+    case "BULL_CASE":
+      return { label: "Bull Case", variant: "positive" };
+    case "BEAR_CASE":
+      return { label: "Bear Case", variant: "negative" };
+    case "BASE_CASE":
+      return { label: "Base Case", variant: "primary" };
+    case "CATALYST":
+      return { label: "Catalyst", variant: "warning" };
+    case "KEY_RISK":
+      return { label: "Key Risk", variant: "negative" };
+    case "CORE_ASSUMPTION":
+      return { label: "Core Assumption", variant: "default" };
+    case "CONTRADICTING_EVIDENCE":
+      return { label: "Contradiction", variant: "outline" };
+    default:
+      return { label: type, variant: "default" };
+  }
+}
+
+export function getExportFormatDisplay(format: ExportFormat): string {
+  switch (format) {
+    case "PDF":
+      return "Institutional PDF";
+    case "DOCX":
+      return "Office Word (DOCX)";
+    case "HTML":
+      return "Self-Contained HTML";
+    case "MARKDOWN":
+      return "Research Markdown";
+    case "JSON_ARCHIVE":
+      return "Point-in-Time JSON Archive";
+    default:
+      return format;
+  }
+}
+
+export function getVerificationSeverityDisplay(severity: VerificationIssueSeverity): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (severity) {
+    case "BLOCKING":
+      return { label: "Blocking Violation", variant: "negative" };
+    case "WARNING":
+      return { label: "Warning", variant: "warning" };
+    case "INFORMATIONAL":
+    default:
+      return { label: "Info", variant: "outline" };
   }
 }
 

@@ -9846,6 +9846,44 @@ This document records the major architectural and product decisions established.
 792. **Zero Fabrication Policy**: Prohibited creation of synthetic financial statement values, fake peer entities, or unverified macro numbers.
 793. **Stage 106 Boundary & Continuity**: Completely delivered Stage 106. Preserved strict roadmap boundary stopping before Stage 107.
 
+## Stage 107: Investment Research Thesis, Evidence-Based Research Synthesis & Professional Analyst Report Studio
+
+### Structured Investment Thesis & Argument Architecture
+794. **Canonical Thesis Domain Entity**: Formalized `ResearchInvestmentThesis` with central thesis statement, investment horizon (`time_horizon`), target entity identification (`primary_subject_id`), conviction scoring (`conviction_score`), and lifecycle status (`DRAFT`, `ACTIVE`, `UNDER_REVIEW`, `ACCEPTED`, `REVISED`, `INVALIDATED`, `ARCHIVED`).
+795. **Taxonomy of Thesis Arguments**: Implemented `ResearchThesisArgument` categorizing thesis arguments into `BULL_CASE`, `BEAR_CASE`, `BASE_CASE`, `CATALYST`, `KEY_RISK`, `CORE_ASSUMPTION`, and `CONTRADICTING_EVIDENCE`.
+796. **Epistemic Evidence Anchoring**: Each argument requires explicit linkages to verified Stage 104 investigation claims (`claim_ids`), verified filing evidence citations (`evidence_ids`), reproducible Stage 106 analysis runs (`analysis_run_ids`), and acknowledged analytical limitations (`limitations`).
+
+### Institutional Report Governance & Section Composition
+797. **Canonical Report Studio Domain**: Structured `ResearchReport` supporting institutional report types (`COMPANY_RESEARCH`, `EQUITY_INITIATION_DRAFT`, `COMPANY_UPDATE`, `EARNINGS_REVIEW`, `INDUSTRY_RESEARCH`, `MACROECONOMIC_RESEARCH`, `FINANCIAL_EVENT_NOTE`, `FUNDAMENTAL_ANALYSIS`, `PEER_BENCHMARKING`, `INVESTMENT_THESIS`, `RISK_RESEARCH_NOTE`, `GENERAL_RESEARCH_MEMORANDUM`).
+798. **Structured Content Block Model**: Section content is modeled via `ResearchReportContentBlock` taxonomy supporting `HEADING_2`, `HEADING_3`, `PARAGRAPH`, `BULLET_LIST`, `NUMBERED_LIST`, `BLOCK_QUOTE`, `QUOTE`, `FINANCIAL_TABLE`, `ANALYSIS_TABLE`, and `CHART` embeds.
+799. **Template-Driven Institutional Consistency**: Engineered built-in institutional templates (`tpl-company-research`, `tpl-equity-initiation`, `tpl-earnings-review`, `tpl-macro-research`, `tpl-investment-thesis`, `tpl-general-memo`) enforcing mandatory governance sections (Executive Summary, Financial Analysis, Valuation Framework, Risks, Methodology, and Disclaimers).
+
+### Point-in-Time Research Snapshots & Immutability
+800. **Strict Optimistic Concurrency Control**: All report mutations require `expected_revision` tracking to eliminate silent overwrite conflicts in multi-tab institutional analyst workflows.
+801. **Auditable Revision History & Unified Diff Engine**: Every saved change increments revision, captures word counts and content hashes, and enables granular section-by-section diff comparisons via `compare_report_revisions`.
+802. **Finalization Immutability**: Transitioning a report to `FINALIZED` or `PUBLISHED` locks the document tree, prohibiting further in-place edits and certifying the artifact as a point-in-time publication snapshot.
+
+### Automated Claim-to-Evidence & Look-Ahead Verification Engine
+803. **Multi-Vector Verification Engine**: Validates structural completeness of required sections, validates filing citations against Stage 104/105 source availability (flagging withdrawn or restricted sources), verifies reproducible Stage 106 analysis runs, and performs temporal cutoff analysis.
+804. **Zero Look-Ahead Violation Protection**: Automatically scans all embedded data points, analysis run timestamps, and cited evidence against the report's `research_cutoff` date; any future data leaks generate blocking issues (`POINT_IN_TIME_CONFLICT`).
+805. **Publication Gatekeeper**: Finalization and certified publication are strictly prohibited while blocking verification violations remain unresolved.
+
+### Zero-External-Dependency Institutional Export
+806. **Direct PDF-1.4 Binary Generation**: Engineered a self-contained PDF generator (`render_report_pdf`) using Python's standard library (`io.BytesIO`) that constructs standard PDF catalogs, pages, font dictionaries (`/Courier`, `/Helvetica-Bold`), text streams, line wraps, tabular financial data, and institutional disclaimers without requiring heavyweight external dependencies like ReportLab.
+807. **Direct OpenXML DOCX Generation**: Built a self-contained DOCX renderer (`render_report_docx`) packaging standard OpenXML schemas (`word/document.xml`, `[Content_Types].xml`, `_rels/.rels`, `word/styles.xml`) via Python's built-in `zipfile` module.
+808. **Mandatory Institutional Compliance Disclaimers**: All generated export documents systematically embed prominent regulatory notices clarifying informational nature, non-promissory risk disclosures, and source attribution.
+
+### Frontend Institutional Report Studio
+809. **Dedicated `/research` Sub-View**: Seamlessly expanded `/research` with top navigation switchers `"Reports & Theses"`, supporting split tabs between Institutional Analyst Reports and Structured Investment Theses.
+810. **Professional 3-Pane Authoring Studio**: Developed `ResearchReportStudio.tsx` integrating `ResearchReportOutline` (drag-and-drop section hierarchy), `ResearchReportEditor` (rich content block authoring and embed controls), and tabbed right-hand inspector panels (`ResearchReportVerificationPanel`, `ResearchReportEvidencePanel`, `ResearchReportRevisionHistory`).
+811. **Print-Ready Document Preview & Controlled Export**: Built `ResearchReportPreview.tsx` rendering high-fidelity executive document layouts with table of contents and compliance notices, and `ResearchReportExportDialog.tsx` triggering background jobs and binary downloads.
+
+### Security, Safety, and Scope Boundaries
+812. **Multi-Tenant Authorization & Cross-User Isolation**: All report, section, revision, verification, export, thesis, and argument operations enforce strict user-level ownership. Attempted access to other users' work returns HTTP 403 Forbidden.
+813. **Zero Autonomous Trade Generation**: Preserved strict boundary prohibiting automated buy/sell recommendations, portfolio rebalancing, or direct market execution.
+814. **Roadmap Boundary (Stage 107 of 150)**: Master engineering implementation completed for Stage 107. All Stage 108 implementation is strictly deferred.
+
+
 
 
 

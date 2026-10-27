@@ -392,3 +392,152 @@ class ResearchScenarioParameterLimitExceededError(ResearchDomainError):
 class ResearchAssumptionNotFoundError(ResearchDomainError):
     """Raised when an assumption ID cannot be found."""
     pass
+
+
+# ---------------------------------------------------------------------------
+# Stage 107 Research Report, Thesis & Export Errors
+# ---------------------------------------------------------------------------
+
+class ResearchReportNotFoundError(ResearchDomainError):
+    """Raised when a research report ID cannot be found."""
+    pass
+
+
+class ResearchReportAccessDeniedError(ResearchDomainError):
+    """Raised when an unauthorized user attempts to access or modify a research report."""
+    pass
+
+
+class ResearchReportTypeUnsupportedError(ResearchDomainError):
+    """Raised when an unsupported report type is specified."""
+    pass
+
+
+class ResearchReportTemplateUnavailableError(ResearchDomainError):
+    """Raised when a requested report template cannot be found or is inactive."""
+    pass
+
+
+class ResearchReportStructureInvalidError(ResearchDomainError):
+    """Raised when report outline or section hierarchy is invalid."""
+    pass
+
+
+class ResearchReportRevisionConflictError(ResearchDomainError):
+    """Raised when optimistic concurrency detects a stale report revision write."""
+    pass
+
+
+class ResearchReportStatusInvalidError(ResearchDomainError):
+    """Raised when an invalid report status transition is attempted."""
+    pass
+
+
+class ResearchReportFinalizedImmutableError(ResearchDomainError):
+    """Raised when attempting to mutate an already finalized report version."""
+    pass
+
+
+class ResearchReportSectionNotFoundError(ResearchDomainError):
+    """Raised when a section ID cannot be found in the report."""
+    pass
+
+
+class ResearchReportBlockInvalidError(ResearchDomainError):
+    """Raised when a content block has an invalid schema or corrupted structure."""
+    pass
+
+
+class ResearchReportEditorSchemaUnsupportedError(ResearchDomainError):
+    """Raised when editor payload schema version is unrecognized."""
+    pass
+
+
+class ResearchReportContentTooLargeError(ResearchDomainError):
+    """Raised when report document size exceeds system memory bounds."""
+    pass
+
+
+class ResearchReportCitationInvalidError(ResearchDomainError):
+    """Raised when an in-text citation does not resolve to valid evidence."""
+    pass
+
+
+class ResearchReportCitationBrokenError(ResearchDomainError):
+    """Raised when a cited source has been withdrawn or corrupted."""
+    pass
+
+
+class ResearchReportSourceWithdrawnError(ResearchDomainError):
+    """Raised when attempting to finalize a report citing withdrawn primary sources."""
+    pass
+
+
+class ResearchReportSourceRestrictedError(ResearchDomainError):
+    """Raised when an embedded source has redistribution restrictions preventing export."""
+    pass
+
+
+class ResearchReportAnalysisRunNotFoundError(ResearchDomainError):
+    """Raised when an embedded analysis run ID cannot be found."""
+    pass
+
+
+class ResearchReportPointInTimeConflictError(ResearchDomainError):
+    """Raised when cited observations violate the historical research cutoff date."""
+    pass
+
+
+class ResearchReportExportFormatUnsupportedError(ResearchDomainError):
+    """Raised when an unsupported document export format is requested."""
+    pass
+
+
+class ResearchReportExportRestrictedContentError(ResearchDomainError):
+    """Raised when content licensing prohibits export or redistribution."""
+    pass
+
+
+class ResearchReportExportTooLargeError(ResearchDomainError):
+    """Raised when export document exceeds maximum renderable page or size bounds."""
+    pass
+
+
+class ResearchReportExportFailedError(ResearchDomainError):
+    """Raised when background PDF or DOCX generation encounters an unrecoverable error."""
+    pass
+
+
+class ResearchReportExportExpiredError(ResearchDomainError):
+    """Raised when attempting to download an expired export artifact."""
+    pass
+
+
+class ResearchReportExportNotFoundError(ResearchDomainError):
+    """Raised when an export job ID cannot be found."""
+    pass
+
+
+class ResearchReportExportAccessDeniedError(ResearchDomainError):
+    """Raised when an unauthorized user attempts to download an export."""
+    pass
+
+
+class ResearchInvestmentThesisNotFoundError(ResearchDomainError):
+    """Raised when an investment thesis ID cannot be found."""
+    pass
+
+
+class ResearchInvestmentThesisAccessDeniedError(ResearchDomainError):
+    """Raised when an unauthorized user attempts to access or modify a thesis."""
+    pass
+
+
+class ResearchInvestmentThesisRevisionConflictError(ResearchDomainError):
+    """Raised when an optimistic concurrency conflict occurs on a thesis."""
+    pass
+
+
+class ResearchThesisArgumentNotFoundError(ResearchDomainError):
+    """Raised when a thesis argument ID cannot be found."""
+    pass

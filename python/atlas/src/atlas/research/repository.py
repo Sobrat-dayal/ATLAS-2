@@ -4,7 +4,7 @@ import copy
 import datetime
 import threading
 import uuid
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -45,12 +45,19 @@ from atlas.research.domain import (
     ResearchHypothesis,
     ResearchHypothesisEvaluation,
     ResearchInvestigation,
+    ResearchInvestmentThesis,
     ResearchNote,
     ResearchNoteRevision,
     ResearchQuestion,
+    ResearchReport,
+    ResearchReportExport,
+    ResearchReportRevision,
+    ResearchReportSection,
+    ResearchReportVerification,
     ResearchScenario,
     ResearchSearchHit,
     ResearchSourceReference,
+    ResearchThesisArgument,
 )
 from atlas.research.enums import (
     AnalysisExecutionStatus,
@@ -60,6 +67,10 @@ from atlas.research.enums import (
     DocumentComparisonMode,
     EvidenceLocationType,
     InvestigationLifecycleStatus,
+    ReportBlockType,
+    ReportLifecycleStatus,
+    ReportSectionType,
+    ReportSnapshotPolicy,
     ResearchActivityAction,
     ResearchAnalysisType,
     ResearchClaimCategory,
@@ -70,10 +81,13 @@ from atlas.research.enums import (
     ResearchNoteStatus,
     ResearchNoteType,
     ResearchQuestionStatus,
+    ResearchReportType,
     ResearchSourceType,
     ResearchType,
     SearchMode,
     SourceAvailabilityStatus,
+    ThesisArgumentType,
+    ThesisLifecycleStatus,
 )
 from atlas.research.errors import (
     ResearchAnalysisAccessDeniedError,
@@ -93,10 +107,19 @@ from atlas.research.errors import (
     ResearchHypothesisNotFoundError,
     ResearchInvestigationNotFoundError,
     ResearchInvestigationRevisionConflictError,
+    ResearchInvestmentThesisAccessDeniedError,
+    ResearchInvestmentThesisNotFoundError,
+    ResearchInvestmentThesisRevisionConflictError,
     ResearchNoteNotFoundError,
     ResearchNoteRevisionConflictError,
     ResearchQuestionNotFoundError,
+    ResearchReportAccessDeniedError,
+    ResearchReportFinalizedImmutableError,
+    ResearchReportNotFoundError,
+    ResearchReportRevisionConflictError,
+    ResearchReportSectionNotFoundError,
     ResearchSourceNotFoundError,
+    ResearchThesisArgumentNotFoundError,
 )
 from atlas.research.models import ResearchDocument
 from atlas.research.security import sanitize_markdown_text
@@ -171,9 +194,20 @@ class ResearchRepository:
         self._assumptions: Dict[str, ResearchAnalysisAssumption] = {}
         self._scenarios: Dict[str, ResearchScenario] = {}
 
+        # Stage 107 Reports, Sections, Theses, Verification & Export Stores
+        self._reports: Dict[str, ResearchReport] = {}
+        self._report_sections: Dict[str, List[ResearchReportSection]] = {}
+        self._report_revisions: Dict[str, List[ResearchReportRevision]] = {}
+        self._theses: Dict[str, ResearchInvestmentThesis] = {}
+        self._thesis_arguments: Dict[str, List[ResearchThesisArgument]] = {}
+        self._verification_runs: Dict[str, List[ResearchReportVerification]] = {}
+        self._exports: Dict[str, ResearchReportExport] = {}
+        self._export_artifacts: Dict[str, bytes] = {}
+
         self._seed_baseline_investigations()
         self._seed_initial_evidence_candidates()
         self._seed_baseline_analyses()
+        self._seed_baseline_reports()
 
     # -----------------------------------------------------------------------
     # Baseline Seeding for Developer and Institutional Workflow
@@ -2554,3 +2588,855 @@ class ResearchRepository:
         with self._lock:
             self._scenarios[scenario.scenario_id] = copy.deepcopy(scenario)
             return copy.deepcopy(scenario)
+
+    # -----------------------------------------------------------------------
+    # Stage 107 — Reports, Theses, Verification & Export Repository
+    # -----------------------------------------------------------------------
+    def _seed_baseline_reports(self):
+        """Seed baseline verified research reports and investment theses."""
+        now = datetime.datetime.now(datetime.timezone.utc)
+        user_id = "default-user"
+
+        # Baseline Report: Apple Inc. Services Margin Analysis Report
+        rep_id = "rep-apple-services-expansion-fy24"
+        report = ResearchReport(
+            report_id=rep_id,
+            owner_user_id=user_id,
+            investigation_id="inv-apple-fy24-margins",
+            report_type=ResearchReportType.COMPANY_RESEARCH,
+            title="Apple Inc. (AAPL) Fiscal 2024 Fundamental Research & Services Margin Expansion",
+            subtitle="Multi-Period Statement Analysis, Peer Benchmarking and Evidence-Backed Synthesis",
+            abstract="A rigorous fundamental research synthesis evaluating Apple's revenue composition, gross margin trajectory across Products vs. Services, capital structure, and risk factors grounded in SEC Form 10-K filings.",
+            primary_subject_id="AAPL",
+            primary_subject_type="COMPANY",
+            secondary_subject_ids=["MSFT", "NVDA"],
+            report_as_of=datetime.date(2024, 10, 25),
+            research_cutoff=datetime.datetime(2024, 10, 25, 23, 59, 59, tzinfo=datetime.timezone.utc),
+            template_id="tpl-company-research",
+            status=ReportLifecycleStatus.IN_PROGRESS,
+            current_revision=1,
+            snapshot_policy=ReportSnapshotPolicy.DRAFT_LATEST_AUTHORIZED,
+            source_manifest=[
+                {
+                    "source_reference_id": "src-filing-aapl-10k-2024",
+                    "accession_number": "0000320193-24-000106",
+                    "document_title": "Apple Inc. Form 10-K (Fiscal Year Ended September 28, 2024)",
+                    "filing_date": "2024-10-31",
+                }
+            ],
+            evidence_manifest=["evi-aapl-rev-2024", "evi-aapl-risk-china"],
+            analysis_run_manifest=["run-aapl-revenue-trend-001"],
+            created_at=now - datetime.timedelta(days=2),
+            updated_at=now - datetime.timedelta(hours=4),
+            provenance={"created_via": "Stage 107 Seeding", "methodology_version": 1},
+        )
+        self._reports[rep_id] = report
+
+        # Seed default sections matching tpl-company-research
+        sec_1 = ResearchReportSection(
+            section_id="sec-apple-exec-summary",
+            report_id=rep_id,
+            parent_section_id=None,
+            order_index=1,
+            section_type=ReportSectionType.EXECUTIVE_SUMMARY,
+            heading="1. Executive Summary & Investment Thesis Summary",
+            content_blocks=[
+                {
+                    "block_id": "blk-apple-exec-1",
+                    "section_id": "sec-apple-exec-summary",
+                    "order_index": 1,
+                    "block_type": ReportBlockType.PARAGRAPH.value,
+                    "content_text": "Apple Inc. (NASDAQ: AAPL) delivered fiscal 2024 total net sales of $391.04B (+2.0% YoY) and net income of $93.74B (-3.4% YoY), underpinned by record Services revenue of $96.17B (+12.9% YoY) with segment gross margins reaching 74.0%.",
+                    "citation_ids": ["cit-aapl-10k-2024-p1"],
+                    "evidence_ids": ["evi-aapl-rev-2024"],
+                },
+                {
+                    "block_id": "blk-apple-exec-2",
+                    "section_id": "sec-apple-exec-summary",
+                    "order_index": 2,
+                    "block_type": ReportBlockType.PARAGRAPH.value,
+                    "content_text": "The central thesis asserts that high-margin Services expansion continues to enhance consolidated gross margin durability (46.2% in FY24 vs 44.1% in FY23), partially cushioning cyclical hardware replacement cycles.",
+                    "citation_ids": [],
+                    "evidence_ids": [],
+                },
+            ],
+            revision=1,
+            created_at=now - datetime.timedelta(days=2),
+            updated_at=now - datetime.timedelta(hours=4),
+        )
+
+        sec_2 = ResearchReportSection(
+            section_id="sec-apple-financial-perf",
+            report_id=rep_id,
+            parent_section_id=None,
+            order_index=2,
+            section_type=ReportSectionType.FINANCIAL_PERFORMANCE,
+            heading="2. Historical Financial Trajectory & Margin Analysis",
+            content_blocks=[
+                {
+                    "block_id": "blk-apple-fin-table",
+                    "section_id": "sec-apple-financial-perf",
+                    "order_index": 1,
+                    "block_type": ReportBlockType.FINANCIAL_TABLE.value,
+                    "caption": "Table 1.1: Apple Inc. Multi-Year Financial Performance (FY22 - FY24)",
+                    "content_text": "Fiscal Year | Net Sales ($M) | Gross Margin % | Operating Income ($M) | Operating Cash Flow ($M)\nFY 2024     | $391,035       | 46.2%          | $123,216              | $118,254\nFY 2023     | $383,285       | 44.1%          | $114,301              | $110,543\nFY 2022     | $394,328       | 43.3%          | $119,437              | $122,151",
+                    "citation_ids": ["cit-aapl-10k-2024-p1"],
+                    "evidence_ids": ["evi-aapl-rev-2024"],
+                    "analysis_run_id": "run-aapl-revenue-trend-001",
+                },
+                {
+                    "block_id": "blk-apple-fin-chart",
+                    "section_id": "sec-apple-financial-perf",
+                    "order_index": 2,
+                    "block_type": ReportBlockType.CHART.value,
+                    "caption": "Figure 1.1: Historical Revenue Trend & Compound Growth (CAGR: 1.95%)",
+                    "content_text": "Revenue Series FY22-FY24: FY22: $394,328M, FY23: $383,285M, FY24: $391,035M",
+                    "analysis_run_id": "run-aapl-revenue-trend-001",
+                },
+            ],
+            revision=1,
+            created_at=now - datetime.timedelta(days=2),
+            updated_at=now - datetime.timedelta(hours=4),
+        )
+
+        sec_3 = ResearchReportSection(
+            section_id="sec-apple-thesis-section",
+            report_id=rep_id,
+            parent_section_id=None,
+            order_index=3,
+            section_type=ReportSectionType.INVESTMENT_THESIS,
+            heading="3. Structured Investment Thesis & Bull/Bear Scenarios",
+            content_blocks=[
+                {
+                    "block_id": "blk-apple-thesis-1",
+                    "section_id": "sec-apple-thesis-section",
+                    "order_index": 1,
+                    "block_type": ReportBlockType.PARAGRAPH.value,
+                    "content_text": "BULL CASE: Services gross profit reaches 40% of total company gross profit, driving cash generation to fund sustained >$100B annual capital return program.",
+                },
+                {
+                    "block_id": "blk-apple-thesis-2",
+                    "section_id": "sec-apple-thesis-section",
+                    "order_index": 2,
+                    "block_type": ReportBlockType.PARAGRAPH.value,
+                    "content_text": "BEAR CASE: Global regulatory antitrust mandates compel restructuring of App Store distribution economics, compressing segment margins while China sales contract.",
+                    "citation_ids": ["cit-aapl-10k-2024-p2"],
+                    "evidence_ids": ["evi-aapl-risk-china"],
+                },
+            ],
+            revision=1,
+            created_at=now - datetime.timedelta(days=2),
+            updated_at=now - datetime.timedelta(hours=4),
+        )
+
+        sec_4 = ResearchReportSection(
+            section_id="sec-apple-disclosures",
+            report_id=rep_id,
+            parent_section_id=None,
+            order_index=4,
+            section_type=ReportSectionType.DISCLOSURES,
+            heading="4. Research Limitations & Institutional Disclosures",
+            content_blocks=[
+                {
+                    "block_id": "blk-apple-disclosures-1",
+                    "section_id": "sec-apple-disclosures",
+                    "order_index": 1,
+                    "block_type": ReportBlockType.PARAGRAPH.value,
+                    "content_text": "This research report represents independent analytical synthesis. It does not constitute an investment recommendation or price target forecast.",
+                }
+            ],
+            revision=1,
+            created_at=now - datetime.timedelta(days=2),
+            updated_at=now - datetime.timedelta(hours=4),
+        )
+
+        self._report_sections[rep_id] = [sec_1, sec_2, sec_3, sec_4]
+
+        # Initial revision
+        snapshot = {
+            "report": copy.deepcopy(report.__dict__),
+            "sections": [copy.deepcopy(s.__dict__) for s in [sec_1, sec_2, sec_3, sec_4]],
+        }
+        rev = ResearchReportRevision(
+            revision_id="rev-apple-services-v1",
+            report_id=rep_id,
+            revision_number=1,
+            parent_revision_id=None,
+            author_user_id=user_id,
+            document_snapshot=snapshot,
+            source_manifest=report.source_manifest,
+            analysis_manifest=report.analysis_run_manifest,
+            revision_status=ReportLifecycleStatus.IN_PROGRESS,
+            change_summary="Initial baseline draft generated from investigation findings",
+            content_hash="hash-apple-rep-v1-initial",
+            created_at=now - datetime.timedelta(days=2),
+        )
+        self._report_revisions[rep_id] = [rev]
+
+        # Baseline Investment Thesis
+        the_id = "the-apple-services-moat-fy24"
+        thesis = ResearchInvestmentThesis(
+            thesis_id=the_id,
+            investigation_id="inv-apple-fy24-margins",
+            report_id=rep_id,
+            owner_user_id=user_id,
+            primary_subject_id="AAPL",
+            primary_subject_type="COMPANY",
+            thesis_statement="Apple's structural shift toward high-margin recurring Services revenue provides resilient operating margin support that mitigates cyclical hardware replacement volatility.",
+            time_horizon="12_MONTHS",
+            status=ThesisLifecycleStatus.ACTIVE,
+            current_revision=1,
+            bull_case_summary="Services revenue exceeds 25% of total mix with gross margins expanding above 75%, driving sustained free cash flow conversion above 100%.",
+            bear_case_summary="Regulatory antitrust remedies in EU and US impair App Store commission rates while iPhone replacement cycle lengthens beyond 4 years.",
+            base_case_summary="Moderate 4-6% total revenue CAGR with stable 45-46% consolidated gross margins and ongoing $100B+ annual share repurchases.",
+            assumptions_summary="Installed base continues compounding at low-single-digits; no material disruption to prime silicon supply chain.",
+            risks_summary="Antitrust litigation, consumer spending contraction in Greater China, and sovereign semiconductor export controls.",
+            catalysts_summary="Apple Intelligence enterprise adoption rollout, FY25 Q1 holiday earnings disclosure, and Worldwide Developers Conference disclosures.",
+            created_at=now - datetime.timedelta(days=2),
+            updated_at=now - datetime.timedelta(hours=4),
+        )
+        self._theses[the_id] = thesis
+
+        # Seed Thesis Arguments
+        arg_1 = ResearchThesisArgument(
+            argument_id="arg-apple-bull-1",
+            thesis_id=the_id,
+            argument_type=ThesisArgumentType.BULL_CASE,
+            statement="Services gross profit contribution expanded from 31.2% in FY22 to 38.3% in FY24, improving consolidated margin floor.",
+            claim_ids=["claim-aapl-services-growth"],
+            evidence_ids=["evi-aapl-rev-2024"],
+            analysis_run_ids=["run-aapl-revenue-trend-001"],
+            finding_ids=["find-aapl-margin-expansion-fy24"],
+            limitations=["Assumes stable App Store fee structure."],
+            revision=1,
+            created_at=now - datetime.timedelta(days=2),
+        )
+        arg_2 = ResearchThesisArgument(
+            argument_id="arg-apple-bear-1",
+            thesis_id=the_id,
+            argument_type=ThesisArgumentType.BEAR_CASE,
+            statement="Item 1A risk disclosure flags intensifying foreign regulatory compliance burdens and potential antitrust remedies.",
+            claim_ids=["claim-aapl-china-risk"],
+            evidence_ids=["evi-aapl-risk-china"],
+            analysis_run_ids=[],
+            finding_ids=[],
+            limitations=["Legal outcomes subject to judicial review."],
+            revision=1,
+            created_at=now - datetime.timedelta(days=2),
+        )
+        self._thesis_arguments[the_id] = [arg_1, arg_2]
+
+    # -----------------------------------------------------------------------
+    # Report CRUD Methods
+    # -----------------------------------------------------------------------
+    def list_reports(
+        self,
+        user_id: str,
+        investigation_id: Optional[str] = None,
+        report_type: Optional[ResearchReportType] = None,
+        status: Optional[ReportLifecycleStatus] = None,
+        subject_id: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[List[ResearchReport], int]:
+        """Lists user-owned reports with multi-factor filtering."""
+        with self._lock:
+            res = [r for r in self._reports.values() if r.owner_user_id == user_id]
+            if investigation_id:
+                res = [r for r in res if r.investigation_id == investigation_id]
+            if report_type:
+                res = [r for r in res if r.report_type == report_type]
+            if status:
+                res = [r for r in res if r.status == status]
+            if subject_id:
+                res = [r for r in res if r.primary_subject_id == subject_id]
+
+            total = len(res)
+            sorted_res = sorted(res, key=lambda r: r.updated_at, reverse=True)
+            paged = sorted_res[offset : offset + limit]
+            return [copy.deepcopy(r) for r in paged], total
+
+    def create_report(
+        self,
+        user_id: str,
+        report: ResearchReport,
+        initial_sections: Optional[List[ResearchReportSection]] = None,
+    ) -> ResearchReport:
+        """Creates and stores a new research report with initial sections."""
+        with self._lock:
+            report.owner_user_id = user_id
+            self._reports[report.report_id] = copy.deepcopy(report)
+
+            sections = initial_sections or []
+            self._report_sections[report.report_id] = [copy.deepcopy(s) for s in sections]
+
+            # Create initial revision
+            snapshot = {
+                "report": copy.deepcopy(report.__dict__),
+                "sections": [copy.deepcopy(s.__dict__) for s in sections],
+            }
+            rev = ResearchReportRevision(
+                revision_id=f"rev-{uuid.uuid4().hex[:12]}",
+                report_id=report.report_id,
+                revision_number=report.current_revision,
+                parent_revision_id=None,
+                author_user_id=user_id,
+                document_snapshot=snapshot,
+                source_manifest=report.source_manifest,
+                analysis_manifest=report.analysis_run_manifest,
+                revision_status=report.status,
+                change_summary="Initial report creation",
+                content_hash=f"hash-{uuid.uuid4().hex[:16]}",
+                created_at=report.created_at,
+            )
+            self._report_revisions[report.report_id] = [rev]
+
+            self._log_activity(
+                action=ResearchActivityAction.REPORT_CREATED,
+                entity_id=report.report_id,
+                entity_type="REPORT",
+                user_id=user_id,
+                details={"title": report.title, "report_type": report.report_type.value},
+            )
+            return copy.deepcopy(report)
+
+    def get_report(self, report_id: str) -> Optional[ResearchReport]:
+        """Retrieves a research report by ID."""
+        with self._lock:
+            rep = self._reports.get(report_id)
+            return copy.deepcopy(rep) if rep else None
+
+    def update_report(
+        self,
+        user_id: str,
+        report_id: str,
+        expected_revision: int,
+        updates: Dict[str, Any],
+    ) -> ResearchReport:
+        """Updates report parameters with optimistic concurrency protection."""
+        with self._lock:
+            rep = self._reports.get(report_id)
+            if not rep:
+                raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+            if rep.owner_user_id != user_id:
+                raise ResearchReportAccessDeniedError("Access denied to report.")
+            if rep.status == ReportLifecycleStatus.FINALIZED:
+                raise ResearchReportFinalizedImmutableError("Cannot update finalized report. Create new revision.")
+            if rep.current_revision != expected_revision:
+                raise ResearchReportRevisionConflictError(
+                    f"Revision conflict: report is at revision {rep.current_revision}, expected {expected_revision}."
+                )
+
+            for key, val in updates.items():
+                if hasattr(rep, key) and val is not None:
+                    setattr(rep, key, val)
+
+            rep.current_revision += 1
+            rep.updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+            # Record snapshot revision
+            sections = self._report_sections.get(report_id, [])
+            snapshot = {
+                "report": copy.deepcopy(rep.__dict__),
+                "sections": [copy.deepcopy(s.__dict__) for s in sections],
+            }
+            rev = ResearchReportRevision(
+                revision_id=f"rev-{uuid.uuid4().hex[:12]}",
+                report_id=rep.report_id,
+                revision_number=rep.current_revision,
+                parent_revision_id=f"rev-{rep.current_revision - 1}",
+                author_user_id=user_id,
+                document_snapshot=snapshot,
+                source_manifest=rep.source_manifest,
+                analysis_manifest=rep.analysis_run_manifest,
+                revision_status=rep.status,
+                change_summary=updates.get("change_summary", "Report parameter update"),
+                content_hash=f"hash-{uuid.uuid4().hex[:16]}",
+                created_at=rep.updated_at,
+            )
+            self._report_revisions.setdefault(report_id, []).append(rev)
+
+            self._log_activity(
+                action=ResearchActivityAction.REPORT_UPDATED,
+                entity_id=rep.report_id,
+                entity_type="REPORT",
+                user_id=user_id,
+                details={"revision": rep.current_revision},
+            )
+            return copy.deepcopy(rep)
+
+    def finalize_report(
+        self,
+        user_id: str,
+        report_id: str,
+        expected_revision: int,
+        change_summary: Optional[str] = None,
+    ) -> ResearchReport:
+        """Freezes report into finalized immutable state and generates immutable snapshot."""
+        with self._lock:
+            rep = self._reports.get(report_id)
+            if not rep:
+                raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+            if rep.owner_user_id != user_id:
+                raise ResearchReportAccessDeniedError("Access denied to report.")
+            if rep.current_revision != expected_revision:
+                raise ResearchReportRevisionConflictError(
+                    f"Revision conflict: report revision {rep.current_revision} != {expected_revision}."
+                )
+
+            rep.status = ReportLifecycleStatus.FINALIZED
+            rep.current_revision += 1
+            rep.updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+            sections = self._report_sections.get(report_id, [])
+            snapshot = {
+                "report": copy.deepcopy(rep.__dict__),
+                "sections": [copy.deepcopy(s.__dict__) for s in sections],
+            }
+            rev = ResearchReportRevision(
+                revision_id=f"rev-{uuid.uuid4().hex[:12]}",
+                report_id=rep.report_id,
+                revision_number=rep.current_revision,
+                parent_revision_id=f"rev-{rep.current_revision - 1}",
+                author_user_id=user_id,
+                document_snapshot=snapshot,
+                source_manifest=rep.source_manifest,
+                analysis_manifest=rep.analysis_run_manifest,
+                revision_status=ReportLifecycleStatus.FINALIZED,
+                change_summary=change_summary or "Official report finalization",
+                content_hash=f"hash-final-{uuid.uuid4().hex[:16]}",
+                created_at=rep.updated_at,
+            )
+            self._report_revisions.setdefault(report_id, []).append(rev)
+
+            self._log_activity(
+                action=ResearchActivityAction.REPORT_FINALIZED,
+                entity_id=rep.report_id,
+                entity_type="REPORT",
+                user_id=user_id,
+                details={"final_revision": rep.current_revision},
+            )
+            return copy.deepcopy(rep)
+
+    def delete_report(self, user_id: str, report_id: str) -> bool:
+        """Archives or deletes a research report."""
+        with self._lock:
+            rep = self._reports.get(report_id)
+            if not rep:
+                raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+            if rep.owner_user_id != user_id:
+                raise ResearchReportAccessDeniedError("Access denied to report.")
+
+            del self._reports[report_id]
+            self._report_sections.pop(report_id, None)
+            self._report_revisions.pop(report_id, None)
+
+            self._log_activity(
+                action=ResearchActivityAction.REPORT_DELETED,
+                entity_id=report_id,
+                entity_type="REPORT",
+                user_id=user_id,
+                details={},
+            )
+            return True
+
+    # -----------------------------------------------------------------------
+    # Section Management Methods
+    # -----------------------------------------------------------------------
+    def list_report_sections(self, report_id: str) -> List[ResearchReportSection]:
+        """Lists all sections of a report in chronological order index."""
+        with self._lock:
+            secs = self._report_sections.get(report_id, [])
+            return sorted(copy.deepcopy(secs), key=lambda s: s.order_index)
+
+    def get_report_section(self, report_id: str, section_id: str) -> Optional[ResearchReportSection]:
+        """Retrieves a specific section within a report."""
+        with self._lock:
+            secs = self._report_sections.get(report_id, [])
+            for s in secs:
+                if s.section_id == section_id:
+                    return copy.deepcopy(s)
+            return None
+
+    def create_report_section(self, user_id: str, section: ResearchReportSection) -> ResearchReportSection:
+        """Appends a section to a report."""
+        with self._lock:
+            rep = self._reports.get(section.report_id)
+            if not rep:
+                raise ResearchReportNotFoundError(f"Report '{section.report_id}' not found.")
+            if rep.owner_user_id != user_id:
+                raise ResearchReportAccessDeniedError("Access denied.")
+            if rep.status == ReportLifecycleStatus.FINALIZED:
+                raise ResearchReportFinalizedImmutableError("Cannot add section to finalized report.")
+
+            secs = self._report_sections.setdefault(section.report_id, [])
+            if section.order_index is None or section.order_index <= 0:
+                section.order_index = len(secs) + 1
+
+            secs.append(copy.deepcopy(section))
+            rep.updated_at = datetime.datetime.now(datetime.timezone.utc)
+            return copy.deepcopy(section)
+
+    def update_report_section(
+        self,
+        user_id: str,
+        section_id: str,
+        expected_revision: int,
+        heading: Optional[str] = None,
+        section_type: Optional[ReportSectionType] = None,
+        content_blocks: Optional[List[Dict[str, Any]]] = None,
+    ) -> ResearchReportSection:
+        """Modifies heading or content blocks of a report section."""
+        with self._lock:
+            found_sec: Optional[ResearchReportSection] = None
+            found_report: Optional[ResearchReport] = None
+
+            for rep_id, secs in self._report_sections.items():
+                for s in secs:
+                    if s.section_id == section_id:
+                        found_sec = s
+                        found_report = self._reports.get(rep_id)
+                        break
+                if found_sec:
+                    break
+
+            if not found_sec or not found_report:
+                raise ResearchReportSectionNotFoundError(f"Section '{section_id}' not found.")
+            if found_report.owner_user_id != user_id:
+                raise ResearchReportAccessDeniedError("Access denied to section.")
+            if found_report.status == ReportLifecycleStatus.FINALIZED:
+                raise ResearchReportFinalizedImmutableError("Cannot edit finalized section.")
+
+            if heading is not None:
+                found_sec.heading = heading
+            if section_type is not None:
+                found_sec.section_type = section_type
+            if content_blocks is not None:
+                found_sec.content_blocks = copy.deepcopy(content_blocks)
+
+            found_sec.revision += 1
+            found_sec.updated_at = datetime.datetime.now(datetime.timezone.utc)
+            found_report.updated_at = found_sec.updated_at
+
+            return copy.deepcopy(found_sec)
+
+    def delete_report_section(self, user_id: str, section_id: str) -> bool:
+        """Removes a section from a report."""
+        with self._lock:
+            for rep_id, secs in self._report_sections.items():
+                for i, s in enumerate(secs):
+                    if s.section_id == section_id:
+                        rep = self._reports.get(rep_id)
+                        if rep and rep.owner_user_id != user_id:
+                            raise ResearchReportAccessDeniedError("Access denied.")
+                        if rep and rep.status == ReportLifecycleStatus.FINALIZED:
+                            raise ResearchReportFinalizedImmutableError("Cannot delete section from finalized report.")
+                        secs.pop(i)
+                        return True
+            raise ResearchReportSectionNotFoundError(f"Section '{section_id}' not found.")
+
+    def reorder_report_sections(
+        self,
+        user_id: str,
+        report_id: str,
+        section_ids: List[str],
+    ) -> List[ResearchReportSection]:
+        """Safely reorders sections according to list of section IDs."""
+        with self._lock:
+            rep = self._reports.get(report_id)
+            if not rep:
+                raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+            if rep.owner_user_id != user_id:
+                raise ResearchReportAccessDeniedError("Access denied.")
+            if rep.status == ReportLifecycleStatus.FINALIZED:
+                raise ResearchReportFinalizedImmutableError("Cannot reorder finalized report.")
+
+            secs = self._report_sections.get(report_id, [])
+            sec_map = {s.section_id: s for s in secs}
+
+            new_order: List[ResearchReportSection] = []
+            for idx, sid in enumerate(section_ids, start=1):
+                if sid in sec_map:
+                    s = sec_map[sid]
+                    s.order_index = idx
+                    new_order.append(s)
+
+            # Include any sections not explicitly specified
+            remaining = [s for s in secs if s.section_id not in section_ids]
+            for idx, s in enumerate(remaining, start=len(new_order) + 1):
+                s.order_index = idx
+                new_order.append(s)
+
+            self._report_sections[report_id] = new_order
+            rep.updated_at = datetime.datetime.now(datetime.timezone.utc)
+            return sorted(copy.deepcopy(new_order), key=lambda s: s.order_index)
+
+    # -----------------------------------------------------------------------
+    # Report Revisions & Diffing
+    # -----------------------------------------------------------------------
+    def list_report_revisions(self, report_id: str) -> List[ResearchReportRevision]:
+        """Lists historical snapshots for an authorized report."""
+        with self._lock:
+            revs = self._report_revisions.get(report_id, [])
+            return sorted(copy.deepcopy(revs), key=lambda r: r.revision_number, reverse=True)
+
+    def get_report_revision(self, report_id: str, revision_number: int) -> Optional[ResearchReportRevision]:
+        """Retrieves a specific revision snapshot."""
+        with self._lock:
+            revs = self._report_revisions.get(report_id, [])
+            for r in revs:
+                if r.revision_number == revision_number:
+                    return copy.deepcopy(r)
+            return None
+
+    def compare_report_revisions(
+        self,
+        report_id: str,
+        base_rev: int,
+        target_rev: int,
+    ) -> Dict[str, Any]:
+        """Computes structural and text diff between two report snapshots."""
+        with self._lock:
+            base_r = self.get_report_revision(report_id, base_rev)
+            target_r = self.get_report_revision(report_id, target_rev)
+            if not base_r or not target_r:
+                raise ResearchReportNotFoundError("Requested revision snapshot not found.")
+
+            base_secs = {s["section_id"]: s for s in base_r.document_snapshot.get("sections", [])}
+            target_secs = {s["section_id"]: s for s in target_r.document_snapshot.get("sections", [])}
+
+            added = [s["heading"] for sid, s in target_secs.items() if sid not in base_secs]
+            removed = [s["heading"] for sid, s in base_secs.items() if sid not in target_secs]
+            modified: List[str] = []
+
+            for sid, s in target_secs.items():
+                if sid in base_secs:
+                    if s.get("heading") != base_secs[sid].get("heading") or len(s.get("content_blocks", [])) != len(base_secs[sid].get("content_blocks", [])):
+                        modified.append(s.get("heading", sid))
+
+            diff_text = f"--- Revision {base_rev}\n+++ Revision {target_rev}\n"
+            if added:
+                diff_text += f"+ Added sections: {', '.join(added)}\n"
+            if removed:
+                diff_text += f"- Removed sections: {', '.join(removed)}\n"
+            if modified:
+                diff_text += f"~ Modified sections: {', '.join(modified)}\n"
+            if not added and not removed and not modified:
+                diff_text += "No structural modifications between revisions.\n"
+
+            return {
+                "report_id": report_id,
+                "base_revision_number": base_rev,
+                "target_revision_number": target_rev,
+                "sections_added": added,
+                "sections_removed": removed,
+                "sections_modified": modified,
+                "diff_unified": diff_text,
+            }
+
+    # -----------------------------------------------------------------------
+    # Investment Theses Repository Methods
+    # -----------------------------------------------------------------------
+    def list_theses(
+        self,
+        user_id: str,
+        investigation_id: Optional[str] = None,
+        report_id: Optional[str] = None,
+        subject_id: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[List[ResearchInvestmentThesis], int]:
+        """Lists user-owned investment theses with multi-factor filtering."""
+        with self._lock:
+            res = [t for t in self._theses.values() if t.owner_user_id == user_id]
+            if investigation_id:
+                res = [t for t in res if t.investigation_id == investigation_id]
+            if report_id:
+                res = [t for t in res if t.report_id == report_id]
+            if subject_id:
+                res = [t for t in res if t.primary_subject_id == subject_id]
+
+            total = len(res)
+            sorted_res = sorted(res, key=lambda t: t.updated_at, reverse=True)
+            paged = sorted_res[offset : offset + limit]
+            return [copy.deepcopy(t) for t in paged], total
+
+    def create_thesis(
+        self,
+        user_id: str,
+        thesis: ResearchInvestmentThesis,
+        initial_arguments: Optional[List[ResearchThesisArgument]] = None,
+    ) -> ResearchInvestmentThesis:
+        """Stores a new analyst investment thesis with structured arguments."""
+        with self._lock:
+            thesis.owner_user_id = user_id
+            self._theses[thesis.thesis_id] = copy.deepcopy(thesis)
+
+            if initial_arguments:
+                self._thesis_arguments[thesis.thesis_id] = [copy.deepcopy(a) for a in initial_arguments]
+            else:
+                self._thesis_arguments[thesis.thesis_id] = []
+
+            self._log_activity(
+                action=ResearchActivityAction.THESIS_CREATED,
+                entity_id=thesis.thesis_id,
+                entity_type="THESIS",
+                user_id=user_id,
+                details={"subject": thesis.primary_subject_id, "horizon": thesis.time_horizon},
+            )
+            return copy.deepcopy(thesis)
+
+    def get_thesis(self, thesis_id: str) -> Optional[ResearchInvestmentThesis]:
+        """Retrieves an investment thesis by ID."""
+        with self._lock:
+            the = self._theses.get(thesis_id)
+            return copy.deepcopy(the) if the else None
+
+    def update_thesis(
+        self,
+        user_id: str,
+        thesis_id: str,
+        expected_revision: int,
+        updates: Dict[str, Any],
+    ) -> ResearchInvestmentThesis:
+        """Updates an investment thesis statement and summaries."""
+        with self._lock:
+            the = self._theses.get(thesis_id)
+            if not the:
+                raise ResearchInvestmentThesisNotFoundError(f"Thesis '{thesis_id}' not found.")
+            if the.owner_user_id != user_id:
+                raise ResearchInvestmentThesisAccessDeniedError("Access denied.")
+            if the.current_revision != expected_revision:
+                raise ResearchInvestmentThesisRevisionConflictError(
+                    f"Revision conflict on thesis {the.current_revision} != {expected_revision}."
+                )
+
+            for key, val in updates.items():
+                if hasattr(the, key) and val is not None:
+                    setattr(the, key, val)
+
+            the.current_revision += 1
+            the.updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+            self._log_activity(
+                action=ResearchActivityAction.THESIS_UPDATED,
+                entity_id=the.thesis_id,
+                entity_type="THESIS",
+                user_id=user_id,
+                details={"revision": the.current_revision},
+            )
+            return copy.deepcopy(the)
+
+    def delete_thesis(self, user_id: str, thesis_id: str) -> bool:
+        """Deletes an investment thesis."""
+        with self._lock:
+            the = self._theses.get(thesis_id)
+            if not the:
+                raise ResearchInvestmentThesisNotFoundError(f"Thesis '{thesis_id}' not found.")
+            if the.owner_user_id != user_id:
+                raise ResearchInvestmentThesisAccessDeniedError("Access denied.")
+
+            del self._theses[thesis_id]
+            self._thesis_arguments.pop(thesis_id, None)
+            return True
+
+    def list_thesis_arguments(self, thesis_id: str) -> List[ResearchThesisArgument]:
+        """Lists arguments linked to an investment thesis."""
+        with self._lock:
+            args = self._thesis_arguments.get(thesis_id, [])
+            return sorted(copy.deepcopy(args), key=lambda a: a.created_at)
+
+    def create_thesis_argument(self, user_id: str, argument: ResearchThesisArgument) -> ResearchThesisArgument:
+        """Adds a structured argument node to a thesis."""
+        with self._lock:
+            the = self._theses.get(argument.thesis_id)
+            if not the:
+                raise ResearchInvestmentThesisNotFoundError(f"Thesis '{argument.thesis_id}' not found.")
+            if the.owner_user_id != user_id:
+                raise ResearchInvestmentThesisAccessDeniedError("Access denied.")
+
+            args = self._thesis_arguments.setdefault(argument.thesis_id, [])
+            args.append(copy.deepcopy(argument))
+            the.updated_at = datetime.datetime.now(datetime.timezone.utc)
+            return copy.deepcopy(argument)
+
+    def delete_thesis_argument(self, user_id: str, argument_id: str) -> bool:
+        """Deletes a thesis argument node."""
+        with self._lock:
+            for the_id, args in self._thesis_arguments.items():
+                for i, a in enumerate(args):
+                    if a.argument_id == argument_id:
+                        the = self._theses.get(the_id)
+                        if the and the.owner_user_id != user_id:
+                            raise ResearchInvestmentThesisAccessDeniedError("Access denied.")
+                        args.pop(i)
+                        return True
+            raise ResearchThesisArgumentNotFoundError(f"Argument '{argument_id}' not found.")
+
+    # -----------------------------------------------------------------------
+    # Report Verification Persistence
+    # -----------------------------------------------------------------------
+    def record_verification(self, verification: ResearchReportVerification) -> ResearchReportVerification:
+        """Saves a verification outcome audit record."""
+        with self._lock:
+            self._verification_runs.setdefault(verification.report_id, []).append(copy.deepcopy(verification))
+            self._log_activity(
+                action=ResearchActivityAction.REPORT_VERIFIED,
+                entity_id=verification.report_id,
+                entity_type="REPORT_VERIFICATION",
+                user_id=verification.verified_by_user_id,
+                details={
+                    "is_valid": verification.is_valid,
+                    "blocking_count": verification.blocking_issues_count,
+                    "coverage_pct": verification.citation_coverage_pct,
+                },
+            )
+            return copy.deepcopy(verification)
+
+    def get_latest_verification(self, report_id: str) -> Optional[ResearchReportVerification]:
+        """Retrieves the latest verification audit for a report."""
+        with self._lock:
+            runs = self._verification_runs.get(report_id, [])
+            if not runs:
+                return None
+            return copy.deepcopy(sorted(runs, key=lambda r: r.checked_at, reverse=True)[0])
+
+    # -----------------------------------------------------------------------
+    # Document Export Job Methods
+    # -----------------------------------------------------------------------
+    def create_export(
+        self,
+        export: ResearchReportExport,
+        artifact_bytes: Optional[bytes] = None,
+    ) -> ResearchReportExport:
+        """Stores a document export job record and binary artifact."""
+        with self._lock:
+            self._exports[export.export_id] = copy.deepcopy(export)
+            if artifact_bytes is not None:
+                self._export_artifacts[export.export_id] = artifact_bytes
+
+            self._log_activity(
+                action=ResearchActivityAction.REPORT_EXPORTED,
+                entity_id=export.report_id,
+                entity_type="EXPORT",
+                user_id=export.owner_user_id,
+                details={"format": export.format.value, "size_bytes": export.file_size_bytes},
+            )
+            return copy.deepcopy(export)
+
+    def get_export(self, export_id: str) -> Optional[ResearchReportExport]:
+        """Retrieves an export job record by ID."""
+        with self._lock:
+            exp = self._exports.get(export_id)
+            return copy.deepcopy(exp) if exp else None
+
+    def list_exports(self, report_id: str) -> List[ResearchReportExport]:
+        """Lists all export jobs for a specific report."""
+        with self._lock:
+            exps = [e for e in self._exports.values() if e.report_id == report_id]
+            return sorted(copy.deepcopy(exps), key=lambda e: e.created_at, reverse=True)
+
+    def get_export_bytes(self, export_id: str) -> Optional[bytes]:
+        """Retrieves the binary export file content (PDF/DOCX)."""
+        with self._lock:
+            return self._export_artifacts.get(export_id)

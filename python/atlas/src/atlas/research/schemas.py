@@ -15,9 +15,15 @@ from atlas.research.enums import (
     DocumentFormat,
     DocumentProcessingStatus,
     EvidenceLocationType,
+    ExportFormat,
+    ExportStatus,
     HypothesisEvaluationOutcome,
     InvestigationLifecycleStatus,
     OutlierHandlingPolicy,
+    ReportBlockType,
+    ReportLifecycleStatus,
+    ReportSectionType,
+    ReportSnapshotPolicy,
     ResearchActivityAction,
     ResearchAnalysisType,
     ResearchClaimCategory,
@@ -28,10 +34,13 @@ from atlas.research.enums import (
     ResearchNoteStatus,
     ResearchNoteType,
     ResearchQuestionStatus,
+    ResearchReportType,
     ResearchSourceType,
     ResearchType,
     SearchMode,
     SourceAvailabilityStatus,
+    ThesisArgumentType,
+    ThesisLifecycleStatus,
     UnitScale,
 )
 from atlas.research.types import ResearchDocumentKind
@@ -1097,3 +1106,334 @@ class ValidateAnalysisSpecificationResponseDTO(BaseModel):
     warnings: List[str] = Field(default_factory=list)
     available_data_periods: List[str] = Field(default_factory=list)
     estimated_observation_count: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Stage 107 Research Reports & Investment Theses DTOs
+# ---------------------------------------------------------------------------
+
+class ResearchReportContentBlockDTO(BaseModel):
+    """Content block within a report section."""
+    block_id: str
+    section_id: str
+    order_index: int
+    block_type: ReportBlockType
+    content_text: Optional[str] = None
+    content_json: Optional[Dict[str, Any]] = None
+    citation_ids: List[str] = Field(default_factory=list)
+    evidence_ids: List[str] = Field(default_factory=list)
+    analysis_run_id: Optional[str] = None
+    caption: Optional[str] = None
+
+
+class ResearchReportSectionDTO(BaseModel):
+    """Structured hierarchical section DTO."""
+    section_id: str
+    report_id: str
+    parent_section_id: Optional[str] = None
+    order_index: int
+    section_type: ReportSectionType
+    heading: str
+    content_blocks: List[Dict[str, Any]] = Field(default_factory=list)
+    revision: int = 1
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class CreateResearchReportRequest(BaseModel):
+    """Request payload to create a new institutional research report."""
+    investigation_id: Optional[str] = None
+    report_type: ResearchReportType
+    title: str = Field(..., min_length=3, max_length=200)
+    subtitle: Optional[str] = Field(default=None, max_length=300)
+    abstract: Optional[str] = Field(default=None, max_length=2000)
+    primary_subject_id: Optional[str] = None
+    primary_subject_type: Optional[str] = None
+    secondary_subject_ids: List[str] = Field(default_factory=list)
+    template_id: Optional[str] = None
+    report_as_of: Optional[datetime.date] = None
+    research_cutoff: Optional[datetime.datetime] = None
+    snapshot_policy: ReportSnapshotPolicy = ReportSnapshotPolicy.DRAFT_LATEST_AUTHORIZED
+
+
+class UpdateResearchReportRequest(BaseModel):
+    """Request payload to update report metadata and parameters."""
+    title: Optional[str] = Field(default=None, min_length=3, max_length=200)
+    subtitle: Optional[str] = None
+    abstract: Optional[str] = None
+    primary_subject_id: Optional[str] = None
+    secondary_subject_ids: Optional[List[str]] = None
+    report_as_of: Optional[datetime.date] = None
+    research_cutoff: Optional[datetime.datetime] = None
+    snapshot_policy: Optional[ReportSnapshotPolicy] = None
+    status: Optional[ReportLifecycleStatus] = None
+    expected_revision: int = Field(..., description="Optimistic concurrency guard")
+
+
+class FinalizeReportRequest(BaseModel):
+    """Request to freeze and finalize a report into an immutable snapshot."""
+    expected_revision: int
+    change_summary: Optional[str] = None
+
+
+class ResearchReportResponse(BaseModel):
+    """Summary representation of a research report."""
+    report_id: str
+    owner_user_id: str
+    investigation_id: Optional[str] = None
+    report_type: ResearchReportType
+    title: str
+    subtitle: Optional[str] = None
+    abstract: Optional[str] = None
+    primary_subject_id: Optional[str] = None
+    primary_subject_type: Optional[str] = None
+    secondary_subject_ids: List[str] = Field(default_factory=list)
+    report_as_of: datetime.date
+    research_cutoff: datetime.datetime
+    template_id: Optional[str] = None
+    status: ReportLifecycleStatus
+    current_revision: int
+    snapshot_policy: ReportSnapshotPolicy
+    section_count: int = 0
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class ResearchReportDetailResponse(ResearchReportResponse):
+    """Complete representation of a research report including sections."""
+    sections: List[ResearchReportSectionDTO] = Field(default_factory=list)
+    source_manifest: List[Dict[str, Any]] = Field(default_factory=list)
+    evidence_manifest: List[str] = Field(default_factory=list)
+    analysis_run_manifest: List[str] = Field(default_factory=list)
+
+
+class ResearchReportListResponse(BaseModel):
+    """Paginated collection of research reports."""
+    reports: List[ResearchReportResponse]
+    total_count: int
+
+
+class CreateReportSectionRequest(BaseModel):
+    """Request payload to add a section to a report."""
+    parent_section_id: Optional[str] = None
+    order_index: Optional[int] = None
+    section_type: ReportSectionType = ReportSectionType.CUSTOM
+    heading: str = Field(..., min_length=1, max_length=200)
+    content_blocks: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class UpdateReportSectionRequest(BaseModel):
+    """Request payload to update an existing section and its content blocks."""
+    heading: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    section_type: Optional[ReportSectionType] = None
+    content_blocks: Optional[List[Dict[str, Any]]] = None
+    expected_revision: int = Field(default=1)
+
+
+class ReorderReportSectionsRequest(BaseModel):
+    """Request to safely update the ordering of sections in a report."""
+    section_ids: List[str]
+
+
+class ResearchReportTemplateDTO(BaseModel):
+    """Institutional template schema for report authoring."""
+    template_id: str
+    template_version: int
+    report_type: ResearchReportType
+    title: str
+    description: str
+    default_sections: List[Dict[str, Any]]
+    required_sections: List[ReportSectionType]
+    citation_style: str
+    is_active: bool
+
+
+class ResearchReportTemplateListResponseDTO(BaseModel):
+    """Collection of available report templates."""
+    templates: List[ResearchReportTemplateDTO]
+    total_count: int
+
+
+class ResearchReportRevisionDTO(BaseModel):
+    """Revision history entry of a saved report."""
+    revision_id: str
+    report_id: str
+    revision_number: int
+    parent_revision_id: Optional[str] = None
+    author_user_id: str
+    revision_status: ReportLifecycleStatus
+    change_summary: Optional[str] = None
+    content_hash: str
+    created_at: datetime.datetime
+
+
+class ResearchReportRevisionListResponseDTO(BaseModel):
+    """Collection of revision history entries."""
+    revisions: List[ResearchReportRevisionDTO]
+    total_count: int
+
+
+class CompareReportRevisionsRequestDTO(BaseModel):
+    """Request to diff two revisions of a report."""
+    base_revision_number: int
+    target_revision_number: int
+
+
+class CompareReportRevisionsResponseDTO(BaseModel):
+    """Structural and text diff between two report revisions."""
+    report_id: str
+    base_revision_number: int
+    target_revision_number: int
+    sections_added: List[str]
+    sections_removed: List[str]
+    sections_modified: List[str]
+    diff_unified: str
+
+
+class CreateResearchThesisRequest(BaseModel):
+    """Request to create an analyst investment thesis."""
+    investigation_id: Optional[str] = None
+    report_id: Optional[str] = None
+    primary_subject_id: Optional[str] = None
+    primary_subject_type: Optional[str] = None
+    thesis_statement: str = Field(..., min_length=10, max_length=1000)
+    time_horizon: str = Field(default="12_MONTHS")
+    bull_case_summary: Optional[str] = None
+    bear_case_summary: Optional[str] = None
+    base_case_summary: Optional[str] = None
+    assumptions_summary: Optional[str] = None
+    risks_summary: Optional[str] = None
+    catalysts_summary: Optional[str] = None
+
+
+class UpdateResearchThesisRequest(BaseModel):
+    """Request to update an analyst investment thesis."""
+    thesis_statement: Optional[str] = Field(default=None, min_length=10, max_length=1000)
+    time_horizon: Optional[str] = None
+    status: Optional[ThesisLifecycleStatus] = None
+    bull_case_summary: Optional[str] = None
+    bear_case_summary: Optional[str] = None
+    base_case_summary: Optional[str] = None
+    assumptions_summary: Optional[str] = None
+    risks_summary: Optional[str] = None
+    catalysts_summary: Optional[str] = None
+    expected_revision: int
+
+
+class ResearchThesisArgumentDTO(BaseModel):
+    """Argument component of an investment thesis."""
+    argument_id: str
+    thesis_id: str
+    argument_type: ThesisArgumentType
+    statement: str
+    claim_ids: List[str] = Field(default_factory=list)
+    evidence_ids: List[str] = Field(default_factory=list)
+    analysis_run_ids: List[str] = Field(default_factory=list)
+    finding_ids: List[str] = Field(default_factory=list)
+    limitations: List[str] = Field(default_factory=list)
+    revision: int
+    created_at: datetime.datetime
+
+
+class CreateThesisArgumentRequest(BaseModel):
+    """Request to add a supporting/opposing argument or scenario to a thesis."""
+    argument_type: ThesisArgumentType
+    statement: str = Field(..., min_length=5, max_length=1000)
+    claim_ids: List[str] = Field(default_factory=list)
+    evidence_ids: List[str] = Field(default_factory=list)
+    analysis_run_ids: List[str] = Field(default_factory=list)
+    finding_ids: List[str] = Field(default_factory=list)
+    limitations: List[str] = Field(default_factory=list)
+
+
+class UpdateThesisArgumentRequest(BaseModel):
+    """Request to modify an existing thesis argument."""
+    statement: Optional[str] = None
+    argument_type: Optional[ThesisArgumentType] = None
+    claim_ids: Optional[List[str]] = None
+    evidence_ids: Optional[List[str]] = None
+    analysis_run_ids: Optional[List[str]] = None
+    finding_ids: Optional[List[str]] = None
+    limitations: Optional[List[str]] = None
+    expected_revision: int = 1
+
+
+class ResearchThesisResponse(BaseModel):
+    """Summary of an investment thesis."""
+    thesis_id: str
+    investigation_id: Optional[str] = None
+    report_id: Optional[str] = None
+    owner_user_id: str
+    primary_subject_id: Optional[str] = None
+    primary_subject_type: Optional[str] = None
+    thesis_statement: str
+    time_horizon: str
+    status: ThesisLifecycleStatus
+    current_revision: int
+    bull_case_summary: Optional[str] = None
+    bear_case_summary: Optional[str] = None
+    base_case_summary: Optional[str] = None
+    assumptions_summary: Optional[str] = None
+    risks_summary: Optional[str] = None
+    catalysts_summary: Optional[str] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class ResearchThesisDetailResponse(ResearchThesisResponse):
+    """Detailed thesis representation including structured argument list."""
+    arguments: List[ResearchThesisArgumentDTO] = Field(default_factory=list)
+
+
+class VerifyReportRequest(BaseModel):
+    """Request to trigger verification checks on a report."""
+    expected_revision: Optional[int] = None
+
+
+class ResearchReportVerificationResponse(BaseModel):
+    """Result of automated report verification."""
+    verification_id: str
+    report_id: str
+    revision_number: int
+    checked_at: datetime.datetime
+    is_valid: bool
+    blocking_issues_count: int
+    warnings_count: int
+    info_count: int
+    issues: List[Dict[str, Any]]
+    citation_coverage_pct: float
+    verified_by_user_id: str
+
+
+class CreateReportExportRequest(BaseModel):
+    """Request to queue a PDF or DOCX report publication export."""
+    format: ExportFormat = ExportFormat.PDF
+    expected_revision: Optional[int] = None
+    include_toc: bool = True
+    include_references: bool = True
+    author_name: str = "ATLAS Analyst"
+
+
+class ResearchReportExportResponse(BaseModel):
+    """Metadata and status of a research report export artifact."""
+    export_id: str
+    report_id: str
+    revision_number: int
+    owner_user_id: str
+    format: ExportFormat
+    export_status: ExportStatus
+    download_url: Optional[str] = None
+    file_size_bytes: int
+    page_count: int
+    content_hash: str
+    created_at: datetime.datetime
+    started_at: Optional[datetime.datetime] = None
+    completed_at: Optional[datetime.datetime] = None
+    expiry_at: Optional[datetime.datetime] = None
+    error_message: Optional[str] = None
+
+
+class ResearchReportExportListResponse(BaseModel):
+    """Collection of export jobs for a report."""
+    exports: List[ResearchReportExportResponse]
+    total_count: int

@@ -59,10 +59,38 @@ import {
   UpdateResearchFindingDTO,
   ValidateAnalysisSpecificationRequest,
   ValidateAnalysisSpecificationResponse,
+  // Stage 107 Types
+  ResearchReport,
+  ResearchReportSection,
+  ResearchReportContentBlock,
+  ResearchReportTemplate,
+  ResearchReportRevision,
+  ResearchReportVerification,
+  ResearchReportExport,
+  ResearchInvestmentThesis,
+  ResearchThesisArgument,
+  CreateResearchReportDTO,
+  UpdateResearchReportDTO,
+  FinalizeResearchReportDTO,
+  CreateReportSectionDTO,
+  UpdateReportSectionDTO,
+  ReorderReportSectionsDTO,
+  VerifyReportDTO,
+  CreateReportExportDTO,
+  CreateThesisDTO,
+  UpdateThesisDTO,
+  CreateThesisArgumentDTO,
+  ResearchReportType,
+  ReportLifecycleStatus,
+  ThesisLifecycleStatus,
+  ThesisArgumentType,
+  ExportFormat,
 } from "@/lib/research/types";
 
 export type ResearchTabMode =
   | "OVERVIEW"
+  | "REPORTS"
+  | "THESES"
   | "INVESTIGATIONS"
   | "ANALYSIS"
   | "SOURCES"
@@ -717,11 +745,397 @@ export function useResearchWorkspace() {
   };
 
   // -------------------------------------------------------------------------
+  // Stage 107: Reports & Theses State
+  // -------------------------------------------------------------------------
+  const [reports, setReports] = useState<ResearchReport[]>([]);
+  const [reportsTotal, setReportsTotal] = useState<number>(0);
+  const [isReportsLoading, setIsReportsLoading] = useState<boolean>(false);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [currentReport, setCurrentReport] = useState<ResearchReport | null>(null);
+  const [reportSections, setReportSections] = useState<ResearchReportSection[]>([]);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [reportTemplates, setReportTemplates] = useState<ResearchReportTemplate[]>([]);
+  const [reportRevisions, setReportRevisions] = useState<ResearchReportRevision[]>([]);
+  const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
+  const [revisionDiff, setRevisionDiff] = useState<any | null>(null);
+  const [verificationResult, setVerificationResult] = useState<ResearchReportVerification | null>(null);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [reportExports, setReportExports] = useState<ResearchReportExport[]>([]);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+
+  const [theses, setTheses] = useState<ResearchInvestmentThesis[]>([]);
+  const [selectedThesisId, setSelectedThesisId] = useState<string | null>(null);
+  const [currentThesis, setCurrentThesis] = useState<ResearchInvestmentThesis | null>(null);
+  const [thesisArguments, setThesisArguments] = useState<ResearchThesisArgument[]>([]);
+  const [isThesesLoading, setIsThesesLoading] = useState<boolean>(false);
+
+  const [reportStatusFilter, setReportStatusFilter] = useState<ReportLifecycleStatus | undefined>(undefined);
+  const [reportTypeFilter, setReportTypeFilter] = useState<ResearchReportType | undefined>(undefined);
+  const [reportSearchQuery, setReportSearchQuery] = useState<string>("");
+
+  const loadReportTemplates = useCallback(async () => {
+    try {
+      const res = await api.listReportTemplates();
+      setReportTemplates(res.templates);
+    } catch (err: any) {
+      console.error("Failed to load report templates", err);
+    }
+  }, []);
+
+  const loadReports = useCallback(async () => {
+    setIsReportsLoading(true);
+    setGlobalError(null);
+    try {
+      const res = await api.listReports({
+        report_type: reportTypeFilter,
+        status: reportStatusFilter,
+      });
+      let filteredReports = res.reports;
+      if (reportSearchQuery) {
+        const q = reportSearchQuery.toLowerCase();
+        filteredReports = filteredReports.filter(
+          (r) =>
+            r.title.toLowerCase().includes(q) ||
+            r.target_entity_name?.toLowerCase().includes(q) ||
+            r.primary_author?.toLowerCase().includes(q)
+        );
+      }
+      setReports(filteredReports);
+      setReportsTotal(filteredReports.length);
+      if (filteredReports.length > 0 && !selectedReportId) {
+        setSelectedReportId(filteredReports[0].report_id);
+      }
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to load research reports.");
+    } finally {
+      setIsReportsLoading(false);
+    }
+  }, [reportTypeFilter, reportStatusFilter, reportSearchQuery, selectedReportId]);
+
+  const loadReportDetail = useCallback(async (reportId: string) => {
+    setGlobalError(null);
+    try {
+      const [rep, secs, revsRes] = await Promise.all([
+        api.getReport(reportId),
+        api.listReportSections(reportId),
+        api.listReportRevisions(reportId),
+      ]);
+      setCurrentReport(rep);
+      setReportSections(secs);
+      setReportRevisions(revsRes.revisions);
+      if (secs.length > 0 && !selectedSectionId) {
+        setSelectedSectionId(secs[0].section_id);
+      }
+      try {
+        const ver = await api.getLatestVerification(reportId);
+        setVerificationResult(ver);
+      } catch {
+        setVerificationResult(null);
+      }
+      try {
+        const exps = await api.listReportExports(reportId);
+        setReportExports(exps.exports);
+      } catch {
+        setReportExports([]);
+      }
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to load report details.");
+    }
+  }, [selectedSectionId]);
+
+  const selectReport = (id: string | null) => {
+    setSelectedReportId(id);
+    setSelectedSectionId(null);
+    setRevisionDiff(null);
+    setVerificationResult(null);
+  };
+
+  const createReport = async (data: CreateResearchReportDTO) => {
+    try {
+      const rep = await api.createReport(data);
+      await loadReports();
+      setSelectedReportId(rep.report_id);
+      return rep;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to create report.");
+      throw err;
+    }
+  };
+
+  const updateReport = async (reportId: string, data: UpdateResearchReportDTO) => {
+    try {
+      const updated = await api.updateReport(reportId, data);
+      setCurrentReport(updated);
+      setReports((prev) => prev.map((r) => (r.report_id === reportId ? updated : r)));
+      return updated;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to update report.");
+      throw err;
+    }
+  };
+
+  const finalizeReport = async (reportId: string, data: FinalizeResearchReportDTO) => {
+    try {
+      const fin = await api.finalizeReport(reportId, {
+        expected_revision: data.expected_revision,
+        change_summary: data.publication_notes,
+      });
+      setCurrentReport(fin);
+      setReports((prev) => prev.map((r) => (r.report_id === reportId ? fin : r)));
+      return fin;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to finalize report.");
+      throw err;
+    }
+  };
+
+  const deleteReport = async (reportId: string) => {
+    try {
+      await api.deleteReport(reportId);
+      setReports((prev) => prev.filter((r) => r.report_id !== reportId));
+      if (selectedReportId === reportId) {
+        setSelectedReportId(null);
+        setCurrentReport(null);
+      }
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to delete report.");
+      throw err;
+    }
+  };
+
+  const createReportSection = async (reportId: string, data: CreateReportSectionDTO) => {
+    try {
+      const sec = await api.createReportSection(reportId, data);
+      setReportSections((prev) => [...prev, sec]);
+      setSelectedSectionId(sec.section_id);
+      return sec;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to create section.");
+      throw err;
+    }
+  };
+
+  const updateReportSection = async (sectionId: string, data: UpdateReportSectionDTO) => {
+    try {
+      const repId = selectedReportId || "";
+      const sec = await api.updateReportSection(repId, sectionId, data);
+      setReportSections((prev) => prev.map((s) => (s.section_id === sectionId ? sec : s)));
+      return sec;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to update section.");
+      throw err;
+    }
+  };
+
+  const deleteReportSection = async (sectionId: string) => {
+    try {
+      const repId = selectedReportId || "";
+      await api.deleteReportSection(repId, sectionId);
+      setReportSections((prev) => prev.filter((s) => s.section_id !== sectionId));
+      if (selectedSectionId === sectionId) {
+        setSelectedSectionId(null);
+      }
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to delete section.");
+      throw err;
+    }
+  };
+
+  const reorderReportSections = async (reportId: string, data: ReorderReportSectionsDTO) => {
+    try {
+      const ordered = await api.reorderReportSections(reportId, data.ordered_section_ids);
+      setReportSections(ordered);
+      return ordered;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to reorder sections.");
+      throw err;
+    }
+  };
+
+  const compareReportRevisions = async (reportId: string, baseRev: number, targetRev: number) => {
+    try {
+      const diff = await api.compareReportRevisions(reportId, baseRev, targetRev);
+      setRevisionDiff(diff);
+      return diff;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to compare revisions.");
+      throw err;
+    }
+  };
+
+  const verifyReport = async (reportId: string, data: VerifyReportDTO = {}) => {
+    setIsVerifying(true);
+    setGlobalError(null);
+    try {
+      const ver = await api.verifyReport(reportId, data.expected_revision);
+      setVerificationResult(ver);
+      return ver;
+    } catch (err: any) {
+      setGlobalError(err.message || "Report verification failed.");
+      throw err;
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const createReportExport = async (reportId: string, data: CreateReportExportDTO) => {
+    setIsExporting(true);
+    setGlobalError(null);
+    try {
+      const exp = await api.createReportExport(reportId, data);
+      setReportExports((prev) => [exp, ...prev]);
+      return exp;
+    } catch (err: any) {
+      setGlobalError(err.message || "Export generation failed.");
+      throw err;
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const loadTheses = useCallback(async () => {
+    setIsThesesLoading(true);
+    try {
+      const res = await api.listTheses();
+      setTheses(res);
+      if (res.length > 0 && !selectedThesisId) {
+        setSelectedThesisId(res[0].thesis_id);
+      }
+    } catch (err: any) {
+      console.error("Failed to load investment theses", err);
+    } finally {
+      setIsThesesLoading(false);
+    }
+  }, [selectedThesisId]);
+
+  const loadThesisDetail = useCallback(async (thesisId: string) => {
+    try {
+      const th = await api.getThesis(thesisId);
+      setCurrentThesis(th);
+      setThesisArguments(th.arguments || []);
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to load thesis details.");
+    }
+  }, []);
+
+  const selectThesis = (id: string | null) => {
+    setSelectedThesisId(id);
+  };
+
+  const createThesis = async (data: CreateThesisDTO) => {
+    try {
+      const th = await api.createThesis({
+        thesis_statement: data.thesis_statement || data.title,
+        time_horizon: `${data.horizon_months || 12}M`,
+        primary_subject_id: data.target_entity_id,
+        investigation_id: data.investigation_id,
+        bull_case_summary: data.summary,
+      });
+      await loadTheses();
+      setSelectedThesisId(th.thesis_id);
+      return th;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to create thesis.");
+      throw err;
+    }
+  };
+
+  const updateThesis = async (thesisId: string, data: UpdateThesisDTO) => {
+    try {
+      const th = await api.updateThesis(thesisId, {
+        expected_revision: data.expected_revision ?? currentThesis?.current_revision ?? 1,
+        thesis_statement: data.title || currentThesis?.thesis_statement,
+        status: data.status,
+      });
+      setCurrentThesis(th);
+      setTheses((prev) => prev.map((t) => (t.thesis_id === thesisId ? th : t)));
+      return th;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to update thesis.");
+      throw err;
+    }
+  };
+
+  const deleteThesis = async (thesisId: string) => {
+    try {
+      await api.deleteThesis(thesisId);
+      setTheses((prev) => prev.filter((t) => t.thesis_id !== thesisId));
+      if (selectedThesisId === thesisId) {
+        setSelectedThesisId(null);
+        setCurrentThesis(null);
+      }
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to delete thesis.");
+      throw err;
+    }
+  };
+
+  const createThesisArgument = async (thesisId: string, data: CreateThesisArgumentDTO) => {
+    try {
+      const arg = await api.createThesisArgument(thesisId, data);
+      setThesisArguments((prev) => [...prev, arg]);
+      if (currentThesis) {
+        setCurrentThesis({
+          ...currentThesis,
+          arguments: [...(currentThesis.arguments || []), arg],
+        });
+      }
+      return arg;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to create thesis argument.");
+      throw err;
+    }
+  };
+
+  const deleteThesisArgument = async (argumentId: string) => {
+    try {
+      const thId = selectedThesisId || "";
+      await api.deleteThesisArgument(thId, argumentId);
+      setThesisArguments((prev) => prev.filter((a) => a.argument_id !== argumentId));
+      if (currentThesis && currentThesis.arguments) {
+        setCurrentThesis({
+          ...currentThesis,
+          arguments: currentThesis.arguments.filter((a: ResearchThesisArgument) => a.argument_id !== argumentId),
+        });
+      }
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to delete thesis argument.");
+      throw err;
+    }
+  };
+
+  // Selection detail hooks
+  useEffect(() => {
+    if (selectedReportId) {
+      loadReportDetail(selectedReportId);
+    } else {
+      setCurrentReport(null);
+      setReportSections([]);
+      setReportRevisions([]);
+    }
+  }, [selectedReportId, loadReportDetail]);
+
+  useEffect(() => {
+    if (selectedThesisId) {
+      loadThesisDetail(selectedThesisId);
+    } else {
+      setCurrentThesis(null);
+      setThesisArguments([]);
+    }
+  }, [selectedThesisId, loadThesisDetail]);
+
+  // -------------------------------------------------------------------------
   // Navigation & Triggers
   // -------------------------------------------------------------------------
   useEffect(() => {
     if (activeTab === "OVERVIEW") {
       loadOverview();
+    } else if (activeTab === "REPORTS") {
+      loadReportTemplates();
+      loadReports();
+      loadTheses();
+    } else if (activeTab === "THESES") {
+      loadTheses();
     } else if (activeTab === "INVESTIGATIONS") {
       loadInvestigations();
     } else if (activeTab === "ANALYSIS") {
@@ -744,6 +1158,9 @@ export function useResearchWorkspace() {
   }, [
     activeTab,
     loadOverview,
+    loadReportTemplates,
+    loadReports,
+    loadTheses,
     loadInvestigations,
     loadAnalysisTypes,
     loadAnalyses,
@@ -1072,6 +1489,61 @@ export function useResearchWorkspace() {
     deleteAssumption,
     executeSensitivity,
     evaluateHypothesis,
+
+    // Stage 107: Reports & Theses
+    reports,
+    reportsTotal,
+    isReportsLoading,
+    selectedReportId,
+    setSelectedReportId,
+    selectReport,
+    currentReport,
+    reportSections,
+    selectedSectionId,
+    setSelectedSectionId,
+    reportTemplates,
+    reportRevisions,
+    selectedRevisionId,
+    setSelectedRevisionId,
+    revisionDiff,
+    verificationResult,
+    isVerifying,
+    reportExports,
+    isExporting,
+    theses,
+    selectedThesisId,
+    setSelectedThesisId,
+    selectThesis,
+    currentThesis,
+    thesisArguments,
+    isThesesLoading,
+    reportStatusFilter,
+    setReportStatusFilter,
+    reportTypeFilter,
+    setReportTypeFilter,
+    reportSearchQuery,
+    setReportSearchQuery,
+    loadReportTemplates,
+    loadReports,
+    loadReportDetail,
+    createReport,
+    updateReport,
+    finalizeReport,
+    deleteReport,
+    createReportSection,
+    updateReportSection,
+    deleteReportSection,
+    reorderReportSections,
+    compareReportRevisions,
+    verifyReport,
+    createReportExport,
+    loadTheses,
+    loadThesisDetail,
+    createThesis,
+    updateThesis,
+    deleteThesis,
+    createThesisArgument,
+    deleteThesisArgument,
 
     // Error
     globalError,

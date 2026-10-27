@@ -1080,3 +1080,488 @@ export interface ValidateAnalysisSpecificationResponse {
   estimated_observation_count: number;
 }
 
+// ---------------------------------------------------------------------------
+// Stage 107 — Report Studio & Investment Thesis Types
+// ---------------------------------------------------------------------------
+
+export type ResearchReportType =
+  | "COMPANY_RESEARCH"
+  | "EQUITY_INITIATION"
+  | "EQUITY_INITIATION_DRAFT"
+  | "COMPANY_UPDATE"
+  | "EARNINGS_REVIEW"
+  | "INDUSTRY_PRIMER"
+  | "INDUSTRY_RESEARCH"
+  | "MACROECONOMIC_REPORT"
+  | "MACROECONOMIC_RESEARCH"
+  | "FINANCIAL_EVENT_NOTE"
+  | "FUNDAMENTAL_ANALYSIS"
+  | "PEER_BENCHMARKING"
+  | "INVESTMENT_THESIS"
+  | "EVENT_MEMO"
+  | "RISK_BRIEF"
+  | "RISK_RESEARCH_NOTE"
+  | "GENERAL_RESEARCH_MEMORANDUM"
+  | "CUSTOM";
+
+export type ReportLifecycleStatus =
+  | "DRAFT"
+  | "IN_PROGRESS"
+  | "READY_FOR_REVIEW"
+  | "REVIEWED"
+  | "UNDER_REVIEW"
+  | "FINALIZED"
+  | "PUBLISHED"
+  | "SUPERSEDED"
+  | "ARCHIVED";
+
+export type ReportSectionType =
+  | "EXECUTIVE_SUMMARY"
+  | "COMPANY_OVERVIEW"
+  | "BUSINESS_MODEL"
+  | "INDUSTRY_CONTEXT"
+  | "FINANCIAL_PERFORMANCE"
+  | "PROFITABILITY_CASH_FLOW"
+  | "CAPITAL_STRUCTURE"
+  | "PEER_BENCHMARKING"
+  | "INVESTMENT_THESIS"
+  | "BULL_BEAR_CASE"
+  | "BULL_BEAR_CASES"
+  | "VALUATION_CONTEXT"
+  | "VALUATION_FRAMEWORK"
+  | "INDUSTRY_DYNAMICS"
+  | "KEY_RISKS"
+  | "RISK_FACTORS"
+  | "CATALYSTS"
+  | "METHODOLOGY"
+  | "METHODOLOGY_AND_DATA"
+  | "REFERENCES"
+  | "DISCLOSURES"
+  | "CUSTOM";
+
+export type ReportBlockType =
+  | "HEADING"
+  | "HEADING_2"
+  | "HEADING_3"
+  | "PARAGRAPH"
+  | "BULLET_LIST"
+  | "NUMBERED_LIST"
+  | "BLOCK_QUOTE"
+  | "QUOTE"
+  | "FINANCIAL_TABLE"
+  | "ANALYSIS_TABLE"
+  | "CHART"
+  | "CALCULATION"
+  | "CITATION"
+  | "FOOTNOTE"
+  | "PAGE_BREAK"
+  | "REFERENCES";
+
+export type ReportSnapshotPolicy =
+  | "DRAFT_LATEST_AUTHORIZED"
+  | "PINNED_SOURCE_REFERENCES"
+  | "FINALIZED_IMMUTABLE_SNAPSHOT";
+
+export type ThesisLifecycleStatus =
+  | "DRAFT"
+  | "ACTIVE"
+  | "UNDER_REVIEW"
+  | "ACCEPTED"
+  | "VALIDATED"
+  | "DISPROVEN"
+  | "REVISED"
+  | "INVALIDATED"
+  | "ARCHIVED";
+
+export type ThesisArgumentType =
+  | "SUPPORTING"
+  | "OPPOSING"
+  | "BULL_CASE"
+  | "BEAR_CASE"
+  | "BASE_CASE"
+  | "CONTEXTUAL"
+  | "ASSUMPTION"
+  | "CORE_ASSUMPTION"
+  | "RISK"
+  | "KEY_RISK"
+  | "CATALYST"
+  | "CONTRADICTING_EVIDENCE"
+  | "OPEN_QUESTION";
+
+export type ExportFormat = "PDF" | "DOCX" | "HTML" | "MARKDOWN" | "JSON_ARCHIVE";
+
+export type ExportStatus = "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "EXPIRED";
+
+export type VerificationIssueSeverity = "BLOCKING" | "WARNING" | "INFORMATIONAL";
+
+export type VerificationIssueType =
+  | "STRUCTURE_INCOMPLETE"
+  | "MISSING_CITATION"
+  | "BROKEN_CITATION"
+  | "SOURCE_RESTRICTED"
+  | "SOURCE_WITHDRAWN"
+  | "SOURCE_REVISED"
+  | "ANALYSIS_RUN_NOT_FOUND"
+  | "ANALYSIS_RUN_OUTDATED"
+  | "UNSUPPORTED_QUANTITATIVE_CLAIM"
+  | "MISSING_METHODOLOGY"
+  | "MISSING_DATA_PERIOD"
+  | "MISSING_UNIT"
+  | "UNDISCLOSED_ASSUMPTION"
+  | "POINT_IN_TIME_CONFLICT"
+  | "UNRESOLVED_CONTRADICTION";
+
+export interface ResearchReportContentBlock {
+  block_id: string;
+  block_type: ReportBlockType;
+  content?: string;
+  text_content?: string;
+  citation_ids?: string[];
+  citation_id?: string;
+  source_id?: string;
+  publication_date?: string;
+  analysis_run_id?: string;
+  table_data?: Record<string, unknown>;
+  table_content?: {
+    columns: string[];
+    rows: string[][];
+    analysis_run_id?: string;
+  };
+  chart_config?: Record<string, unknown>;
+  chart_spec?: {
+    chart_type?: string;
+    series_name?: string;
+    data_points?: Array<{ period: string; value: number }>;
+    analysis_run_id?: string;
+  };
+  caption?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ResearchReportSection {
+  section_id: string;
+  report_id: string;
+  parent_section_id?: string | null;
+  order_index: number;
+  section_type: ReportSectionType;
+  title: string;
+  heading?: string;
+  blocks?: ResearchReportContentBlock[];
+  content_blocks: ResearchReportContentBlock[];
+  is_mandatory?: boolean;
+  revision: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResearchReport {
+  report_id: string;
+  owner_user_id: string;
+  investigation_id?: string | null;
+  report_type: ResearchReportType;
+  title: string;
+  subtitle?: string | null;
+  abstract?: string | null;
+  target_entity_id?: string | null;
+  target_entity_name?: string | null;
+  primary_author: string;
+  co_authors?: string[];
+  primary_subject_id?: string | null;
+  primary_subject_type?: string | null;
+  secondary_subject_ids?: string[];
+  report_as_of?: string;
+  research_cutoff?: string;
+  template_id?: string | null;
+  status: ReportLifecycleStatus;
+  current_revision: number;
+  revision: number;
+  snapshot_policy?: ReportSnapshotPolicy;
+  section_count: number;
+  sections?: ResearchReportSection[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResearchReportDetail extends ResearchReport {
+  sections: ResearchReportSection[];
+  source_manifest: Array<Record<string, unknown>>;
+  evidence_manifest: string[];
+  analysis_run_manifest: string[];
+}
+
+export interface ResearchReportTemplate {
+  template_id: string;
+  template_version: number;
+  report_type: ResearchReportType;
+  title: string;
+  description: string;
+  default_sections: Array<{
+    heading: string;
+    section_type: ReportSectionType;
+    content_blocks: Array<Record<string, unknown>>;
+  }>;
+  required_sections: ReportSectionType[];
+  citation_style: string;
+  is_active: boolean;
+}
+
+export interface ResearchReportRevision {
+  revision_id: string;
+  report_id: string;
+  revision_number: number;
+  parent_revision_id?: string | null;
+  author_user_id: string;
+  created_by?: string;
+  word_count?: number;
+  revision_status: ReportLifecycleStatus;
+  change_summary?: string | null;
+  content_hash: string;
+  created_at: string;
+}
+
+export interface CompareReportRevisionsResponse {
+  report_id: string;
+  base_revision_number: number;
+  target_revision_number: number;
+  sections_added: string[];
+  sections_removed: string[];
+  sections_modified: string[];
+  diff_unified: string;
+}
+
+export interface ResearchThesisArgument {
+  argument_id: string;
+  thesis_id: string;
+  argument_type: ThesisArgumentType;
+  statement: string;
+  claim_ids?: string[];
+  evidence_ids?: string[];
+  evidence_citations?: string[];
+  strength_score?: number;
+  analysis_run_ids?: string[];
+  finding_ids?: string[];
+  limitations?: string[];
+  revision: number;
+  created_at: string;
+}
+
+export interface ResearchInvestmentThesis {
+  thesis_id: string;
+  investigation_id?: string | null;
+  report_id?: string | null;
+  owner_user_id: string;
+  primary_subject_id?: string | null;
+  primary_subject_type?: string | null;
+  title: string;
+  thesis_statement: string;
+  time_horizon: string;
+  horizon_months?: number;
+  conviction_score?: number;
+  target_entity_id?: string | null;
+  target_entity_name?: string | null;
+  status: ThesisLifecycleStatus;
+  current_revision: number;
+  summary?: string | null;
+  bull_case_summary?: string | null;
+  bear_case_summary?: string | null;
+  base_case_summary?: string | null;
+  assumptions_summary?: string | null;
+  risks_summary?: string | null;
+  catalysts_summary?: string | null;
+  arguments?: ResearchThesisArgument[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResearchInvestmentThesisDetail extends ResearchInvestmentThesis {
+  arguments: ResearchThesisArgument[];
+}
+
+export interface VerificationIssue {
+  issue_type: VerificationIssueType;
+  severity: VerificationIssueSeverity;
+  message: string;
+  section_id?: string | null;
+  block_id?: string | null;
+  reference_id?: string | null;
+}
+
+export interface ResearchReportVerification {
+  verification_id: string;
+  report_id: string;
+  revision_number: number;
+  checked_at: string;
+  verified_at?: string;
+  is_valid: boolean;
+  blocking_issues_count: number;
+  warnings_count: number;
+  info_count: number;
+  issues: VerificationIssue[];
+  citation_coverage_pct: number;
+  verified_by_user_id: string;
+}
+
+export interface ResearchReportExport {
+  export_id: string;
+  report_id: string;
+  revision_number: number;
+  owner_user_id: string;
+  format: ExportFormat;
+  export_status: ExportStatus;
+  file_name?: string;
+  download_url?: string | null;
+  file_size_bytes: number;
+  page_count: number;
+  content_hash: string;
+  created_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  expiry_at?: string | null;
+  error_message?: string | null;
+}
+
+export interface CreateResearchReportDTO {
+  investigation_id?: string | null;
+  report_type: ResearchReportType;
+  title: string;
+  subtitle?: string | null;
+  abstract?: string | null;
+  target_entity_id?: string | null;
+  target_entity_name?: string | null;
+  primary_author?: string;
+  co_authors?: string[];
+  primary_subject_id?: string | null;
+  primary_subject_type?: string | null;
+  secondary_subject_ids?: string[];
+  template_id?: string | null;
+  report_as_of?: string | null;
+  research_cutoff?: string | null;
+  snapshot_policy?: ReportSnapshotPolicy;
+}
+
+export interface UpdateResearchReportDTO {
+  expected_revision: number;
+  title?: string;
+  subtitle?: string | null;
+  abstract?: string | null;
+  primary_subject_id?: string | null;
+  secondary_subject_ids?: string[];
+  report_as_of?: string | null;
+  research_cutoff?: string | null;
+  snapshot_policy?: ReportSnapshotPolicy;
+  status?: ReportLifecycleStatus;
+}
+
+export interface FinalizeResearchReportDTO {
+  expected_revision: number;
+  publication_notes?: string;
+  disclaimer_override?: string;
+}
+
+export interface ReorderReportSectionsDTO {
+  ordered_section_ids: string[];
+}
+
+export interface VerifyReportDTO {
+  expected_revision?: number;
+}
+
+export interface CreateReportExportDTO {
+  format: ExportFormat;
+  include_disclosures?: boolean;
+  include_citations?: boolean;
+  include_charts?: boolean;
+}
+
+export interface CreateReportSectionDTO {
+  parent_section_id?: string | null;
+  order_index?: number | null;
+  section_type?: ReportSectionType;
+  title?: string;
+  heading?: string;
+  blocks?: ResearchReportContentBlock[];
+  content_blocks?: Array<Record<string, unknown>>;
+}
+
+export interface UpdateReportSectionDTO {
+  expected_revision: number;
+  title?: string;
+  heading?: string;
+  section_type?: ReportSectionType;
+  blocks?: ResearchReportContentBlock[];
+  content_blocks?: Array<Record<string, unknown>>;
+}
+
+export interface CreateThesisDTO {
+  title: string;
+  summary?: string;
+  target_entity_id?: string;
+  target_entity_name?: string;
+  horizon_months?: number;
+  conviction_score?: number;
+  investigation_id?: string;
+  thesis_statement?: string;
+}
+
+export interface UpdateThesisDTO {
+  title?: string;
+  summary?: string;
+  target_entity_id?: string;
+  target_entity_name?: string;
+  horizon_months?: number;
+  conviction_score?: number;
+  status?: ThesisLifecycleStatus;
+  expected_revision?: number;
+}
+
+export interface CreateThesisArgumentDTO {
+  argument_type: ThesisArgumentType;
+  statement: string;
+  claim_ids?: string[];
+  evidence_ids?: string[];
+  evidence_citations?: string[];
+  strength_score?: number;
+  analysis_run_ids?: string[];
+  finding_ids?: string[];
+  limitations?: string[];
+}
+
+export interface CreateResearchThesisDTO {
+  investigation_id?: string | null;
+  report_id?: string | null;
+  primary_subject_id?: string | null;
+  primary_subject_type?: string | null;
+  thesis_statement: string;
+  time_horizon?: string;
+  bull_case_summary?: string | null;
+  bear_case_summary?: string | null;
+  base_case_summary?: string | null;
+  assumptions_summary?: string | null;
+  risks_summary?: string | null;
+  catalysts_summary?: string | null;
+}
+
+export interface UpdateResearchThesisDTO {
+  expected_revision: number;
+  thesis_statement?: string;
+  time_horizon?: string;
+  status?: ThesisLifecycleStatus;
+  bull_case_summary?: string | null;
+  bear_case_summary?: string | null;
+  base_case_summary?: string | null;
+  assumptions_summary?: string | null;
+  risks_summary?: string | null;
+  catalysts_summary?: string | null;
+}
+
+export interface CreateThesisArgumentDTO {
+  argument_type: ThesisArgumentType;
+  statement: string;
+  claim_ids?: string[];
+  evidence_ids?: string[];
+  analysis_run_ids?: string[];
+  finding_ids?: string[];
+  limitations?: string[];
+}
+
+

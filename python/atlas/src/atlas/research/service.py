@@ -2,7 +2,7 @@
 
 import datetime
 import uuid
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -23,19 +23,30 @@ from atlas.research.domain import (
     ResearchAnalysisSpecification,
     ResearchFinding,
     ResearchInvestigation,
+    ResearchInvestmentThesis,
+    ResearchReport,
+    ResearchReportExport,
+    ResearchReportSection,
     ResearchScenario,
     ResearchSourceReference,
+    ResearchThesisArgument,
 )
 from atlas.research.enums import (
     AnalysisExecutionStatus,
     AnalysisInputPolicy,
+    ExportFormat,
+    ExportStatus,
     InvestigationLifecycleStatus,
+    ReportLifecycleStatus,
+    ReportSectionType,
     ResearchAnalysisType,
     ResearchFindingReviewStatus,
+    ResearchReportType,
     ResearchSourceType,
     ResearchType,
     ScenarioType,
     SourceAvailabilityStatus,
+    ThesisLifecycleStatus,
 )
 from atlas.research.errors import (
     InvalidResearchDocumentKindError,
@@ -53,19 +64,38 @@ from atlas.research.errors import (
     ResearchHypothesisNotFoundError,
     ResearchInvestigationAccessDeniedError,
     ResearchInvestigationNotFoundError,
+    ResearchInvestmentThesisAccessDeniedError,
+    ResearchInvestmentThesisNotFoundError,
     ResearchNoteAccessDeniedError,
     ResearchNoteNotFoundError,
     ResearchQuestionNotFoundError,
+    ResearchReportAccessDeniedError,
+    ResearchReportExportAccessDeniedError,
+    ResearchReportExportNotFoundError,
+    ResearchReportNotFoundError,
+    ResearchReportRevisionConflictError,
+    ResearchReportTemplateUnavailableError,
     ResearchSourceNotFoundError,
 )
+from atlas.research.reports.exports import render_report_docx, render_report_pdf
+from atlas.research.reports.templates import (
+    get_report_template,
+    list_report_templates,
+)
+from atlas.research.reports.verification import verify_research_report
 from atlas.research.repository import ResearchDocumentRepository, ResearchRepository
 from atlas.research.schemas import (
     # Stage 106 Schemas
     AnalysisProvenanceResponseDTO,
     AnalyticalObservationRowDTO,
     AnalyticalSummaryStatisticsDTO,
+    # Stage 107 Schemas
+    CompareReportRevisionsRequestDTO,
+    CompareReportRevisionsResponseDTO,
     # Stage 105 Schemas
     ConvertEvidenceCandidateDTO,
+    CreateReportExportRequest,
+    CreateReportSectionRequest,
     CreateResearchAnalysisDTO,
     CreateResearchAssumptionDTO,
     CreateResearchClaimDTO,
@@ -74,6 +104,9 @@ from atlas.research.schemas import (
     CreateResearchInvestigationDTO,
     CreateResearchNoteDTO,
     CreateResearchQuestionDTO,
+    CreateResearchReportRequest,
+    CreateResearchThesisRequest,
+    CreateThesisArgumentRequest,
     DocumentComparisonRequestDTO,
     DocumentComparisonResultDTO,
     DocumentComparisonSectionDiffDTO,
@@ -83,11 +116,13 @@ from atlas.research.schemas import (
     EvaluateResearchHypothesisDTO,
     EvidenceCandidateListResponseDTO,
     ExecuteSensitivityScenarioDTO,
+    FinalizeReportRequest,
     FinancialFactComparisonDTO,
     FinancialFactsCompareRequestDTO,
     FinancialFactsCompareResponseDTO,
     HypothesisTestCriteriaDTO,
     LinkResearchSourceDTO,
+    ReorderReportSectionsRequest,
     ResearchActivityDTO,
     ResearchAnalysisDTO,
     ResearchAnalysisResultDTO,
@@ -113,6 +148,17 @@ from atlas.research.schemas import (
     ResearchNoteRevisionDTO,
     ResearchOverviewSummaryDTO,
     ResearchQuestionDTO,
+    ResearchReportDetailResponse,
+    ResearchReportExportListResponse,
+    ResearchReportExportResponse,
+    ResearchReportListResponse,
+    ResearchReportResponse,
+    ResearchReportRevisionDTO,
+    ResearchReportRevisionListResponseDTO,
+    ResearchReportSectionDTO,
+    ResearchReportTemplateDTO,
+    ResearchReportTemplateListResponseDTO,
+    ResearchReportVerificationResponse,
     ResearchSearchHitDTO,
     ResearchSensitivityResultDTO,
     ResearchSourceDiscoveryQueryDTO,
@@ -120,8 +166,12 @@ from atlas.research.schemas import (
     ResearchSourceReferenceDTO,
     ResearchSourceTypeItemDTO,
     ResearchSourceTypeListResponseDTO,
+    ResearchThesisArgumentDTO,
+    ResearchThesisDetailResponse,
+    ResearchThesisResponse,
     ResolveEvidenceLocationRequestDTO,
     ResolveEvidenceLocationResponseDTO,
+    UpdateReportSectionRequest,
     UpdateResearchAnalysisDTO,
     UpdateResearchClaimDTO,
     UpdateResearchFindingDTO,
@@ -129,8 +179,11 @@ from atlas.research.schemas import (
     UpdateResearchInvestigationDTO,
     UpdateResearchNoteDTO,
     UpdateResearchQuestionDTO,
+    UpdateResearchReportRequest,
+    UpdateResearchThesisRequest,
     ValidateAnalysisSpecificationRequestDTO,
     ValidateAnalysisSpecificationResponseDTO,
+    VerifyReportRequest,
 )
 from atlas.research.security import (
     sanitize_markdown_text,
@@ -1794,6 +1847,742 @@ class ResearchService:
         self.repository.save_scenario(scenario)
 
         return ResearchSensitivityResultDTO(**result_dict)
+
+    # =======================================================================
+    # Stage 107: Report Studio, Investment Theses & Exports
+    # =======================================================================
+
+    # --- Templates ---
+    def list_report_templates(self) -> ResearchReportTemplateListResponseDTO:
+        templates = list_report_templates()
+        dto_list = [
+            ResearchReportTemplateDTO(
+                template_id=t.template_id,
+                template_version=t.template_version,
+                report_type=t.report_type,
+                title=t.title,
+                description=t.description,
+                default_sections=t.default_sections,
+                required_sections=t.required_sections,
+                citation_style=t.citation_style,
+                is_active=t.is_active,
+            )
+            for t in templates
+        ]
+        return ResearchReportTemplateListResponseDTO(templates=dto_list, total_count=len(dto_list))
+
+    def get_report_template(self, template_id: str) -> ResearchReportTemplateDTO:
+        t = get_report_template(template_id)
+        if not t:
+            raise ResearchReportTemplateUnavailableError(f"Template '{template_id}' is not available.")
+        return ResearchReportTemplateDTO(
+            template_id=t.template_id,
+            template_version=t.template_version,
+            report_type=t.report_type,
+            title=t.title,
+            description=t.description,
+            default_sections=t.default_sections,
+            required_sections=t.required_sections,
+            citation_style=t.citation_style,
+            is_active=t.is_active,
+        )
+
+    # --- Reports CRUD ---
+    def list_reports(
+        self,
+        user_id: str,
+        investigation_id: Optional[str] = None,
+        report_type: Optional[ResearchReportType] = None,
+        status: Optional[ReportLifecycleStatus] = None,
+        subject_id: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> ResearchReportListResponse:
+        reports, total = self.repository.list_reports(
+            user_id=user_id,
+            investigation_id=investigation_id,
+            report_type=report_type,
+            status=status,
+            subject_id=subject_id,
+            limit=limit,
+            offset=offset,
+        )
+        dtos = []
+        for r in reports:
+            secs = self.repository.list_report_sections(r.report_id)
+            dtos.append(
+                ResearchReportResponse(
+                    report_id=r.report_id,
+                    owner_user_id=r.owner_user_id,
+                    investigation_id=r.investigation_id,
+                    report_type=r.report_type,
+                    title=r.title,
+                    subtitle=r.subtitle,
+                    abstract=r.abstract,
+                    primary_subject_id=r.primary_subject_id,
+                    primary_subject_type=r.primary_subject_type,
+                    secondary_subject_ids=r.secondary_subject_ids,
+                    report_as_of=r.report_as_of,
+                    research_cutoff=r.research_cutoff,
+                    template_id=r.template_id,
+                    status=r.status,
+                    current_revision=r.current_revision,
+                    snapshot_policy=r.snapshot_policy,
+                    section_count=len(secs),
+                    created_at=r.created_at,
+                    updated_at=r.updated_at,
+                )
+            )
+        return ResearchReportListResponse(reports=dtos, total_count=total)
+
+    def create_report(
+        self,
+        data: CreateResearchReportRequest,
+        user_id: str,
+    ) -> ResearchReportDetailResponse:
+        clean_title = sanitize_markdown_text(data.title.strip())
+        clean_subtitle = sanitize_markdown_text(data.subtitle.strip()) if data.subtitle else None
+        clean_abstract = sanitize_markdown_text(data.abstract.strip()) if data.abstract else None
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        as_of = data.report_as_of or now.date()
+        cutoff = data.research_cutoff or now
+
+        report_id = f"rep-{uuid.uuid4().hex[:12]}"
+
+        # Initialize sections from template if selected
+        initial_sections: List[ResearchReportSection] = []
+        if data.template_id:
+            tpl = get_report_template(data.template_id)
+            if tpl:
+                for idx, sec_def in enumerate(tpl.default_sections, start=1):
+                    sec_type = ReportSectionType(sec_def.get("section_type", ReportSectionType.CUSTOM.value))
+                    initial_sections.append(
+                        ResearchReportSection(
+                            section_id=f"sec-{uuid.uuid4().hex[:10]}",
+                            report_id=report_id,
+                            parent_section_id=None,
+                            order_index=idx,
+                            section_type=sec_type,
+                            heading=sec_def.get("heading", f"Section {idx}"),
+                            content_blocks=sec_def.get("content_blocks", []),
+                            revision=1,
+                            created_at=now,
+                            updated_at=now,
+                        )
+                    )
+
+        report = ResearchReport(
+            report_id=report_id,
+            owner_user_id=user_id,
+            investigation_id=data.investigation_id,
+            report_type=data.report_type,
+            title=clean_title,
+            subtitle=clean_subtitle,
+            abstract=clean_abstract,
+            primary_subject_id=data.primary_subject_id,
+            primary_subject_type=data.primary_subject_type or ("COMPANY" if data.primary_subject_id else None),
+            secondary_subject_ids=data.secondary_subject_ids,
+            report_as_of=as_of,
+            research_cutoff=cutoff,
+            template_id=data.template_id,
+            current_revision=1,
+            status=ReportLifecycleStatus.DRAFT,
+            snapshot_policy=data.snapshot_policy,
+            source_manifest=[],
+            evidence_manifest=[],
+            analysis_run_manifest=[],
+            citation_references=[],
+            created_at=now,
+            updated_at=now,
+            archived_at=None,
+        )
+
+        saved = self.repository.create_report(user_id, report, initial_sections)
+        return self._build_report_detail_response(saved)
+
+    def get_report(self, report_id: str, user_id: str) -> ResearchReportDetailResponse:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        if rep.owner_user_id != user_id:
+            raise ResearchReportAccessDeniedError("Access denied to report.")
+        return self._build_report_detail_response(rep)
+
+    def update_report(
+        self,
+        report_id: str,
+        data: UpdateResearchReportRequest,
+        user_id: str,
+    ) -> ResearchReportDetailResponse:
+        updates: Dict[str, Any] = {}
+        if data.title is not None:
+            updates["title"] = sanitize_markdown_text(data.title.strip())
+        if data.subtitle is not None:
+            updates["subtitle"] = sanitize_markdown_text(data.subtitle.strip())
+        if data.abstract is not None:
+            updates["abstract"] = sanitize_markdown_text(data.abstract.strip())
+        if data.primary_subject_id is not None:
+            updates["primary_subject_id"] = data.primary_subject_id
+        if data.secondary_subject_ids is not None:
+            updates["secondary_subject_ids"] = data.secondary_subject_ids
+        if data.report_as_of is not None:
+            updates["report_as_of"] = data.report_as_of
+        if data.research_cutoff is not None:
+            updates["research_cutoff"] = data.research_cutoff
+        if data.snapshot_policy is not None:
+            updates["snapshot_policy"] = data.snapshot_policy
+        if data.status is not None:
+            updates["status"] = data.status
+
+        updated = self.repository.update_report(
+            user_id=user_id,
+            report_id=report_id,
+            expected_revision=data.expected_revision,
+            updates=updates,
+        )
+        return self._build_report_detail_response(updated)
+
+    def finalize_report(
+        self,
+        report_id: str,
+        data: FinalizeReportRequest,
+        user_id: str,
+    ) -> ResearchReportDetailResponse:
+        finalized = self.repository.finalize_report(
+            user_id=user_id,
+            report_id=report_id,
+            expected_revision=data.expected_revision,
+            change_summary=data.change_summary,
+        )
+        return self._build_report_detail_response(finalized)
+
+    def delete_report(self, report_id: str, user_id: str) -> bool:
+        return self.repository.delete_report(user_id=user_id, report_id=report_id)
+
+    # --- Report Sections ---
+    def list_report_sections(self, report_id: str, user_id: str) -> List[ResearchReportSectionDTO]:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        if rep.owner_user_id != user_id:
+            raise ResearchReportAccessDeniedError("Access denied to report sections.")
+        secs = self.repository.list_report_sections(report_id)
+        return [self._map_section_dto(s) for s in secs]
+
+    def create_report_section(
+        self,
+        report_id: str,
+        data: CreateReportSectionRequest,
+        user_id: str,
+    ) -> ResearchReportSectionDTO:
+        clean_heading = sanitize_markdown_text(data.heading.strip())
+        now = datetime.datetime.now(datetime.timezone.utc)
+        sec = ResearchReportSection(
+            section_id=f"sec-{uuid.uuid4().hex[:10]}",
+            report_id=report_id,
+            parent_section_id=data.parent_section_id,
+            order_index=data.order_index or 0,
+            section_type=data.section_type,
+            heading=clean_heading,
+            content_blocks=data.content_blocks,
+            revision=1,
+            created_at=now,
+            updated_at=now,
+        )
+        saved = self.repository.create_report_section(user_id, sec)
+        return self._map_section_dto(saved)
+
+    def update_report_section(
+        self,
+        report_id: str,
+        section_id: str,
+        data: UpdateReportSectionRequest,
+        user_id: str,
+    ) -> ResearchReportSectionDTO:
+        clean_heading = sanitize_markdown_text(data.heading.strip()) if data.heading else None
+        updated = self.repository.update_report_section(
+            user_id=user_id,
+            section_id=section_id,
+            expected_revision=data.expected_revision,
+            heading=clean_heading,
+            section_type=data.section_type,
+            content_blocks=data.content_blocks,
+        )
+        return self._map_section_dto(updated)
+
+    def delete_report_section(
+        self,
+        report_id: str,
+        section_id: str,
+        user_id: str,
+    ) -> bool:
+        return self.repository.delete_report_section(user_id=user_id, section_id=section_id)
+
+    def reorder_report_sections(
+        self,
+        report_id: str,
+        data: ReorderReportSectionsRequest,
+        user_id: str,
+    ) -> List[ResearchReportSectionDTO]:
+        reordered = self.repository.reorder_report_sections(
+            user_id=user_id,
+            report_id=report_id,
+            section_ids=data.section_ids,
+        )
+        return [self._map_section_dto(s) for s in reordered]
+
+    # --- Report Revisions ---
+    def list_report_revisions(
+        self,
+        report_id: str,
+        user_id: str,
+    ) -> ResearchReportRevisionListResponseDTO:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        if rep.owner_user_id != user_id:
+            raise ResearchReportAccessDeniedError("Access denied.")
+        revs = self.repository.list_report_revisions(report_id)
+        dtos = [
+            ResearchReportRevisionDTO(
+                revision_id=r.revision_id,
+                report_id=r.report_id,
+                revision_number=r.revision_number,
+                parent_revision_id=r.parent_revision_id,
+                author_user_id=r.author_user_id,
+                revision_status=r.revision_status,
+                change_summary=r.change_summary,
+                content_hash=r.content_hash,
+                created_at=r.created_at,
+            )
+            for r in revs
+        ]
+        return ResearchReportRevisionListResponseDTO(revisions=dtos, total_count=len(dtos))
+
+    def compare_report_revisions(
+        self,
+        report_id: str,
+        data: CompareReportRevisionsRequestDTO,
+        user_id: str,
+    ) -> CompareReportRevisionsResponseDTO:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        if rep.owner_user_id != user_id:
+            raise ResearchReportAccessDeniedError("Access denied.")
+        diff = self.repository.compare_report_revisions(
+            report_id=report_id,
+            base_rev=data.base_revision_number,
+            target_rev=data.target_revision_number,
+        )
+        return CompareReportRevisionsResponseDTO(**diff)
+
+    # --- Verification ---
+    def verify_report(
+        self,
+        report_id: str,
+        data: VerifyReportRequest,
+        user_id: str,
+    ) -> ResearchReportVerificationResponse:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        if rep.owner_user_id != user_id:
+            raise ResearchReportAccessDeniedError("Access denied.")
+        if data.expected_revision and rep.current_revision != data.expected_revision:
+            raise ResearchReportRevisionConflictError(
+                f"Report revision {rep.current_revision} != expected {data.expected_revision}."
+            )
+
+        sections = self.repository.list_report_sections(report_id)
+        verification = verify_research_report(rep, sections, verified_by_user_id=user_id)
+        saved = self.repository.record_verification(verification)
+
+        return ResearchReportVerificationResponse(
+            verification_id=saved.verification_id,
+            report_id=saved.report_id,
+            revision_number=saved.revision_number,
+            checked_at=saved.checked_at,
+            is_valid=saved.is_valid,
+            blocking_issues_count=saved.blocking_issues_count,
+            warnings_count=saved.warnings_count,
+            info_count=saved.info_count,
+            issues=saved.issues,
+            citation_coverage_pct=saved.citation_coverage_pct,
+            verified_by_user_id=saved.verified_by_user_id,
+        )
+
+    def get_latest_verification(
+        self,
+        report_id: str,
+        user_id: str,
+    ) -> Optional[ResearchReportVerificationResponse]:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        if rep.owner_user_id != user_id:
+            raise ResearchReportAccessDeniedError("Access denied.")
+        v = self.repository.get_latest_verification(report_id)
+        if not v:
+            return None
+        return ResearchReportVerificationResponse(
+            verification_id=v.verification_id,
+            report_id=v.report_id,
+            revision_number=v.revision_number,
+            checked_at=v.checked_at,
+            is_valid=v.is_valid,
+            blocking_issues_count=v.blocking_issues_count,
+            warnings_count=v.warnings_count,
+            info_count=v.info_count,
+            issues=v.issues,
+            citation_coverage_pct=v.citation_coverage_pct,
+            verified_by_user_id=v.verified_by_user_id,
+        )
+
+    # --- Exports ---
+    def create_report_export(
+        self,
+        report_id: str,
+        data: CreateReportExportRequest,
+        user_id: str,
+    ) -> ResearchReportExportResponse:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        if rep.owner_user_id != user_id:
+            raise ResearchReportAccessDeniedError("Access denied.")
+        if data.expected_revision and rep.current_revision != data.expected_revision:
+            raise ResearchReportRevisionConflictError(
+                f"Report revision {rep.current_revision} != expected {data.expected_revision}."
+            )
+
+        sections = self.repository.list_report_sections(report_id)
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if data.format == ExportFormat.PDF:
+            artifact_bytes, page_count = render_report_pdf(rep, sections, author_name=data.author_name)
+        elif data.format == ExportFormat.DOCX:
+            artifact_bytes, page_count = render_report_docx(rep, sections, author_name=data.author_name)
+        else:
+            raise ValueError(f"Unsupported export format '{data.format}'.")
+
+        import hashlib
+        content_hash = f"sha256:{hashlib.sha256(artifact_bytes).hexdigest()}"
+        export_id = f"exp-{uuid.uuid4().hex[:12]}"
+        download_url = f"/api/v1/research/report-exports/{export_id}/download"
+
+        export = ResearchReportExport(
+            export_id=export_id,
+            report_id=report_id,
+            revision_number=rep.current_revision,
+            owner_user_id=user_id,
+            format=data.format,
+            export_status=ExportStatus.COMPLETED,
+            download_url=download_url,
+            file_size_bytes=len(artifact_bytes),
+            page_count=page_count,
+            content_hash=content_hash,
+            created_at=now,
+            started_at=now,
+            completed_at=now,
+            expiry_at=now + datetime.timedelta(days=7),
+            error_message=None,
+        )
+        saved = self.repository.create_export(export, artifact_bytes=artifact_bytes)
+        return self._map_export_dto(saved)
+
+    def get_report_export(self, export_id: str, user_id: str) -> ResearchReportExportResponse:
+        exp = self.repository.get_export(export_id)
+        if not exp:
+            raise ResearchReportExportNotFoundError(f"Export job '{export_id}' not found.")
+        if exp.owner_user_id != user_id:
+            raise ResearchReportExportAccessDeniedError("Access denied to export.")
+        return self._map_export_dto(exp)
+
+    def list_report_exports(self, report_id: str, user_id: str) -> ResearchReportExportListResponse:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        if rep.owner_user_id != user_id:
+            raise ResearchReportAccessDeniedError("Access denied.")
+        exps = self.repository.list_exports(report_id)
+        dtos = [self._map_export_dto(e) for e in exps]
+        return ResearchReportExportListResponse(exports=dtos, total_count=len(dtos))
+
+    def download_export_file(self, export_id: str, user_id: str) -> Tuple[bytes, str, str]:
+        exp = self.repository.get_export(export_id)
+        if not exp:
+            raise ResearchReportExportNotFoundError(f"Export job '{export_id}' not found.")
+        if exp.owner_user_id != user_id:
+            raise ResearchReportExportAccessDeniedError("Access denied to download file.")
+
+        content = self.repository.get_export_bytes(export_id)
+        if not content:
+            raise ResearchReportExportNotFoundError("Export binary file artifact not found.")
+
+        media_type = (
+            "application/pdf"
+            if exp.format == ExportFormat.PDF
+            else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        ext = "pdf" if exp.format == ExportFormat.PDF else "docx"
+        filename = f"atlas_report_{exp.report_id}_rev{exp.revision_number}.{ext}"
+        return content, media_type, filename
+
+    # --- Investment Theses ---
+    def list_theses(
+        self,
+        user_id: str,
+        investigation_id: Optional[str] = None,
+        report_id: Optional[str] = None,
+        subject_id: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[ResearchThesisResponse]:
+        theses, _ = self.repository.list_theses(
+            user_id=user_id,
+            investigation_id=investigation_id,
+            report_id=report_id,
+            subject_id=subject_id,
+            limit=limit,
+            offset=offset,
+        )
+        return [self._map_thesis_dto(t) for t in theses]
+
+    def create_thesis(
+        self,
+        data: CreateResearchThesisRequest,
+        user_id: str,
+    ) -> ResearchThesisDetailResponse:
+        clean_stmt = sanitize_markdown_text(data.thesis_statement.strip())
+        now = datetime.datetime.now(datetime.timezone.utc)
+        the_id = f"the-{uuid.uuid4().hex[:10]}"
+
+        thesis = ResearchInvestmentThesis(
+            thesis_id=the_id,
+            investigation_id=data.investigation_id,
+            report_id=data.report_id,
+            owner_user_id=user_id,
+            primary_subject_id=data.primary_subject_id,
+            primary_subject_type=data.primary_subject_type or ("COMPANY" if data.primary_subject_id else None),
+            thesis_statement=clean_stmt,
+            time_horizon=data.time_horizon,
+            status=ThesisLifecycleStatus.DRAFT,
+            current_revision=1,
+            bull_case_summary=data.bull_case_summary,
+            bear_case_summary=data.bear_case_summary,
+            base_case_summary=data.base_case_summary,
+            assumptions_summary=data.assumptions_summary,
+            risks_summary=data.risks_summary,
+            catalysts_summary=data.catalysts_summary,
+            created_at=now,
+            updated_at=now,
+        )
+        saved = self.repository.create_thesis(user_id, thesis)
+        return self._build_thesis_detail_response(saved)
+
+    def get_thesis(self, thesis_id: str, user_id: str) -> ResearchThesisDetailResponse:
+        the = self.repository.get_thesis(thesis_id)
+        if not the:
+            raise ResearchInvestmentThesisNotFoundError(f"Thesis '{thesis_id}' not found.")
+        if the.owner_user_id != user_id:
+            raise ResearchInvestmentThesisAccessDeniedError("Access denied to thesis.")
+        return self._build_thesis_detail_response(the)
+
+    def update_thesis(
+        self,
+        thesis_id: str,
+        data: UpdateResearchThesisRequest,
+        user_id: str,
+    ) -> ResearchThesisDetailResponse:
+        updates: Dict[str, Any] = {}
+        if data.thesis_statement is not None:
+            updates["thesis_statement"] = sanitize_markdown_text(data.thesis_statement.strip())
+        if data.time_horizon is not None:
+            updates["time_horizon"] = data.time_horizon
+        if data.status is not None:
+            updates["status"] = data.status
+        if data.bull_case_summary is not None:
+            updates["bull_case_summary"] = data.bull_case_summary
+        if data.bear_case_summary is not None:
+            updates["bear_case_summary"] = data.bear_case_summary
+        if data.base_case_summary is not None:
+            updates["base_case_summary"] = data.base_case_summary
+        if data.assumptions_summary is not None:
+            updates["assumptions_summary"] = data.assumptions_summary
+        if data.risks_summary is not None:
+            updates["risks_summary"] = data.risks_summary
+        if data.catalysts_summary is not None:
+            updates["catalysts_summary"] = data.catalysts_summary
+
+        updated = self.repository.update_thesis(
+            user_id=user_id,
+            thesis_id=thesis_id,
+            expected_revision=data.expected_revision,
+            updates=updates,
+        )
+        return self._build_thesis_detail_response(updated)
+
+    def delete_thesis(self, thesis_id: str, user_id: str) -> bool:
+        return self.repository.delete_thesis(user_id=user_id, thesis_id=thesis_id)
+
+    def create_thesis_argument(
+        self,
+        thesis_id: str,
+        data: CreateThesisArgumentRequest,
+        user_id: str,
+    ) -> ResearchThesisArgumentDTO:
+        clean_stmt = sanitize_markdown_text(data.statement.strip())
+        now = datetime.datetime.now(datetime.timezone.utc)
+        arg = ResearchThesisArgument(
+            argument_id=f"arg-{uuid.uuid4().hex[:10]}",
+            thesis_id=thesis_id,
+            argument_type=data.argument_type,
+            statement=clean_stmt,
+            claim_ids=data.claim_ids,
+            evidence_ids=data.evidence_ids,
+            analysis_run_ids=data.analysis_run_ids,
+            finding_ids=data.finding_ids,
+            limitations=data.limitations,
+            revision=1,
+            created_at=now,
+        )
+        saved = self.repository.create_thesis_argument(user_id, arg)
+        return self._map_argument_dto(saved)
+
+    def delete_thesis_argument(
+        self,
+        thesis_id: str,
+        argument_id: str,
+        user_id: str,
+    ) -> bool:
+        return self.repository.delete_thesis_argument(user_id=user_id, argument_id=argument_id)
+
+    # --- Helper Mapping Methods ---
+    def _build_report_detail_response(self, r: ResearchReport) -> ResearchReportDetailResponse:
+        secs = self.repository.list_report_sections(r.report_id)
+        sec_dtos = [self._map_section_dto(s) for s in secs]
+        return ResearchReportDetailResponse(
+            report_id=r.report_id,
+            owner_user_id=r.owner_user_id,
+            investigation_id=r.investigation_id,
+            report_type=r.report_type,
+            title=r.title,
+            subtitle=r.subtitle,
+            abstract=r.abstract,
+            primary_subject_id=r.primary_subject_id,
+            primary_subject_type=r.primary_subject_type,
+            secondary_subject_ids=r.secondary_subject_ids,
+            report_as_of=r.report_as_of,
+            research_cutoff=r.research_cutoff,
+            template_id=r.template_id,
+            status=r.status,
+            current_revision=r.current_revision,
+            snapshot_policy=r.snapshot_policy,
+            section_count=len(secs),
+            created_at=r.created_at,
+            updated_at=r.updated_at,
+            sections=sec_dtos,
+            source_manifest=r.source_manifest,
+            evidence_manifest=r.evidence_manifest,
+            analysis_run_manifest=r.analysis_run_manifest,
+        )
+
+    def _map_section_dto(self, s: ResearchReportSection) -> ResearchReportSectionDTO:
+        return ResearchReportSectionDTO(
+            section_id=s.section_id,
+            report_id=s.report_id,
+            parent_section_id=s.parent_section_id,
+            order_index=s.order_index,
+            section_type=s.section_type,
+            heading=s.heading,
+            content_blocks=s.content_blocks,
+            revision=s.revision,
+            created_at=s.created_at,
+            updated_at=s.updated_at,
+        )
+
+    def _map_export_dto(self, e: ResearchReportExport) -> ResearchReportExportResponse:
+        return ResearchReportExportResponse(
+            export_id=e.export_id,
+            report_id=e.report_id,
+            revision_number=e.revision_number,
+            owner_user_id=e.owner_user_id,
+            format=e.format,
+            export_status=e.export_status,
+            download_url=e.download_url,
+            file_size_bytes=e.file_size_bytes,
+            page_count=e.page_count,
+            content_hash=e.content_hash,
+            created_at=e.created_at,
+            started_at=e.started_at,
+            completed_at=e.completed_at,
+            expiry_at=e.expiry_at,
+            error_message=e.error_message,
+        )
+
+    def _map_thesis_dto(self, t: ResearchInvestmentThesis) -> ResearchThesisResponse:
+        return ResearchThesisResponse(
+            thesis_id=t.thesis_id,
+            investigation_id=t.investigation_id,
+            report_id=t.report_id,
+            owner_user_id=t.owner_user_id,
+            primary_subject_id=t.primary_subject_id,
+            primary_subject_type=t.primary_subject_type,
+            thesis_statement=t.thesis_statement,
+            time_horizon=t.time_horizon,
+            status=t.status,
+            current_revision=t.current_revision,
+            bull_case_summary=t.bull_case_summary,
+            bear_case_summary=t.bear_case_summary,
+            base_case_summary=t.base_case_summary,
+            assumptions_summary=t.assumptions_summary,
+            risks_summary=t.risks_summary,
+            catalysts_summary=t.catalysts_summary,
+            created_at=t.created_at,
+            updated_at=t.updated_at,
+        )
+
+    def _build_thesis_detail_response(self, t: ResearchInvestmentThesis) -> ResearchThesisDetailResponse:
+        args = self.repository.list_thesis_arguments(t.thesis_id)
+        arg_dtos = [self._map_argument_dto(a) for a in args]
+        return ResearchThesisDetailResponse(
+            thesis_id=t.thesis_id,
+            investigation_id=t.investigation_id,
+            report_id=t.report_id,
+            owner_user_id=t.owner_user_id,
+            primary_subject_id=t.primary_subject_id,
+            primary_subject_type=t.primary_subject_type,
+            thesis_statement=t.thesis_statement,
+            time_horizon=t.time_horizon,
+            status=t.status,
+            current_revision=t.current_revision,
+            bull_case_summary=t.bull_case_summary,
+            bear_case_summary=t.bear_case_summary,
+            base_case_summary=t.base_case_summary,
+            assumptions_summary=t.assumptions_summary,
+            risks_summary=t.risks_summary,
+            catalysts_summary=t.catalysts_summary,
+            created_at=t.created_at,
+            updated_at=t.updated_at,
+            arguments=arg_dtos,
+        )
+
+    def _map_argument_dto(self, a: ResearchThesisArgument) -> ResearchThesisArgumentDTO:
+        return ResearchThesisArgumentDTO(
+            argument_id=a.argument_id,
+            thesis_id=a.thesis_id,
+            argument_type=a.argument_type,
+            statement=a.statement,
+            claim_ids=a.claim_ids,
+            evidence_ids=a.evidence_ids,
+            analysis_run_ids=a.analysis_run_ids,
+            finding_ids=a.finding_ids,
+            limitations=a.limitations,
+            revision=a.revision,
+            created_at=a.created_at,
+        )
 
 
 # Global singleton instance for injection

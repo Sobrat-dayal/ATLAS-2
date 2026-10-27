@@ -52,7 +52,9 @@ from atlas.auth import AuthPrincipal
 from atlas.research.enums import (
     AnalysisInputPolicy,
     InvestigationLifecycleStatus,
+    ReportLifecycleStatus,
     ResearchAnalysisType,
+    ResearchReportType,
     ResearchSourceType,
     ResearchType,
 )
@@ -84,21 +86,39 @@ from atlas.research.errors import (
     ResearchInvestigationAccessDeniedError,
     ResearchInvestigationNotFoundError,
     ResearchInvestigationRevisionConflictError,
+    ResearchInvestmentThesisAccessDeniedError,
+    ResearchInvestmentThesisNotFoundError,
+    ResearchInvestmentThesisRevisionConflictError,
     ResearchNoteAccessDeniedError,
     ResearchNoteContentInvalidError,
     ResearchNoteNotFoundError,
     ResearchNoteRevisionConflictError,
     ResearchQuestionNotFoundError,
+    # Stage 107 Errors
+    ResearchReportAccessDeniedError,
+    ResearchReportExportAccessDeniedError,
+    ResearchReportExportNotFoundError,
+    ResearchReportFinalizedImmutableError,
+    ResearchReportNotFoundError,
+    ResearchReportRevisionConflictError,
+    ResearchReportSectionNotFoundError,
+    ResearchReportTemplateUnavailableError,
     ResearchScenarioConfigurationInvalidError,
     ResearchSemanticSearchUnavailableError,
     ResearchSourceNotFoundError,
     ResearchSourceUrlUnsafeError,
+    ResearchThesisArgumentNotFoundError,
 )
 from atlas.research.schemas import (
     # Stage 106 Schemas
     AnalysisProvenanceResponseDTO,
     AttachResearchEvidenceDTO,
+    # Stage 107 Schemas
+    CompareReportRevisionsRequestDTO,
+    CompareReportRevisionsResponseDTO,
     ConvertEvidenceCandidateDTO,
+    CreateReportExportRequest,
+    CreateReportSectionRequest,
     CreateResearchAnalysisDTO,
     CreateResearchAssumptionDTO,
     CreateResearchClaimDTO,
@@ -107,6 +127,9 @@ from atlas.research.schemas import (
     CreateResearchInvestigationDTO,
     CreateResearchNoteDTO,
     CreateResearchQuestionDTO,
+    CreateResearchReportRequest,
+    CreateResearchThesisRequest,
+    CreateThesisArgumentRequest,
     DocumentComparisonRequestDTO,
     DocumentComparisonResultDTO,
     DocumentSearchRequestDTO,
@@ -114,9 +137,11 @@ from atlas.research.schemas import (
     EvaluateResearchHypothesisDTO,
     EvidenceCandidateListResponseDTO,
     ExecuteSensitivityScenarioDTO,
+    FinalizeReportRequest,
     FinancialFactsCompareRequestDTO,
     FinancialFactsCompareResponseDTO,
     LinkResearchSourceDTO,
+    ReorderReportSectionsRequest,
     ResearchActivityTimelineResponseDTO,
     ResearchAnalysisDTO,
     ResearchAnalysisListResponseDTO,
@@ -151,14 +176,27 @@ from atlas.research.schemas import (
     ResearchOverviewSummaryDTO,
     ResearchQuestionDTO,
     ResearchQuestionListResponseDTO,
+    ResearchReportDetailResponse,
+    ResearchReportExportListResponse,
+    ResearchReportExportResponse,
+    ResearchReportListResponse,
+    ResearchReportRevisionListResponseDTO,
+    ResearchReportSectionDTO,
+    ResearchReportTemplateDTO,
+    ResearchReportTemplateListResponseDTO,
+    ResearchReportVerificationResponse,
     ResearchSensitivityResultDTO,
     ResearchSourceDiscoveryQueryDTO,
     ResearchSourceDiscoveryResponseDTO,
     ResearchSourceListResponseDTO,
     ResearchSourceReferenceDTO,
     ResearchSourceTypeListResponseDTO,
+    ResearchThesisArgumentDTO,
+    ResearchThesisDetailResponse,
+    ResearchThesisResponse,
     ResolveEvidenceLocationRequestDTO,
     ResolveEvidenceLocationResponseDTO,
+    UpdateReportSectionRequest,
     UpdateResearchAnalysisDTO,
     UpdateResearchClaimDTO,
     UpdateResearchFindingDTO,
@@ -166,15 +204,18 @@ from atlas.research.schemas import (
     UpdateResearchInvestigationDTO,
     UpdateResearchNoteDTO,
     UpdateResearchQuestionDTO,
+    UpdateResearchReportRequest,
+    UpdateResearchThesisRequest,
     ValidateAnalysisSpecificationRequestDTO,
     ValidateAnalysisSpecificationResponseDTO,
+    VerifyReportRequest,
 )
 from atlas.research.service import (
     ResearchDocumentService,
     ResearchService,
     get_research_service,
 )
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from sqlalchemy.orm import Session
 
 from atlas_api.auth.dependencies import get_current_user
@@ -1823,6 +1864,627 @@ def execute_sensitivity_scenario_endpoint(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ResearchScenarioConfigurationInvalidError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 107 Research Reports & Report Templates
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/research/report-templates",
+    response_model=ResearchReportTemplateListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="List institutional research report templates",
+)
+def list_report_templates_endpoint(
+    service: ResearchService = Depends(get_research_service),
+    _user=Depends(get_current_user),
+):
+    return service.list_report_templates()
+
+
+@router.get(
+    "/research/report-templates/{template_id}",
+    response_model=ResearchReportTemplateDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get report template schema by ID",
+)
+def get_report_template_endpoint(
+    template_id: str = Path(..., description="Template ID"),
+    service: ResearchService = Depends(get_research_service),
+    _user=Depends(get_current_user),
+):
+    try:
+        return service.get_report_template(template_id)
+    except ResearchReportTemplateUnavailableError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/research/reports",
+    response_model=ResearchReportListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List user-owned institutional research reports",
+)
+def list_reports_endpoint(
+    investigation_id: Optional[str] = Query(None, description="Filter by investigation ID"),
+    report_type: Optional[ResearchReportType] = Query(None, description="Filter by report type"),
+    status_filter: Optional[ReportLifecycleStatus] = Query(None, alias="status", description="Filter by status"),
+    subject_id: Optional[str] = Query(None, description="Filter by primary subject ID"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.list_reports(
+        user_id=user_id,
+        investigation_id=investigation_id,
+        report_type=report_type,
+        status=status_filter,
+        subject_id=subject_id,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.post(
+    "/research/reports",
+    response_model=ResearchReportDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new institutional research report",
+)
+def create_report_endpoint(
+    payload: CreateResearchReportRequest,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.create_report(payload, user_id=user_id)
+    except ResearchReportTemplateUnavailableError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/research/reports/{id}",
+    response_model=ResearchReportDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get research report details with sections and manifests",
+)
+def get_report_endpoint(
+    id: str = Path(..., description="Report ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_report(id, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.patch(
+    "/research/reports/{id}",
+    response_model=ResearchReportDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update research report parameters with optimistic concurrency",
+)
+def update_report_endpoint(
+    id: str = Path(..., description="Report ID"),
+    payload: UpdateResearchReportRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.update_report(id, payload, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchReportFinalizedImmutableError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except ResearchReportRevisionConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
+@router.post(
+    "/research/reports/{id}/finalize",
+    response_model=ResearchReportDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Finalize and freeze research report into immutable snapshot",
+)
+def finalize_report_endpoint(
+    id: str = Path(..., description="Report ID"),
+    payload: FinalizeReportRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.finalize_report(id, payload, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchReportRevisionConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
+@router.delete(
+    "/research/reports/{id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete or archive research report",
+)
+def delete_report_endpoint(
+    id: str = Path(..., description="Report ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        service.delete_report(id, user_id=user_id)
+        return {"success": True, "message": f"Report '{id}' deleted successfully."}
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 107 Report Sections
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/research/reports/{id}/sections",
+    response_model=List[ResearchReportSectionDTO],
+    status_code=status.HTTP_200_OK,
+    summary="List structured sections of a report",
+)
+def list_report_sections_endpoint(
+    id: str = Path(..., description="Report ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.list_report_sections(id, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/reports/{id}/sections",
+    response_model=ResearchReportSectionDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a structured section to a report",
+)
+def create_report_section_endpoint(
+    id: str = Path(..., description="Report ID"),
+    payload: CreateReportSectionRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.create_report_section(id, payload, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchReportFinalizedImmutableError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.patch(
+    "/research/reports/{id}/sections/{section_id}",
+    response_model=ResearchReportSectionDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Update section heading or content blocks",
+)
+def update_report_section_endpoint(
+    id: str = Path(..., description="Report ID"),
+    section_id: str = Path(..., description="Section ID"),
+    payload: UpdateReportSectionRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.update_report_section(id, section_id, payload, user_id=user_id)
+    except ResearchReportSectionNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchReportFinalizedImmutableError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.delete(
+    "/research/reports/{id}/sections/{section_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete section from report",
+)
+def delete_report_section_endpoint(
+    id: str = Path(..., description="Report ID"),
+    section_id: str = Path(..., description="Section ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        service.delete_report_section(id, section_id, user_id=user_id)
+        return {"success": True, "message": f"Section '{section_id}' removed."}
+    except ResearchReportSectionNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchReportFinalizedImmutableError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.post(
+    "/research/reports/{id}/sections/reorder",
+    response_model=List[ResearchReportSectionDTO],
+    status_code=status.HTTP_200_OK,
+    summary="Safely reorder sections without destroying references",
+)
+def reorder_report_sections_endpoint(
+    id: str = Path(..., description="Report ID"),
+    payload: ReorderReportSectionsRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.reorder_report_sections(id, payload, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchReportFinalizedImmutableError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 107 Revisions & Comparison
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/research/reports/{id}/revisions",
+    response_model=ResearchReportRevisionListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="List revision history entries for a report",
+)
+def list_report_revisions_endpoint(
+    id: str = Path(..., description="Report ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.list_report_revisions(id, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/reports/{id}/revisions/compare",
+    response_model=CompareReportRevisionsResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Compare two revisions of a report and return diff",
+)
+def compare_report_revisions_endpoint(
+    id: str = Path(..., description="Report ID"),
+    payload: CompareReportRevisionsRequestDTO = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.compare_report_revisions(id, payload, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 107 Automated Verification
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/research/reports/{id}/verify",
+    response_model=ResearchReportVerificationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Run structural, citation, analysis embed, and temporal cutoff checks",
+)
+def verify_report_endpoint(
+    id: str = Path(..., description="Report ID"),
+    payload: VerifyReportRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.verify_report(id, payload, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchReportRevisionConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
+@router.get(
+    "/research/reports/{id}/verification",
+    response_model=Optional[ResearchReportVerificationResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get latest verification result for a report",
+)
+def get_latest_verification_endpoint(
+    id: str = Path(..., description="Report ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_latest_verification(id, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 107 PDF & DOCX Exports
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/research/reports/{id}/exports",
+    response_model=ResearchReportExportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate institutional publication PDF or DOCX report export",
+)
+def create_report_export_endpoint(
+    id: str = Path(..., description="Report ID"),
+    payload: CreateReportExportRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.create_report_export(id, payload, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchReportRevisionConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
+@router.get(
+    "/research/reports/{id}/exports",
+    response_model=ResearchReportExportListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List publication export jobs for a report",
+)
+def list_report_exports_endpoint(
+    id: str = Path(..., description="Report ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.list_report_exports(id, user_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/report-exports/{export_id}",
+    response_model=ResearchReportExportResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get export artifact metadata and status",
+)
+def get_report_export_endpoint(
+    export_id: str = Path(..., description="Export ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_report_export(export_id, user_id=user_id)
+    except ResearchReportExportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportExportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/report-exports/{export_id}/download",
+    status_code=status.HTTP_200_OK,
+    summary="Download authorized PDF or DOCX binary report artifact",
+)
+def download_report_export_endpoint(
+    export_id: str = Path(..., description="Export ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        content, media_type, filename = service.download_export_file(export_id, user_id=user_id)
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Length": str(len(content)),
+            },
+        )
+    except ResearchReportExportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReportExportAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 107 Structured Investment Theses & Arguments
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/research/theses",
+    response_model=List[ResearchThesisResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List user-owned investment theses",
+)
+def list_theses_endpoint(
+    investigation_id: Optional[str] = Query(None, description="Filter by investigation ID"),
+    report_id: Optional[str] = Query(None, description="Filter by report ID"),
+    subject_id: Optional[str] = Query(None, description="Filter by subject ID"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.list_theses(
+        user_id=user_id,
+        investigation_id=investigation_id,
+        report_id=report_id,
+        subject_id=subject_id,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.post(
+    "/research/theses",
+    response_model=ResearchThesisDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new structured investment thesis",
+)
+def create_thesis_endpoint(
+    payload: CreateResearchThesisRequest,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.create_thesis(payload, user_id=user_id)
+
+
+@router.get(
+    "/research/theses/{id}",
+    response_model=ResearchThesisDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get investment thesis details and structured arguments",
+)
+def get_thesis_endpoint(
+    id: str = Path(..., description="Thesis ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_thesis(id, user_id=user_id)
+    except ResearchInvestmentThesisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestmentThesisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.patch(
+    "/research/theses/{id}",
+    response_model=ResearchThesisDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update investment thesis statement or summaries",
+)
+def update_thesis_endpoint(
+    id: str = Path(..., description="Thesis ID"),
+    payload: UpdateResearchThesisRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.update_thesis(id, payload, user_id=user_id)
+    except ResearchInvestmentThesisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestmentThesisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchInvestmentThesisRevisionConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
+@router.delete(
+    "/research/theses/{id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete investment thesis",
+)
+def delete_thesis_endpoint(
+    id: str = Path(..., description="Thesis ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        service.delete_thesis(id, user_id=user_id)
+        return {"success": True, "message": f"Thesis '{id}' deleted successfully."}
+    except ResearchInvestmentThesisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestmentThesisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/theses/{id}/arguments",
+    response_model=ResearchThesisArgumentDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add supporting or opposing argument to investment thesis",
+)
+def create_thesis_argument_endpoint(
+    id: str = Path(..., description="Thesis ID"),
+    payload: CreateThesisArgumentRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.create_thesis_argument(id, payload, user_id=user_id)
+    except ResearchInvestmentThesisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestmentThesisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.delete(
+    "/research/theses/{id}/arguments/{argument_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete argument node from thesis",
+)
+def delete_thesis_argument_endpoint(
+    id: str = Path(..., description="Thesis ID"),
+    argument_id: str = Path(..., description="Argument ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        service.delete_thesis_argument(id, argument_id, user_id=user_id)
+        return {"success": True, "message": f"Argument '{argument_id}' deleted."}
+    except ResearchThesisArgumentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestmentThesisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
 
 # ---------------------------------------------------------------------------

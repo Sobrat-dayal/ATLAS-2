@@ -48,6 +48,28 @@ import {
   ResearchSourceTypeListResponse,
   ResolveEvidenceLocationRequest,
   ResolveEvidenceLocationResponse,
+  // Stage 107 Types
+  CompareReportRevisionsResponse,
+  CreateReportSectionDTO,
+  CreateResearchReportDTO,
+  CreateResearchThesisDTO,
+  CreateThesisArgumentDTO,
+  ExportFormat,
+  ReportLifecycleStatus,
+  ResearchReport,
+  ResearchReportDetail,
+  ResearchReportExport,
+  ResearchReportRevision,
+  ResearchReportSection,
+  ResearchReportTemplate,
+  ResearchReportType,
+  ResearchReportVerification,
+  ResearchThesisArgument,
+  ResearchInvestmentThesis,
+  ResearchInvestmentThesisDetail,
+  UpdateReportSectionDTO,
+  UpdateResearchReportDTO,
+  UpdateResearchThesisDTO,
 } from "./types";
 
 function getBaseApiUrl(): string {
@@ -889,5 +911,282 @@ export async function executeSensitivityAnalysis(
     body: JSON.stringify(data),
   });
   return handleResponse<SensitivityAnalysisResponse>(res);
+}
+
+// ---------------------------------------------------------------------------
+// Stage 107: Report Studio, Theses & Exports API Client
+// ---------------------------------------------------------------------------
+
+export async function listReportTemplates(): Promise<{ templates: ResearchReportTemplate[]; total_count: number }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/report-templates`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<{ templates: ResearchReportTemplate[]; total_count: number }>(res);
+}
+
+export async function getReportTemplate(templateId: string): Promise<ResearchReportTemplate> {
+  const url = `${getBaseApiUrl()}/api/v1/research/report-templates/${templateId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchReportTemplate>(res);
+}
+
+export async function listReports(filters?: {
+  investigation_id?: string;
+  report_type?: ResearchReportType;
+  status?: ReportLifecycleStatus;
+  subject_id?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ reports: ResearchReport[]; total_count: number }> {
+  const params = new URLSearchParams();
+  if (filters?.investigation_id) params.append("investigation_id", filters.investigation_id);
+  if (filters?.report_type) params.append("report_type", filters.report_type);
+  if (filters?.status) params.append("status", filters.status);
+  if (filters?.subject_id) params.append("subject_id", filters.subject_id);
+  if (filters?.limit) params.append("limit", filters.limit.toString());
+  if (filters?.offset) params.append("offset", filters.offset.toString());
+
+  const url = `${getBaseApiUrl()}/api/v1/research/reports?${params.toString()}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<{ reports: ResearchReport[]; total_count: number }>(res);
+}
+
+export async function createReport(data: CreateResearchReportDTO): Promise<ResearchReportDetail> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchReportDetail>(res);
+}
+
+export async function getReport(reportId: string): Promise<ResearchReportDetail> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchReportDetail>(res);
+}
+
+export async function updateReport(reportId: string, data: UpdateResearchReportDTO): Promise<ResearchReportDetail> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchReportDetail>(res);
+}
+
+export async function finalizeReport(
+  reportId: string,
+  data: { expected_revision: number; change_summary?: string }
+): Promise<ResearchReportDetail> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/finalize`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchReportDetail>(res);
+}
+
+export async function deleteReport(reportId: string): Promise<{ success: boolean; message: string }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}`;
+  const res = await fetch(url, { method: "DELETE", headers: getHeaders() });
+  return handleResponse<{ success: boolean; message: string }>(res);
+}
+
+export async function listReportSections(reportId: string): Promise<ResearchReportSection[]> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/sections`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchReportSection[]>(res);
+}
+
+export async function createReportSection(reportId: string, data: CreateReportSectionDTO): Promise<ResearchReportSection> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/sections`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchReportSection>(res);
+}
+
+export async function updateReportSection(
+  reportId: string,
+  sectionId: string,
+  data: UpdateReportSectionDTO
+): Promise<ResearchReportSection> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/sections/${sectionId}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchReportSection>(res);
+}
+
+export async function deleteReportSection(reportId: string, sectionId: string): Promise<{ success: boolean }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/sections/${sectionId}`;
+  const res = await fetch(url, { method: "DELETE", headers: getHeaders() });
+  return handleResponse<{ success: boolean }>(res);
+}
+
+export async function reorderReportSections(
+  reportId: string,
+  sectionIds: string[]
+): Promise<ResearchReportSection[]> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/sections/reorder`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ section_ids: sectionIds }),
+  });
+  return handleResponse<ResearchReportSection[]>(res);
+}
+
+export async function listReportRevisions(
+  reportId: string
+): Promise<{ revisions: ResearchReportRevision[]; total_count: number }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/revisions`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<{ revisions: ResearchReportRevision[]; total_count: number }>(res);
+}
+
+export async function compareReportRevisions(
+  reportId: string,
+  baseRev: number,
+  targetRev: number
+): Promise<CompareReportRevisionsResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/revisions/compare`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ base_revision_number: baseRev, target_revision_number: targetRev }),
+  });
+  return handleResponse<CompareReportRevisionsResponse>(res);
+}
+
+export async function verifyReport(
+  reportId: string,
+  expectedRevision?: number
+): Promise<ResearchReportVerification> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/verify`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ expected_revision: expectedRevision }),
+  });
+  return handleResponse<ResearchReportVerification>(res);
+}
+
+export async function getLatestVerification(
+  reportId: string
+): Promise<ResearchReportVerification | null> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/verification`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchReportVerification | null>(res);
+}
+
+export async function createReportExport(
+  reportId: string,
+  data: { format: ExportFormat; author_name?: string; include_toc?: boolean; expected_revision?: number }
+): Promise<ResearchReportExport> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/exports`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchReportExport>(res);
+}
+
+export async function listReportExports(
+  reportId: string
+): Promise<{ exports: ResearchReportExport[]; total_count: number }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/exports`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<{ exports: ResearchReportExport[]; total_count: number }>(res);
+}
+
+export async function getReportExport(exportId: string): Promise<ResearchReportExport> {
+  const url = `${getBaseApiUrl()}/api/v1/research/report-exports/${exportId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchReportExport>(res);
+}
+
+export async function listTheses(filters?: {
+  investigation_id?: string;
+  report_id?: string;
+  subject_id?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<ResearchInvestmentThesis[]> {
+  const params = new URLSearchParams();
+  if (filters?.investigation_id) params.append("investigation_id", filters.investigation_id);
+  if (filters?.report_id) params.append("report_id", filters.report_id);
+  if (filters?.subject_id) params.append("subject_id", filters.subject_id);
+  if (filters?.limit) params.append("limit", filters.limit.toString());
+  if (filters?.offset) params.append("offset", filters.offset.toString());
+
+  const url = `${getBaseApiUrl()}/api/v1/research/theses?${params.toString()}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchInvestmentThesis[]>(res);
+}
+
+export async function createThesis(data: CreateResearchThesisDTO): Promise<ResearchInvestmentThesisDetail> {
+  const url = `${getBaseApiUrl()}/api/v1/research/theses`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchInvestmentThesisDetail>(res);
+}
+
+export async function getThesis(thesisId: string): Promise<ResearchInvestmentThesisDetail> {
+  const url = `${getBaseApiUrl()}/api/v1/research/theses/${thesisId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchInvestmentThesisDetail>(res);
+}
+
+export async function updateThesis(
+  thesisId: string,
+  data: UpdateResearchThesisDTO
+): Promise<ResearchInvestmentThesisDetail> {
+  const url = `${getBaseApiUrl()}/api/v1/research/theses/${thesisId}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchInvestmentThesisDetail>(res);
+}
+
+export async function deleteThesis(thesisId: string): Promise<{ success: boolean; message: string }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/theses/${thesisId}`;
+  const res = await fetch(url, { method: "DELETE", headers: getHeaders() });
+  return handleResponse<{ success: boolean; message: string }>(res);
+}
+
+export async function createThesisArgument(
+  thesisId: string,
+  data: CreateThesisArgumentDTO
+): Promise<ResearchThesisArgument> {
+  const url = `${getBaseApiUrl()}/api/v1/research/theses/${thesisId}/arguments`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchThesisArgument>(res);
+}
+
+export async function deleteThesisArgument(
+  thesisId: string,
+  argumentId: string
+): Promise<{ success: boolean; message: string }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/theses/${thesisId}/arguments/${argumentId}`;
+  const res = await fetch(url, { method: "DELETE", headers: getHeaders() });
+  return handleResponse<{ success: boolean; message: string }>(res);
 }
 

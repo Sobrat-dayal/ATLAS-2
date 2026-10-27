@@ -14,9 +14,15 @@ from atlas.research.enums import (
     DocumentFormat,
     DocumentProcessingStatus,
     EvidenceLocationType,
+    ExportFormat,
+    ExportStatus,
     HypothesisEvaluationOutcome,
     InvestigationLifecycleStatus,
     OutlierHandlingPolicy,
+    ReportBlockType,
+    ReportLifecycleStatus,
+    ReportSectionType,
+    ReportSnapshotPolicy,
     ResearchActivityAction,
     ResearchAnalysisType,
     ResearchClaimCategory,
@@ -27,10 +33,13 @@ from atlas.research.enums import (
     ResearchNoteStatus,
     ResearchNoteType,
     ResearchQuestionStatus,
+    ResearchReportType,
     ResearchSourceType,
     ResearchType,
     ScenarioType,
     SourceAvailabilityStatus,
+    ThesisArgumentType,
+    ThesisLifecycleStatus,
     UnitScale,
 )
 
@@ -611,3 +620,172 @@ class ResearchAnalysisTypeDefinition:
     supported_metric_categories: List[str]
     is_active: bool = True
     methodology_version: int = 1
+
+
+# ---------------------------------------------------------------------------
+# Stage 107 Research Reports & Investment Theses Domain Models
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ResearchReport:
+    """Canonical institutional financial research report container."""
+    report_id: str
+    owner_user_id: str
+    investigation_id: Optional[str]
+    report_type: ResearchReportType
+    title: str
+    subtitle: Optional[str]
+    abstract: Optional[str]
+    primary_subject_id: Optional[str]
+    primary_subject_type: Optional[str]
+    secondary_subject_ids: List[str]
+    report_as_of: datetime.date
+    research_cutoff: datetime.datetime
+    template_id: Optional[str]
+    status: ReportLifecycleStatus
+    current_revision: int
+    snapshot_policy: ReportSnapshotPolicy
+    source_manifest: List[Dict[str, Any]]
+    evidence_manifest: List[str]
+    analysis_run_manifest: List[str]
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    archived_at: Optional[datetime.datetime] = None
+    citation_references: List[str] = field(default_factory=list)
+    provenance: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ResearchReportContentBlock:
+    """Individual typed content unit within a report section."""
+    block_id: str
+    section_id: str
+    order_index: int
+    block_type: ReportBlockType
+    content_text: Optional[str] = None
+    content_json: Optional[Dict[str, Any]] = None
+    citation_ids: List[str] = field(default_factory=list)
+    evidence_ids: List[str] = field(default_factory=list)
+    analysis_run_id: Optional[str] = None
+    caption: Optional[str] = None
+
+
+@dataclass
+class ResearchReportSection:
+    """Structured hierarchical section within an institutional research report."""
+    section_id: str
+    report_id: str
+    parent_section_id: Optional[str]
+    order_index: int
+    section_type: ReportSectionType
+    heading: str
+    content_blocks: List[Dict[str, Any]]
+    revision: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+@dataclass
+class ResearchReportTemplate:
+    """Pre-configured institutional research template definition."""
+    template_id: str
+    template_version: int
+    report_type: ResearchReportType
+    title: str
+    description: str
+    default_sections: List[Dict[str, Any]]
+    required_sections: List[ReportSectionType]
+    citation_style: str = "INSTITUTIONAL_NUMERIC"
+    is_active: bool = True
+
+
+@dataclass
+class ResearchReportRevision:
+    """Immutable snapshot of a saved or finalized report version."""
+    revision_id: str
+    report_id: str
+    revision_number: int
+    parent_revision_id: Optional[str]
+    author_user_id: str
+    document_snapshot: Dict[str, Any]
+    source_manifest: List[Dict[str, Any]]
+    analysis_manifest: List[str]
+    revision_status: ReportLifecycleStatus
+    change_summary: Optional[str]
+    content_hash: str
+    created_at: datetime.datetime
+
+
+@dataclass
+class ResearchInvestmentThesis:
+    """Structured analyst investment thesis linking bull/bear cases and evidence."""
+    thesis_id: str
+    investigation_id: Optional[str]
+    report_id: Optional[str]
+    owner_user_id: str
+    primary_subject_id: Optional[str]
+    primary_subject_type: Optional[str]
+    thesis_statement: str
+    time_horizon: str
+    status: ThesisLifecycleStatus
+    current_revision: int
+    bull_case_summary: Optional[str] = None
+    bear_case_summary: Optional[str] = None
+    base_case_summary: Optional[str] = None
+    assumptions_summary: Optional[str] = None
+    risks_summary: Optional[str] = None
+    catalysts_summary: Optional[str] = None
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    updated_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+
+
+@dataclass
+class ResearchThesisArgument:
+    """Structured argument node in a two-sided investment thesis."""
+    argument_id: str
+    thesis_id: str
+    argument_type: ThesisArgumentType
+    statement: str
+    claim_ids: List[str]
+    evidence_ids: List[str]
+    analysis_run_ids: List[str]
+    finding_ids: List[str]
+    limitations: List[str]
+    revision: int
+    created_at: datetime.datetime
+
+
+@dataclass
+class ResearchReportVerification:
+    """Audit outcome of automated evidence, citation, and temporal verification."""
+    verification_id: str
+    report_id: str
+    revision_number: int
+    checked_at: datetime.datetime
+    is_valid: bool
+    blocking_issues_count: int
+    warnings_count: int
+    info_count: int
+    issues: List[Dict[str, Any]]
+    citation_coverage_pct: float
+    verified_by_user_id: str
+
+
+@dataclass
+class ResearchReportExport:
+    """Record of a rendered PDF or DOCX research publication artifact."""
+    export_id: str
+    report_id: str
+    revision_number: int
+    owner_user_id: str
+    format: ExportFormat
+    export_status: ExportStatus
+    download_url: Optional[str]
+    file_size_bytes: int
+    page_count: int
+    content_hash: str
+    created_at: datetime.datetime
+    started_at: Optional[datetime.datetime] = None
+    completed_at: Optional[datetime.datetime] = None
+    expiry_at: Optional[datetime.datetime] = None
+    error_message: Optional[str] = None
