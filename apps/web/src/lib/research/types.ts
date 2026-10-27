@@ -707,3 +707,376 @@ export interface FinancialFactsCompareResponse {
   total_concepts_compared: number;
 }
 
+// ---------------------------------------------------------------------------
+// Stage 106 — Research Analysis, Hypothesis Testing & Scenarios
+// ---------------------------------------------------------------------------
+
+export type ResearchAnalysisType =
+  | "COMPANY_FINANCIAL_TREND"
+  | "COMPANY_RATIO_ANALYSIS"
+  | "CASH_FLOW_ANALYSIS"
+  | "CAPITAL_STRUCTURE_ANALYSIS"
+  | "PEER_BENCHMARKING"
+  | "INDUSTRY_COMPARISON"
+  | "MACROECONOMIC_TIME_SERIES"
+  | "MULTI_INDICATOR_COMPARISON"
+  | "HISTORICAL_MARKET_CONTEXT"
+  | "EVENT_DISCLOSURE_COMPARISON"
+  | "HYPOTHESIS_EVALUATION"
+  | "DESCRIPTIVE_STATISTICAL_ANALYSIS"
+  | "ASSUMPTION_SENSITIVITY_ANALYSIS";
+
+export type AnalysisExecutionStatus =
+  | "DRAFT"
+  | "CONFIGURED"
+  | "RUNNING"
+  | "COMPLETED"
+  | "FAILED"
+  | "OUTDATED"
+  | "ARCHIVED";
+
+export type AnalysisInputPolicy =
+  | "PINNED_SOURCE_VERSION"
+  | "LATEST_AUTHORIZED_DATA";
+
+export type AnalysisFrequency =
+  | "ANNUAL"
+  | "QUARTERLY"
+  | "MONTHLY"
+  | "DAILY"
+  | "TTM";
+
+export type HypothesisEvaluationOutcome =
+  | "CRITERIA_MET"
+  | "CRITERIA_NOT_MET"
+  | "MIXED_RESULTS"
+  | "INCONCLUSIVE"
+  | "INSUFFICIENT_DATA"
+  | "INVALID_TEST";
+
+export type ResearchFindingType =
+  | "OBSERVED_FACT"
+  | "CALCULATED_RESULT"
+  | "STATISTICAL_OBSERVATION"
+  | "ANALYST_INTERPRETATION"
+  | "INCONCLUSIVE_RESULT";
+
+export type ResearchFindingReviewStatus =
+  | "DRAFT"
+  | "NEEDS_EVIDENCE"
+  | "READY_FOR_REVIEW"
+  | "REVIEWED"
+  | "REVISED"
+  | "ARCHIVED";
+
+export type AssumptionSourceType =
+  | "SOURCE_REPORTED"
+  | "ANALYST_ASSUMED"
+  | "DERIVED";
+
+export type ScenarioType =
+  | "BASE_ASSUMPTION"
+  | "ALTERNATIVE_A"
+  | "ALTERNATIVE_B"
+  | "CUSTOM_SENSITIVITY";
+
+export type OutlierHandlingPolicy =
+  | "INCLUDE_ALL"
+  | "EXCLUDE_EXTREMES"
+  | "WINSORIZE";
+
+export interface AnalyticalObservationRow {
+  period_label: string;
+  metric_id: string;
+  metric_name: string;
+  raw_value?: number | null;
+  display_value: string;
+  unit: string;
+  currency?: string | null;
+  period_delta?: number | null;
+  percentage_growth?: number | null;
+  source_id?: string | null;
+  source_title?: string | null;
+  source_accession?: string | null;
+  is_restated: boolean;
+  is_missing: boolean;
+  missing_reason?: string | null;
+  observed_date?: string | null;
+  publication_cutoff?: string | null;
+}
+
+export interface AnalyticalSummaryStatistics {
+  sample_size_n: number;
+  mean?: number | null;
+  median?: number | null;
+  minimum?: number | null;
+  maximum?: number | null;
+  standard_deviation?: number | null;
+  quartile_1?: number | null;
+  quartile_3?: number | null;
+  cagr_percentage?: number | null;
+  correlation_coefficient?: number | null;
+  missing_count: number;
+  outlier_count: number;
+  correlation_is_not_causation_notice: boolean;
+}
+
+export interface ResearchAnalysisSpecification {
+  analysis_type: ResearchAnalysisType;
+  primary_entity_id: string;
+  secondary_entity_ids?: string[];
+  metric_ids: string[];
+  frequency?: AnalysisFrequency;
+  time_range_start?: string | null;
+  time_range_end?: string | null;
+  input_version_policy?: AnalysisInputPolicy;
+  currency?: string;
+  unit?: string;
+  outlier_policy?: OutlierHandlingPolicy;
+  methodology_version?: number;
+  as_known_at_cutoff?: string | null;
+}
+
+export interface ResearchAnalysis {
+  analysis_id: string;
+  investigation_id?: string | null;
+  owner_user_id: string;
+  title: string;
+  description?: string;
+  analysis_type: ResearchAnalysisType;
+  research_objective?: string;
+  primary_subject_entity_id?: string;
+  primary_subject_type?: string;
+  secondary_entity_ids: string[];
+  specification: ResearchAnalysisSpecification;
+  status: AnalysisExecutionStatus;
+  current_revision: number;
+  latest_run_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  archived_at?: string | null;
+  provenance: Record<string, unknown>;
+  linked_question_ids: string[];
+  linked_hypothesis_ids: string[];
+  runs_count: number;
+  findings_count: number;
+  assumptions_count: number;
+}
+
+export interface ResearchAnalysisRun {
+  run_id: string;
+  analysis_id: string;
+  analysis_revision: number;
+  owner_user_id: string;
+  input_specification_hash: string;
+  methodology_version: number;
+  input_policy: AnalysisInputPolicy;
+  source_data_manifest: Array<Record<string, unknown>>;
+  started_at: string;
+  completed_at?: string | null;
+  execution_status: AnalysisExecutionStatus;
+  observations_count: number;
+  error_message?: string | null;
+  warnings: string[];
+  compute_duration_ms: number;
+  provenance: Record<string, unknown>;
+}
+
+export interface ResearchAnalysisResult {
+  run_id: string;
+  analysis_id: string;
+  analysis_type: ResearchAnalysisType;
+  execution_status: AnalysisExecutionStatus;
+  primary_subject_id: string;
+  metric_id: string;
+  observations: AnalyticalObservationRow[];
+  summary_statistics: AnalyticalSummaryStatistics;
+  comparability_warnings: string[];
+  source_data_manifest: Array<Record<string, unknown>>;
+  executed_at: string;
+  reproducibility_hash: string;
+  methodology_description: string;
+}
+
+export interface HypothesisTestCriteria {
+  metric_id: string;
+  operator: "GT" | "GTE" | "LT" | "LTE" | "EQ" | "BETWEEN";
+  threshold_value: number;
+  secondary_threshold?: number | null;
+  required_periods_count?: number;
+  allow_missing?: boolean;
+}
+
+export interface ResearchHypothesisEvaluation {
+  evaluation_id: string;
+  hypothesis_id: string;
+  analysis_run_id: string;
+  owner_user_id: string;
+  criteria: HypothesisTestCriteria;
+  eligible_universe: string[];
+  observation_count: number;
+  result_status: HypothesisEvaluationOutcome;
+  supporting_evidence_ids: string[];
+  contradicting_evidence_ids: string[];
+  limitations: string[];
+  analyst_notes?: string;
+  created_at: string;
+  provenance: Record<string, unknown>;
+}
+
+export interface ResearchFinding {
+  finding_id: string;
+  investigation_id?: string | null;
+  analysis_id: string;
+  analysis_run_id?: string | null;
+  author_user_id: string;
+  finding_type: ResearchFindingType;
+  statement: string;
+  methodology_description?: string;
+  supporting_evidence_ids: string[];
+  contradicting_evidence_ids: string[];
+  calculated_result_references: Record<string, unknown>;
+  limitations: string[];
+  review_status: ResearchFindingReviewStatus;
+  revision: number;
+  created_at: string;
+  updated_at: string;
+  provenance: Record<string, unknown>;
+}
+
+export interface ResearchAssumption {
+  assumption_id: string;
+  analysis_id: string;
+  owner_user_id: string;
+  label: string;
+  parameter_id: string;
+  value: number;
+  unit: string;
+  source_type: AssumptionSourceType;
+  source_reference_id?: string | null;
+  analyst_note?: string;
+  revision: number;
+  created_at: string;
+}
+
+export interface ResearchScenario {
+  scenario_id: string;
+  analysis_id: string;
+  owner_user_id: string;
+  scenario_type: ScenarioType;
+  label: string;
+  assumption_ids: string[];
+  deterministic_parameters: Record<string, number>;
+  is_non_predictive_illustrative: boolean;
+  created_at: string;
+}
+
+export interface ResearchAnalysisTypeDefinition {
+  type_id: ResearchAnalysisType;
+  label: string;
+  description: string;
+  supported_subject_types: string[];
+  supported_frequencies: AnalysisFrequency[];
+  required_parameters: string[];
+  default_metric_ids: string[];
+  methodology_version: number;
+  is_active: boolean;
+}
+
+export interface CreateResearchAnalysisDTO {
+  title: string;
+  description?: string;
+  analysis_type: ResearchAnalysisType;
+  research_objective?: string;
+  primary_subject_entity_id?: string;
+  primary_subject_type?: string;
+  secondary_entity_ids?: string[];
+  specification: ResearchAnalysisSpecification;
+  investigation_id?: string | null;
+  linked_question_ids?: string[];
+  linked_hypothesis_ids?: string[];
+}
+
+export interface UpdateResearchAnalysisDTO {
+  expected_revision: number;
+  title?: string;
+  description?: string;
+  research_objective?: string;
+  specification?: ResearchAnalysisSpecification;
+  linked_question_ids?: string[];
+  linked_hypothesis_ids?: string[];
+}
+
+export interface CreateResearchFindingDTO {
+  analysis_id: string;
+  analysis_run_id?: string | null;
+  finding_type: ResearchFindingType;
+  statement: string;
+  methodology_description?: string;
+  supporting_evidence_ids?: string[];
+  contradicting_evidence_ids?: string[];
+  calculated_result_references?: Record<string, unknown>;
+  limitations?: string[];
+  review_status?: ResearchFindingReviewStatus;
+  investigation_id?: string | null;
+}
+
+export interface UpdateResearchFindingDTO {
+  expected_revision: number;
+  statement?: string;
+  methodology_description?: string;
+  supporting_evidence_ids?: string[];
+  contradicting_evidence_ids?: string[];
+  calculated_result_references?: Record<string, unknown>;
+  limitations?: string[];
+  review_status?: ResearchFindingReviewStatus;
+}
+
+export interface CreateResearchAssumptionDTO {
+  label: string;
+  parameter_id: string;
+  value: number;
+  unit: string;
+  source_type: AssumptionSourceType;
+  source_reference_id?: string | null;
+  analyst_note?: string;
+}
+
+export interface ExecuteHypothesisEvaluationDTO {
+  analysis_run_id: string;
+  criteria: HypothesisTestCriteria;
+  eligible_universe?: string[];
+  analyst_notes?: string;
+}
+
+export interface SensitivityAnalysisRequest {
+  base_metric_value: number;
+  metric_name: string;
+  unit?: string;
+  growth_rates?: number[];
+  margin_rates?: number[];
+  notes?: string;
+}
+
+export interface SensitivityAnalysisResponse {
+  base_metric_value: number;
+  metric_name: string;
+  unit: string;
+  growth_rates: number[];
+  margin_rates: number[];
+  scenario_matrix: number[][];
+  is_non_predictive_illustrative: boolean;
+  qualification_notice: string;
+}
+
+export interface ValidateAnalysisSpecificationRequest {
+  specification: ResearchAnalysisSpecification;
+}
+
+export interface ValidateAnalysisSpecificationResponse {
+  is_valid: boolean;
+  errors: string[];
+  warnings: string[];
+  estimated_observation_count: number;
+}
+

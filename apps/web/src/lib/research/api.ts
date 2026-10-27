@@ -31,7 +31,6 @@ import {
   UpdateResearchQuestionDTO,
   // Stage 105 Types
   ConvertEvidenceCandidateDTO,
-  DocumentComparisonMode,
   DocumentComparisonRequest,
   DocumentComparisonResult,
   DocumentSearchRequest,
@@ -612,5 +611,283 @@ export async function compareFinancialFacts(
     body: JSON.stringify(data),
   });
   return handleResponse<FinancialFactsCompareResponse>(res);
+}
+
+// ---------------------------------------------------------------------------
+// Stage 106 — Research Analysis, Hypothesis Testing & Scenarios
+// ---------------------------------------------------------------------------
+
+import {
+  CreateResearchAnalysisDTO,
+  CreateResearchAssumptionDTO,
+  CreateResearchFindingDTO,
+  ExecuteHypothesisEvaluationDTO,
+  ResearchAnalysis,
+  ResearchAnalysisResult,
+  ResearchAnalysisRun,
+  ResearchAnalysisType,
+  ResearchAnalysisTypeDefinition,
+  ResearchAssumption,
+  ResearchFinding,
+  ResearchHypothesisEvaluation,
+  SensitivityAnalysisRequest,
+  SensitivityAnalysisResponse,
+  UpdateResearchAnalysisDTO,
+  UpdateResearchFindingDTO,
+  ValidateAnalysisSpecificationRequest,
+  ValidateAnalysisSpecificationResponse,
+} from "./types";
+
+export async function listAnalysisTypes(): Promise<{
+  analysis_types: ResearchAnalysisTypeDefinition[];
+  total_count: number;
+}> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analysis-types`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<{
+    analysis_types: ResearchAnalysisTypeDefinition[];
+    total_count: number;
+  }>(res);
+}
+
+export async function validateAnalysisSpecification(
+  data: ValidateAnalysisSpecificationRequest
+): Promise<ValidateAnalysisSpecificationResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/validate`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ValidateAnalysisSpecificationResponse>(res);
+}
+
+export async function listAnalyses(params?: {
+  investigationId?: string;
+  analysisType?: ResearchAnalysisType;
+  entityId?: string;
+  search?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ analyses: ResearchAnalysis[]; total_count: number }> {
+  const query = new URLSearchParams();
+  if (params?.investigationId) query.append("investigation_id", params.investigationId);
+  if (params?.analysisType) query.append("analysis_type", params.analysisType);
+  if (params?.entityId) query.append("entity_id", params.entityId);
+  if (params?.search) query.append("search", params.search);
+  if (params?.status) query.append("status", params.status);
+  if (params?.limit) query.append("limit", params.limit.toString());
+  if (params?.offset) query.append("offset", params.offset.toString());
+
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses?${query.toString()}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<{ analyses: ResearchAnalysis[]; total_count: number }>(res);
+}
+
+export async function createAnalysis(
+  data: CreateResearchAnalysisDTO
+): Promise<ResearchAnalysis> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchAnalysis>(res);
+}
+
+export async function getAnalysis(analysisId: string): Promise<ResearchAnalysis> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchAnalysis>(res);
+}
+
+export async function updateAnalysis(
+  analysisId: string,
+  data: UpdateResearchAnalysisDTO
+): Promise<ResearchAnalysis> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchAnalysis>(res);
+}
+
+export async function duplicateAnalysis(analysisId: string): Promise<ResearchAnalysis> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}/duplicate`;
+  const res = await fetch(url, { method: "POST", headers: getHeaders() });
+  return handleResponse<ResearchAnalysis>(res);
+}
+
+export async function deleteAnalysis(
+  analysisId: string
+): Promise<{ deleted: boolean; analysis_id: string }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}`;
+  const res = await fetch(url, { method: "DELETE", headers: getHeaders() });
+  return handleResponse<{ deleted: boolean; analysis_id: string }>(res);
+}
+
+export async function executeAnalysisRun(
+  analysisId: string,
+  inputPolicy: string = "PINNED_SOURCE_VERSION"
+): Promise<ResearchAnalysisRun> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}/runs?input_policy=${inputPolicy}`;
+  const res = await fetch(url, { method: "POST", headers: getHeaders() });
+  return handleResponse<ResearchAnalysisRun>(res);
+}
+
+export async function listAnalysisRuns(
+  analysisId: string
+): Promise<{ runs: ResearchAnalysisRun[]; total_count: number }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}/runs`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<{ runs: ResearchAnalysisRun[]; total_count: number }>(res);
+}
+
+export async function getAnalysisRun(runId: string): Promise<ResearchAnalysisRun> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analysis-runs/${runId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchAnalysisRun>(res);
+}
+
+export async function getAnalysisRunResults(
+  runId: string
+): Promise<ResearchAnalysisResult> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analysis-runs/${runId}/results`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchAnalysisResult>(res);
+}
+
+export async function getAnalysisRunProvenance(
+  runId: string
+): Promise<Record<string, unknown>> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analysis-runs/${runId}/provenance`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<Record<string, unknown>>(res);
+}
+
+export async function listHypothesisEvaluations(
+  hypothesisId: string
+): Promise<{ evaluations: ResearchHypothesisEvaluation[]; total_count: number }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/hypotheses/${hypothesisId}/evaluations`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<{
+    evaluations: ResearchHypothesisEvaluation[];
+    total_count: number;
+  }>(res);
+}
+
+export async function executeHypothesisEvaluation(
+  hypothesisId: string,
+  data: ExecuteHypothesisEvaluationDTO
+): Promise<ResearchHypothesisEvaluation> {
+  const url = `${getBaseApiUrl()}/api/v1/research/hypotheses/${hypothesisId}/evaluations`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchHypothesisEvaluation>(res);
+}
+
+export async function getHypothesisEvaluation(
+  evaluationId: string
+): Promise<ResearchHypothesisEvaluation> {
+  const url = `${getBaseApiUrl()}/api/v1/research/hypothesis-evaluations/${evaluationId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchHypothesisEvaluation>(res);
+}
+
+export async function listAnalysisFindings(
+  analysisId: string
+): Promise<{ findings: ResearchFinding[]; total_count: number }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}/findings`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<{ findings: ResearchFinding[]; total_count: number }>(res);
+}
+
+export async function createAnalysisFinding(
+  analysisId: string,
+  data: CreateResearchFindingDTO
+): Promise<ResearchFinding> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}/findings`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchFinding>(res);
+}
+
+export async function getFinding(findingId: string): Promise<ResearchFinding> {
+  const url = `${getBaseApiUrl()}/api/v1/research/findings/${findingId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchFinding>(res);
+}
+
+export async function updateFinding(
+  findingId: string,
+  data: UpdateResearchFindingDTO
+): Promise<ResearchFinding> {
+  const url = `${getBaseApiUrl()}/api/v1/research/findings/${findingId}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchFinding>(res);
+}
+
+export async function deleteFinding(
+  findingId: string
+): Promise<{ deleted: boolean; finding_id: string }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/findings/${findingId}`;
+  const res = await fetch(url, { method: "DELETE", headers: getHeaders() });
+  return handleResponse<{ deleted: boolean; finding_id: string }>(res);
+}
+
+export async function listAnalysisAssumptions(
+  analysisId: string
+): Promise<{ assumptions: ResearchAssumption[]; total_count: number }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}/assumptions`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<{ assumptions: ResearchAssumption[]; total_count: number }>(res);
+}
+
+export async function createAnalysisAssumption(
+  analysisId: string,
+  data: CreateResearchAssumptionDTO
+): Promise<ResearchAssumption> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}/assumptions`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchAssumption>(res);
+}
+
+export async function deleteAssumption(
+  assumptionId: string
+): Promise<{ deleted: boolean; assumption_id: string }> {
+  const url = `${getBaseApiUrl()}/api/v1/research/assumptions/${assumptionId}`;
+  const res = await fetch(url, { method: "DELETE", headers: getHeaders() });
+  return handleResponse<{ deleted: boolean; assumption_id: string }>(res);
+}
+
+export async function executeSensitivityAnalysis(
+  analysisId: string,
+  data: SensitivityAnalysisRequest
+): Promise<SensitivityAnalysisResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/analyses/${analysisId}/scenarios/sensitivity`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<SensitivityAnalysisResponse>(res);
 }
 

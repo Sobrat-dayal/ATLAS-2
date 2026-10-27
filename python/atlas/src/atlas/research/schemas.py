@@ -7,14 +7,23 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from atlas.research.enums import (
+    AnalysisExecutionStatus,
+    AnalysisFrequency,
+    AnalysisInputPolicy,
+    AssumptionSourceType,
     DocumentComparisonMode,
     DocumentFormat,
     DocumentProcessingStatus,
     EvidenceLocationType,
+    HypothesisEvaluationOutcome,
     InvestigationLifecycleStatus,
+    OutlierHandlingPolicy,
     ResearchActivityAction,
+    ResearchAnalysisType,
     ResearchClaimCategory,
     ResearchEvidenceStatus,
+    ResearchFindingReviewStatus,
+    ResearchFindingType,
     ResearchHypothesisStatus,
     ResearchNoteStatus,
     ResearchNoteType,
@@ -416,6 +425,9 @@ class ResearchOverviewSummaryDTO(BaseModel):
     total_notes_count: int
     total_sources_count: int
     total_evidence_count: int
+    total_analyses_count: int = 0
+    total_findings_count: int = 0
+    total_evaluations_count: int = 0
     recent_investigations: List[ResearchInvestigationDTO]
     recent_activities: List[ResearchActivityDTO]
 
@@ -716,3 +728,372 @@ class FinancialFactsCompareResponseDTO(BaseModel):
     right_period: str
     fact_diffs: List[FinancialFactComparisonDTO]
     total_concepts_compared: int
+
+
+# ---------------------------------------------------------------------------
+# Stage 106 — Research Analysis, Runs, Findings & Hypothesis DTOs
+# ---------------------------------------------------------------------------
+
+class ResearchAnalysisSpecificationDTO(BaseModel):
+    """Typed specification for executing a research analysis."""
+    analysis_type: ResearchAnalysisType = Field(..., description="Canonical analysis type")
+    primary_entity_id: str = Field(..., description="Primary subject ticker or entity ID (e.g. 'AAPL', 'CPI')")
+    secondary_entity_ids: List[str] = Field(default_factory=list, description="Peers or benchmark entities")
+    metric_ids: List[str] = Field(default_factory=list, description="Canonical metric concepts or ratios")
+    time_range_start: Optional[str] = Field(None, description="Start date or period (e.g. '2020' or '2020-01-01')")
+    time_range_end: Optional[str] = Field(None, description="End date or period (e.g. '2024' or '2024-12-31')")
+    frequency: AnalysisFrequency = Field(default=AnalysisFrequency.ANNUAL)
+    input_version_policy: AnalysisInputPolicy = Field(default=AnalysisInputPolicy.PINNED_SOURCE_VERSION)
+    outlier_policy: OutlierHandlingPolicy = Field(default=OutlierHandlingPolicy.INCLUDE_ALL)
+    currency: Optional[str] = Field(None, description="Preserved reporting currency (e.g. 'USD')")
+    as_known_at_cutoff: Optional[datetime.datetime] = Field(None, description="Historical point-in-time publication cutoff")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="Custom parameters or threshold criteria")
+    methodology_version: int = Field(default=1, ge=1)
+
+
+class CreateResearchAnalysisDTO(BaseModel):
+    """Request DTO to create a new research analysis."""
+    title: str = Field(..., min_length=3, max_length=500, description="Title of the research analysis")
+    description: Optional[str] = Field(None, max_length=50000)
+    analysis_type: ResearchAnalysisType = Field(..., description="Canonical analysis type")
+    research_objective: Optional[str] = Field(None, max_length=5000)
+    investigation_id: Optional[str] = Field(None, description="Optional parent investigation ID")
+    primary_subject_entity_id: str = Field(..., description="Primary company ticker or entity ID")
+    primary_subject_type: str = Field(default="COMPANY", description="COMPANY, FINANCIAL_INSTRUMENT, INDUSTRY, ECONOMIC_ENTITY, FINANCIAL_EVENT")
+    secondary_entity_ids: List[str] = Field(default_factory=list)
+    specification: ResearchAnalysisSpecificationDTO
+    linked_question_ids: List[str] = Field(default_factory=list)
+    linked_hypothesis_ids: List[str] = Field(default_factory=list)
+
+
+class UpdateResearchAnalysisDTO(BaseModel):
+    """Request DTO to update an existing analysis with optimistic concurrency."""
+    expected_revision: int = Field(..., description="Expected revision number to guard against stale edits")
+    title: Optional[str] = Field(None, min_length=3, max_length=500)
+    description: Optional[str] = None
+    research_objective: Optional[str] = None
+    specification: Optional[ResearchAnalysisSpecificationDTO] = None
+    linked_question_ids: Optional[List[str]] = None
+    linked_hypothesis_ids: Optional[List[str]] = None
+    status: Optional[AnalysisExecutionStatus] = None
+
+
+class ResearchAnalysisDTO(BaseModel):
+    """Response DTO representing a research analysis entity."""
+    analysis_id: str
+    investigation_id: Optional[str] = None
+    owner_user_id: str
+    title: str
+    description: Optional[str] = None
+    analysis_type: ResearchAnalysisType
+    research_objective: Optional[str] = None
+    primary_subject_entity_id: str
+    primary_subject_type: str
+    secondary_entity_ids: List[str] = Field(default_factory=list)
+    specification: ResearchAnalysisSpecificationDTO
+    status: AnalysisExecutionStatus
+    current_revision: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    archived_at: Optional[datetime.datetime] = None
+    linked_question_ids: List[str] = Field(default_factory=list)
+    linked_hypothesis_ids: List[str] = Field(default_factory=list)
+    latest_run_id: Optional[str] = None
+    runs_count: int = 0
+    findings_count: int = 0
+    provenance: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ResearchAnalysisListResponseDTO(BaseModel):
+    """Paginated or filtered list of research analyses."""
+    analyses: List[ResearchAnalysisDTO]
+    total_count: int
+
+
+class AnalyticalObservationRowDTO(BaseModel):
+    """Single observation data point in a time series or comparative table."""
+    period_or_subject: str
+    primary_value: Optional[float]
+    unit: str
+    formatted_value: str
+    period_change_absolute: Optional[float] = None
+    period_change_percentage: Optional[float] = None
+    source_reference_id: Optional[str] = None
+    source_accession: Optional[str] = None
+    source_vintage: Optional[str] = None
+    is_restated: bool = False
+    is_missing: bool = False
+    availability_status: str = "AVAILABLE"
+    derived_formula_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class AnalyticalSummaryStatisticsDTO(BaseModel):
+    """Cross-sectional or time-series summary statistics."""
+    sample_size_n: int
+    excluded_count: int
+    mean: Optional[float] = None
+    median: Optional[float] = None
+    minimum: Optional[float] = None
+    maximum: Optional[float] = None
+    standard_deviation: Optional[float] = None
+    q1_percentile: Optional[float] = None
+    q3_percentile: Optional[float] = None
+    cagr_percentage: Optional[float] = None
+    pearson_correlation: Optional[float] = None
+    methodology_notes: List[str] = Field(default_factory=list)
+
+
+class ResearchAnalysisRunDTO(BaseModel):
+    """Metadata for an individual analytical execution run."""
+    run_id: str
+    analysis_id: str
+    analysis_revision: int
+    owner_user_id: str
+    input_specification_hash: str
+    methodology_version: int
+    source_data_manifest: List[Dict[str, Any]]
+    source_revision_watermarks: Dict[str, str] = Field(default_factory=dict)
+    started_at: datetime.datetime
+    completed_at: Optional[datetime.datetime] = None
+    execution_status: AnalysisExecutionStatus
+    observations_count: int
+    warnings: List[str] = Field(default_factory=list)
+    errors: List[str] = Field(default_factory=list)
+    compute_metadata: Dict[str, Any] = Field(default_factory=dict)
+    provenance: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ResearchAnalysisRunListResponseDTO(BaseModel):
+    """List of executed runs for an analysis."""
+    analysis_id: str
+    runs: List[ResearchAnalysisRunDTO]
+    total_count: int
+
+
+class ResearchAnalysisResultDTO(BaseModel):
+    """Complete results of an executed analysis."""
+    analysis_id: str
+    run_id: str
+    analysis_type: ResearchAnalysisType
+    execution_status: AnalysisExecutionStatus
+    methodology_version: int
+    primary_subject_id: str
+    metric_id: str
+    unit: str
+    observations: List[AnalyticalObservationRowDTO]
+    summary_statistics: AnalyticalSummaryStatisticsDTO
+    chart_series: List[Dict[str, Any]]
+    missingness_report: Dict[str, Any] = Field(default_factory=dict)
+    comparability_warnings: List[str] = Field(default_factory=list)
+    source_data_manifest: List[Dict[str, Any]] = Field(default_factory=list)
+    executed_at: datetime.datetime
+    as_known_at_cutoff: Optional[str] = None
+    non_causal_qualification: str = (
+        "Observed historical correlation or trends do not establish deterministic economic causality or investment outcomes."
+    )
+
+
+class AnalysisProvenanceResponseDTO(BaseModel):
+    """Detailed audit lineage of data sources, formulas, and calculations."""
+    analysis_id: str
+    run_id: str
+    input_specification_hash: str
+    methodology_version: int
+    executed_at: datetime.datetime
+    source_manifest: List[Dict[str, Any]]
+    source_watermarks: Dict[str, str]
+    formula_definitions: Dict[str, str]
+    temporal_policy: str
+    provenance_chain: List[Dict[str, Any]]
+
+
+class HypothesisTestCriteriaDTO(BaseModel):
+    """Specification of criteria for deterministic hypothesis testing."""
+    metric_id: str = Field(..., description="Canonical metric ID tested (e.g. 'profitability.operating_margin')")
+    operator: str = Field(..., description="GTE, LTE, GT, LT, EQ, CONSISTENT_EXPANSION")
+    threshold_value: Optional[float] = Field(None, description="Numeric threshold for comparison")
+    comparison_target: Optional[str] = Field(None, description="PEER_MEDIAN, PREVIOUS_PERIOD, HISTORICAL_MEAN")
+    required_periods_count: Optional[int] = Field(None, description="Required consecutive or total periods")
+    allow_missing: bool = Field(default=False)
+
+
+class EvaluateResearchHypothesisDTO(BaseModel):
+    """Request DTO to evaluate an analyst hypothesis against an executed analysis run."""
+    analysis_run_id: str = Field(..., description="Target analysis run to evaluate against")
+    criteria: HypothesisTestCriteriaDTO
+    eligible_universe: List[str] = Field(default_factory=list)
+
+
+class ResearchHypothesisEvaluationDTO(BaseModel):
+    """Evaluation result for a research hypothesis."""
+    evaluation_id: str
+    hypothesis_id: str
+    analysis_run_id: str
+    author_user_id: str
+    criteria: HypothesisTestCriteriaDTO
+    eligible_universe: List[str]
+    observation_count: int
+    result_status: HypothesisEvaluationOutcome
+    supporting_evidence_ids: List[str] = Field(default_factory=list)
+    contradicting_evidence_ids: List[str] = Field(default_factory=list)
+    evaluation_summary: str
+    methodology_limitations: List[str] = Field(default_factory=list)
+    analyst_review_state: str = "PENDING_REVIEW"
+    created_at: datetime.datetime
+
+
+class ResearchHypothesisEvaluationListResponseDTO(BaseModel):
+    """History of hypothesis evaluations."""
+    hypothesis_id: str
+    evaluations: List[ResearchHypothesisEvaluationDTO]
+    total_count: int
+
+
+class CreateResearchFindingDTO(BaseModel):
+    """Request DTO to record a new research finding."""
+    analysis_id: str
+    analysis_run_id: str
+    investigation_id: Optional[str] = None
+    finding_type: ResearchFindingType = Field(default=ResearchFindingType.CALCULATED_RESULT)
+    statement: str = Field(..., min_length=5, max_length=5000, description="Clear finding statement")
+    methodology_description: str = Field(..., max_length=5000, description="Calculation or derivation methodology")
+    supporting_evidence_ids: List[str] = Field(default_factory=list)
+    contradicting_evidence_ids: List[str] = Field(default_factory=list)
+    calculated_result_references: Dict[str, Any] = Field(default_factory=dict)
+    limitations: List[str] = Field(default_factory=list)
+
+
+class UpdateResearchFindingDTO(BaseModel):
+    """Request DTO to update a research finding."""
+    expected_revision: int = Field(..., description="Optimistic concurrency revision check")
+    statement: Optional[str] = Field(None, min_length=5, max_length=5000)
+    finding_type: Optional[ResearchFindingType] = None
+    methodology_description: Optional[str] = None
+    supporting_evidence_ids: Optional[List[str]] = None
+    contradicting_evidence_ids: Optional[List[str]] = None
+    limitations: Optional[List[str]] = None
+    review_status: Optional[ResearchFindingReviewStatus] = None
+
+
+class ResearchFindingDTO(BaseModel):
+    """Canonical research finding response."""
+    finding_id: str
+    investigation_id: Optional[str] = None
+    analysis_id: str
+    analysis_run_id: str
+    author_user_id: str
+    finding_type: ResearchFindingType
+    statement: str
+    methodology_description: str
+    supporting_evidence_ids: List[str] = Field(default_factory=list)
+    contradicting_evidence_ids: List[str] = Field(default_factory=list)
+    calculated_result_references: Dict[str, Any] = Field(default_factory=dict)
+    limitations: List[str] = Field(default_factory=list)
+    review_status: ResearchFindingReviewStatus
+    revision: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    is_source_outdated: bool = False
+    source_outdated_reason: Optional[str] = None
+
+
+class ResearchFindingListResponseDTO(BaseModel):
+    """List of research findings for an analysis or investigation."""
+    findings: List[ResearchFindingDTO]
+    total_count: int
+
+
+class CreateResearchAssumptionDTO(BaseModel):
+    """Request to record an explicit analyst assumption."""
+    label: str = Field(..., min_length=2, max_length=200)
+    parameter_id: str = Field(..., description="Parameter key (e.g. 'revenue_growth_rate')")
+    value: float = Field(...)
+    unit: str = Field(default="%")
+    source_type: AssumptionSourceType = Field(default=AssumptionSourceType.ANALYST_ASSUMED)
+    source_reference_id: Optional[str] = None
+    analyst_note: Optional[str] = None
+
+
+class ResearchAssumptionDTO(BaseModel):
+    """Response DTO for an analyst assumption."""
+    assumption_id: str
+    analysis_id: str
+    label: str
+    parameter_id: str
+    value: float
+    unit: str
+    source_type: AssumptionSourceType
+    source_reference_id: Optional[str] = None
+    analyst_note: Optional[str] = None
+    created_at: datetime.datetime
+
+
+class ResearchAssumptionListResponseDTO(BaseModel):
+    """List of assumptions recorded for an analysis."""
+    analysis_id: str
+    assumptions: List[ResearchAssumptionDTO]
+    total_count: int
+
+
+class ExecuteSensitivityScenarioDTO(BaseModel):
+    """Request for running bounded deterministic what-if sensitivity scenario matrix."""
+    base_metric_value: float = Field(..., description="Baseline historical value (e.g. 391035.0)")
+    metric_name: str = Field(default="Revenue")
+    unit: str = Field(default="$M")
+    growth_rates: List[float] = Field(
+        default_factory=lambda: [-0.05, 0.0, 0.05, 0.10, 0.15],
+        description="Finite percentage growth assumptions (e.g. -5% to +15%)"
+    )
+    margin_rates: Optional[List[float]] = Field(
+        default_factory=lambda: [0.28, 0.30, 0.32, 0.34],
+        description="Optional operating margin assumptions"
+    )
+
+
+class ResearchSensitivityResultDTO(BaseModel):
+    """Sensitivity table output clearly qualified as illustrative non-predictive calculation."""
+    base_metric_value: float
+    growth_rates: List[float]
+    margin_rates: Optional[List[float]] = None
+    scenario_matrix: List[List[float]]  # Row: growth rate, Col: margin rate (or 1D if single param)
+    headers: List[str]
+    row_labels: List[str]
+    unit: str
+    is_non_predictive_illustrative: bool = True
+    qualification_notice: str = (
+        "Sensitivity analysis provides deterministic illustrative arithmetic for specified assumptions; "
+        "it does not constitute a probabilistic market forecast, trading recommendation, or guaranteed valuation."
+    )
+
+
+class ResearchAnalysisTypeDTO(BaseModel):
+    """Metadata for an analysis type in the registry."""
+    type_id: ResearchAnalysisType
+    label: str
+    description: str
+    supported_subject_types: List[str]
+    supported_frequencies: List[AnalysisFrequency]
+    supported_metric_categories: List[str]
+    is_active: bool = True
+    methodology_version: int = 1
+
+
+class ResearchAnalysisTypeListResponseDTO(BaseModel):
+    """Catalog of supported analysis types."""
+    analysis_types: List[ResearchAnalysisTypeDTO]
+    total_count: int
+
+
+class ValidateAnalysisSpecificationRequestDTO(BaseModel):
+    """Request to validate an analysis configuration before execution."""
+    specification: ResearchAnalysisSpecificationDTO
+
+
+class ValidateAnalysisSpecificationResponseDTO(BaseModel):
+    """Validation response indicating configuration soundness and data availability."""
+    is_valid: bool
+    errors: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+    available_data_periods: List[str] = Field(default_factory=list)
+    estimated_observation_count: int = 0

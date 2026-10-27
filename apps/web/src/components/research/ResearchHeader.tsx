@@ -27,7 +27,7 @@ export function ResearchHeader({
                 FINANCIAL RESEARCH PLATFORM
               </h1>
               <Badge variant="outline" className="font-mono text-[10px]">
-                STAGE 105 DOCUMENT INTELLIGENCE
+                STAGE 106 RESEARCH ANALYSIS & HYPOTHESIS TESTING
               </Badge>
               {activeCount > 0 && (
                 <Badge variant="primary" className="text-[10px]">
@@ -36,7 +36,7 @@ export function ResearchHeader({
               )}
             </div>
             <p className="text-xs text-atlas-text-muted">
-              Source discovery, document intelligence, multi-document comparison, structured evidence extraction, and citation-anchored research.
+              Source-verified financial analysis, company benchmarking, economic research, reproducible quantitative workbenches, hypothesis testing, and analytical provenance.
             </p>
           </div>
         </div>
@@ -52,6 +52,16 @@ export function ResearchHeader({
               }`}
             >
               Overview
+            </button>
+            <button
+              onClick={() => onTabChange("ANALYSIS")}
+              className={`rounded-xs px-3 py-1 text-xs font-medium transition-colors ${
+                activeTab === "ANALYSIS"
+                  ? "bg-atlas-accent text-white"
+                  : "text-atlas-text-secondary hover:text-atlas-text-primary"
+              }`}
+            >
+              Analysis
             </button>
             <button
               onClick={() => onTabChange("DISCOVERY")}

@@ -9798,6 +9798,54 @@ This document records the major architectural and product decisions established.
 764. **Zero Fabrication Policy**: All filing text, section outlines, and financial statement matrices are grounded in real SEC EDGAR disclosures (e.g., Apple Form 10-K 2023/2024, Microsoft Form 10-K 2024, BLS CPI, Bloomberg FOMC rate report); synthetic opinions and fabricated metrics are prohibited.
 765. **Stage 105 Roadmap Completion**: Stage 105 concludes the Source Discovery and Document Intelligence phase of the Research module.
 
+## Stage 106: Institutional-Grade Financial Research Analysis, Hypothesis Evaluation, and Reproducible Analytical Workbenches
+
+### Canonical Research Analysis Domain & Optimistic Concurrency
+766. **Canonical Research Analysis Entity**: Engineered `ResearchAnalysis` entity with stable identifiers (`analysis_id`), user ownership (`owner_user_id`), investigation links (`investigation_id`), and optimistic concurrency versioning (`revision`).
+767. **Controlled Analysis Type Registry**: Formalized 13 institutional analysis types (`COMPANY_FINANCIAL_TREND`, `COMPANY_RATIO_ANALYSIS`, `CASH_FLOW_ANALYSIS`, `CAPITAL_STRUCTURE_ANALYSIS`, `PEER_BENCHMARKING`, `INDUSTRY_COMPARISON`, `MACROECONOMIC_TIME_SERIES`, `MULTI_INDICATOR_COMPARISON`, `HISTORICAL_MARKET_CONTEXT`, `EVENT_DISCLOSURE_COMPARISON`, `HYPOTHESIS_EVALUATION`, `DESCRIPTIVE_STATISTICAL_ANALYSIS`, `ASSUMPTION_SENSITIVITY_ANALYSIS`).
+768. **Typed Analysis Specifications**: Enforced strict validation of `ResearchAnalysisSpecification` with input metric identifiers, subjects, reporting period ranges, currency policies (`NATIVE_REPORTED`, `USD_NORMALIZED`), missing data policies (`EXCLUDE_INCOMPLETE`, `ERROR_ON_MISSING`, `FORWARD_FILL`), and data revision policies (`LATEST_AUTHORIZED_DATA`, `PINNED_SOURCE_VERSION`).
+769. **Reproducible Analysis Runs & Immutable Results**: Implemented `ResearchAnalysisRun` with input specification hashes (`sha256`), execution lifecycle states (`QUEUED`, `RUNNING`, `COMPLETED`, `FAILED`, `STALE`), execution duration tracking, and immutable result persistence.
+
+### Rigorous Financial Mathematics & Safe AST Expressions
+770. **Period-over-Period Variance & Growth**: Calculated absolute delta ($\Delta = X_t - X_{t-1}$) and percentage change ($\%\Delta = \frac{X_t - X_{t-1}}{X_{t-1}} \times 100$). Enforced zero-base guard (`null` when denominator is zero) and negative-base warnings to prevent misleading percentage growth for deficit or loss accounts.
+771. **Compound Annual Growth Rate (CAGR)**: Implemented institutional CAGR formula $\text{CAGR} = (X_{\text{end}} / X_{\text{start}})^{1/n} - 1$ strictly enforcing positive endpoint constraints ($X_{\text{start}} > 0, X_{\text{end}} > 0, n > 0$). Returns `null` with explicit mathematical qualification for non-positive baselines.
+772. **Safe AST Expression Evaluator**: Bounded formula engine (`SafeExpressionEvaluator`) rejecting `eval()`, `exec()`, arbitrary Python/SQL/shell, imports, attribute access, and nested function calls. Enforced recursion depth limit ($\le 10$) and AST node count limit ($\le 50$), with explicit zero-division guard.
+
+### Cross-SectionAL Peer Benchmarking & Non-Parametric Statistics
+773. **Verified Stage 87 Peer Group Integration**: Reused canonical peer group definitions without synthetic company fabrication.
+774. **Cross-Sectional Summary Statistics**: Implemented non-parametric median, first quartile ($Q_1$), third quartile ($Q_3$), sample mean, and standard deviation. Explicitly report eligible sample size ($N$), excluded count, and comparability warnings (such as fiscal year-end or accounting standard divergences).
+775. **No Fabricated Rankings**: Prohibited naive percentile ranks or fabricated "quality scores" for incomplete or unverified cohorts.
+
+### Deterministic Hypothesis Testing & Evidence Grounding
+776. **Deterministic Hypothesis Evaluation Engine**: Connected Stage 104 Hypotheses to empirical analysis runs via `ResearchHypothesisEvaluation`. Formulated explicit test criteria with metric concepts, relational operators (`GREATER_THAN`, `LESS_THAN_OR_EQUAL`, etc.), thresholds, and minimum required sample sizes.
+777. **Evidence Separation**: Categorized evaluated observations into explicit supporting evidence (`supporting_evidence_ids`) and contradicting evidence (`contradicting_evidence_ids`).
+778. **Qualified Outcomes Without Hyperbole**: Evaluation returns institutional states (`CRITERIA_MET`, `CRITERIA_NOT_MET`, `MIXED_RESULTS`, `INCONCLUSIVE`, `INSUFFICIENT_DATA`) rather than claiming universal scientific proof or infallible trading signals.
+
+### Epistemic Research Findings Lifecycle
+779. **Canonical Research Finding Domain**: Implemented `ResearchFinding` entities categorized into `OBSERVED_FACT`, `CALCULATED_RESULT`, `STATISTICAL_OBSERVATION`, `ANALYST_INTERPRETATION`, and `INCONCLUSIVE_RESULT`.
+780. **Auditable Review Lifecycle**: Tracked finding review progression (`DRAFT`, `NEEDS_EVIDENCE`, `READY_FOR_REVIEW`, `REVIEWED`, `REVISED`, `ARCHIVED`) with required limitation disclosures.
+781. **Stale Finding Invalidation**: Source revisions or re-runs automatically flag connected findings as potentially outdated without silently erasing historical analyst contributions.
+
+### Controlled Sensitivity Analysis & Bounded Scenarios
+782. **Analyst Assumption Management**: Formalized `ResearchAssumption` records clearly distinguishing `SOURCE_REPORTED`, `ANALYST_ASSUMED`, and `DERIVED` parameters.
+783. **Deterministic What-If Scenario Matrix**: Generated bounded sensitivity tables (e.g. baseline, alternative A, alternative B) evaluating deterministic parameter adjustments.
+784. **Mandatory Non-Predictive Disclaimers**: All scenario calculations strictly display institutional disclaimers stating that outputs are hypothetical illustrations and not forecast probabilities or investment recommendations.
+
+### Cryptographic Analytical Provenance & SEC EDGAR Manifests
+785. **Source Observation Watermark Manifest**: Every analysis run builds a comprehensive provenance manifest indexing exact SEC EDGAR Form 10-K accession numbers, reporting dates, fact IDs, and calculation formula versions.
+786. **Zero Look-Ahead Violation Protection**: Enforced as-known-at publication cutoffs to prevent future restatements or subsequent disclosure leakage into historical analysis frames.
+
+### Frontend Institutional Research Workbench
+787. **Institutional Analysis Workspace**: Built `/research` sub-tab `"ANALYSIS"` featuring Split-pane layout with searchable analysis list, type filters, and interactive master studio (`ResearchAnalysisWorkspace.tsx`, `ResearchAnalysisStudio.tsx`).
+788. **Interactive Financial Visualization**: Implemented `FinancialTrendChart` (time series bar chart with deltas and CAGR badge), `PeerBenchmarkChart` (cross-sectional horizontal bars with median reference line), and `EconomicResearchChart` (macro observation series with vintage flags).
+789. **Deep Evidence & Provenance Inspectors**: Developed `AnalysisResultsTable` with financial delta indicators and accession links, `HypothesisEvaluationPanel` with live criteria execution, `FindingsWorkspace` with epistemic badges, `ScenarioSensitivityWorkspace` with interactive assumption sliders, and `AnalysisProvenanceInspector` with cryptographic audit trails.
+
+### Security, Safety, and Scope Boundaries
+790. **Multi-Tenant User Isolation & RLS**: All analysis CRUD, runs, findings, and assumptions enforce strict user-level ownership and authorization. Cross-user data access returns 403 Forbidden.
+791. **Zero Trading / Broker Execution**: Strictly confined within analytical and epistemic boundaries. Prohibited all automated order placement, broker execution, portfolio rebalancing, or price target generation.
+792. **Zero Fabrication Policy**: Prohibited creation of synthetic financial statement values, fake peer entities, or unverified macro numbers.
+793. **Stage 106 Boundary & Continuity**: Completely delivered Stage 106. Preserved strict roadmap boundary stopping before Stage 107.
+
 
 
 

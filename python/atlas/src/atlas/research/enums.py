@@ -156,6 +156,16 @@ class ResearchActivityAction(str, Enum):
     DOCUMENT_PROCESSED = "DOCUMENT_PROCESSED"
     EVIDENCE_CANDIDATE_EXTRACTED = "EVIDENCE_CANDIDATE_EXTRACTED"
     DOCUMENTS_COMPARED = "DOCUMENTS_COMPARED"
+    ANALYSIS_CREATED = "ANALYSIS_CREATED"
+    ANALYSIS_UPDATED = "ANALYSIS_UPDATED"
+    ANALYSIS_RUN_EXECUTED = "ANALYSIS_RUN_EXECUTED"
+    ANALYSIS_DELETED = "ANALYSIS_DELETED"
+    HYPOTHESIS_EVALUATED = "HYPOTHESIS_EVALUATED"
+    FINDING_CREATED = "FINDING_CREATED"
+    FINDING_UPDATED = "FINDING_UPDATED"
+    FINDING_DELETED = "FINDING_DELETED"
+    ASSUMPTION_SAVED = "ASSUMPTION_SAVED"
+    SCENARIO_EVALUATED = "SCENARIO_EVALUATED"
 
 
 class DocumentProcessingStatus(str, Enum):
@@ -202,3 +212,101 @@ class UnitScale(str, Enum):
     BILLIONS = "BILLIONS"
     PERCENTAGE = "PERCENTAGE"
     PER_SHARE = "PER_SHARE"
+
+
+# ---------------------------------------------------------------------------
+# Stage 106 — Research Analysis, Hypothesis & Findings Enums
+# ---------------------------------------------------------------------------
+
+class ResearchAnalysisType(str, Enum):
+    """Controlled taxonomy of financial research analysis types."""
+    COMPANY_FINANCIAL_TREND = "COMPANY_FINANCIAL_TREND"
+    COMPANY_RATIO_ANALYSIS = "COMPANY_RATIO_ANALYSIS"
+    CASH_FLOW_ANALYSIS = "CASH_FLOW_ANALYSIS"
+    CAPITAL_STRUCTURE_ANALYSIS = "CAPITAL_STRUCTURE_ANALYSIS"
+    PEER_BENCHMARKING = "PEER_BENCHMARKING"
+    INDUSTRY_COMPARISON = "INDUSTRY_COMPARISON"
+    MACROECONOMIC_TIME_SERIES = "MACROECONOMIC_TIME_SERIES"
+    MULTI_INDICATOR_COMPARISON = "MULTI_INDICATOR_COMPARISON"
+    HISTORICAL_MARKET_CONTEXT = "HISTORICAL_MARKET_CONTEXT"
+    EVENT_DISCLOSURE_COMPARISON = "EVENT_DISCLOSURE_COMPARISON"
+    HYPOTHESIS_EVALUATION = "HYPOTHESIS_EVALUATION"
+    DESCRIPTIVE_STATISTICAL_ANALYSIS = "DESCRIPTIVE_STATISTICAL_ANALYSIS"
+    ASSUMPTION_SENSITIVITY_ANALYSIS = "ASSUMPTION_SENSITIVITY_ANALYSIS"
+
+
+class AnalysisExecutionStatus(str, Enum):
+    """Lifecycle and execution state of a research analysis or run."""
+    DRAFT = "DRAFT"
+    CONFIGURED = "CONFIGURED"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    OUTDATED = "OUTDATED"
+    ARCHIVED = "ARCHIVED"
+
+
+class AnalysisInputPolicy(str, Enum):
+    """Policy for input data versioning and reproduction."""
+    PINNED_SOURCE_VERSION = "PINNED_SOURCE_VERSION"
+    LATEST_AUTHORIZED_DATA = "LATEST_AUTHORIZED_DATA"
+
+
+class AnalysisFrequency(str, Enum):
+    """Reporting and observation frequency for analytical time series."""
+    ANNUAL = "ANNUAL"
+    QUARTERLY = "QUARTERLY"
+    TTM = "TTM"
+    MONTHLY = "MONTHLY"
+    DAILY = "DAILY"
+
+
+class HypothesisEvaluationOutcome(str, Enum):
+    """Outcomes for evidence-based hypothesis testing without fabricated proof."""
+    CRITERIA_MET = "CRITERIA_MET"
+    CRITERIA_NOT_MET = "CRITERIA_NOT_MET"
+    MIXED_RESULTS = "MIXED_RESULTS"
+    INCONCLUSIVE = "INCONCLUSIVE"
+    INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
+    INVALID_TEST = "INVALID_TEST"
+
+
+class ResearchFindingType(str, Enum):
+    """Explicit taxonomy distinguishing facts, calculations, and interpretations."""
+    OBSERVED_FACT = "OBSERVED_FACT"
+    CALCULATED_RESULT = "CALCULATED_RESULT"
+    STATISTICAL_OBSERVATION = "STATISTICAL_OBSERVATION"
+    ANALYST_INTERPRETATION = "ANALYST_INTERPRETATION"
+    INCONCLUSIVE_RESULT = "INCONCLUSIVE_RESULT"
+
+
+class ResearchFindingReviewStatus(str, Enum):
+    """Peer and institutional review states for research findings."""
+    DRAFT = "DRAFT"
+    NEEDS_EVIDENCE = "NEEDS_EVIDENCE"
+    READY_FOR_REVIEW = "READY_FOR_REVIEW"
+    REVIEWED = "REVIEWED"
+    REVISED = "REVISED"
+    ARCHIVED = "ARCHIVED"
+
+
+class AssumptionSourceType(str, Enum):
+    """Provenance classification of analytical assumptions."""
+    SOURCE_REPORTED = "SOURCE_REPORTED"
+    ANALYST_ASSUMED = "ANALYST_ASSUMED"
+    DERIVED = "DERIVED"
+
+
+class ScenarioType(str, Enum):
+    """Controlled scenario category for deterministic what-if sensitivity analysis."""
+    BASE_ASSUMPTION = "BASE_ASSUMPTION"
+    ALTERNATIVE_A = "ALTERNATIVE_A"
+    ALTERNATIVE_B = "ALTERNATIVE_B"
+
+
+class OutlierHandlingPolicy(str, Enum):
+    """Explicit policy for handling statistical outliers."""
+    INCLUDE_ALL = "INCLUDE_ALL"
+    EXCLUDE_OUTLIERS = "EXCLUDE_OUTLIERS"
+    WINSORIZE = "WINSORIZE"
+

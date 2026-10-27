@@ -5,21 +5,31 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from atlas.research.enums import (
+    AnalysisExecutionStatus,
+    AnalysisFrequency,
+    AnalysisInputPolicy,
+    AssumptionSourceType,
     ClaimEvidenceRelationship,
     DocumentComparisonMode,
     DocumentFormat,
     DocumentProcessingStatus,
     EvidenceLocationType,
+    HypothesisEvaluationOutcome,
     InvestigationLifecycleStatus,
+    OutlierHandlingPolicy,
     ResearchActivityAction,
+    ResearchAnalysisType,
     ResearchClaimCategory,
     ResearchEvidenceStatus,
+    ResearchFindingReviewStatus,
+    ResearchFindingType,
     ResearchHypothesisStatus,
     ResearchNoteStatus,
     ResearchNoteType,
     ResearchQuestionStatus,
     ResearchSourceType,
     ResearchType,
+    ScenarioType,
     SourceAvailabilityStatus,
     UnitScale,
 )
@@ -381,3 +391,223 @@ class DocumentComparisonResult:
     right_period: Optional[str] = None
     comparison_mode: DocumentComparisonMode = DocumentComparisonMode.FULL_TEXT
     compatibility_warnings: List[str] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Stage 106 — Research Analysis, Execution Runs, Findings & Hypothesis Domain
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AnalyticalObservationRow:
+    """A single source-grounded or calculated observation in an analytical time series or cross-section."""
+    period_or_subject: str
+    primary_value: Optional[float]
+    unit: str
+    formatted_value: str
+    period_change_absolute: Optional[float] = None
+    period_change_percentage: Optional[float] = None
+    source_reference_id: Optional[str] = None
+    source_accession: Optional[str] = None
+    source_vintage: Optional[str] = None
+    is_restated: bool = False
+    is_missing: bool = False
+    availability_status: str = "AVAILABLE"
+    derived_formula_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@dataclass
+class AnalyticalSummaryStatistics:
+    """Descriptive statistics computed over genuine eligible observations."""
+    sample_size_n: int
+    excluded_count: int
+    mean: Optional[float] = None
+    median: Optional[float] = None
+    minimum: Optional[float] = None
+    maximum: Optional[float] = None
+    standard_deviation: Optional[float] = None
+    q1_percentile: Optional[float] = None
+    q3_percentile: Optional[float] = None
+    cagr_percentage: Optional[float] = None
+    pearson_correlation: Optional[float] = None
+    methodology_notes: List[str] = field(default_factory=list)
+
+
+@dataclass
+class ResearchAnalysisSpecification:
+    """Typed analysis specification defining inputs, metrics, time periods, and methodology."""
+    analysis_type: ResearchAnalysisType
+    primary_entity_id: str
+    secondary_entity_ids: List[str] = field(default_factory=list)
+    metric_ids: List[str] = field(default_factory=list)
+    time_range_start: Optional[str] = None
+    time_range_end: Optional[str] = None
+    frequency: AnalysisFrequency = AnalysisFrequency.ANNUAL
+    input_version_policy: AnalysisInputPolicy = AnalysisInputPolicy.PINNED_SOURCE_VERSION
+    outlier_policy: OutlierHandlingPolicy = OutlierHandlingPolicy.INCLUDE_ALL
+    currency: Optional[str] = None
+    as_known_at_cutoff: Optional[datetime.datetime] = None
+    parameters: Dict[str, Any] = field(default_factory=dict)
+    methodology_version: int = 1
+
+
+@dataclass
+class ResearchAnalysis:
+    """Canonical institutional research analysis container."""
+    analysis_id: str
+    investigation_id: Optional[str]
+    owner_user_id: str
+    title: str
+    description: Optional[str]
+    analysis_type: ResearchAnalysisType
+    research_objective: Optional[str]
+    primary_subject_entity_id: str
+    primary_subject_type: str  # COMPANY, FINANCIAL_INSTRUMENT, INDUSTRY, ECONOMIC_ENTITY, FINANCIAL_EVENT
+    secondary_entity_ids: List[str]
+    specification: ResearchAnalysisSpecification
+    status: AnalysisExecutionStatus
+    current_revision: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    archived_at: Optional[datetime.datetime] = None
+    linked_question_ids: List[str] = field(default_factory=list)
+    linked_hypothesis_ids: List[str] = field(default_factory=list)
+    latest_run_id: Optional[str] = None
+    provenance: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ResearchAnalysisRun:
+    """Point-in-time immutable record of an executed research analysis."""
+    run_id: str
+    analysis_id: str
+    analysis_revision: int
+    owner_user_id: str
+    input_specification_hash: str
+    methodology_version: int
+    source_data_manifest: List[Dict[str, Any]]  # List of exact facts, filings, dates, vintages
+    source_revision_watermarks: Dict[str, str]
+    started_at: datetime.datetime
+    completed_at: Optional[datetime.datetime]
+    execution_status: AnalysisExecutionStatus
+    observations_count: int
+    warnings: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
+    compute_metadata: Dict[str, Any] = field(default_factory=dict)
+    provenance: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ResearchAnalysisResult:
+    """Complete analytical results payload with observations, charts, and summary statistics."""
+    analysis_id: str
+    run_id: str
+    analysis_type: ResearchAnalysisType
+    execution_status: AnalysisExecutionStatus
+    methodology_version: int
+    primary_subject_id: str
+    metric_id: str
+    unit: str
+    observations: List[AnalyticalObservationRow]
+    summary_statistics: AnalyticalSummaryStatistics
+    chart_series: List[Dict[str, Any]]
+    missingness_report: Dict[str, Any]
+    comparability_warnings: List[str]
+    source_data_manifest: List[Dict[str, Any]]
+    executed_at: datetime.datetime
+    as_known_at_cutoff: Optional[str] = None
+    non_causal_qualification: str = "Observed historical correlation or trends do not establish deterministic economic causality or investment outcomes."
+
+
+@dataclass
+class HypothesisTestCriteria:
+    """Explicit deterministic evaluation criteria for testing a hypothesis."""
+    metric_id: str
+    operator: str  # GTE, LTE, GT, LT, EQ, CONSISTENT_EXPANSION
+    threshold_value: Optional[float] = None
+    comparison_target: Optional[str] = None  # PEER_MEDIAN, PREVIOUS_PERIOD, HISTORICAL_MEAN
+    required_periods_count: Optional[int] = None
+    allow_missing: bool = False
+
+
+@dataclass
+class ResearchHypothesisEvaluation:
+    """Evidence-based hypothesis evaluation record without fabricated conclusions."""
+    evaluation_id: str
+    hypothesis_id: str
+    analysis_run_id: str
+    author_user_id: str
+    criteria: HypothesisTestCriteria
+    eligible_universe: List[str]
+    observation_count: int
+    result_status: HypothesisEvaluationOutcome
+    supporting_evidence_ids: List[str]
+    contradicting_evidence_ids: List[str]
+    evaluation_summary: str
+    methodology_limitations: List[str]
+    analyst_review_state: str  # PENDING_REVIEW, ACCEPTED_BY_ANALYST, REJECTED_BY_ANALYST
+    created_at: datetime.datetime
+
+
+@dataclass
+class ResearchFinding:
+    """Canonical research finding linking an analytical run to evidence and interpretations."""
+    finding_id: str
+    investigation_id: Optional[str]
+    analysis_id: str
+    analysis_run_id: str
+    author_user_id: str
+    finding_type: ResearchFindingType
+    statement: str
+    methodology_description: str
+    supporting_evidence_ids: List[str]
+    contradicting_evidence_ids: List[str]
+    calculated_result_references: Dict[str, Any]
+    limitations: List[str]
+    review_status: ResearchFindingReviewStatus
+    revision: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    is_source_outdated: bool = False
+    source_outdated_reason: Optional[str] = None
+
+
+@dataclass
+class ResearchAnalysisAssumption:
+    """Analyst-defined parameter assumption for sensitivity testing."""
+    assumption_id: str
+    analysis_id: str
+    label: str
+    parameter_id: str
+    value: float
+    unit: str
+    source_type: AssumptionSourceType
+    source_reference_id: Optional[str]
+    analyst_note: Optional[str]
+    created_at: datetime.datetime
+
+
+@dataclass
+class ResearchScenario:
+    """Deterministic what-if scenario parameter set for sensitivity analysis."""
+    scenario_id: str
+    analysis_id: str
+    name: str
+    scenario_type: ScenarioType
+    parameter_values: Dict[str, float]
+    calculated_outputs: Dict[str, float]
+    created_at: datetime.datetime
+    is_non_predictive_illustrative: bool = True
+
+
+@dataclass
+class ResearchAnalysisTypeDefinition:
+    """Taxonomic metadata definition for supported analysis types."""
+    type_id: ResearchAnalysisType
+    label: str
+    description: str
+    supported_subject_types: List[str]
+    supported_frequencies: List[AnalysisFrequency]
+    supported_metric_categories: List[str]
+    is_active: bool = True
+    methodology_version: int = 1

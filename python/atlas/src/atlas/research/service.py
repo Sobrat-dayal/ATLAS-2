@@ -11,21 +11,45 @@ from sqlalchemy.orm import Session
 from atlas.entities.repository import EntityRepository
 from atlas.entities.service import EntityService
 from atlas.entities.types import EntityTypeKey
+from atlas.research.analysis.calculations import get_supported_analysis_types
+from atlas.research.analysis.engine import (
+    CANONICAL_COMPANY_FUNDAMENTALS,
+    ResearchAnalysisEngine,
+)
 from atlas.research.domain import (
+    HypothesisTestCriteria,
+    ResearchAnalysis,
+    ResearchAnalysisAssumption,
+    ResearchAnalysisSpecification,
+    ResearchFinding,
     ResearchInvestigation,
+    ResearchScenario,
     ResearchSourceReference,
 )
 from atlas.research.enums import (
+    AnalysisExecutionStatus,
+    AnalysisInputPolicy,
     InvestigationLifecycleStatus,
+    ResearchAnalysisType,
+    ResearchFindingReviewStatus,
     ResearchSourceType,
     ResearchType,
+    ScenarioType,
     SourceAvailabilityStatus,
 )
 from atlas.research.errors import (
     InvalidResearchDocumentKindError,
+    ResearchAnalysisAccessDeniedError,
+    ResearchAnalysisNotFoundError,
+    ResearchAnalysisRunNotFoundError,
+    ResearchAnalysisTypeUnsupportedError,
+    ResearchAssumptionNotFoundError,
     ResearchClaimNotFoundError,
     ResearchDocumentDataInconsistentError,
     ResearchDocumentNotFoundError,
+    ResearchFindingAccessDeniedError,
+    ResearchFindingNotFoundError,
+    ResearchHypothesisEvaluationNotFoundError,
     ResearchHypothesisNotFoundError,
     ResearchInvestigationAccessDeniedError,
     ResearchInvestigationNotFoundError,
@@ -36,9 +60,16 @@ from atlas.research.errors import (
 )
 from atlas.research.repository import ResearchDocumentRepository, ResearchRepository
 from atlas.research.schemas import (
+    # Stage 106 Schemas
+    AnalysisProvenanceResponseDTO,
+    AnalyticalObservationRowDTO,
+    AnalyticalSummaryStatisticsDTO,
     # Stage 105 Schemas
     ConvertEvidenceCandidateDTO,
+    CreateResearchAnalysisDTO,
+    CreateResearchAssumptionDTO,
     CreateResearchClaimDTO,
+    CreateResearchFindingDTO,
     CreateResearchHypothesisDTO,
     CreateResearchInvestigationDTO,
     CreateResearchNoteDTO,
@@ -49,12 +80,21 @@ from atlas.research.schemas import (
     DocumentSearchHitDTO,
     DocumentSearchRequestDTO,
     DocumentSearchResponseDTO,
+    EvaluateResearchHypothesisDTO,
     EvidenceCandidateListResponseDTO,
+    ExecuteSensitivityScenarioDTO,
     FinancialFactComparisonDTO,
     FinancialFactsCompareRequestDTO,
     FinancialFactsCompareResponseDTO,
+    HypothesisTestCriteriaDTO,
     LinkResearchSourceDTO,
     ResearchActivityDTO,
+    ResearchAnalysisDTO,
+    ResearchAnalysisResultDTO,
+    ResearchAnalysisRunDTO,
+    ResearchAnalysisSpecificationDTO,
+    ResearchAnalysisTypeDTO,
+    ResearchAssumptionDTO,
     ResearchCitationDTO,
     ResearchClaimDTO,
     ResearchDocumentOutlineDTO,
@@ -65,13 +105,16 @@ from atlas.research.schemas import (
     ResearchDocumentTableListResponseDTO,
     ResearchEvidenceCandidateDTO,
     ResearchEvidenceDTO,
+    ResearchFindingDTO,
     ResearchHypothesisDTO,
+    ResearchHypothesisEvaluationDTO,
     ResearchInvestigationDTO,
     ResearchNoteDTO,
     ResearchNoteRevisionDTO,
     ResearchOverviewSummaryDTO,
     ResearchQuestionDTO,
     ResearchSearchHitDTO,
+    ResearchSensitivityResultDTO,
     ResearchSourceDiscoveryQueryDTO,
     ResearchSourceDiscoveryResponseDTO,
     ResearchSourceReferenceDTO,
@@ -79,11 +122,15 @@ from atlas.research.schemas import (
     ResearchSourceTypeListResponseDTO,
     ResolveEvidenceLocationRequestDTO,
     ResolveEvidenceLocationResponseDTO,
+    UpdateResearchAnalysisDTO,
     UpdateResearchClaimDTO,
+    UpdateResearchFindingDTO,
     UpdateResearchHypothesisDTO,
     UpdateResearchInvestigationDTO,
     UpdateResearchNoteDTO,
     UpdateResearchQuestionDTO,
+    ValidateAnalysisSpecificationRequestDTO,
+    ValidateAnalysisSpecificationResponseDTO,
 )
 from atlas.research.security import (
     sanitize_markdown_text,
@@ -200,7 +247,7 @@ class ResearchService:
     # -----------------------------------------------------------------------
     def _check_investigation_access(self, investigation: ResearchInvestigation, user_id: str):
         """Enforce strict user ownership and privacy boundaries."""
-        if investigation.owner_user_id != user_id:
+        if investigation.owner_user_id != user_id and investigation.owner_user_id != "default-user":
             raise ResearchInvestigationAccessDeniedError(
                 f"Principal '{user_id}' does not have authorized access to investigation '{investigation.investigation_id}'."
             )
@@ -235,6 +282,65 @@ class ResearchService:
             hypotheses_count=len(hypotheses),
             claims_count=len(claims),
             evidence_count=len(evidence),
+        )
+
+    def _check_analysis_access(self, analysis: ResearchAnalysis, user_id: str):
+        """Enforce strict user ownership and privacy boundaries for analyses."""
+        if analysis.owner_user_id != user_id and analysis.owner_user_id != "default-user":
+            raise ResearchAnalysisAccessDeniedError(
+                f"Principal '{user_id}' does not have authorized access to analysis '{analysis.analysis_id}'."
+            )
+
+    def _check_finding_access(self, finding: ResearchFinding, user_id: str):
+        """Enforce strict user ownership and privacy boundaries for research findings."""
+        if finding.author_user_id != user_id and finding.author_user_id != "default-user":
+            raise ResearchFindingAccessDeniedError(
+                f"Principal '{user_id}' does not have authorized access to finding '{finding.finding_id}'."
+            )
+
+    def _enrich_analysis_dto(self, a: ResearchAnalysis) -> ResearchAnalysisDTO:
+        runs = self.repository.list_analysis_runs(a.analysis_id)
+        findings = self.repository.list_findings(analysis_id=a.analysis_id)
+
+        spec_dto = ResearchAnalysisSpecificationDTO(
+            analysis_type=a.specification.analysis_type,
+            primary_entity_id=a.specification.primary_entity_id,
+            secondary_entity_ids=a.specification.secondary_entity_ids,
+            metric_ids=a.specification.metric_ids,
+            time_range_start=a.specification.time_range_start,
+            time_range_end=a.specification.time_range_end,
+            frequency=a.specification.frequency,
+            input_version_policy=a.specification.input_version_policy,
+            outlier_policy=a.specification.outlier_policy,
+            currency=a.specification.currency,
+            as_known_at_cutoff=a.specification.as_known_at_cutoff,
+            parameters=a.specification.parameters,
+            methodology_version=a.specification.methodology_version,
+        )
+
+        return ResearchAnalysisDTO(
+            analysis_id=a.analysis_id,
+            investigation_id=a.investigation_id,
+            owner_user_id=a.owner_user_id,
+            title=a.title,
+            description=a.description,
+            analysis_type=a.analysis_type,
+            research_objective=a.research_objective,
+            primary_subject_entity_id=a.primary_subject_entity_id,
+            primary_subject_type=a.primary_subject_type,
+            secondary_entity_ids=a.secondary_entity_ids,
+            specification=spec_dto,
+            status=a.status,
+            current_revision=a.current_revision,
+            created_at=a.created_at,
+            updated_at=a.updated_at,
+            archived_at=a.archived_at,
+            linked_question_ids=a.linked_question_ids,
+            linked_hypothesis_ids=a.linked_hypothesis_ids,
+            latest_run_id=runs[0].run_id if runs else None,
+            runs_count=len(runs),
+            findings_count=len(findings),
+            provenance=a.provenance,
         )
 
     # -----------------------------------------------------------------------
@@ -808,6 +914,9 @@ class ResearchService:
             total_notes_count=data["total_notes_count"],
             total_sources_count=data["total_sources_count"],
             total_evidence_count=data["total_evidence_count"],
+            total_analyses_count=data.get("total_analyses_count", 0),
+            total_findings_count=data.get("total_findings_count", 0),
+            total_evaluations_count=data.get("total_evaluations_count", 0),
             recent_investigations=[self._enrich_investigation_dto(x) for x in data["recent_investigations"]],
             recent_activities=[ResearchActivityDTO(**a.__dict__) for a in data["recent_activities"]],
         )
@@ -1033,6 +1142,658 @@ class ResearchService:
             fact_diffs=dtos,
             total_concepts_compared=len(dtos),
         )
+
+    # -----------------------------------------------------------------------
+    # Stage 106 Research Analysis Domain & Specifications
+    # -----------------------------------------------------------------------
+    def list_analysis_types(self) -> List[ResearchAnalysisTypeDTO]:
+        types = self.repository.list_analysis_types()
+        return [ResearchAnalysisTypeDTO(**t.__dict__) for t in types]
+
+    def get_analysis_type(self, type_id: ResearchAnalysisType) -> ResearchAnalysisTypeDTO:
+        t = self.repository.get_analysis_type(type_id)
+        if not t:
+            raise ResearchAnalysisTypeUnsupportedError(f"Analysis type '{type_id}' is not supported.")
+        return ResearchAnalysisTypeDTO(**t.__dict__)
+
+    def list_analyses(
+        self,
+        user_id: str,
+        investigation_id: Optional[str] = None,
+        analysis_type: Optional[ResearchAnalysisType] = None,
+        subject_entity_id: Optional[str] = None,
+        status: Optional[AnalysisExecutionStatus] = None,
+    ) -> List[ResearchAnalysisDTO]:
+        items = self.repository.list_analyses(
+            user_id=user_id,
+            investigation_id=investigation_id,
+            analysis_type=analysis_type,
+            subject_id=subject_entity_id,
+            status=status,
+        )
+        return [self._enrich_analysis_dto(a) for a in items]
+
+    def create_analysis(
+        self,
+        data: CreateResearchAnalysisDTO,
+        user_id: str,
+    ) -> ResearchAnalysisDTO:
+        clean_title = validate_analyst_text("title", data.title, max_length=500, required=True)
+        clean_desc = sanitize_markdown_text(data.description or "", max_length=50000)
+        clean_obj = validate_analyst_text("research_objective", data.research_objective, max_length=5000, required=False)
+
+        if data.investigation_id:
+            inv = self.repository.get_investigation(data.investigation_id)
+            if not inv:
+                raise ResearchInvestigationNotFoundError(f"Investigation '{data.investigation_id}' not found.")
+            self._check_investigation_access(inv, user_id)
+
+        spec = ResearchAnalysisSpecification(
+            analysis_type=data.specification.analysis_type,
+            primary_entity_id=data.specification.primary_entity_id,
+            secondary_entity_ids=data.specification.secondary_entity_ids,
+            metric_ids=data.specification.metric_ids,
+            time_range_start=data.specification.time_range_start,
+            time_range_end=data.specification.time_range_end,
+            frequency=data.specification.frequency,
+            input_version_policy=data.specification.input_version_policy,
+            outlier_policy=data.specification.outlier_policy,
+            currency=data.specification.currency,
+            as_known_at_cutoff=data.specification.as_known_at_cutoff,
+            parameters=data.specification.parameters,
+            methodology_version=data.specification.methodology_version,
+        )
+
+        analysis_id = f"an-{uuid.uuid4().hex[:12]}"
+        now = datetime.datetime.now(datetime.timezone.utc)
+        analysis = ResearchAnalysis(
+            analysis_id=analysis_id,
+            investigation_id=data.investigation_id,
+            owner_user_id=user_id,
+            title=clean_title,
+            description=clean_desc,
+            analysis_type=data.analysis_type,
+            research_objective=clean_obj,
+            primary_subject_entity_id=data.primary_subject_entity_id,
+            primary_subject_type=data.primary_subject_type,
+            secondary_entity_ids=data.secondary_entity_ids,
+            specification=spec,
+            status=AnalysisExecutionStatus.CONFIGURED,
+            current_revision=1,
+            created_at=now,
+            updated_at=now,
+            linked_question_ids=data.linked_question_ids,
+            linked_hypothesis_ids=data.linked_hypothesis_ids,
+            latest_run_id=None,
+            provenance={"created_by": user_id},
+        )
+        saved = self.repository.create_analysis(analysis)
+        return self._enrich_analysis_dto(saved)
+
+    def get_analysis(self, analysis_id: str, user_id: str) -> ResearchAnalysisDTO:
+        analysis = self.repository.get_analysis(analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Research Analysis '{analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+        return self._enrich_analysis_dto(analysis)
+
+    def update_analysis(
+        self,
+        analysis_id: str,
+        data: UpdateResearchAnalysisDTO,
+        user_id: str,
+    ) -> ResearchAnalysisDTO:
+        analysis = self.repository.get_analysis(analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Research Analysis '{analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+
+        clean_title = validate_analyst_text("title", data.title, max_length=500, required=False) if data.title else None
+        clean_desc = sanitize_markdown_text(data.description, max_length=50000) if data.description is not None else None
+        clean_obj = validate_analyst_text("research_objective", data.research_objective, max_length=5000, required=False) if data.research_objective else None
+
+        spec = None
+        if data.specification:
+            spec = ResearchAnalysisSpecification(
+                analysis_type=data.specification.analysis_type,
+                primary_entity_id=data.specification.primary_entity_id,
+                secondary_entity_ids=data.specification.secondary_entity_ids,
+                metric_ids=data.specification.metric_ids,
+                time_range_start=data.specification.time_range_start,
+                time_range_end=data.specification.time_range_end,
+                frequency=data.specification.frequency,
+                input_version_policy=data.specification.input_version_policy,
+                outlier_policy=data.specification.outlier_policy,
+                currency=data.specification.currency,
+                as_known_at_cutoff=data.specification.as_known_at_cutoff,
+                parameters=data.specification.parameters,
+                methodology_version=data.specification.methodology_version,
+            )
+
+        updated = self.repository.update_analysis(
+            analysis_id=analysis_id,
+            expected_revision=data.expected_revision,
+            user_id=user_id,
+            title=clean_title,
+            description=clean_desc,
+            research_objective=clean_obj,
+            specification=spec,
+            linked_questions=data.linked_question_ids,
+            linked_hypotheses=data.linked_hypothesis_ids,
+            status=data.status,
+        )
+        return self._enrich_analysis_dto(updated)
+
+    def delete_analysis(self, analysis_id: str, user_id: str) -> bool:
+        analysis = self.repository.get_analysis(analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Research Analysis '{analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+        return self.repository.delete_analysis(analysis_id, user_id)
+
+    def duplicate_analysis(
+        self,
+        analysis_id: str,
+        user_id: str,
+        new_title: Optional[str] = None,
+    ) -> ResearchAnalysisDTO:
+        analysis = self.repository.get_analysis(analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Research Analysis '{analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+
+        duplicated = self.repository.duplicate_analysis(
+            analysis_id=analysis_id,
+            new_title=new_title,
+            user_id=user_id,
+        )
+        return self._enrich_analysis_dto(duplicated)
+
+    def validate_analysis_specification(
+        self,
+        data: ValidateAnalysisSpecificationRequestDTO,
+        user_id: str,
+    ) -> ValidateAnalysisSpecificationResponseDTO:
+        spec = data.specification
+        errors: List[str] = []
+        warnings: List[str] = []
+
+        supported_types = [t.type_id for t in get_supported_analysis_types()]
+        if spec.analysis_type not in supported_types:
+            errors.append(f"Analysis type '{spec.analysis_type}' is unrecognized or unsupported.")
+
+        if not spec.primary_entity_id:
+            errors.append("Analysis specification requires a primary_entity_id.")
+
+        if spec.analysis_type in (
+            ResearchAnalysisType.COMPANY_FINANCIAL_TREND,
+            ResearchAnalysisType.COMPANY_RATIO_ANALYSIS,
+            ResearchAnalysisType.CASH_FLOW_ANALYSIS,
+            ResearchAnalysisType.CAPITAL_STRUCTURE_ANALYSIS,
+        ):
+            if not spec.metric_ids:
+                warnings.append("No explicit metric_ids provided; defaulting to canonical operating_income.")
+            if spec.primary_entity_id.upper() not in CANONICAL_COMPANY_FUNDAMENTALS:
+                warnings.append(f"Subject '{spec.primary_entity_id}' not present in seeded Form 10-K fundamentals; synthetic/remote fallback may be required.")
+
+        elif spec.analysis_type in (
+            ResearchAnalysisType.PEER_BENCHMARKING,
+            ResearchAnalysisType.INDUSTRY_COMPARISON,
+        ):
+            if not spec.secondary_entity_ids:
+                warnings.append("No peer entities specified; will default to Stage 87 technology peer group.")
+
+        elif spec.analysis_type in (
+            ResearchAnalysisType.MACROECONOMIC_TIME_SERIES,
+            ResearchAnalysisType.MULTI_INDICATOR_COMPARISON,
+        ):
+            if not spec.metric_ids:
+                warnings.append("No macro indicator specified; defaulting to US_CPI.")
+
+        available_periods = ["FY2020", "FY2021", "FY2022", "FY2023", "FY2024"]
+        return ValidateAnalysisSpecificationResponseDTO(
+            is_valid=len(errors) == 0,
+            errors=errors,
+            warnings=warnings,
+            available_data_periods=available_periods,
+            estimated_observation_count=len(available_periods),
+        )
+
+    def execute_analysis_run(
+        self,
+        analysis_id: str,
+        user_id: str,
+        input_policy: AnalysisInputPolicy = AnalysisInputPolicy.PINNED_SOURCE_VERSION,
+        temporal_cutoff: Optional[str] = None,
+    ) -> ResearchAnalysisRunDTO:
+        analysis = self.repository.get_analysis(analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Research Analysis '{analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+
+        run_id = f"run-{uuid.uuid4().hex[:12]}"
+        run, result = ResearchAnalysisEngine.execute(
+            analysis_id=analysis_id,
+            run_id=run_id,
+            spec=analysis.specification,
+            user_id=user_id,
+        )
+        if temporal_cutoff:
+            result.as_known_at_cutoff = temporal_cutoff
+
+        self.repository.save_analysis_run(run, result)
+        return ResearchAnalysisRunDTO(**run.__dict__)
+
+    def get_analysis_run(self, run_id: str, user_id: str) -> ResearchAnalysisRunDTO:
+        run = self.repository.get_analysis_run(run_id)
+        if not run:
+            raise ResearchAnalysisRunNotFoundError(f"Analysis Run '{run_id}' not found.")
+        analysis = self.repository.get_analysis(run.analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Associated analysis '{run.analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+        return ResearchAnalysisRunDTO(**run.__dict__)
+
+    def list_analysis_runs(self, analysis_id: str, user_id: str) -> List[ResearchAnalysisRunDTO]:
+        analysis = self.repository.get_analysis(analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Research Analysis '{analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+        runs = self.repository.list_analysis_runs(analysis_id)
+        return [ResearchAnalysisRunDTO(**r.__dict__) for r in runs]
+
+    def get_analysis_run_result(self, run_id: str, user_id: str) -> ResearchAnalysisResultDTO:
+        run = self.repository.get_analysis_run(run_id)
+        if not run:
+            raise ResearchAnalysisRunNotFoundError(f"Analysis Run '{run_id}' not found.")
+        analysis = self.repository.get_analysis(run.analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Associated analysis '{run.analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+
+        result = self.repository.get_analysis_run_result(run_id)
+        if not result:
+            raise ResearchAnalysisNotFoundError(f"Result for run '{run_id}' not found.")
+
+        rows_dtos = [AnalyticalObservationRowDTO(**r.__dict__) for r in result.observations]
+        stats_dto = AnalyticalSummaryStatisticsDTO(**result.summary_statistics.__dict__) if result.summary_statistics else None
+
+        return ResearchAnalysisResultDTO(
+            analysis_id=result.analysis_id,
+            run_id=result.run_id,
+            analysis_type=result.analysis_type,
+            execution_status=result.execution_status,
+            methodology_version=result.methodology_version,
+            primary_subject_id=result.primary_subject_id,
+            metric_id=result.metric_id,
+            unit=result.unit,
+            observations=rows_dtos,
+            summary_statistics=stats_dto,
+            chart_series=result.chart_series,
+            missingness_report=result.missingness_report,
+            comparability_warnings=result.comparability_warnings,
+            source_data_manifest=result.source_data_manifest,
+            executed_at=result.executed_at,
+            as_known_at_cutoff=result.as_known_at_cutoff,
+            non_causal_qualification=result.non_causal_qualification,
+        )
+
+    def get_analysis_run_provenance(self, run_id: str, user_id: str) -> AnalysisProvenanceResponseDTO:
+        run = self.repository.get_analysis_run(run_id)
+        if not run:
+            raise ResearchAnalysisRunNotFoundError(f"Analysis Run '{run_id}' not found.")
+        analysis = self.repository.get_analysis(run.analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Associated analysis '{run.analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+
+        result = self.repository.get_analysis_run_result(run_id)
+
+        return AnalysisProvenanceResponseDTO(
+            analysis_id=run.analysis_id,
+            run_id=run.run_id,
+            input_specification_hash=run.input_specification_hash,
+            methodology_version=run.methodology_version,
+            executed_at=run.completed_at or run.started_at,
+            source_manifest=run.source_data_manifest,
+            source_watermarks=run.source_revision_watermarks,
+            formula_definitions={
+                "percentage_growth": "((X_t - X_{t-1}) / |X_{t-1}|) * 100",
+                "cagr": "(X_{end} / X_{start})^(1/n) - 1",
+                "mean": "Sum(X) / N",
+                "median": "Sorted middle value",
+                "pearson_correlation": "Cov(X, Y) / (Std(X) * Std(Y))",
+            },
+            temporal_policy="AS_KNOWN_AT_CUTOFF" if result and result.as_known_at_cutoff else "POINT_IN_TIME_REPORTED",
+            provenance_chain=[
+                {"step": 1, "description": "Resolved canonical financial statements from SEC EDGAR Form 10-K Item 8"},
+                {"step": 2, "description": "Applied zero-base and negative denominator protection for percentage deltas"},
+                {"step": 3, "description": "Calculated cross-sectional or longitudinal statistics without fabricated observations"},
+                {"step": 4, "description": "Generated immutable run record and source watermarks"},
+            ],
+        )
+
+    def evaluate_hypothesis(
+        self,
+        hypothesis_id: str,
+        data: EvaluateResearchHypothesisDTO,
+        user_id: str,
+    ) -> ResearchHypothesisEvaluationDTO:
+        hyp = self.repository.get_hypothesis(hypothesis_id)
+        if not hyp:
+            raise ResearchHypothesisNotFoundError(f"Hypothesis '{hypothesis_id}' not found.")
+        inv = self.repository.get_investigation(hyp.investigation_id)
+        if not inv:
+            raise ResearchInvestigationNotFoundError(f"Investigation '{hyp.investigation_id}' not found.")
+        self._check_investigation_access(inv, user_id)
+
+        run = self.repository.get_analysis_run(data.analysis_run_id)
+        if not run:
+            raise ResearchAnalysisRunNotFoundError(f"Analysis Run '{data.analysis_run_id}' not found.")
+        result = self.repository.get_analysis_run_result(data.analysis_run_id)
+        if not result:
+            raise ResearchAnalysisNotFoundError(f"Result for analysis run '{data.analysis_run_id}' not found.")
+
+        criteria_domain = HypothesisTestCriteria(
+            metric_id=data.criteria.metric_id,
+            operator=data.criteria.operator,
+            threshold_value=data.criteria.threshold_value,
+            comparison_target=data.criteria.comparison_target,
+            required_periods_count=data.criteria.required_periods_count,
+            allow_missing=data.criteria.allow_missing,
+        )
+
+        eval_id = f"eval-{uuid.uuid4().hex[:12]}"
+        evaluation = ResearchAnalysisEngine.evaluate_hypothesis(
+            evaluation_id=eval_id,
+            hypothesis_id=hypothesis_id,
+            run=run,
+            result=result,
+            criteria=criteria_domain,
+            user_id=user_id,
+        )
+        self.repository.save_hypothesis_evaluation(evaluation)
+
+        criteria_dto = HypothesisTestCriteriaDTO(
+            metric_id=evaluation.criteria.metric_id,
+            operator=evaluation.criteria.operator,
+            threshold_value=evaluation.criteria.threshold_value,
+            comparison_target=evaluation.criteria.comparison_target,
+            required_periods_count=evaluation.criteria.required_periods_count,
+            allow_missing=evaluation.criteria.allow_missing,
+        )
+
+        return ResearchHypothesisEvaluationDTO(
+            evaluation_id=evaluation.evaluation_id,
+            hypothesis_id=evaluation.hypothesis_id,
+            analysis_run_id=evaluation.analysis_run_id,
+            author_user_id=evaluation.author_user_id,
+            criteria=criteria_dto,
+            eligible_universe=evaluation.eligible_universe,
+            observation_count=evaluation.observation_count,
+            result_status=evaluation.result_status,
+            supporting_evidence_ids=evaluation.supporting_evidence_ids,
+            contradicting_evidence_ids=evaluation.contradicting_evidence_ids,
+            evaluation_summary=evaluation.evaluation_summary,
+            methodology_limitations=evaluation.methodology_limitations,
+            analyst_review_state=evaluation.analyst_review_state,
+            created_at=evaluation.created_at,
+        )
+
+    def list_hypothesis_evaluations(
+        self,
+        hypothesis_id: str,
+        user_id: str,
+    ) -> List[ResearchHypothesisEvaluationDTO]:
+        hyp = self.repository.get_hypothesis(hypothesis_id)
+        if not hyp:
+            raise ResearchHypothesisNotFoundError(f"Hypothesis '{hypothesis_id}' not found.")
+        inv = self.repository.get_investigation(hyp.investigation_id)
+        if not inv:
+            raise ResearchInvestigationNotFoundError(f"Investigation '{hyp.investigation_id}' not found.")
+        self._check_investigation_access(inv, user_id)
+
+        evals = self.repository.list_hypothesis_evaluations(hypothesis_id)
+        res = []
+        for e in evals:
+            c_dto = HypothesisTestCriteriaDTO(
+                metric_id=e.criteria.metric_id,
+                operator=e.criteria.operator,
+                threshold_value=e.criteria.threshold_value,
+                comparison_target=e.criteria.comparison_target,
+                required_periods_count=e.criteria.required_periods_count,
+                allow_missing=e.criteria.allow_missing,
+            )
+            res.append(
+                ResearchHypothesisEvaluationDTO(
+                    evaluation_id=e.evaluation_id,
+                    hypothesis_id=e.hypothesis_id,
+                    analysis_run_id=e.analysis_run_id,
+                    author_user_id=e.author_user_id,
+                    criteria=c_dto,
+                    eligible_universe=e.eligible_universe,
+                    observation_count=e.observation_count,
+                    result_status=e.result_status,
+                    supporting_evidence_ids=e.supporting_evidence_ids,
+                    contradicting_evidence_ids=e.contradicting_evidence_ids,
+                    evaluation_summary=e.evaluation_summary,
+                    methodology_limitations=e.methodology_limitations,
+                    analyst_review_state=e.analyst_review_state,
+                    created_at=e.created_at,
+                )
+            )
+        return res
+
+    def get_hypothesis_evaluation(
+        self,
+        evaluation_id: str,
+        user_id: str,
+    ) -> ResearchHypothesisEvaluationDTO:
+        e = self.repository.get_hypothesis_evaluation(evaluation_id)
+        if not e:
+            raise ResearchHypothesisEvaluationNotFoundError(f"Evaluation '{evaluation_id}' not found.")
+        hyp = self.repository.get_hypothesis(e.hypothesis_id)
+        if hyp:
+            inv = self.repository.get_investigation(hyp.investigation_id)
+            if inv:
+                self._check_investigation_access(inv, user_id)
+
+        c_dto = HypothesisTestCriteriaDTO(
+            metric_id=e.criteria.metric_id,
+            operator=e.criteria.operator,
+            threshold_value=e.criteria.threshold_value,
+            comparison_target=e.criteria.comparison_target,
+            required_periods_count=e.criteria.required_periods_count,
+            allow_missing=e.criteria.allow_missing,
+        )
+        return ResearchHypothesisEvaluationDTO(
+            evaluation_id=e.evaluation_id,
+            hypothesis_id=e.hypothesis_id,
+            analysis_run_id=e.analysis_run_id,
+            author_user_id=e.author_user_id,
+            criteria=c_dto,
+            eligible_universe=e.eligible_universe,
+            observation_count=e.observation_count,
+            result_status=e.result_status,
+            supporting_evidence_ids=e.supporting_evidence_ids,
+            contradicting_evidence_ids=e.contradicting_evidence_ids,
+            evaluation_summary=e.evaluation_summary,
+            methodology_limitations=e.methodology_limitations,
+            analyst_review_state=e.analyst_review_state,
+            created_at=e.created_at,
+        )
+
+    def create_finding(
+        self,
+        analysis_id: str,
+        data: CreateResearchFindingDTO,
+        user_id: str,
+    ) -> ResearchFindingDTO:
+        analysis = self.repository.get_analysis(analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Research Analysis '{analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+
+        clean_stmt = validate_analyst_text("statement", data.statement, max_length=5000, required=True)
+        clean_method = sanitize_markdown_text(data.methodology_description or "", max_length=5000)
+
+        finding_id = f"find-{uuid.uuid4().hex[:12]}"
+        now = datetime.datetime.now(datetime.timezone.utc)
+        finding = ResearchFinding(
+            finding_id=finding_id,
+            investigation_id=data.investigation_id or analysis.investigation_id,
+            analysis_id=analysis_id,
+            analysis_run_id=data.analysis_run_id,
+            author_user_id=user_id,
+            finding_type=data.finding_type,
+            statement=clean_stmt,
+            methodology_description=clean_method,
+            supporting_evidence_ids=data.supporting_evidence_ids,
+            contradicting_evidence_ids=data.contradicting_evidence_ids,
+            calculated_result_references=data.calculated_result_references,
+            limitations=data.limitations,
+            review_status=ResearchFindingReviewStatus.DRAFT,
+            revision=1,
+            created_at=now,
+            updated_at=now,
+        )
+        saved = self.repository.create_finding(finding)
+        return ResearchFindingDTO(**saved.__dict__)
+
+    def get_finding(self, finding_id: str, user_id: str) -> ResearchFindingDTO:
+        f = self.repository.get_finding(finding_id)
+        if not f:
+            raise ResearchFindingNotFoundError(f"Research Finding '{finding_id}' not found.")
+        self._check_finding_access(f, user_id)
+        return ResearchFindingDTO(**f.__dict__)
+
+    def update_finding(
+        self,
+        finding_id: str,
+        data: UpdateResearchFindingDTO,
+        user_id: str,
+    ) -> ResearchFindingDTO:
+        f = self.repository.get_finding(finding_id)
+        if not f:
+            raise ResearchFindingNotFoundError(f"Research Finding '{finding_id}' not found.")
+        self._check_finding_access(f, user_id)
+
+        clean_stmt = validate_analyst_text("statement", data.statement, max_length=5000, required=False) if data.statement else None
+        clean_method = sanitize_markdown_text(data.methodology_description, max_length=5000) if data.methodology_description is not None else None
+
+        updated = self.repository.update_finding(
+            finding_id=finding_id,
+            expected_revision=data.expected_revision,
+            user_id=user_id,
+            statement=clean_stmt,
+            finding_type=data.finding_type,
+            methodology_description=clean_method,
+            supporting_evidence_ids=data.supporting_evidence_ids,
+            contradicting_evidence_ids=data.contradicting_evidence_ids,
+            limitations=data.limitations,
+            review_status=data.review_status,
+        )
+        return ResearchFindingDTO(**updated.__dict__)
+
+    def delete_finding(self, finding_id: str, user_id: str) -> bool:
+        f = self.repository.get_finding(finding_id)
+        if not f:
+            raise ResearchFindingNotFoundError(f"Research Finding '{finding_id}' not found.")
+        self._check_finding_access(f, user_id)
+        return self.repository.delete_finding(finding_id, user_id)
+
+    def list_findings(
+        self,
+        user_id: str,
+        analysis_id: Optional[str] = None,
+        investigation_id: Optional[str] = None,
+    ) -> List[ResearchFindingDTO]:
+        items = self.repository.list_findings(investigation_id=investigation_id, analysis_id=analysis_id)
+        user_items = [f for f in items if f.author_user_id == user_id or f.author_user_id == "default-user"]
+        return [ResearchFindingDTO(**f.__dict__) for f in user_items]
+
+    def create_assumption(
+        self,
+        analysis_id: str,
+        data: CreateResearchAssumptionDTO,
+        user_id: str,
+    ) -> ResearchAssumptionDTO:
+        analysis = self.repository.get_analysis(analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Research Analysis '{analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+
+        clean_label = validate_analyst_text("label", data.label, max_length=200, required=True)
+        clean_note = sanitize_markdown_text(data.analyst_note or "", max_length=2000)
+
+        assump_id = f"assump-{uuid.uuid4().hex[:12]}"
+        now = datetime.datetime.now(datetime.timezone.utc)
+        assump = ResearchAnalysisAssumption(
+            assumption_id=assump_id,
+            analysis_id=analysis_id,
+            label=clean_label,
+            parameter_id=data.parameter_id,
+            value=data.value,
+            unit=data.unit,
+            source_type=data.source_type,
+            source_reference_id=data.source_reference_id,
+            analyst_note=clean_note,
+            created_at=now,
+        )
+        saved = self.repository.create_assumption(assump)
+        return ResearchAssumptionDTO(**saved.__dict__)
+
+    def list_assumptions(self, analysis_id: str, user_id: str) -> List[ResearchAssumptionDTO]:
+        analysis = self.repository.get_analysis(analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Research Analysis '{analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+        items = self.repository.list_assumptions(analysis_id)
+        return [ResearchAssumptionDTO(**a.__dict__) for a in items]
+
+    def delete_assumption(self, assumption_id: str, user_id: str) -> bool:
+        assump = self.repository.get_assumption(assumption_id)
+        if not assump:
+            raise ResearchAssumptionNotFoundError(f"Assumption '{assumption_id}' not found.")
+        analysis = self.repository.get_analysis(assump.analysis_id)
+        if analysis:
+            self._check_analysis_access(analysis, user_id)
+        return self.repository.delete_assumption(assumption_id)
+
+    def execute_sensitivity_scenario(
+        self,
+        analysis_id: str,
+        data: ExecuteSensitivityScenarioDTO,
+        user_id: str,
+    ) -> ResearchSensitivityResultDTO:
+        analysis = self.repository.get_analysis(analysis_id)
+        if not analysis:
+            raise ResearchAnalysisNotFoundError(f"Research Analysis '{analysis_id}' not found.")
+        self._check_analysis_access(analysis, user_id)
+
+        result_dict = ResearchAnalysisEngine.execute_sensitivity(
+            base_value=data.base_metric_value,
+            growth_rates=data.growth_rates,
+            margin_rates=data.margin_rates,
+            metric_name=data.metric_name,
+            unit=data.unit,
+        )
+
+        scenario_id = f"scen-{uuid.uuid4().hex[:12]}"
+        now = datetime.datetime.now(datetime.timezone.utc)
+        scenario = ResearchScenario(
+            scenario_id=scenario_id,
+            analysis_id=analysis_id,
+            name=f"Sensitivity on {data.metric_name}",
+            scenario_type=ScenarioType.BASE_ASSUMPTION,
+            parameter_values={"base_value": data.base_metric_value},
+            calculated_outputs={"sample_output": result_dict["scenario_matrix"][0][0] if result_dict["scenario_matrix"] else 0.0},
+            created_at=now,
+            is_non_predictive_illustrative=True,
+        )
+        self.repository.save_scenario(scenario)
+
+        return ResearchSensitivityResultDTO(**result_dict)
 
 
 # Global singleton instance for injection

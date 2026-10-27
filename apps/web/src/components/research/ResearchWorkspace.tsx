@@ -11,6 +11,7 @@ import { ResearchInvestigationsTable } from "./ResearchInvestigationsTable";
 import { ResearchOverview } from "./ResearchOverview";
 import { ResearchSourceDiscovery } from "./ResearchSourceDiscovery";
 import { ResearchSourceLibrary } from "./ResearchSourceLibrary";
+import { ResearchAnalysisWorkspace } from "./analysis/ResearchAnalysisWorkspace";
 import { useResearchWorkspace } from "@/hooks/research/useResearchWorkspace";
 
 export function ResearchWorkspace() {
@@ -95,6 +96,37 @@ export function ResearchWorkspace() {
     // Shortcuts
     openDocument,
     openComparison,
+
+    // Stage 106: Research Analysis
+    analyses,
+    analysesTotal,
+    isAnalysesLoading,
+    selectedAnalysisId,
+    selectAnalysis,
+    currentAnalysis,
+    analysisRuns,
+    selectedRunId,
+    selectRun,
+    currentRunResult,
+    currentRunProvenance,
+    isRunExecuting,
+    analysisFindings,
+    analysisAssumptions,
+    sensitivityResult,
+    isSensitivityLoading,
+    hypothesisEvaluations,
+    isHypothesisEvaluating,
+    createAnalysis,
+    duplicateAnalysis,
+    deleteAnalysis,
+    executeAnalysisRun,
+    createFinding,
+    updateFinding,
+    deleteFinding,
+    createAssumption,
+    deleteAssumption,
+    executeSensitivity,
+    evaluateHypothesis,
 
     globalError,
     clearError,
@@ -183,6 +215,43 @@ export function ResearchWorkspace() {
               onViewAllInvestigations={() => setActiveTab("INVESTIGATIONS")}
             />
           </div>
+        )}
+
+        {activeTab === "ANALYSIS" && (
+          <ResearchAnalysisWorkspace
+            analyses={analyses}
+            analysesTotal={analysesTotal}
+            isAnalysesLoading={isAnalysesLoading}
+            selectedAnalysisId={selectedAnalysisId}
+            currentAnalysis={currentAnalysis}
+            analysisRuns={analysisRuns}
+            selectedRunId={selectedRunId}
+            currentRunResult={currentRunResult}
+            currentRunProvenance={currentRunProvenance}
+            isRunExecuting={isRunExecuting}
+            analysisFindings={analysisFindings}
+            analysisAssumptions={analysisAssumptions}
+            sensitivityResult={sensitivityResult}
+            isSensitivityLoading={isSensitivityLoading}
+            hypothesisEvaluations={hypothesisEvaluations}
+            isHypothesisEvaluating={isHypothesisEvaluating}
+            investigations={investigations}
+            hypotheses={hypotheses}
+            onSelectAnalysis={selectAnalysis}
+            onCreateAnalysis={createAnalysis}
+            onDuplicateAnalysis={duplicateAnalysis}
+            onDeleteAnalysis={deleteAnalysis}
+            onExecuteAnalysisRun={executeAnalysisRun}
+            onSelectRun={selectRun}
+            onCreateFinding={(data) => selectedAnalysisId ? createFinding(selectedAnalysisId, data) : Promise.reject("No analysis selected")}
+            onUpdateFinding={updateFinding}
+            onDeleteFinding={deleteFinding}
+            onCreateAssumption={(data) => selectedAnalysisId ? createAssumption(selectedAnalysisId, data) : Promise.reject("No analysis selected")}
+            onDeleteAssumption={deleteAssumption}
+            onExecuteSensitivity={(data) => selectedAnalysisId ? executeSensitivity(selectedAnalysisId, data) : Promise.reject("No analysis selected")}
+            onEvaluateHypothesis={evaluateHypothesis}
+            onOpenSource={(srcId) => openDocument(srcId)}
+          />
         )}
 
         {activeTab === "DISCOVERY" && (

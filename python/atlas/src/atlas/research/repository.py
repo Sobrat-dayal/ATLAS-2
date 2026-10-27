@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 # Keep legacy imports for backwards compatibility
 from atlas.entities.models import Entity
+from atlas.research.analysis.calculations import get_supported_analysis_types
+from atlas.research.analysis.engine import ResearchAnalysisEngine
 from atlas.research.documents import (
     ParsedDocumentData,
     build_canonical_documents_registry,
@@ -23,7 +25,14 @@ from atlas.research.domain import (
     DocumentComparisonResult,
     DocumentSearchHit,
     FinancialFactComparison,
+    HypothesisTestCriteria,
     ResearchActivity,
+    ResearchAnalysis,
+    ResearchAnalysisAssumption,
+    ResearchAnalysisResult,
+    ResearchAnalysisRun,
+    ResearchAnalysisSpecification,
+    ResearchAnalysisTypeDefinition,
     ResearchCitation,
     ResearchClaim,
     ResearchClaimEvidence,
@@ -32,21 +41,31 @@ from atlas.research.domain import (
     ResearchDocumentTable,
     ResearchEvidence,
     ResearchEvidenceCandidate,
+    ResearchFinding,
     ResearchHypothesis,
+    ResearchHypothesisEvaluation,
     ResearchInvestigation,
     ResearchNote,
     ResearchNoteRevision,
     ResearchQuestion,
+    ResearchScenario,
     ResearchSearchHit,
     ResearchSourceReference,
 )
 from atlas.research.enums import (
+    AnalysisExecutionStatus,
+    AnalysisFrequency,
+    AnalysisInputPolicy,
+    AssumptionSourceType,
     DocumentComparisonMode,
     EvidenceLocationType,
     InvestigationLifecycleStatus,
     ResearchActivityAction,
+    ResearchAnalysisType,
     ResearchClaimCategory,
     ResearchEvidenceStatus,
+    ResearchFindingReviewStatus,
+    ResearchFindingType,
     ResearchHypothesisStatus,
     ResearchNoteStatus,
     ResearchNoteType,
@@ -57,6 +76,10 @@ from atlas.research.enums import (
     SourceAvailabilityStatus,
 )
 from atlas.research.errors import (
+    ResearchAnalysisAccessDeniedError,
+    ResearchAnalysisNotFoundError,
+    ResearchAnalysisRevisionConflictError,
+    ResearchAssumptionNotFoundError,
     ResearchClaimNotFoundError,
     ResearchComparisonIncompatibleError,
     ResearchDocumentNotFoundError,
@@ -65,6 +88,8 @@ from atlas.research.errors import (
     ResearchEvidenceCandidateNotFoundError,
     ResearchEvidenceNotFoundError,
     ResearchEvidenceSourceMissingError,
+    ResearchFindingNotFoundError,
+    ResearchFindingRevisionConflictError,
     ResearchHypothesisNotFoundError,
     ResearchInvestigationNotFoundError,
     ResearchInvestigationRevisionConflictError,
@@ -137,8 +162,18 @@ class ResearchRepository:
         self._citations: Dict[str, ResearchCitation] = {}
         self._activity: List[ResearchActivity] = []
 
+        # Stage 106 Analysis, Runs, Findings & Hypothesis Stores
+        self._analyses: Dict[str, ResearchAnalysis] = {}
+        self._analysis_runs: Dict[str, ResearchAnalysisRun] = {}
+        self._analysis_results: Dict[str, ResearchAnalysisResult] = {}
+        self._findings: Dict[str, ResearchFinding] = {}
+        self._hypothesis_evaluations: Dict[str, ResearchHypothesisEvaluation] = {}
+        self._assumptions: Dict[str, ResearchAnalysisAssumption] = {}
+        self._scenarios: Dict[str, ResearchScenario] = {}
+
         self._seed_baseline_investigations()
         self._seed_initial_evidence_candidates()
+        self._seed_baseline_analyses()
 
     # -----------------------------------------------------------------------
     # Baseline Seeding for Developer and Institutional Workflow
@@ -1365,6 +1400,9 @@ class ResearchRepository:
             total_sources = sum(len(self._source_links.get(i.investigation_id, [])) for i in user_invs)
             user_inv_ids = {i.investigation_id for i in user_invs}
             total_evidence = sum(1 for e in self._evidence.values() if e.investigation_id in user_inv_ids)
+            total_analyses = sum(1 for a in self._analyses.values() if a.owner_user_id == owner_user_id)
+            total_findings = sum(1 for f in self._findings.values() if f.author_user_id == owner_user_id)
+            total_evaluations = len(self._hypothesis_evaluations)
 
             sorted_invs = sorted(user_invs, key=lambda x: x.updated_at, reverse=True)[:5]
             recent_activities = [a for a in self._activity if a.actor_user_id == owner_user_id]
@@ -1378,6 +1416,9 @@ class ResearchRepository:
                 "total_notes_count": total_notes,
                 "total_sources_count": total_sources,
                 "total_evidence_count": total_evidence,
+                "total_analyses_count": total_analyses,
+                "total_findings_count": total_findings,
+                "total_evaluations_count": total_evaluations,
                 "recent_investigations": [copy.deepcopy(x) for x in sorted_invs],
                 "recent_activities": [copy.deepcopy(x) for x in recent_activities[:10]],
             }
@@ -1880,3 +1921,636 @@ class ResearchRepository:
                 facts = [f for f in facts if any(c in f.fact_key.lower() or c in f.label.lower() for c in concepts_lower)]
 
             return facts
+
+    # -----------------------------------------------------------------------
+    # Stage 106 — Research Analysis Baseline Seeding
+    # -----------------------------------------------------------------------
+    def _seed_baseline_analyses(self):
+        """Seed verified baseline analyses, runs, findings, and hypothesis evaluations."""
+        now = datetime.datetime.now(datetime.timezone.utc)
+        user_id = "default-user"
+
+        # 1. Apple Inc. 5-Year Operating & Gross Margin Trajectory (FY2020-FY2024)
+        an_id_1 = "an-aapl-margin-trend"
+        spec_1 = ResearchAnalysisSpecification(
+            analysis_type=ResearchAnalysisType.COMPANY_FINANCIAL_TREND,
+            primary_entity_id="AAPL",
+            secondary_entity_ids=["MSFT", "NVDA"],
+            metric_ids=["operating_income"],
+            time_range_start="2020",
+            time_range_end="2024",
+            frequency=AnalysisFrequency.ANNUAL,
+            input_version_policy=AnalysisInputPolicy.PINNED_SOURCE_VERSION,
+            currency="USD",
+            methodology_version=1,
+        )
+        an_1 = ResearchAnalysis(
+            analysis_id=an_id_1,
+            investigation_id="inv-apple-fy24-margins",
+            owner_user_id=user_id,
+            title="Apple Inc. (AAPL) 5-Year Operating Profit Margin Trajectory (FY2020-FY2024)",
+            description="Historical fundamental analysis evaluating operating income and margin consistency across Form 10-K filings from FY2020 through FY2024.",
+            analysis_type=ResearchAnalysisType.COMPANY_FINANCIAL_TREND,
+            research_objective="Determine whether operating profitability expanded consistently over the last five fiscal years.",
+            primary_subject_entity_id="AAPL",
+            primary_subject_type="COMPANY",
+            secondary_entity_ids=["MSFT", "NVDA"],
+            specification=spec_1,
+            status=AnalysisExecutionStatus.COMPLETED,
+            current_revision=1,
+            created_at=now - datetime.timedelta(days=5),
+            updated_at=now - datetime.timedelta(hours=1),
+            linked_question_ids=["q-aapl-01"],
+            linked_hypothesis_ids=["hyp-aapl-01"],
+            latest_run_id="run-aapl-margin-01",
+            provenance={"created_by": user_id, "source": "ATLAS_RESEARCH_WORKSPACE"},
+        )
+        self._analyses[an_id_1] = an_1
+
+        # Execute run for an_1
+        run_1, res_1 = ResearchAnalysisEngine.execute(an_id_1, "run-aapl-margin-01", spec_1, user_id)
+        self._analysis_runs[run_1.run_id] = run_1
+        self._analysis_results[run_1.run_id] = res_1
+
+        # 2. Apple vs Mega-Cap Tech Peer Group Operating Margin Benchmarking
+        an_id_2 = "an-aapl-peer-benchmark"
+        spec_2 = ResearchAnalysisSpecification(
+            analysis_type=ResearchAnalysisType.PEER_BENCHMARKING,
+            primary_entity_id="AAPL",
+            secondary_entity_ids=["MSFT", "GOOGL", "NVDA", "Samsung", "Dell", "HP", "Sony"],
+            metric_ids=["profitability.operating_margin"],
+            frequency=AnalysisFrequency.ANNUAL,
+            input_version_policy=AnalysisInputPolicy.PINNED_SOURCE_VERSION,
+            parameters={"peer_group_id": "peer-group-big-tech"},
+            methodology_version=1,
+        )
+        an_2 = ResearchAnalysis(
+            analysis_id=an_id_2,
+            investigation_id="inv-apple-fy24-margins",
+            owner_user_id=user_id,
+            title="Apple Inc. vs Global Tech Platforms Operating Margin Benchmarking",
+            description="Cross-sectional comparative benchmarking evaluating Apple's operating margin relative to verified Stage 87 peer group medians and bounds.",
+            analysis_type=ResearchAnalysisType.PEER_BENCHMARKING,
+            research_objective="Assess Apple's operating margin competitiveness against hardware and enterprise platform competitors.",
+            primary_subject_entity_id="AAPL",
+            primary_subject_type="COMPANY",
+            secondary_entity_ids=["MSFT", "GOOGL", "NVDA", "Samsung", "Dell", "HP", "Sony"],
+            specification=spec_2,
+            status=AnalysisExecutionStatus.COMPLETED,
+            current_revision=1,
+            created_at=now - datetime.timedelta(days=4),
+            updated_at=now - datetime.timedelta(hours=2),
+            linked_question_ids=["q-aapl-01"],
+            linked_hypothesis_ids=["hyp-aapl-01"],
+            latest_run_id="run-aapl-peer-01",
+            provenance={"created_by": user_id, "source": "ATLAS_RESEARCH_WORKSPACE"},
+        )
+        self._analyses[an_id_2] = an_2
+
+        run_2, res_2 = ResearchAnalysisEngine.execute(an_id_2, "run-aapl-peer-01", spec_2, user_id)
+        self._analysis_runs[run_2.run_id] = run_2
+        self._analysis_results[run_2.run_id] = res_2
+
+        # 3. Macroeconomic CPI vs Federal Funds Policy Rate Alignment
+        an_id_3 = "an-macro-rate-inflation"
+        spec_3 = ResearchAnalysisSpecification(
+            analysis_type=ResearchAnalysisType.MACROECONOMIC_TIME_SERIES,
+            primary_entity_id="US",
+            secondary_entity_ids=[],
+            metric_ids=["US_CPI", "US_FED_FUNDS"],
+            time_range_start="2020",
+            time_range_end="2024",
+            frequency=AnalysisFrequency.ANNUAL,
+            methodology_version=1,
+        )
+        an_3 = ResearchAnalysis(
+            analysis_id=an_id_3,
+            investigation_id=None,
+            owner_user_id=user_id,
+            title="United States Consumer Price Index (CPI) vs Federal Funds Rate Alignment (2020-2024)",
+            description="Macroeconomic research series analyzing historical inflation shocks and monetary tightening cycles with release date watermarking.",
+            analysis_type=ResearchAnalysisType.MACROECONOMIC_TIME_SERIES,
+            research_objective="Examine the historical lag between inflation spikes and Federal Reserve monetary policy rate increases.",
+            primary_subject_entity_id="US",
+            primary_subject_type="ECONOMIC_ENTITY",
+            secondary_entity_ids=[],
+            specification=spec_3,
+            status=AnalysisExecutionStatus.COMPLETED,
+            current_revision=1,
+            created_at=now - datetime.timedelta(days=3),
+            updated_at=now - datetime.timedelta(hours=3),
+            latest_run_id="run-macro-cpi-01",
+            provenance={"created_by": user_id, "source": "ATLAS_MACRO_SERIES"},
+        )
+        self._analyses[an_id_3] = an_3
+
+        run_3, res_3 = ResearchAnalysisEngine.execute(an_id_3, "run-macro-cpi-01", spec_3, user_id)
+        self._analysis_runs[run_3.run_id] = run_3
+        self._analysis_results[run_3.run_id] = res_3
+
+        # 4. Hypothesis Evaluation for hyp-aapl-01
+        hyp_criteria = HypothesisTestCriteria(
+            metric_id="operating_income",
+            operator="GTE",
+            threshold_value=60000.0,
+            required_periods_count=5,
+        )
+        hyp_eval = ResearchAnalysisEngine.evaluate_hypothesis(
+            evaluation_id="eval-aapl-hyp-01",
+            hypothesis_id="hyp-aapl-01",
+            run=run_1,
+            result=res_1,
+            criteria=hyp_criteria,
+            user_id=user_id,
+        )
+        self._hypothesis_evaluations[hyp_eval.evaluation_id] = hyp_eval
+
+        # 5. Baseline Research Findings
+        f1 = ResearchFinding(
+            finding_id="find-aapl-margin-01",
+            investigation_id="inv-apple-fy24-margins",
+            analysis_id=an_id_1,
+            analysis_run_id="run-aapl-margin-01",
+            author_user_id=user_id,
+            finding_type=ResearchFindingType.CALCULATED_RESULT,
+            statement="Apple Inc. operating income increased from $66.29B in FY2020 to $123.18B in FY2024, representing an overall 5-year CAGR of 16.75% with operating margin expanding from 24.15% to 31.50%.",
+            methodology_description="Deterministic period-over-period delta and compound annual growth rate calculation over Form 10-K reported Item 8 financial statement values.",
+            supporting_evidence_ids=["ev-aapl-opinc-01", "ev-aapl-10k-risk"],
+            contradicting_evidence_ids=[],
+            calculated_result_references={"cagr": 16.75, "fy20_val": 66288.0, "fy24_val": 123184.0},
+            limitations=[
+                "Calculated over annual consolidated reported periods; does not include quarterly seasonality.",
+                "Subject to future FASB accounting standard updates or corporate restructuring.",
+            ],
+            review_status=ResearchFindingReviewStatus.REVIEWED,
+            revision=1,
+            created_at=now - datetime.timedelta(days=2),
+            updated_at=now - datetime.timedelta(hours=2),
+        )
+        self._findings[f1.finding_id] = f1
+
+        f2 = ResearchFinding(
+            finding_id="find-aapl-peers-01",
+            investigation_id="inv-apple-fy24-margins",
+            analysis_id=an_id_2,
+            analysis_run_id="run-aapl-peer-01",
+            author_user_id=user_id,
+            finding_type=ResearchFindingType.STATISTICAL_OBSERVATION,
+            statement="Apple FY2024 operating profit margin of 31.50% substantially exceeds the Stage 87 technology peer group median of 20.70%, placing Apple in the 75th percentile of comparable global platforms.",
+            methodology_description="Cross-sectional quartile and median statistical derivation across 8 verified peer companies.",
+            supporting_evidence_ids=["ev-aapl-opinc-01"],
+            contradicting_evidence_ids=[],
+            calculated_result_references={"subject_margin": 31.50, "peer_median": 20.70, "peer_q3": 37.28},
+            limitations=[
+                "Peer comparisons include companies reporting under U.S. GAAP and IFRS.",
+                "Sample size N=8 technology companies.",
+            ],
+            review_status=ResearchFindingReviewStatus.READY_FOR_REVIEW,
+            revision=1,
+            created_at=now - datetime.timedelta(days=1),
+            updated_at=now - datetime.timedelta(hours=1),
+        )
+        self._findings[f2.finding_id] = f2
+
+        # 6. Baseline Assumptions for Sensitivity Testing
+        assump_1 = ResearchAnalysisAssumption(
+            assumption_id="assump-aapl-rev-01",
+            analysis_id=an_id_1,
+            label="Baseline Revenue Growth Rate",
+            parameter_id="revenue_growth_rate",
+            value=5.0,
+            unit="%",
+            source_type=AssumptionSourceType.ANALYST_ASSUMED,
+            source_reference_id=None,
+            analyst_note="Illustrative baseline revenue expansion assumption based on mid-single digit Services growth.",
+            created_at=now - datetime.timedelta(days=2),
+        )
+        assump_2 = ResearchAnalysisAssumption(
+            assumption_id="assump-aapl-margin-01",
+            analysis_id=an_id_1,
+            label="Target Operating Profit Margin",
+            parameter_id="target_operating_margin",
+            value=31.5,
+            unit="%",
+            source_type=AssumptionSourceType.SOURCE_REPORTED,
+            source_reference_id="src-filing-aapl-10k-2024",
+            analyst_note="Anchored to FY2024 Form 10-K reported operating margin baseline.",
+            created_at=now - datetime.timedelta(days=2),
+        )
+        self._assumptions[assump_1.assumption_id] = assump_1
+        self._assumptions[assump_2.assumption_id] = assump_2
+
+    def _log_activity(
+        self,
+        action: ResearchActivityAction,
+        entity_id: str,
+        entity_type: str,
+        user_id: str,
+        details: Dict,
+        investigation_id: Optional[str] = None,
+    ):
+        """Helper to log research activity for stage 106 operations."""
+        self.record_activity(
+            investigation_id=investigation_id or "inv-global-research",
+            action_type=action,
+            actor_user_id=user_id,
+            object_type=entity_type,
+            object_id=entity_id,
+            details=details,
+        )
+
+    def list_analysis_types(self) -> List[ResearchAnalysisTypeDefinition]:
+        """Returns supported analysis types catalog."""
+        return get_supported_analysis_types()
+
+    def get_analysis_type(self, type_id: ResearchAnalysisType) -> Optional[ResearchAnalysisTypeDefinition]:
+        """Gets metadata for a specific analysis type."""
+        for t in get_supported_analysis_types():
+            if t.type_id == type_id:
+                return t
+        return None
+
+    def list_analyses(
+        self,
+        user_id: str,
+        investigation_id: Optional[str] = None,
+        analysis_type: Optional[ResearchAnalysisType] = None,
+        subject_id: Optional[str] = None,
+        status: Optional[AnalysisExecutionStatus] = None,
+    ) -> List[ResearchAnalysis]:
+        """Lists user-owned research analyses with optional facet filters."""
+        with self._lock:
+            res: List[ResearchAnalysis] = []
+            for an in self._analyses.values():
+                # Enforce RLS user ownership isolation (default-user can access seeded)
+                if an.owner_user_id != user_id and an.owner_user_id != "default-user":
+                    continue
+                if investigation_id and an.investigation_id != investigation_id:
+                    continue
+                if analysis_type and an.analysis_type != analysis_type:
+                    continue
+                if subject_id and (an.primary_subject_entity_id or "").upper() != subject_id.upper():
+                    continue
+                if status and an.status != status:
+                    continue
+                res.append(copy.deepcopy(an))
+            return sorted(res, key=lambda a: a.updated_at, reverse=True)
+
+    def create_analysis(self, analysis: ResearchAnalysis) -> ResearchAnalysis:
+        """Persists a new user-owned research analysis."""
+        with self._lock:
+            self._analyses[analysis.analysis_id] = copy.deepcopy(analysis)
+            self._log_activity(
+                action=ResearchActivityAction.ANALYSIS_CREATED,
+                entity_id=analysis.analysis_id,
+                entity_type="ANALYSIS",
+                user_id=analysis.owner_user_id,
+                details={"title": analysis.title, "type": analysis.analysis_type.value},
+            )
+            return copy.deepcopy(analysis)
+
+    def get_analysis(self, analysis_id: str) -> Optional[ResearchAnalysis]:
+        """Retrieves a research analysis by canonical identifier."""
+        with self._lock:
+            an = self._analyses.get(analysis_id)
+            return copy.deepcopy(an) if an else None
+
+    def update_analysis(
+        self,
+        analysis_id: str,
+        expected_revision: int,
+        user_id: str,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        research_objective: Optional[str] = None,
+        specification: Optional[ResearchAnalysisSpecification] = None,
+        linked_questions: Optional[List[str]] = None,
+        linked_hypotheses: Optional[List[str]] = None,
+        status: Optional[AnalysisExecutionStatus] = None,
+    ) -> ResearchAnalysis:
+        """Updates an analysis with optimistic concurrency revision checking."""
+        with self._lock:
+            an = self._analyses.get(analysis_id)
+            if not an:
+                raise ResearchAnalysisNotFoundError(f"Analysis '{analysis_id}' not found.")
+            if an.owner_user_id != user_id and an.owner_user_id != "default-user":
+                raise ResearchAnalysisAccessDeniedError(f"Access denied to analysis '{analysis_id}'.")
+            if an.current_revision != expected_revision:
+                raise ResearchAnalysisRevisionConflictError(
+                    f"Stale analysis write: current revision is {an.current_revision}, expected {expected_revision}."
+                )
+
+            now = datetime.datetime.now(datetime.timezone.utc)
+            if title is not None:
+                an.title = title
+            if description is not None:
+                an.description = description
+            if research_objective is not None:
+                an.research_objective = research_objective
+            if specification is not None:
+                an.specification = specification
+            if linked_questions is not None:
+                an.linked_question_ids = linked_questions
+            if linked_hypotheses is not None:
+                an.linked_hypothesis_ids = linked_hypotheses
+            if status is not None:
+                an.status = status
+
+            an.current_revision += 1
+            an.updated_at = now
+
+            self._log_activity(
+                action=ResearchActivityAction.ANALYSIS_UPDATED,
+                entity_id=an.analysis_id,
+                entity_type="ANALYSIS",
+                user_id=user_id,
+                details={"revision": an.current_revision, "title": an.title},
+            )
+            return copy.deepcopy(an)
+
+    def delete_analysis(self, analysis_id: str, user_id: str) -> bool:
+        """Deletes or archives an analysis and linked runs under policy."""
+        with self._lock:
+            an = self._analyses.get(analysis_id)
+            if not an:
+                raise ResearchAnalysisNotFoundError(f"Analysis '{analysis_id}' not found.")
+            if an.owner_user_id != user_id and an.owner_user_id != "default-user":
+                raise ResearchAnalysisAccessDeniedError(f"Access denied to analysis '{analysis_id}'.")
+
+            del self._analyses[analysis_id]
+            self._log_activity(
+                action=ResearchActivityAction.ANALYSIS_DELETED,
+                entity_id=analysis_id,
+                entity_type="ANALYSIS",
+                user_id=user_id,
+                details={"deleted_analysis_id": analysis_id},
+            )
+            return True
+
+    def duplicate_analysis(
+        self,
+        analysis_id: str,
+        new_title: Optional[str],
+        user_id: str,
+    ) -> ResearchAnalysis:
+        """Duplicates an existing analysis within user research scope."""
+        with self._lock:
+            an = self._analyses.get(analysis_id)
+            if not an:
+                raise ResearchAnalysisNotFoundError(f"Analysis '{analysis_id}' not found.")
+            now = datetime.datetime.now(datetime.timezone.utc)
+            new_id = f"an-{uuid.uuid4().hex[:12]}"
+            dup_title = new_title or f"{an.title} (Copy)"
+
+            new_an = ResearchAnalysis(
+                analysis_id=new_id,
+                investigation_id=an.investigation_id,
+                owner_user_id=user_id,
+                title=dup_title,
+                description=an.description,
+                analysis_type=an.analysis_type,
+                research_objective=an.research_objective,
+                primary_subject_entity_id=an.primary_subject_entity_id,
+                primary_subject_type=an.primary_subject_type,
+                secondary_entity_ids=list(an.secondary_entity_ids),
+                specification=copy.deepcopy(an.specification),
+                status=AnalysisExecutionStatus.CONFIGURED,
+                current_revision=1,
+                created_at=now,
+                updated_at=now,
+                linked_question_ids=list(an.linked_question_ids),
+                linked_hypothesis_ids=list(an.linked_hypothesis_ids),
+                latest_run_id=None,
+                provenance={"duplicated_from": analysis_id, "created_by": user_id},
+            )
+            self._analyses[new_id] = new_an
+            return copy.deepcopy(new_an)
+
+    # -----------------------------------------------------------------------
+    # Stage 106 — Run & Result Persistence
+    # -----------------------------------------------------------------------
+    def save_analysis_run(self, run: ResearchAnalysisRun, result: ResearchAnalysisResult):
+        """Persists an immutable analysis run and associated results."""
+        with self._lock:
+            self._analysis_runs[run.run_id] = copy.deepcopy(run)
+            self._analysis_results[run.run_id] = copy.deepcopy(result)
+            # Update latest_run_id on parent analysis
+            if run.analysis_id in self._analyses:
+                an = self._analyses[run.analysis_id]
+                an.latest_run_id = run.run_id
+                an.status = AnalysisExecutionStatus.COMPLETED
+                an.updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+            self._log_activity(
+                action=ResearchActivityAction.ANALYSIS_RUN_EXECUTED,
+                entity_id=run.run_id,
+                entity_type="ANALYSIS_RUN",
+                user_id=run.owner_user_id,
+                details={
+                    "analysis_id": run.analysis_id,
+                    "observations_count": run.observations_count,
+                    "status": run.execution_status.value,
+                },
+            )
+
+    def get_analysis_run(self, run_id: str) -> Optional[ResearchAnalysisRun]:
+        """Retrieves an analysis run record by ID."""
+        with self._lock:
+            run = self._analysis_runs.get(run_id)
+            return copy.deepcopy(run) if run else None
+
+    def get_analysis_run_result(self, run_id: str) -> Optional[ResearchAnalysisResult]:
+        """Retrieves analytical results for an execution run."""
+        with self._lock:
+            res = self._analysis_results.get(run_id)
+            return copy.deepcopy(res) if res else None
+
+    def list_analysis_runs(self, analysis_id: str) -> List[ResearchAnalysisRun]:
+        """Lists historical execution runs for an analysis in descending order."""
+        with self._lock:
+            runs = [r for r in self._analysis_runs.values() if r.analysis_id == analysis_id]
+            return sorted(copy.deepcopy(runs), key=lambda r: r.started_at, reverse=True)
+
+    # -----------------------------------------------------------------------
+    # Stage 106 — Hypothesis Evaluation Repository Methods
+    # -----------------------------------------------------------------------
+    def save_hypothesis_evaluation(self, eval_record: ResearchHypothesisEvaluation):
+        """Persists a deterministic hypothesis evaluation result."""
+        with self._lock:
+            self._hypothesis_evaluations[eval_record.evaluation_id] = copy.deepcopy(eval_record)
+            self._log_activity(
+                action=ResearchActivityAction.HYPOTHESIS_EVALUATED,
+                entity_id=eval_record.evaluation_id,
+                entity_type="HYPOTHESIS_EVALUATION",
+                user_id=eval_record.author_user_id,
+                details={
+                    "hypothesis_id": eval_record.hypothesis_id,
+                    "result_status": eval_record.result_status.value,
+                },
+            )
+
+    def get_hypothesis_evaluation(self, evaluation_id: str) -> Optional[ResearchHypothesisEvaluation]:
+        """Retrieves an evaluation record by ID."""
+        with self._lock:
+            ev = self._hypothesis_evaluations.get(evaluation_id)
+            return copy.deepcopy(ev) if ev else None
+
+    def list_hypothesis_evaluations(self, hypothesis_id: str) -> List[ResearchHypothesisEvaluation]:
+        """Lists evaluation history for an analyst hypothesis."""
+        with self._lock:
+            evals = [e for e in self._hypothesis_evaluations.values() if e.hypothesis_id == hypothesis_id]
+            return sorted(copy.deepcopy(evals), key=lambda e: e.created_at, reverse=True)
+
+    # -----------------------------------------------------------------------
+    # Stage 106 — Research Findings Repository Methods
+    # -----------------------------------------------------------------------
+    def create_finding(self, finding: ResearchFinding) -> ResearchFinding:
+        """Persists a new evidence-grounded research finding."""
+        with self._lock:
+            self._findings[finding.finding_id] = copy.deepcopy(finding)
+            self._log_activity(
+                action=ResearchActivityAction.FINDING_CREATED,
+                entity_id=finding.finding_id,
+                entity_type="FINDING",
+                user_id=finding.author_user_id,
+                details={
+                    "analysis_id": finding.analysis_id,
+                    "type": finding.finding_type.value,
+                    "statement": finding.statement[:100],
+                },
+            )
+            return copy.deepcopy(finding)
+
+    def get_finding(self, finding_id: str) -> Optional[ResearchFinding]:
+        """Retrieves a research finding by ID."""
+        with self._lock:
+            f = self._findings.get(finding_id)
+            return copy.deepcopy(f) if f else None
+
+    def update_finding(
+        self,
+        finding_id: str,
+        expected_revision: int,
+        user_id: str,
+        statement: Optional[str] = None,
+        finding_type: Optional[ResearchFindingType] = None,
+        methodology_description: Optional[str] = None,
+        supporting_evidence_ids: Optional[List[str]] = None,
+        contradicting_evidence_ids: Optional[List[str]] = None,
+        limitations: Optional[List[str]] = None,
+        review_status: Optional[ResearchFindingReviewStatus] = None,
+    ) -> ResearchFinding:
+        """Updates a research finding with optimistic concurrency."""
+        with self._lock:
+            f = self._findings.get(finding_id)
+            if not f:
+                raise ResearchFindingNotFoundError(f"Finding '{finding_id}' not found.")
+            if f.author_user_id != user_id and f.author_user_id != "default-user":
+                raise ResearchAnalysisAccessDeniedError(f"Access denied to finding '{finding_id}'.")
+            if f.revision != expected_revision:
+                raise ResearchFindingRevisionConflictError(
+                    f"Stale finding write: current revision is {f.revision}, expected {expected_revision}."
+                )
+
+            now = datetime.datetime.now(datetime.timezone.utc)
+            if statement is not None:
+                f.statement = statement
+            if finding_type is not None:
+                f.finding_type = finding_type
+            if methodology_description is not None:
+                f.methodology_description = methodology_description
+            if supporting_evidence_ids is not None:
+                f.supporting_evidence_ids = supporting_evidence_ids
+            if contradicting_evidence_ids is not None:
+                f.contradicting_evidence_ids = contradicting_evidence_ids
+            if limitations is not None:
+                f.limitations = limitations
+            if review_status is not None:
+                f.review_status = review_status
+
+            f.revision += 1
+            f.updated_at = now
+
+            self._log_activity(
+                action=ResearchActivityAction.FINDING_UPDATED,
+                entity_id=f.finding_id,
+                entity_type="FINDING",
+                user_id=user_id,
+                details={"revision": f.revision, "review_status": f.review_status.value},
+            )
+            return copy.deepcopy(f)
+
+    def delete_finding(self, finding_id: str, user_id: str) -> bool:
+        """Deletes a research finding."""
+        with self._lock:
+            f = self._findings.get(finding_id)
+            if not f:
+                raise ResearchFindingNotFoundError(f"Finding '{finding_id}' not found.")
+            if f.author_user_id != user_id and f.author_user_id != "default-user":
+                raise ResearchAnalysisAccessDeniedError(f"Access denied to finding '{finding_id}'.")
+
+            del self._findings[finding_id]
+            self._log_activity(
+                action=ResearchActivityAction.FINDING_DELETED,
+                entity_id=finding_id,
+                entity_type="FINDING",
+                user_id=user_id,
+                details={"deleted_finding_id": finding_id},
+            )
+            return True
+
+    def list_findings(
+        self,
+        analysis_id: Optional[str] = None,
+        investigation_id: Optional[str] = None,
+    ) -> List[ResearchFinding]:
+        """Lists findings associated with an analysis or investigation."""
+        with self._lock:
+            res = list(self._findings.values())
+            if analysis_id:
+                res = [f for f in res if f.analysis_id == analysis_id]
+            if investigation_id:
+                res = [f for f in res if f.investigation_id == investigation_id]
+            return sorted(copy.deepcopy(res), key=lambda f: f.updated_at, reverse=True)
+
+    # -----------------------------------------------------------------------
+    # Stage 106 — Analyst Assumptions Repository Methods
+    # -----------------------------------------------------------------------
+    def create_assumption(self, assumption: ResearchAnalysisAssumption) -> ResearchAnalysisAssumption:
+        """Persists a new analyst assumption for sensitivity modeling."""
+        with self._lock:
+            self._assumptions[assumption.assumption_id] = copy.deepcopy(assumption)
+            self._log_activity(
+                action=ResearchActivityAction.ASSUMPTION_SAVED,
+                entity_id=assumption.assumption_id,
+                entity_type="ASSUMPTION",
+                user_id="default-user",
+                details={"analysis_id": assumption.analysis_id, "parameter": assumption.parameter_id},
+            )
+            return copy.deepcopy(assumption)
+
+    def list_assumptions(self, analysis_id: str) -> List[ResearchAnalysisAssumption]:
+        """Lists all assumptions linked to a specific analysis."""
+        with self._lock:
+            assumps = [a for a in self._assumptions.values() if a.analysis_id == analysis_id]
+            return sorted(copy.deepcopy(assumps), key=lambda a: a.created_at)
+
+    def delete_assumption(self, assumption_id: str) -> bool:
+        """Deletes an assumption by ID."""
+        with self._lock:
+            if assumption_id in self._assumptions:
+                del self._assumptions[assumption_id]
+                return True
+            raise ResearchAssumptionNotFoundError(f"Assumption '{assumption_id}' not found.")
+
+    def get_assumption(self, assumption_id: str) -> Optional[ResearchAnalysisAssumption]:
+        """Retrieves an assumption by ID."""
+        with self._lock:
+            a = self._assumptions.get(assumption_id)
+            return copy.deepcopy(a) if a else None
+
+    def save_scenario(self, scenario: ResearchScenario) -> ResearchScenario:
+        """Saves a deterministic what-if scenario record."""
+        with self._lock:
+            self._scenarios[scenario.scenario_id] = copy.deepcopy(scenario)
+            return copy.deepcopy(scenario)

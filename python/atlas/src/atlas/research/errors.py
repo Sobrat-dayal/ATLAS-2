@@ -238,3 +238,157 @@ class ResearchComparisonResourceLimitError(ResearchDomainError):
 class ResearchSemanticSearchUnavailableError(ResearchDomainError):
     """Raised when semantic retrieval is requested but unavailable or unlicensed."""
     pass
+
+
+# ---------------------------------------------------------------------------
+# Stage 106 — Research Analysis, Runs, Hypothesis, Findings & Scenario Errors
+# ---------------------------------------------------------------------------
+
+class ResearchAnalysisNotFoundError(ResearchDomainError):
+    """Raised when a research analysis ID does not exist."""
+    pass
+
+
+class ResearchAnalysisAccessDeniedError(ResearchDomainError):
+    """Raised when a user attempts to access an analysis owned by another user."""
+    pass
+
+
+class ResearchAnalysisTypeUnsupportedError(ResearchDomainError):
+    """Raised when an requested analysis type is not supported."""
+    pass
+
+
+class ResearchAnalysisConfigurationInvalidError(ResearchDomainError):
+    """Raised when an analysis specification fails parameter or schema validation."""
+    pass
+
+
+class ResearchAnalysisRevisionConflictError(ResearchDomainError):
+    """Raised when optimistic concurrency detects a stale analysis write."""
+    pass
+
+
+class ResearchAnalysisExecutionFailedError(ResearchDomainError):
+    """Raised when analytical execution encounters an unrecoverable failure."""
+    pass
+
+
+class ResearchAnalysisExecutionTimeoutError(ResearchDomainError):
+    """Raised when an analytical run exceeds execution runtime limits."""
+    pass
+
+
+class ResearchAnalysisResourceLimitExceededError(ResearchDomainError):
+    """Raised when query or data points exceed per-user compute bounds."""
+    pass
+
+
+class ResearchAnalysisMetricUnsupportedError(ResearchDomainError):
+    """Raised when an unknown or unsupported financial metric concept is requested."""
+    pass
+
+
+class ResearchAnalysisPeriodIncompatibleError(ResearchDomainError):
+    """Raised when financial statement periods cannot be compared meaningfully."""
+    pass
+
+
+class ResearchAnalysisCurrencyMismatchError(ResearchDomainError):
+    """Raised when monetary metrics in different currencies are compared without FX conversion."""
+    pass
+
+
+class ResearchAnalysisUnitMismatchError(ResearchDomainError):
+    """Raised when incompatible metric dimensional units are combined."""
+    pass
+
+
+class ResearchAnalysisInputUnavailableError(ResearchDomainError):
+    """Raised when required canonical input data points are missing or not reported."""
+    pass
+
+
+class ResearchAnalysisLookaheadViolationError(ResearchDomainError):
+    """Raised when an analysis requests data published after an explicit as-known-at cutoff."""
+    pass
+
+
+class ResearchAnalysisSampleInsufficientError(ResearchDomainError):
+    """Raised when the eligible observation sample is insufficient for statistical validity."""
+    pass
+
+
+class ResearchAnalysisFormulaInvalidError(ResearchDomainError):
+    """Raised when a formula definition or expression syntax is invalid."""
+    pass
+
+
+class ResearchAnalysisDivisionByZeroError(ResearchDomainError):
+    """Raised when a calculation encounters an unhandled division by zero."""
+    pass
+
+
+class ResearchAnalysisUndefinedGrowthError(ResearchDomainError):
+    """Raised when a percentage change or CAGR has an invalid non-positive baseline."""
+    pass
+
+
+class ResearchAnalysisStatisticalTestInvalidError(ResearchDomainError):
+    """Raised when statistical test preconditions or assumptions are violated."""
+    pass
+
+
+class ResearchAnalysisRunNotFoundError(ResearchDomainError):
+    """Raised when an analysis run ID cannot be found."""
+    pass
+
+
+class ResearchFindingNotFoundError(ResearchDomainError):
+    """Raised when a research finding ID cannot be found."""
+    pass
+
+
+class ResearchFindingAccessDeniedError(ResearchDomainError):
+    """Raised when an unauthorized user attempts to access or modify a research finding."""
+    pass
+
+
+class ResearchFindingEvidenceMissingError(ResearchDomainError):
+    """Raised when a finding lacks required supporting evidence citations."""
+    pass
+
+
+class ResearchFindingRevisionConflictError(ResearchDomainError):
+    """Raised when an optimistic concurrency conflict occurs on a research finding."""
+    pass
+
+
+class ResearchHypothesisEvaluationNotFoundError(ResearchDomainError):
+    """Raised when a hypothesis evaluation ID cannot be found."""
+    pass
+
+
+class ResearchHypothesisEvaluationInvalidError(ResearchDomainError):
+    """Raised when an evaluation configuration or methodology is invalid."""
+    pass
+
+
+class ResearchHypothesisCriteriaUnsupportedError(ResearchDomainError):
+    """Raised when testable hypothesis criteria specify unsupported operators or metrics."""
+    pass
+
+
+class ResearchScenarioConfigurationInvalidError(ResearchDomainError):
+    """Raised when scenario sensitivity inputs fail range or unit bounds."""
+    pass
+
+
+class ResearchScenarioParameterLimitExceededError(ResearchDomainError):
+    """Raised when what-if parameter grid exceeds combinatorial bounds."""
+    pass
+
+
+class ResearchAssumptionNotFoundError(ResearchDomainError):
+    """Raised when an assumption ID cannot be found."""
+    pass

@@ -39,11 +39,32 @@ import {
   ResearchType,
   UpdateResearchInvestigationDTO,
   UpdateResearchNoteDTO,
+  // Stage 106 Types
+  CreateResearchAnalysisDTO,
+  CreateResearchAssumptionDTO,
+  CreateResearchFindingDTO,
+  ExecuteHypothesisEvaluationDTO,
+  ResearchAnalysis,
+  ResearchAnalysisResult,
+  ResearchAnalysisRun,
+  ResearchAnalysisSpecification,
+  ResearchAnalysisType,
+  ResearchAnalysisTypeDefinition,
+  ResearchAssumption,
+  ResearchFinding,
+  ResearchHypothesisEvaluation,
+  SensitivityAnalysisRequest,
+  SensitivityAnalysisResponse,
+  UpdateResearchAnalysisDTO,
+  UpdateResearchFindingDTO,
+  ValidateAnalysisSpecificationRequest,
+  ValidateAnalysisSpecificationResponse,
 } from "@/lib/research/types";
 
 export type ResearchTabMode =
   | "OVERVIEW"
   | "INVESTIGATIONS"
+  | "ANALYSIS"
   | "SOURCES"
   | "DISCOVERY"
   | "DOCUMENT_VIEWER"
@@ -414,6 +435,288 @@ export function useResearchWorkspace() {
   );
 
   // -------------------------------------------------------------------------
+  // Stage 106: Research Analysis & Workbenches State
+  // -------------------------------------------------------------------------
+  const [analyses, setAnalyses] = useState<ResearchAnalysis[]>([]);
+  const [analysesTotal, setAnalysesTotal] = useState<number>(0);
+  const [isAnalysesLoading, setIsAnalysesLoading] = useState<boolean>(false);
+  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
+  const [currentAnalysis, setCurrentAnalysis] = useState<ResearchAnalysis | null>(null);
+  const [analysisRuns, setAnalysisRuns] = useState<ResearchAnalysisRun[]>([]);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [currentRunResult, setCurrentRunResult] = useState<ResearchAnalysisResult | null>(null);
+  const [currentRunProvenance, setCurrentRunProvenance] = useState<Record<string, any> | null>(null);
+  const [isRunExecuting, setIsRunExecuting] = useState<boolean>(false);
+  const [analysisFindings, setAnalysisFindings] = useState<ResearchFinding[]>([]);
+  const [analysisAssumptions, setAnalysisAssumptions] = useState<ResearchAssumption[]>([]);
+  const [sensitivityResult, setSensitivityResult] = useState<SensitivityAnalysisResponse | null>(null);
+  const [isSensitivityLoading, setIsSensitivityLoading] = useState<boolean>(false);
+  const [hypothesisEvaluations, setHypothesisEvaluations] = useState<ResearchHypothesisEvaluation[]>([]);
+  const [isHypothesisEvaluating, setIsHypothesisEvaluating] = useState<boolean>(false);
+  const [analysisTypeCatalog, setAnalysisTypeCatalog] = useState<ResearchAnalysisTypeDefinition[]>([]);
+  const [analysisTypeFilter, setAnalysisTypeFilter] = useState<ResearchAnalysisType | undefined>(undefined);
+  const [analysisEntityFilter, setAnalysisEntityFilter] = useState<string>("");
+  const [analysisSearchQuery, setAnalysisSearchQuery] = useState<string>("");
+
+  const loadAnalysisTypes = useCallback(async () => {
+    try {
+      const res = await api.listAnalysisTypes();
+      setAnalysisTypeCatalog(res.analysis_types);
+    } catch (err: any) {
+      console.error("Failed to load analysis types catalog", err);
+    }
+  }, []);
+
+  const loadAnalyses = useCallback(async () => {
+    setIsAnalysesLoading(true);
+    setGlobalError(null);
+    try {
+      const res = await api.listAnalyses({
+        analysisType: analysisTypeFilter,
+        entityId: analysisEntityFilter || undefined,
+        search: analysisSearchQuery || undefined,
+      });
+      setAnalyses(res.analyses);
+      setAnalysesTotal(res.total_count);
+      if (res.analyses.length > 0 && !selectedAnalysisId) {
+        setSelectedAnalysisId(res.analyses[0].analysis_id);
+      }
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to load research analyses.");
+    } finally {
+      setIsAnalysesLoading(false);
+    }
+  }, [analysisTypeFilter, analysisEntityFilter, analysisSearchQuery, selectedAnalysisId]);
+
+  const loadAnalysisDetail = useCallback(async (analysisId: string) => {
+    setGlobalError(null);
+    try {
+      const [an, runsRes, findingsRes, assumptionsRes] = await Promise.all([
+        api.getAnalysis(analysisId),
+        api.listAnalysisRuns(analysisId),
+        api.listAnalysisFindings(analysisId),
+        api.listAnalysisAssumptions(analysisId),
+      ]);
+      setCurrentAnalysis(an);
+      setAnalysisRuns(runsRes.runs);
+      setAnalysisFindings(findingsRes.findings);
+      setAnalysisAssumptions(assumptionsRes.assumptions);
+
+      const activeRunId = an.latest_run_id || (runsRes.runs.length > 0 ? runsRes.runs[0].run_id : null);
+      if (activeRunId) {
+        setSelectedRunId(activeRunId);
+        try {
+          const [result, prov] = await Promise.all([
+            api.getAnalysisRunResults(activeRunId),
+            api.getAnalysisRunProvenance(activeRunId),
+          ]);
+          setCurrentRunResult(result);
+          setCurrentRunProvenance(prov);
+        } catch (runErr) {
+          console.warn("Could not load run results/provenance", runErr);
+        }
+      } else {
+        setSelectedRunId(null);
+        setCurrentRunResult(null);
+        setCurrentRunProvenance(null);
+      }
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to load analysis detail.");
+    }
+  }, []);
+
+  const selectRun = useCallback(async (runId: string) => {
+    setSelectedRunId(runId);
+    try {
+      const [result, prov] = await Promise.all([
+        api.getAnalysisRunResults(runId),
+        api.getAnalysisRunProvenance(runId),
+      ]);
+      setCurrentRunResult(result);
+      setCurrentRunProvenance(prov);
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to load run result.");
+    }
+  }, []);
+
+  const selectAnalysis = useCallback((id: string | null) => {
+    setSelectedAnalysisId(id);
+    if (!id) {
+      setCurrentAnalysis(null);
+      setAnalysisRuns([]);
+      setSelectedRunId(null);
+      setCurrentRunResult(null);
+      setCurrentRunProvenance(null);
+      setAnalysisFindings([]);
+      setAnalysisAssumptions([]);
+      setSensitivityResult(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedAnalysisId) {
+      loadAnalysisDetail(selectedAnalysisId);
+    }
+  }, [selectedAnalysisId, loadAnalysisDetail]);
+
+  const createAnalysis = async (data: CreateResearchAnalysisDTO) => {
+    try {
+      const an = await api.createAnalysis(data);
+      await loadAnalyses();
+      setSelectedAnalysisId(an.analysis_id);
+      return an;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to create analysis.");
+      throw err;
+    }
+  };
+
+  const updateAnalysis = async (analysisId: string, data: UpdateResearchAnalysisDTO) => {
+    try {
+      const updated = await api.updateAnalysis(analysisId, data);
+      setCurrentAnalysis(updated);
+      await loadAnalyses();
+      return updated;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to update analysis.");
+      throw err;
+    }
+  };
+
+  const duplicateAnalysis = async (analysisId: string) => {
+    try {
+      const copy = await api.duplicateAnalysis(analysisId);
+      await loadAnalyses();
+      setSelectedAnalysisId(copy.analysis_id);
+      return copy;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to duplicate analysis.");
+      throw err;
+    }
+  };
+
+  const deleteAnalysis = async (analysisId: string) => {
+    try {
+      await api.deleteAnalysis(analysisId);
+      if (selectedAnalysisId === analysisId) {
+        setSelectedAnalysisId(null);
+      }
+      await loadAnalyses();
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to delete analysis.");
+      throw err;
+    }
+  };
+
+  const executeAnalysisRun = async (analysisId: string, inputPolicy: string = "PINNED_SOURCE_VERSION") => {
+    setIsRunExecuting(true);
+    setGlobalError(null);
+    try {
+      const run = await api.executeAnalysisRun(analysisId, inputPolicy);
+      const [res, prov, runsRes, an] = await Promise.all([
+        api.getAnalysisRunResults(run.run_id),
+        api.getAnalysisRunProvenance(run.run_id),
+        api.listAnalysisRuns(analysisId),
+        api.getAnalysis(analysisId),
+      ]);
+      setSelectedRunId(run.run_id);
+      setCurrentRunResult(res);
+      setCurrentRunProvenance(prov);
+      setAnalysisRuns(runsRes.runs);
+      setCurrentAnalysis(an);
+      return run;
+    } catch (err: any) {
+      setGlobalError(err.message || "Analysis execution failed.");
+      throw err;
+    } finally {
+      setIsRunExecuting(false);
+    }
+  };
+
+  const createFinding = async (analysisId: string, data: CreateResearchFindingDTO) => {
+    try {
+      const f = await api.createAnalysisFinding(analysisId, data);
+      setAnalysisFindings((prev) => [f, ...prev]);
+      return f;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to create finding.");
+      throw err;
+    }
+  };
+
+  const updateFinding = async (findingId: string, data: UpdateResearchFindingDTO) => {
+    try {
+      const updated = await api.updateFinding(findingId, data);
+      setAnalysisFindings((prev) => prev.map((f) => (f.finding_id === findingId ? updated : f)));
+      return updated;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to update finding.");
+      throw err;
+    }
+  };
+
+  const deleteFinding = async (findingId: string) => {
+    try {
+      await api.deleteFinding(findingId);
+      setAnalysisFindings((prev) => prev.filter((f) => f.finding_id !== findingId));
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to delete finding.");
+      throw err;
+    }
+  };
+
+  const createAssumption = async (analysisId: string, data: CreateResearchAssumptionDTO) => {
+    try {
+      const as = await api.createAnalysisAssumption(analysisId, data);
+      setAnalysisAssumptions((prev) => [...prev, as]);
+      return as;
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to create assumption.");
+      throw err;
+    }
+  };
+
+  const deleteAssumption = async (assumptionId: string) => {
+    try {
+      await api.deleteAssumption(assumptionId);
+      setAnalysisAssumptions((prev) => prev.filter((a) => a.assumption_id !== assumptionId));
+    } catch (err: any) {
+      setGlobalError(err.message || "Failed to delete assumption.");
+      throw err;
+    }
+  };
+
+  const executeSensitivity = async (analysisId: string, data: SensitivityAnalysisRequest) => {
+    setIsSensitivityLoading(true);
+    setGlobalError(null);
+    try {
+      const res = await api.executeSensitivityAnalysis(analysisId, data);
+      setSensitivityResult(res);
+      return res;
+    } catch (err: any) {
+      setGlobalError(err.message || "Sensitivity analysis failed.");
+      throw err;
+    } finally {
+      setIsSensitivityLoading(false);
+    }
+  };
+
+  const evaluateHypothesis = async (hypothesisId: string, data: ExecuteHypothesisEvaluationDTO) => {
+    setIsHypothesisEvaluating(true);
+    setGlobalError(null);
+    try {
+      const ev = await api.executeHypothesisEvaluation(hypothesisId, data);
+      setHypothesisEvaluations((prev) => [ev, ...prev]);
+      return ev;
+    } catch (err: any) {
+      setGlobalError(err.message || "Hypothesis evaluation failed.");
+      throw err;
+    } finally {
+      setIsHypothesisEvaluating(false);
+    }
+  };
+
+  // -------------------------------------------------------------------------
   // Navigation & Triggers
   // -------------------------------------------------------------------------
   useEffect(() => {
@@ -421,6 +724,9 @@ export function useResearchWorkspace() {
       loadOverview();
     } else if (activeTab === "INVESTIGATIONS") {
       loadInvestigations();
+    } else if (activeTab === "ANALYSIS") {
+      loadAnalysisTypes();
+      loadAnalyses();
     } else if (activeTab === "DISCOVERY") {
       loadSourceTypes();
       if (discoveryResults.length === 0) {
@@ -439,6 +745,8 @@ export function useResearchWorkspace() {
     activeTab,
     loadOverview,
     loadInvestigations,
+    loadAnalysisTypes,
+    loadAnalyses,
     loadSourceTypes,
     discoveryResults.length,
     searchDiscovery,
@@ -723,6 +1031,47 @@ export function useResearchWorkspace() {
     // Navigation Shortcuts
     openDocument,
     openComparison,
+
+    // Stage 106: Research Analysis & Workbenches
+    analyses,
+    analysesTotal,
+    isAnalysesLoading,
+    selectedAnalysisId,
+    setSelectedAnalysisId,
+    selectAnalysis,
+    currentAnalysis,
+    analysisRuns,
+    selectedRunId,
+    selectRun,
+    currentRunResult,
+    currentRunProvenance,
+    isRunExecuting,
+    analysisFindings,
+    analysisAssumptions,
+    sensitivityResult,
+    isSensitivityLoading,
+    hypothesisEvaluations,
+    isHypothesisEvaluating,
+    analysisTypeCatalog,
+    analysisTypeFilter,
+    setAnalysisTypeFilter,
+    analysisEntityFilter,
+    setAnalysisEntityFilter,
+    analysisSearchQuery,
+    setAnalysisSearchQuery,
+    loadAnalyses,
+    createAnalysis,
+    updateAnalysis,
+    duplicateAnalysis,
+    deleteAnalysis,
+    executeAnalysisRun,
+    createFinding,
+    updateFinding,
+    deleteFinding,
+    createAssumption,
+    deleteAssumption,
+    executeSensitivity,
+    evaluateHypothesis,
 
     // Error
     globalError,

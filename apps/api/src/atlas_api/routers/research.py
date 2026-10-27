@@ -50,11 +50,21 @@ from typing import List, Optional
 
 from atlas.auth import AuthPrincipal
 from atlas.research.enums import (
+    AnalysisInputPolicy,
     InvestigationLifecycleStatus,
+    ResearchAnalysisType,
     ResearchSourceType,
     ResearchType,
 )
 from atlas.research.errors import (
+    ResearchAnalysisAccessDeniedError,
+    ResearchAnalysisConfigurationInvalidError,
+    ResearchAnalysisExecutionFailedError,
+    ResearchAnalysisNotFoundError,
+    ResearchAnalysisRevisionConflictError,
+    ResearchAnalysisRunNotFoundError,
+    ResearchAnalysisTypeUnsupportedError,
+    ResearchAssumptionNotFoundError,
     ResearchClaimNotFoundError,
     ResearchComparisonIncompatibleError,
     ResearchComparisonResourceLimitError,
@@ -65,6 +75,11 @@ from atlas.research.errors import (
     ResearchEvidenceCandidateNotFoundError,
     ResearchEvidenceNotFoundError,
     ResearchEvidenceSourceMissingError,
+    ResearchFindingAccessDeniedError,
+    ResearchFindingNotFoundError,
+    ResearchFindingRevisionConflictError,
+    ResearchHypothesisEvaluationInvalidError,
+    ResearchHypothesisEvaluationNotFoundError,
     ResearchHypothesisNotFoundError,
     ResearchInvestigationAccessDeniedError,
     ResearchInvestigationNotFoundError,
@@ -74,14 +89,20 @@ from atlas.research.errors import (
     ResearchNoteNotFoundError,
     ResearchNoteRevisionConflictError,
     ResearchQuestionNotFoundError,
+    ResearchScenarioConfigurationInvalidError,
     ResearchSemanticSearchUnavailableError,
     ResearchSourceNotFoundError,
     ResearchSourceUrlUnsafeError,
 )
 from atlas.research.schemas import (
+    # Stage 106 Schemas
+    AnalysisProvenanceResponseDTO,
     AttachResearchEvidenceDTO,
     ConvertEvidenceCandidateDTO,
+    CreateResearchAnalysisDTO,
+    CreateResearchAssumptionDTO,
     CreateResearchClaimDTO,
+    CreateResearchFindingDTO,
     CreateResearchHypothesisDTO,
     CreateResearchInvestigationDTO,
     CreateResearchNoteDTO,
@@ -90,11 +111,21 @@ from atlas.research.schemas import (
     DocumentComparisonResultDTO,
     DocumentSearchRequestDTO,
     DocumentSearchResponseDTO,
+    EvaluateResearchHypothesisDTO,
     EvidenceCandidateListResponseDTO,
+    ExecuteSensitivityScenarioDTO,
     FinancialFactsCompareRequestDTO,
     FinancialFactsCompareResponseDTO,
     LinkResearchSourceDTO,
     ResearchActivityTimelineResponseDTO,
+    ResearchAnalysisDTO,
+    ResearchAnalysisListResponseDTO,
+    ResearchAnalysisResultDTO,
+    ResearchAnalysisRunDTO,
+    ResearchAnalysisRunListResponseDTO,
+    ResearchAnalysisTypeListResponseDTO,
+    ResearchAssumptionDTO,
+    ResearchAssumptionListResponseDTO,
     ResearchCitationListResponseDTO,
     ResearchClaimDTO,
     ResearchClaimListResponseDTO,
@@ -106,7 +137,11 @@ from atlas.research.schemas import (
     ResearchDocumentTableListResponseDTO,
     ResearchEvidenceDTO,
     ResearchEvidenceListResponseDTO,
+    ResearchFindingDTO,
+    ResearchFindingListResponseDTO,
     ResearchHypothesisDTO,
+    ResearchHypothesisEvaluationDTO,
+    ResearchHypothesisEvaluationListResponseDTO,
     ResearchHypothesisListResponseDTO,
     ResearchInvestigationDTO,
     ResearchInvestigationListResponseDTO,
@@ -116,6 +151,7 @@ from atlas.research.schemas import (
     ResearchOverviewSummaryDTO,
     ResearchQuestionDTO,
     ResearchQuestionListResponseDTO,
+    ResearchSensitivityResultDTO,
     ResearchSourceDiscoveryQueryDTO,
     ResearchSourceDiscoveryResponseDTO,
     ResearchSourceListResponseDTO,
@@ -123,11 +159,15 @@ from atlas.research.schemas import (
     ResearchSourceTypeListResponseDTO,
     ResolveEvidenceLocationRequestDTO,
     ResolveEvidenceLocationResponseDTO,
+    UpdateResearchAnalysisDTO,
     UpdateResearchClaimDTO,
+    UpdateResearchFindingDTO,
     UpdateResearchHypothesisDTO,
     UpdateResearchInvestigationDTO,
     UpdateResearchNoteDTO,
     UpdateResearchQuestionDTO,
+    ValidateAnalysisSpecificationRequestDTO,
+    ValidateAnalysisSpecificationResponseDTO,
 )
 from atlas.research.service import (
     ResearchDocumentService,
@@ -1218,6 +1258,570 @@ def compare_financial_facts_endpoint(
     try:
         return service.compare_financial_facts(payload, user_id=user_id)
     except ResearchComparisonIncompatibleError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 106 Research Analysis Domain & Specifications
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/research/analysis-types",
+    response_model=ResearchAnalysisTypeListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="List supported institutional research analysis types",
+)
+def list_analysis_types_endpoint(
+    service: ResearchService = Depends(get_research_service),
+    _user=Depends(get_current_user),
+):
+    items = service.list_analysis_types()
+    return ResearchAnalysisTypeListResponseDTO(analysis_types=items, total_count=len(items))
+
+
+@router.get(
+    "/research/analyses",
+    response_model=ResearchAnalysisListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="List user-owned institutional research analyses",
+)
+def list_analyses_endpoint(
+    investigation_id: Optional[str] = Query(None, description="Filter by investigation ID"),
+    analysis_type: Optional[ResearchAnalysisType] = Query(None, description="Filter by analysis type"),
+    subject_entity_id: Optional[str] = Query(None, description="Filter by primary subject entity ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    items = service.list_analyses(
+        user_id=user_id,
+        investigation_id=investigation_id,
+        analysis_type=analysis_type,
+        subject_entity_id=subject_entity_id,
+    )
+    return ResearchAnalysisListResponseDTO(analyses=items, total_count=len(items))
+
+
+@router.post(
+    "/research/analyses",
+    response_model=ResearchAnalysisDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new institutional research analysis specification",
+)
+def create_analysis_endpoint(
+    payload: CreateResearchAnalysisDTO,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.create_analysis(payload, user_id=user_id)
+    except ResearchInvestigationNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestigationAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchAnalysisTypeUnsupportedError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except ResearchAnalysisConfigurationInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.get(
+    "/research/analyses/{id}",
+    response_model=ResearchAnalysisDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get research analysis details by ID",
+)
+def get_analysis_endpoint(
+    id: str = Path(..., description="The analysis ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_analysis(id, user_id=user_id)
+    except ResearchAnalysisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.patch(
+    "/research/analyses/{id}",
+    response_model=ResearchAnalysisDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Update research analysis definition with optimistic concurrency",
+)
+def update_analysis_endpoint(
+    id: str = Path(..., description="The analysis ID"),
+    payload: UpdateResearchAnalysisDTO = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.update_analysis(id, payload, user_id=user_id)
+    except ResearchAnalysisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchAnalysisRevisionConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except ResearchAnalysisConfigurationInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.delete(
+    "/research/analyses/{id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete research analysis",
+)
+def delete_analysis_endpoint(
+    id: str = Path(..., description="The analysis ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        service.delete_analysis(id, user_id=user_id)
+        return {"success": True, "message": f"Analysis '{id}' deleted successfully."}
+    except ResearchAnalysisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/analyses/{id}/duplicate",
+    response_model=ResearchAnalysisDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Duplicate a research analysis into draft status",
+)
+def duplicate_analysis_endpoint(
+    id: str = Path(..., description="The analysis ID to duplicate"),
+    target_investigation_id: Optional[str] = Query(None, description="Optional target investigation ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.duplicate_analysis(id, user_id=user_id)
+    except ResearchAnalysisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchInvestigationNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestigationAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/analyses/validate",
+    response_model=ValidateAnalysisSpecificationResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Validate analysis specification before execution",
+)
+def validate_analysis_specification_endpoint(
+    payload: ValidateAnalysisSpecificationRequestDTO,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.validate_analysis_specification(payload, user_id=user_id)
+
+
+# ---------------------------------------------------------------------------
+# Stage 106 Analysis Runs, Results & Provenance
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/research/analyses/{id}/runs",
+    response_model=ResearchAnalysisRunDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Execute a reproducible research analysis run",
+)
+def execute_analysis_run_endpoint(
+    id: str = Path(..., description="The analysis ID"),
+    input_policy: AnalysisInputPolicy = Query(AnalysisInputPolicy.PINNED_SOURCE_VERSION, description="Input data policy"),
+    temporal_cutoff: Optional[str] = Query(None, description="Optional historical public information cutoff date (YYYY-MM-DD)"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.execute_analysis_run(
+            analysis_id=id,
+            user_id=user_id,
+            input_policy=input_policy,
+            temporal_cutoff=temporal_cutoff,
+        )
+    except ResearchAnalysisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchAnalysisExecutionFailedError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get(
+    "/research/analyses/{id}/runs",
+    response_model=ResearchAnalysisRunListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="List historical execution runs for an analysis",
+)
+def list_analysis_runs_endpoint(
+    id: str = Path(..., description="The analysis ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        items = service.list_analysis_runs(id, user_id=user_id)
+        return ResearchAnalysisRunListResponseDTO(analysis_id=id, runs=items, total_count=len(items))
+    except ResearchAnalysisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/analysis-runs/{run_id}",
+    response_model=ResearchAnalysisRunDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get execution metadata for an analysis run",
+)
+def get_analysis_run_endpoint(
+    run_id: str = Path(..., description="The run ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_analysis_run(run_id, user_id=user_id)
+    except (ResearchAnalysisRunNotFoundError, ResearchAnalysisNotFoundError) as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/analysis-runs/{run_id}/results",
+    response_model=ResearchAnalysisResultDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get calculated observations, charts, and summary statistics for an analysis run",
+)
+def get_analysis_run_results_endpoint(
+    run_id: str = Path(..., description="The run ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_analysis_run_result(run_id, user_id=user_id)
+    except (ResearchAnalysisRunNotFoundError, ResearchAnalysisNotFoundError) as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/analysis-runs/{run_id}/provenance",
+    response_model=AnalysisProvenanceResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Inspect exact source data manifest, revision watermarks, and calculation lineage",
+)
+def get_analysis_run_provenance_endpoint(
+    run_id: str = Path(..., description="The run ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_analysis_run_provenance(run_id, user_id=user_id)
+    except (ResearchAnalysisRunNotFoundError, ResearchAnalysisNotFoundError) as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 106 Hypothesis Evaluation
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/research/hypotheses/{id}/evaluations",
+    response_model=ResearchHypothesisEvaluationDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Evaluate an analyst hypothesis against reproducible analysis results",
+)
+def evaluate_hypothesis_endpoint(
+    id: str = Path(..., description="The hypothesis ID"),
+    payload: EvaluateResearchHypothesisDTO = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.evaluate_hypothesis(id, payload, user_id=user_id)
+    except ResearchHypothesisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestigationAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except (ResearchAnalysisRunNotFoundError, ResearchAnalysisNotFoundError) as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchHypothesisEvaluationInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.get(
+    "/research/hypotheses/{id}/evaluations",
+    response_model=ResearchHypothesisEvaluationListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="List hypothesis evaluation history",
+)
+def list_hypothesis_evaluations_endpoint(
+    id: str = Path(..., description="The hypothesis ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        items = service.list_hypothesis_evaluations(id, user_id=user_id)
+        return ResearchHypothesisEvaluationListResponseDTO(hypothesis_id=id, evaluations=items, total_count=len(items))
+    except ResearchHypothesisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestigationAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/hypothesis-evaluations/{id}",
+    response_model=ResearchHypothesisEvaluationDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get hypothesis evaluation details, criteria, and limitations",
+)
+def get_hypothesis_evaluation_endpoint(
+    id: str = Path(..., description="The evaluation ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_hypothesis_evaluation(id, user_id=user_id)
+    except ResearchHypothesisEvaluationNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchInvestigationAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 106 Research Findings
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/research/findings",
+    response_model=ResearchFindingListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="List research findings across investigations and analyses",
+)
+def list_all_findings_endpoint(
+    investigation_id: Optional[str] = Query(None, description="Optional filter by investigation ID"),
+    analysis_id: Optional[str] = Query(None, description="Optional filter by analysis ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    items = service.list_findings(user_id=user_id, analysis_id=analysis_id, investigation_id=investigation_id)
+    return ResearchFindingListResponseDTO(findings=items, total_count=len(items))
+
+
+@router.get(
+    "/research/analyses/{id}/findings",
+    response_model=ResearchFindingListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="List research findings attached to an analysis",
+)
+def list_analysis_findings_endpoint(
+    id: str = Path(..., description="The analysis ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    items = service.list_findings(user_id=user_id, analysis_id=id)
+    return ResearchFindingListResponseDTO(findings=items, total_count=len(items))
+
+
+@router.post(
+    "/research/analyses/{id}/findings",
+    response_model=ResearchFindingDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Record an institutional research finding with evidence and limitations",
+)
+def create_finding_endpoint(
+    id: str = Path(..., description="The analysis ID"),
+    payload: CreateResearchFindingDTO = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.create_finding(id, payload, user_id=user_id)
+    except ResearchAnalysisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/findings/{id}",
+    response_model=ResearchFindingDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Get research finding details",
+)
+def get_finding_endpoint(
+    id: str = Path(..., description="The finding ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_finding(id, user_id=user_id)
+    except ResearchFindingNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchFindingAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.patch(
+    "/research/findings/{id}",
+    response_model=ResearchFindingDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Update research finding statement, review status, or evidence",
+)
+def update_finding_endpoint(
+    id: str = Path(..., description="The finding ID"),
+    payload: UpdateResearchFindingDTO = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.update_finding(id, payload, user_id=user_id)
+    except ResearchFindingNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchFindingAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchFindingRevisionConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
+@router.delete(
+    "/research/findings/{id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete research finding",
+)
+def delete_finding_endpoint(
+    id: str = Path(..., description="The finding ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        service.delete_finding(id, user_id=user_id)
+        return {"success": True, "message": f"Finding '{id}' deleted successfully."}
+    except ResearchFindingNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchFindingAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 106 Assumptions & Scenario Sensitivity
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/research/analyses/{id}/assumptions",
+    response_model=ResearchAssumptionListResponseDTO,
+    status_code=status.HTTP_200_OK,
+    summary="List explicit analyst assumptions for an analysis",
+)
+def list_assumptions_endpoint(
+    id: str = Path(..., description="The analysis ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        items = service.list_assumptions(id, user_id=user_id)
+        return ResearchAssumptionListResponseDTO(analysis_id=id, assumptions=items, total_count=len(items))
+    except ResearchAnalysisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/analyses/{id}/assumptions",
+    response_model=ResearchAssumptionDTO,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add an explicit analyst assumption with unit and source context",
+)
+def create_assumption_endpoint(
+    id: str = Path(..., description="The analysis ID"),
+    payload: CreateResearchAssumptionDTO = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.create_assumption(id, payload, user_id=user_id)
+    except ResearchAnalysisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.delete(
+    "/research/assumptions/{id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete an analyst assumption",
+)
+def delete_assumption_endpoint(
+    id: str = Path(..., description="The assumption ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        service.delete_assumption(id, user_id=user_id)
+        return {"success": True, "message": f"Assumption '{id}' deleted successfully."}
+    except ResearchAssumptionNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/analyses/{id}/scenarios/sensitivity",
+    response_model=ResearchSensitivityResultDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Execute deterministic what-if sensitivity matrix for an analysis",
+)
+def execute_sensitivity_scenario_endpoint(
+    id: str = Path(..., description="The analysis ID"),
+    payload: ExecuteSensitivityScenarioDTO = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.execute_sensitivity_scenario(id, payload, user_id=user_id)
+    except ResearchAnalysisNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchAnalysisAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchScenarioConfigurationInvalidError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
 
