@@ -9957,24 +9957,43 @@ This document records the major architectural and product decisions established.
 857. **Frontend Knowledge & Updates Workspaces**: Integrated `"Knowledge Library"` and `"Updates & Monitoring"` workspaces with search, inspector, lineage graph, and revalidation modal.
 858. **Full Research Sequence Closure (Stages 104–109)**: Successfully closed the complete 6-stage Research module development sequence within the primary route `/research`.
 859. **Roadmap Boundary (Stage 109 of 150)**: Stage 109 implementation complete. Stage 110 (Portfolios) and subsequent stages are strictly deferred. Zero portfolio mutation, zero trade execution, zero autonomous AI trading agents.
+## Stage 110: Build PORTFOLIOS V1 — Accounts, Transactions, Positions, Cash and Valuation
 
+### Canonical Portfolio and Investment Account Domain
+860. **Canonical Portfolio & Account Architecture**: Formalized `Portfolio` and `InvestmentAccount` entities with stable UUID identifiers, user-level tenant ownership (`owner_user_id`), portfolio types (`TAXABLE_INDIVIDUAL`, `JOINT_TENANTS`, `CORPORATE_TREASURY`, `INSTITUTIONAL_FUND`, `TRUST_FIDUCIARY`, `RETIREMENT_IRA`, `MODEL_BENCHMARK`), base reporting currencies (`base_currency`), and lifecycle states (`ACTIVE`, `RESTRICTED`, `CLOSED`, `ARCHIVED`).
+861. **Multi-Account Container Hierarchy**: Implemented multi-account containment allowing each portfolio to manage multiple segregated accounts (`BROKERAGE_RECORD`, `INVESTMENT_ACCOUNT`, `CASH_ACCOUNT`, `MANUAL_PORTFOLIO_ACCOUNT`) with strict isolation and account-level settlement policies.
+862. **Optimistic Concurrency & Audit Metadata**: Enforced integer revision counters (`revision`) across portfolios and accounts to detect and prevent mid-air collision overwrites during concurrent ledger postings.
 
+### Immutable Transaction Ledger & Controlled Reversals
+863. **Double-Entry-Inspired Transaction Journal**: Structured `PortfolioTransaction` supporting 12 canonical transaction types (`BUY`, `SELL`, `CASH_DEPOSIT`, `CASH_WITHDRAWAL`, `CASH_TRANSFER_IN`, `CASH_TRANSFER_OUT`, `CASH_DIVIDEND`, `CASH_INTEREST`, `ACCOUNT_FEE`, `WITHHOLDING_TAX`, `STOCK_SPLIT_ADJUSTMENT`, `CORRECTION_REVERSAL`). Every transaction captures trade date, settlement date, gross execution amount, fees, net cash impact, and transaction status (`PENDING`, `SETTLED`, `REVERSED`, `CORRECTED`, `CANCELED`).
+864. **Interactive Transaction Preview Engine**: Built pure deterministic preview endpoint (`preview_transaction`) that calculates fee allocations, net cash impacts, FIFO lot consumption projections, and projected cash/position balances prior to committing changes to the ledger.
+865. **Idempotency Protection & Duplicate Detection**: Enforced client-provided `idempotency_key` checking to eliminate duplicate transaction postings across network retries or double-click events.
+866. **Audited Reversing Entries & Non-Destructive Corrections**: Prohibited raw physical deletion of posted transactions. Implemented `CORRECTION_REVERSAL` entries with mandatory audit reasons (`audit_reason`), maintaining unbroken journal provenance while reversing lot consumptions and cash movements.
 
+### Multi-Currency Cash Management & Segregated Balances
+867. **Multi-Currency Cash Balance Segregation**: Modeled cash balances per account and per currency code, separating `POSTED_CASH`, `SETTLED_CASH`, `UNSETTLED_RECEIVABLE`, `UNSETTLED_PAYABLE`, and `AVAILABLE_CASH`. Prohibited raw mathematical addition across differing currencies without explicit canonical FX rate conversion.
+868. **Cash Ledger Audit Trail**: Maintained atomic `PortfolioCashLedgerEntry` journal recording directional cash inflows, outflows, transaction links, and resulting running balances for institutional audit verification.
 
+### FIFO Tax-Lot Accounting Engine & Exact Part XXII Reference Fixture
+869. **FIFO Cost-Basis Engine with Fee Capitalization**: Engineered deterministic First-In, First-Out (FIFO) tax-lot matching (`PortfolioSecurityLot`). Purchases capitalize transaction fees into acquisition cost basis ($\text{Unit Basis} = \frac{\text{Gross Amount} + \text{Fees}}{\text{Quantity}}$).
+870. **Partial Lot Consumption & Realized P&L Calculation**: Sales consume open lots chronologically, generating immutable `PortfolioLotConsumption` records. Net proceeds deduct exit fees ($\text{Net Proceeds} = \text{Gross Amount} - \text{Fees}$), computing exact realized capital gains ($\text{Realized P&L} = \text{Net Proceeds} - \text{Cost Basis Disposed}$).
+871. **Exact Part XXII Reference Fixture Verification**: Fully tested and mathematically verified the canonical benchmark fixture: $10,000 cash deposit, Buy 100 shares @ $50.00 + $10 fee, Sell 40 shares @ $60.00 - $8 fee $\rightarrow$ 60 remaining shares @ $50.10 unit basis, $2,004.00 cost basis disposed, $388.00 realized P&L, $3,006.00 remaining basis, $7,382.00 cash balance, $3,300.00 market value @ $55.00 mark, $10,682.00 total portfolio value, $294.00 unrealized P&L, and $682.00 net economic gain.
+872. **Corporate Action Stock Split Adjustments**: Stock splits and reverse splits adjust open lot quantities while preserving total aggregate cost basis, reciprocally updating unit basis with zero cash movement.
 
+### Position Projections & Event Stream Replay
+873. **Deterministic Position Derivation**: Portfolio positions (`PortfolioPosition`) are projected dynamically from transaction event logs. Backdated transactions trigger ordered stream replay to ensure accurate historical lot states and prevent basis corruption.
 
+### Canonical Market Data, FX Integration & Valuation Engine
+874. **Canonical Quote Freshness & Completeness States**: Position valuation integrates canonical market quotes with explicit freshness tracking (`REAL_TIME`, `DELAYED_15MIN`, `END_OF_DAY`, `STALE_OVER_24H`). Portfolio valuations classify completeness states into `COMPLETE`, `PARTIAL_MISSING_PRICES`, `PARTIAL_MISSING_FX`, `PARTIAL_STALE_DATA`, and `UNAVAILABLE`.
+875. **Multi-Currency Conversion with Directional FX Quotes**: Foreign asset and cash valuations are converted to portfolio base reporting currency using verified FX rates (e.g., ECB reference feeds), handling direct pairs and mathematical inversions with explicit timestamp capture.
 
+### Continuous Ledger Reconciliation Engine
+876. **Automated Balance & Lot Reconciliation**: Built automated audit verification comparing cash ledger entry sums against cash balance records, open lot share counts against position quantities, remaining lot basis against position cost basis, and total realized P&L against lot consumptions. Returns explicit reconciliation states (`RECONCILED`, `RECONCILIATION_WARNING`, `OUT_OF_BALANCE`).
 
+### Professional Bloomberg-Style Frontend Workspaces
+877. **Integrated `/portfolios` Workspaces**: Delivered comprehensive frontend at `/portfolios` featuring Portfolio Header with switcher, Overview with KPI metric cards, Holdings & Tax-Lots Table, Position Inspector, Transaction Journal with Live Preview, Transaction Reversal/Correction modals, Multi-Currency Cash Workspace, Valuation Workspace with FX rates and quote freshness inspectors, and Investment Account Management.
 
-
-
-
-
-
-
-
-
-
-
-
-
+### Roadmap Boundaries & Strict Deferrals
+878. **Stage 110 Roadmap Boundary (Portfolios V1)**: Stage 110 exclusively establishes core accounts, transaction ledgers, positions, FIFO tax lots, cash management, valuation, and reconciliation.
+879. **Strict Deferral of Performance Analytics (Stage 111)**: Strictly prohibited conversion of accounting P&L into Time-Weighted Return (TWR), Money-Weighted Return (MWR), IRR, or XIRR (reserved for Stage 111).
+880. **Strict Deferral of Allocation, Attribution, Risk, and Trading**: Strictly deferred Stage 112 (Allocation/Exposure), Stage 113 (Attribution), Stage 114 (Optimization), Stages 115–118 (Risk), Stage 143 (Backtesting), Stage 144 (Paper Trading), Stage 145 (Broker Sandbox), and Stages 146–149 (Autonomous Agents). Zero live broker order execution.

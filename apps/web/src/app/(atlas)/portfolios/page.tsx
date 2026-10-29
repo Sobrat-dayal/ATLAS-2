@@ -1,13 +1,15 @@
 import { ATLAS_MODULES } from "@/config/atlas-modules";
-import { ModuleFoundation } from "@/components/modules/ModuleFoundation";
+import { PortfolioWorkspace } from "@/components/portfolios/PortfolioWorkspace";
 import { Metadata } from "next";
 
 export function generateMetadata(): Metadata {
   return {
-    title: `${ATLAS_MODULES.portfolios.label} | ATLAS`
+    title: `${ATLAS_MODULES.portfolios.label} | ATLAS`,
+    description:
+      "Institutional-grade portfolio management, investment accounts, transaction ledgers, FIFO tax lots, and marked valuation.",
   };
 }
 
 export default function PortfoliosPage() {
-  return <ModuleFoundation module={ATLAS_MODULES.portfolios} />;
+  return <PortfolioWorkspace />;
 }

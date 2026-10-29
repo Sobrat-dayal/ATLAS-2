@@ -42,6 +42,7 @@ from .geography import router as geography_router
 from .health import router as health_router
 from .news import router as news_router
 from .notifications import router as notifications_router
+from .portfolios import router as portfolios_router
 from .provenance import router as provenance_router
 from .providers import router as providers_router
 from .realtime import router as realtime_router
@@ -104,4 +105,4 @@ api_router.include_router(screeners_router, prefix="")
 api_router.include_router(activity_router, prefix="")
 api_router.include_router(tasks_router, prefix="")
 api_router.include_router(approvals_router, prefix="")
-
+api_router.include_router(portfolios_router, prefix="")

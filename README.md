@@ -1331,6 +1331,41 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
 - **Documentation**: See `docs/RESEARCH_KNOWLEDGE_MONITORING_AND_LIFECYCLE.md` and `docs/DECISIONS.md`.
 
+## Build PORTFOLIOS V1: Accounts, Transactions, Positions, Cash and Valuation (Stage 110)
+- **Architecture**: Complete, institutional-grade portfolio management foundation, double-entry-inspired transaction ledger, multi-currency cash management, deterministic FIFO tax-lot matching, corporate action adjustments, valuation completeness engine, and continuous reconciliation platform at primary route `/portfolios` (Module 14).
+- **Canonical Portfolio and Multi-Account Domain**:
+  - Stable UUID entities with user-level tenant ownership (`owner_user_id`), portfolio types (`TAXABLE_INDIVIDUAL`, `INSTITUTIONAL_FUND`, `CORPORATE_TREASURY`, etc.), and base reporting currencies.
+  - Multi-account container supporting segregated `BROKERAGE_RECORD`, `INVESTMENT_ACCOUNT`, `CASH_ACCOUNT`, and `MANUAL_PORTFOLIO_ACCOUNT` instances with integer revision tracking for optimistic concurrency.
+- **Double-Entry-Inspired Transaction Journal & Controlled Reversals**:
+  - Immutable journal recording 12 canonical transaction types (`BUY`, `SELL`, `CASH_DEPOSIT`, `CASH_WITHDRAWAL`, `CASH_TRANSFER_IN`, `CASH_TRANSFER_OUT`, `CASH_DIVIDEND`, `CASH_INTEREST`, `ACCOUNT_FEE`, `WITHHOLDING_TAX`, `STOCK_SPLIT_ADJUSTMENT`, `CORRECTION_REVERSAL`).
+  - Interactive transaction preview calculating fee allocations, FIFO lot consumptions, and projected balances before committing.
+  - Idempotency protection with client-supplied `idempotency_key`.
+  - Non-destructive reversal and replacement workflows via `CORRECTION_REVERSAL` with mandatory audit rationale.
+- **Segregated Multi-Currency Cash Ledger**:
+  - Independent cash balances per account and currency code (`POSTED_CASH`, `SETTLED_CASH`, `UNSETTLED_RECEIVABLE`, `UNSETTLED_PAYABLE`, `AVAILABLE_CASH`).
+  - Strict prohibition of cross-currency raw addition without explicit canonical FX conversion.
+- **FIFO Tax-Lot Accounting & Exact Part XXII Reference Fixture**:
+  - Fee capitalization into purchase basis ($\text{Unit Basis} = (\text{Gross} + \text{Fees}) / \text{Qty}$).
+  - Chronological FIFO lot consumption on sales with realized gain computation ($\text{Realized P&L} = \text{Net Proceeds} - \text{Basis Disposed}$).
+  - Fully verified Part XXII Reference Benchmark: $10,000 cash deposit, buy 100 @ $50 + $10 fee, sell 40 @ $60 - $8 fee $\rightarrow$ 60 shares @ $50.10, $388 realized P&L, $3,006 remaining basis, $7,382 cash, $3,300 position value @ $55 mark, $10,682 total value, $294 unrealized P&L, $682 net gain.
+  - Forward and reverse stock split adjustments preserving total cost basis with zero cash movement.
+- **Valuation Completeness & Continuous Reconciliation**:
+  - Mark-to-market position and cash valuation converted to base currency using canonical quotes and ECB FX reference rates.
+  - Explicit valuation completeness states (`COMPLETE`, `PARTIAL_MISSING_PRICES`, `PARTIAL_MISSING_FX`, `PARTIAL_STALE_DATA`, `UNAVAILABLE`) and quote freshness tracking (`REAL_TIME`, `DELAYED_15MIN`, `END_OF_DAY`, `STALE_OVER_24H`).
+  - Continuous reconciliation verifying cash ledger sum, open lot share counts, remaining lot basis, and realized P&L invariants.
+- **Professional Bloomberg-Style Frontend Workspaces (`/portfolios`)**:
+  - Master workspace featuring Portfolio Header, Overview with KPI cards and reconciliation box, Holdings & Lots Table with lot inspector, Transaction Journal with live accounting preview and correction modal, Cash Workspace, Valuation Workspace, and Account Management.
+- **Strict Roadmap Boundaries**:
+  - Stage 110 exclusively establishes core accounts, transactions, positions, lots, cash, valuation, and reconciliation.
+  - Strictly deferred: Stage 111 (Portfolio Performance / TWR / IRR / XIRR), Stage 112 (Allocation & Exposure), Stage 113 (Attribution), Stage 114 (Optimization), Stages 115–118 (Risk), and Stages 143–149 (Backtesting / Broker Sandbox / Autonomous Execution).
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_portfolios_v1.py` (6/6 passed in 1.12s).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (107/107 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Frontend linter: `npx eslint src/components/portfolios/ src/lib/portfolios/ src/hooks/portfolios/` (0 errors).
+  - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
+- **Documentation**: See `docs/PORTFOLIOS_V1_ACCOUNTING_AND_VALUATION.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets
