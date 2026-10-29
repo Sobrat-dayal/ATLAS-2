@@ -1294,6 +1294,43 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
 - **Documentation**: See `docs/RESEARCH_COLLABORATION_REVIEW_AND_GOVERNANCE.md` and `docs/DECISIONS.md`.
 
+## Institutional-Grade Research Knowledge, Continuous Evidence Monitoring and Research Lifecycle Management Platform (Stage 109)
+- **Architecture**: Complete, institutional-grade research knowledge organization, continuous evidence monitoring, and research lifecycle management platform at primary route `/research`. Concludes the 6-stage Research sequence (Stages 104–109), uniting investigative research, document intelligence, quantitative analyses, theses, reports, and governance into a unified, continuous operating system.
+- **Cross-Module Research Knowledge Library & Indexing**:
+  - Unified repository index registering all research artifacts: `INVESTIGATION`, `NOTE`, `QUESTION`, `HYPOTHESIS`, `CLAIM`, `EVIDENCE`, `ANALYSIS`, `FINDING`, `THESIS`, `REPORT`, and `SOURCE_REFERENCE`.
+  - Structured search with multi-type filters, subject entity resolution, and strict cross-tenant isolation guarantees.
+  - Epistemic lifecycle tags: `ACTIVE`, `ARCHIVED`, `DEPRECATED`, `DRAFT`, coupled with source availability presence (`AVAILABLE`, `PENDING_VERIFICATION`, `RESTRICTED`, `UNAVAILABLE`).
+- **Multi-Hop Dependency Lineage Graph Traversal**:
+  - Formalized directed dependency edges (`ResearchDependencyEdge`) linking canonical filings to evidence, quantitative calculations, empirical findings, theses, reports, and review decisions.
+  - Traversal engine with cycle detection and bounded traversal limit (`max_depth=5`), preventing recursion anomalies while mapping full upstream provenance and downstream impact.
+  - Interactive frontend lineage graph visualizer (`ResearchDependencyLineageViewer.tsx`) rendering node types and directed edges.
+- **Continuous Canonical Source-Change Detection**:
+  - Ingestion and deduplication engine capturing canonical revisions: `DOCUMENT_AMENDED` (SEC Form 10-K/A, 8-K), `FACT_RESTATED` (financial statement restatements), `VINTAGE_UPDATED` (macroeconomic data releases), `NEWS_CORRECTED` (verified journalism retractions), and `ENTITLEMENT_REVOKED` (vendor licensing changes).
+  - Composite key deduplication eliminating alert redundancies while tracking specific footnote/section alterations.
+- **Deterministic Downstream Impact Assessment**:
+  - Traverses dependency chains to generate `ResearchImpactAssessment` records across direct source links, intermediate calculation runs, and empirical findings.
+  - Epistemic humility: provides non-causal review recommendations and impact paths rather than unsupported assertions.
+- **Automated Reference & Citation Revalidation**:
+  - Evaluates citation integrity, reporting period matching, and approval revision status across target reports and analyses.
+  - Classifies issues by severity (`BLOCKING`, `WARNING`, `INFORMATIONAL`) and computes revalidation outcomes (`VALID_REFERENCES`, `VALID_WITH_WARNINGS`, `REQUIRES_HUMAN_REVIEW`, `INVALID_CITATIONS`, `APPROVAL_REVOCATION_RECOMMENDED`).
+- **Research Update Queue & Lifecycle State Machine**:
+  - Operational task queue for analysts tracking required verifications: `OPEN` -> `ACKNOWLEDGED` -> `RESOLVED` / `DISMISSED` / `REOPENED`.
+  - Mandatory analyst resolution notes documenting adjustments or verification rationales.
+  - Cross-tenant isolation preventing unauthorized task acknowledgement or resolution.
+- **Historical Point-in-Time Immutability**:
+  - Ingesting source change events, computing impact assessments, or running revalidations **strictly preserves completed historical analysis runs, locked evidence records, and finalized reports without silent mutation**.
+- **Consolidated Research Platform Overview & Frontend Integration**:
+  - Live metric counters across investigations, notes, analyses, reports, theses, pending reviews, open updates, and critical updates.
+  - Navigation tabs: `"Overview"`, `"Knowledge Library"`, `"Updates & Monitoring"`, `"Reviews & Governance"`, `"Reports & Theses"`, `"Analysis"`, `"Investigations"`, `"Discovery"`, `"Document Viewer"`, `"Comparison"`, and `"Activity"`.
+  - Dedicated components: `ResearchKnowledgeWorkspace`, `ResearchKnowledgeInspector`, `ResearchUpdatesWorkspace`, `ResearchUpdateQueue`, `ResearchImpactInspector`, `ResearchDependencyLineageViewer`, and `ResearchRevalidationDialog`.
+- **Testing & Verification**:
+  - Backend tests: Full 6-stage Research regression suite (`test_research_foundation_v1.py`, `test_research_document_intelligence_v1.py`, `test_research_analysis_v1.py`, `test_research_reports_v1.py`, `test_research_collaboration_and_review_v1.py`, `test_research_knowledge_monitoring_and_lifecycle_v1.py`) (77/77 passed in 7.56s).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (101/101 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Frontend linter: `npx eslint src/components/research/knowledge/ src/components/research/updates/` (0 errors).
+  - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
+- **Documentation**: See `docs/RESEARCH_KNOWLEDGE_MONITORING_AND_LIFECYCLE.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

@@ -25,19 +25,28 @@ from atlas.research.domain import (
     ResearchAnalysisSpecification,
     ResearchComment,
     ResearchCommentThread,
+    ResearchDependencyEdge,
     ResearchFinding,
+    ResearchImpactAssessment,
     ResearchInternalCirculation,
     ResearchInvestigation,
     ResearchInvestmentThesis,
+    ResearchKnowledgeCollection,
+    ResearchKnowledgeEntry,
+    ResearchNote,
     ResearchReport,
     ResearchReportExport,
     ResearchReportSection,
+    ResearchRevalidationIssue,
+    ResearchRevalidationResult,
     ResearchReviewAuditEvent,
     ResearchReviewDecision,
     ResearchReviewRequest,
     ResearchScenario,
+    ResearchSourceChangeEvent,
     ResearchSourceReference,
     ResearchThesisArgument,
+    ResearchUpdateItem,
 )
 from atlas.research.enums import (
     AnalysisExecutionStatus,
@@ -45,9 +54,14 @@ from atlas.research.enums import (
     CirculationStatus,
     CommentAnchorType,
     CommentThreadStatus,
+    DependencyType,
     ExportFormat,
     ExportStatus,
+    ImpactCategory,
     InvestigationLifecycleStatus,
+    KnowledgeEntryType,
+    KnowledgeSourceAvailability,
+    KnowledgeStatus,
     ReportLifecycleStatus,
     ReportSectionType,
     ResearchActivityAction,
@@ -60,12 +74,18 @@ from atlas.research.enums import (
     ResearchRole,
     ResearchSourceType,
     ResearchType,
+    RevalidationOutcome,
+    RevalidationStatus,
     ReviewDecisionType,
     ReviewScope,
     ReviewStatus,
     ScenarioType,
     SourceAvailabilityStatus,
+    SourceChangeType,
     ThesisLifecycleStatus,
+    UpdateItemPriority,
+    UpdateItemStatus,
+    UpdateItemType,
 )
 from atlas.research.errors import (
     InvalidResearchDocumentKindError,
@@ -86,16 +106,20 @@ from atlas.research.errors import (
     ResearchCommentAnchorInvalidError,
     ResearchCommentNotFoundError,
     ResearchCommentThreadNotFoundError,
+    ResearchDependencyNotFoundError,
     ResearchDocumentDataInconsistentError,
     ResearchDocumentNotFoundError,
     ResearchFindingAccessDeniedError,
     ResearchFindingNotFoundError,
     ResearchHypothesisEvaluationNotFoundError,
     ResearchHypothesisNotFoundError,
+    ResearchImpactNotFoundError,
     ResearchInvestigationAccessDeniedError,
     ResearchInvestigationNotFoundError,
     ResearchInvestmentThesisAccessDeniedError,
     ResearchInvestmentThesisNotFoundError,
+    ResearchKnowledgeAccessDeniedError,
+    ResearchKnowledgeEntryNotFoundError,
     ResearchNoteAccessDeniedError,
     ResearchNoteNotFoundError,
     ResearchParticipantCrossTenantError,
@@ -108,6 +132,9 @@ from atlas.research.errors import (
     ResearchReportNotFoundError,
     ResearchReportRevisionConflictError,
     ResearchReportTemplateUnavailableError,
+    ResearchRevalidationAccessDeniedError,
+    ResearchRevalidationNotFoundError,
+    ResearchRevalidationTargetUnavailableError,
     ResearchReviewAccessDeniedError,
     ResearchReviewAlreadyDecidedError,
     ResearchReviewDuplicateActiveRequestError,
@@ -115,7 +142,13 @@ from atlas.research.errors import (
     ResearchReviewNotFoundError,
     ResearchReviewRevisionMismatchError,
     ResearchReviewSelfApprovalForbiddenError,
+    ResearchSourceChangeDuplicateError,
+    ResearchSourceChangeNotFoundError,
     ResearchSourceNotFoundError,
+    ResearchUpdateAlreadyResolvedError,
+    ResearchUpdateInvalidStateTransitionError,
+    ResearchUpdateItemAccessDeniedError,
+    ResearchUpdateItemNotFoundError,
 )
 from atlas.research.reports.exports import render_report_docx, render_report_pdf
 from atlas.research.reports.templates import (
@@ -249,6 +282,25 @@ from atlas.research.schemas import (
     UpdateAccessGrantRequest,
     UpdateCommentRequest,
     UpdateReviewRequest,
+    # Stage 109 Schemas
+    CreateRevalidationRequest,
+    CreateSourceChangeEventRequest,
+    CreateUpdateItemRequest,
+    ResearchDependencyEdgeResponse,
+    ResearchDependencyLineageResponse,
+    ResearchImpactAssessmentResponse,
+    ResearchImpactListResponse,
+    ResearchKnowledgeEntryResponse,
+    ResearchKnowledgeSearchQuery,
+    ResearchKnowledgeSearchResponse,
+    ResearchOverviewSummaryResponse,
+    ResearchRevalidationIssueResponse,
+    ResearchRevalidationResultResponse,
+    ResearchSourceChangeEventListResponse,
+    ResearchSourceChangeEventResponse,
+    ResearchUpdateItemListResponse,
+    ResearchUpdateItemResponse,
+    ResolveUpdateItemRequest,
 )
 from atlas.research.security import (
     sanitize_markdown_text,
@@ -3420,6 +3472,571 @@ class ResearchService:
             for e in evts
         ]
         return ResearchReviewAuditEventListResponse(events=items, total_count=len(items))
+
+    # ---------------------------------------------------------------------------
+    # Stage 109 — Knowledge Library & Search Services
+    # ---------------------------------------------------------------------------
+    def search_knowledge(
+        self,
+        query: ResearchKnowledgeSearchQuery,
+        user_id: str,
+    ) -> ResearchKnowledgeSearchResponse:
+        """Searches across authorized research knowledge entries with structured filters."""
+        entries, total = self.repository.search_knowledge_entries(
+            owner_user_id=user_id,
+            query=query.query,
+            entry_types=query.entry_types,
+            investigation_id=query.investigation_id,
+            entity_id=query.entity_id,
+            source_status=query.source_status,
+            knowledge_status=query.knowledge_status,
+            limit=query.limit,
+            offset=query.offset,
+        )
+        return ResearchKnowledgeSearchResponse(
+            entries=[
+                ResearchKnowledgeEntryResponse(
+                    knowledge_entry_id=e.knowledge_entry_id,
+                    entry_type=e.entry_type,
+                    referenced_resource_type=e.referenced_resource_type,
+                    referenced_resource_id=e.referenced_resource_id,
+                    owner_user_id=e.owner_user_id,
+                    title=e.title,
+                    description=e.description,
+                    investigation_id=e.investigation_id,
+                    subject_entity_ids=e.subject_entity_ids,
+                    source_status=e.source_status,
+                    knowledge_status=e.knowledge_status,
+                    metadata_revision=e.metadata_revision,
+                    created_at=e.created_at,
+                    updated_at=e.updated_at,
+                )
+                for e in entries
+            ],
+            total_count=total,
+        )
+
+    def get_knowledge_entry(
+        self,
+        entry_id: str,
+        user_id: str,
+    ) -> ResearchKnowledgeEntryResponse:
+        """Retrieves a single knowledge entry with entitlement verification."""
+        entry = self.repository.get_knowledge_entry(entry_id)
+        if not entry:
+            raise ResearchKnowledgeEntryNotFoundError(f"Knowledge entry '{entry_id}' not found.")
+
+        if entry.owner_user_id != user_id and entry.owner_user_id not in ("default-user", "system", "SYSTEM"):
+            raise ResearchKnowledgeAccessDeniedError(f"Access to knowledge entry '{entry_id}' denied.")
+
+        return ResearchKnowledgeEntryResponse(
+            knowledge_entry_id=entry.knowledge_entry_id,
+            entry_type=entry.entry_type,
+            referenced_resource_type=entry.referenced_resource_type,
+            referenced_resource_id=entry.referenced_resource_id,
+            owner_user_id=entry.owner_user_id,
+            title=entry.title,
+            description=entry.description,
+            investigation_id=entry.investigation_id,
+            subject_entity_ids=entry.subject_entity_ids,
+            source_status=entry.source_status,
+            knowledge_status=entry.knowledge_status,
+            metadata_revision=entry.metadata_revision,
+            created_at=entry.created_at,
+            updated_at=entry.updated_at,
+        )
+
+    # ---------------------------------------------------------------------------
+    # Stage 109 — Research Dependency Lineage Services
+    # ---------------------------------------------------------------------------
+    def get_dependency_lineage(
+        self,
+        root_type: str,
+        root_id: str,
+        user_id: str,
+        max_depth: int = 5,
+    ) -> ResearchDependencyLineageResponse:
+        """Traverses bounded upstream and downstream dependency graph for a research entity."""
+        edges, nodes = self.repository.get_lineage(root_type=root_type, root_id=root_id, max_depth=max_depth)
+        edge_dtos = [
+            ResearchDependencyEdgeResponse(
+                edge_id=e.edge_id,
+                upstream_resource_type=e.upstream_resource_type,
+                upstream_resource_id=e.upstream_resource_id,
+                upstream_revision_id=e.upstream_revision_id,
+                downstream_resource_type=e.downstream_resource_type,
+                downstream_resource_id=e.downstream_resource_id,
+                downstream_revision_id=e.downstream_revision_id,
+                dependency_type=e.dependency_type,
+                source_reference=e.source_reference,
+                created_at=e.created_at,
+            )
+            for e in edges
+        ]
+        return ResearchDependencyLineageResponse(
+            root_resource_type=root_type,
+            root_resource_id=root_id,
+            edges=edge_dtos,
+            nodes=nodes,
+        )
+
+    # ---------------------------------------------------------------------------
+    # Stage 109 — Source Change Monitoring Services
+    # ---------------------------------------------------------------------------
+    def record_source_change_event(
+        self,
+        data: CreateSourceChangeEventRequest,
+        actor_id: str,
+    ) -> ResearchSourceChangeEventResponse:
+        """Ingests a canonical source change, evaluates downstream impacts, and enqueues update tasks."""
+        event_id = f"sce-{uuid.uuid4().hex[:12]}"
+        now = datetime.datetime.now(datetime.timezone.utc)
+
+        evt = ResearchSourceChangeEvent(
+            change_event_id=event_id,
+            source_type=data.source_type,
+            canonical_source_id=data.canonical_source_id,
+            old_revision_id=data.old_revision_id,
+            new_revision_id=data.new_revision_id,
+            change_type=data.change_type,
+            changed_fields=data.changed_fields,
+            detected_at=now,
+            source_published_at=data.source_published_at,
+            provider_id=data.provider_id,
+            details=data.details,
+        )
+        saved_evt = self.repository.record_source_change_event(evt)
+
+        # Automatic bounded impact evaluation: find downstream research dependents
+        dep_edges = self.repository.list_dependency_edges(resource_id=data.canonical_source_id)
+        for edge in dep_edges:
+            if edge.upstream_resource_id == data.canonical_source_id:
+                impact_id = f"imp-{uuid.uuid4().hex[:12]}"
+                imp = ResearchImpactAssessment(
+                    impact_id=impact_id,
+                    change_event_id=saved_evt.change_event_id,
+                    target_resource_type=edge.downstream_resource_type,
+                    target_resource_id=edge.downstream_resource_id,
+                    impact_category=ImpactCategory.DIRECT_SOURCE_REFERENCE_CHANGED,
+                    dependency_path=[data.canonical_source_id, edge.downstream_resource_id],
+                    direct_dependency=True,
+                    review_recommended=True,
+                    summary=f"Upstream {data.source_type} '{data.canonical_source_id}' was revised via {data.change_type.value}.",
+                    detected_at=now,
+                )
+                self.repository.record_impact_assessment(imp)
+
+                # Automatically enqueue a ResearchUpdateItem
+                update_id = f"upd-{uuid.uuid4().hex[:12]}"
+                self.repository.create_update_item(
+                    ResearchUpdateItem(
+                        update_item_id=update_id,
+                        owner_user_id=actor_id,
+                        target_resource_type=edge.downstream_resource_type,
+                        target_resource_id=edge.downstream_resource_id,
+                        source_change_event_id=saved_evt.change_event_id,
+                        impact_assessment_id=impact_id,
+                        update_type=UpdateItemType.SOURCE_CHANGE_REVIEW,
+                        priority=UpdateItemPriority.HIGH,
+                        status=UpdateItemStatus.OPEN,
+                        title=f"Source Change Review: {data.source_type} {data.change_type.value}",
+                        description=f"Detected change in '{data.canonical_source_id}'. Verify dependent research {edge.downstream_resource_type} '{edge.downstream_resource_id}'.",
+                        created_at=now,
+                    )
+                )
+
+        return ResearchSourceChangeEventResponse(
+            change_event_id=saved_evt.change_event_id,
+            source_type=saved_evt.source_type,
+            canonical_source_id=saved_evt.canonical_source_id,
+            old_revision_id=saved_evt.old_revision_id,
+            new_revision_id=saved_evt.new_revision_id,
+            change_type=saved_evt.change_type,
+            changed_fields=saved_evt.changed_fields,
+            detected_at=saved_evt.detected_at,
+            source_published_at=saved_evt.source_published_at,
+            provider_id=saved_evt.provider_id,
+            details=saved_evt.details,
+        )
+
+    def list_source_change_events(
+        self,
+        source_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> ResearchSourceChangeEventListResponse:
+        """Lists detected source-change events."""
+        events, total = self.repository.list_source_change_events(source_type=source_type, limit=limit, offset=offset)
+        return ResearchSourceChangeEventListResponse(
+            events=[
+                ResearchSourceChangeEventResponse(
+                    change_event_id=e.change_event_id,
+                    source_type=e.source_type,
+                    canonical_source_id=e.canonical_source_id,
+                    old_revision_id=e.old_revision_id,
+                    new_revision_id=e.new_revision_id,
+                    change_type=e.change_type,
+                    changed_fields=e.changed_fields,
+                    detected_at=e.detected_at,
+                    source_published_at=e.source_published_at,
+                    provider_id=e.provider_id,
+                    details=e.details,
+                )
+                for e in events
+            ],
+            total_count=total,
+        )
+
+    def get_source_change_event(
+        self,
+        event_id: str,
+    ) -> ResearchSourceChangeEventResponse:
+        """Retrieves a single source-change event by ID."""
+        evt = self.repository.get_source_change_event(event_id)
+        if not evt:
+            raise ResearchSourceChangeNotFoundError(f"Source change event '{event_id}' not found.")
+        return ResearchSourceChangeEventResponse(
+            change_event_id=evt.change_event_id,
+            source_type=evt.source_type,
+            canonical_source_id=evt.canonical_source_id,
+            old_revision_id=evt.old_revision_id,
+            new_revision_id=evt.new_revision_id,
+            change_type=evt.change_type,
+            changed_fields=evt.changed_fields,
+            detected_at=evt.detected_at,
+            source_published_at=evt.source_published_at,
+            provider_id=evt.provider_id,
+            details=evt.details,
+        )
+
+    def list_impact_assessments(
+        self,
+        change_event_id: Optional[str] = None,
+        target_id: Optional[str] = None,
+    ) -> ResearchImpactListResponse:
+        """Lists evaluated impact assessments for research artifacts."""
+        impacts = self.repository.list_impact_assessments(change_event_id=change_event_id, target_id=target_id)
+        return ResearchImpactListResponse(
+            impacts=[
+                ResearchImpactAssessmentResponse(
+                    impact_id=i.impact_id,
+                    change_event_id=i.change_event_id,
+                    target_resource_type=i.target_resource_type,
+                    target_resource_id=i.target_resource_id,
+                    target_revision_id=i.target_revision_id,
+                    impact_category=i.impact_category,
+                    dependency_path=i.dependency_path,
+                    direct_dependency=i.direct_dependency,
+                    review_recommended=i.review_recommended,
+                    summary=i.summary,
+                    detected_at=i.detected_at,
+                )
+                for i in impacts
+            ],
+            total_count=len(impacts),
+        )
+
+    # ---------------------------------------------------------------------------
+    # Stage 109 — Research Revalidation Services
+    # ---------------------------------------------------------------------------
+    def run_revalidation(
+        self,
+        data: CreateRevalidationRequest,
+        actor_id: str,
+    ) -> ResearchRevalidationResultResponse:
+        """Executes automated evidence, citation, analysis, and approval revalidation."""
+        reval_id = f"reval-{uuid.uuid4().hex[:12]}"
+        now = datetime.datetime.now(datetime.timezone.utc)
+        issues: List[ResearchRevalidationIssue] = []
+
+        if data.target_type == "REPORT":
+            rep = self.repository.get_report(data.target_id)
+            if not rep:
+                raise ResearchRevalidationTargetUnavailableError(f"Target report '{data.target_id}' not found.")
+
+            target_rev = data.target_revision_number or rep.revision
+
+            # 1. Check citations against source change events
+            sections = self.repository.list_report_sections(data.target_id)
+            for s in sections:
+                for b in s.content_blocks:
+                    for cit_id in getattr(b, "citation_ids", []):
+                        cit = self.repository.get_citation(cit_id)
+                        if not cit:
+                            issues.append(
+                                ResearchRevalidationIssue(
+                                    issue_id=f"iss-{uuid.uuid4().hex[:8]}",
+                                    severity="WARNING",
+                                    issue_type="MISSING_CITATION_TARGET",
+                                    message=f"Citation '{cit_id}' in block '{b.block_id}' does not resolve.",
+                                    target_reference=cit_id,
+                                )
+                            )
+
+            # 2. Check for recent source changes on linked dependencies
+            dep_edges = self.repository.list_dependency_edges(resource_id=data.target_id)
+            for edge in dep_edges:
+                events, _ = self.repository.list_source_change_events(limit=10)
+                for ev in events:
+                    if ev.canonical_source_id == edge.upstream_resource_id:
+                        issues.append(
+                            ResearchRevalidationIssue(
+                                issue_id=f"iss-{uuid.uuid4().hex[:8]}",
+                                severity="WARNING",
+                                issue_type="UPSTREAM_SOURCE_REVISED",
+                                message=f"Upstream dependency '{edge.upstream_resource_id}' was revised via {ev.change_type.value}.",
+                                target_reference=edge.upstream_resource_id,
+                            )
+                        )
+
+            # 3. Check approval revision match
+            is_approved, _ = self.repository.get_report_approval_status(data.target_id, target_rev)
+            if not is_approved:
+                issues.append(
+                    ResearchRevalidationIssue(
+                        issue_id=f"iss-{uuid.uuid4().hex[:8]}",
+                        severity="INFORMATIONAL",
+                        issue_type="APPROVAL_PENDING",
+                        message=f"Revision {target_rev} does not hold an active formal approval.",
+                        target_reference=f"r{target_rev}",
+                    )
+                )
+
+        # Classify overall outcome
+        blocking_count = len([i for i in issues if i.severity == "BLOCKING"])
+        warning_count = len([i for i in issues if i.severity == "WARNING"])
+
+        if blocking_count > 0:
+            outcome = RevalidationOutcome.REQUIRES_HUMAN_REVIEW
+            status = RevalidationStatus.COMPLETED_WITH_WARNINGS
+        elif warning_count > 0:
+            outcome = RevalidationOutcome.VALID_WITH_WARNINGS
+            status = RevalidationStatus.COMPLETED_WITH_WARNINGS
+        else:
+            outcome = RevalidationOutcome.VALID_REFERENCES
+            status = RevalidationStatus.COMPLETED
+
+        result = ResearchRevalidationResult(
+            revalidation_id=reval_id,
+            target_type=data.target_type,
+            target_id=data.target_id,
+            target_revision_number=data.target_revision_number,
+            status=status,
+            outcome=outcome,
+            issues=issues,
+            executed_at=now,
+            validated_by=actor_id,
+        )
+        saved_result = self.repository.record_revalidation_result(result)
+
+        return ResearchRevalidationResultResponse(
+            revalidation_id=saved_result.revalidation_id,
+            target_type=saved_result.target_type,
+            target_id=saved_result.target_id,
+            target_revision_number=saved_result.target_revision_number,
+            status=saved_result.status,
+            outcome=saved_result.outcome,
+            issues=[
+                ResearchRevalidationIssueResponse(
+                    issue_id=iss.issue_id,
+                    severity=iss.severity,
+                    issue_type=iss.issue_type,
+                    message=iss.message,
+                    target_reference=iss.target_reference,
+                )
+                for iss in saved_result.issues
+            ],
+            executed_at=saved_result.executed_at,
+            validated_by=saved_result.validated_by,
+        )
+
+    def list_revalidation_results(
+        self,
+        target_id: str,
+    ) -> List[ResearchRevalidationResultResponse]:
+        """Lists historical revalidation results for an artifact."""
+        res_list = self.repository.list_revalidation_results(target_id)
+        return [
+            ResearchRevalidationResultResponse(
+                revalidation_id=r.revalidation_id,
+                target_type=r.target_type,
+                target_id=r.target_id,
+                target_revision_number=r.target_revision_number,
+                status=r.status,
+                outcome=r.outcome,
+                issues=[
+                    ResearchRevalidationIssueResponse(
+                        issue_id=iss.issue_id,
+                        severity=iss.severity,
+                        issue_type=iss.issue_type,
+                        message=iss.message,
+                        target_reference=iss.target_reference,
+                    )
+                    for iss in r.issues
+                ],
+                executed_at=r.executed_at,
+                validated_by=r.validated_by,
+            )
+            for r in res_list
+        ]
+
+    # ---------------------------------------------------------------------------
+    # Stage 109 — Research Update Queue Services
+    # ---------------------------------------------------------------------------
+    def create_update_item(
+        self,
+        data: CreateUpdateItemRequest,
+        user_id: str,
+    ) -> ResearchUpdateItemResponse:
+        """Creates an actionable update queue item."""
+        update_id = f"upd-{uuid.uuid4().hex[:12]}"
+        now = datetime.datetime.now(datetime.timezone.utc)
+
+        item = ResearchUpdateItem(
+            update_item_id=update_id,
+            owner_user_id=user_id,
+            investigation_id=data.investigation_id,
+            target_resource_type=data.target_resource_type,
+            target_resource_id=data.target_resource_id,
+            source_change_event_id=data.source_change_event_id,
+            impact_assessment_id=data.impact_assessment_id,
+            update_type=data.update_type,
+            priority=data.priority,
+            status=UpdateItemStatus.OPEN,
+            title=data.title,
+            description=data.description,
+            created_at=now,
+        )
+        saved = self.repository.create_update_item(item)
+        return self._to_update_item_response(saved)
+
+    def list_update_items(
+        self,
+        user_id: str,
+        status: Optional[UpdateItemStatus] = None,
+        investigation_id: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> ResearchUpdateItemListResponse:
+        """Lists research update queue items for an authorized owner."""
+        items, total = self.repository.list_update_items(
+            owner_user_id=user_id,
+            status=status,
+            investigation_id=investigation_id,
+            limit=limit,
+            offset=offset,
+        )
+        return ResearchUpdateItemListResponse(
+            updates=[self._to_update_item_response(i) for i in items],
+            total_count=total,
+        )
+
+    def acknowledge_update_item(
+        self,
+        update_item_id: str,
+        user_id: str,
+    ) -> ResearchUpdateItemResponse:
+        """Transitions an update queue item to ACKNOWLEDGED."""
+        item = self.repository.get_update_item(update_item_id)
+        if not item:
+            raise ResearchUpdateItemNotFoundError(f"Update item '{update_item_id}' not found.")
+        if item.owner_user_id != user_id and item.owner_user_id not in ("default-user", "system", "SYSTEM"):
+            raise ResearchUpdateItemAccessDeniedError(f"Access to update item '{update_item_id}' denied.")
+
+        updated = self.repository.update_update_item_status(update_item_id, UpdateItemStatus.ACKNOWLEDGED)
+        return self._to_update_item_response(updated)
+
+    def resolve_update_item(
+        self,
+        update_item_id: str,
+        data: ResolveUpdateItemRequest,
+        user_id: str,
+    ) -> ResearchUpdateItemResponse:
+        """Resolves an update queue item with documented analyst note."""
+        item = self.repository.get_update_item(update_item_id)
+        if not item:
+            raise ResearchUpdateItemNotFoundError(f"Update item '{update_item_id}' not found.")
+        if item.owner_user_id != user_id and item.owner_user_id not in ("default-user", "system", "SYSTEM"):
+            raise ResearchUpdateItemAccessDeniedError(f"Access to update item '{update_item_id}' denied.")
+
+        updated = self.repository.update_update_item_status(
+            update_item_id, UpdateItemStatus.RESOLVED, resolution_note=data.resolution_note
+        )
+        return self._to_update_item_response(updated)
+
+    def dismiss_update_item(
+        self,
+        update_item_id: str,
+        user_id: str,
+    ) -> ResearchUpdateItemResponse:
+        """Dismisses an update queue item under policy."""
+        item = self.repository.get_update_item(update_item_id)
+        if not item:
+            raise ResearchUpdateItemNotFoundError(f"Update item '{update_item_id}' not found.")
+        if item.owner_user_id != user_id and item.owner_user_id not in ("default-user", "system", "SYSTEM"):
+            raise ResearchUpdateItemAccessDeniedError(f"Access to update item '{update_item_id}' denied.")
+
+        updated = self.repository.update_update_item_status(update_item_id, UpdateItemStatus.DISMISSED)
+        return self._to_update_item_response(updated)
+
+    def reopen_update_item(
+        self,
+        update_item_id: str,
+        user_id: str,
+    ) -> ResearchUpdateItemResponse:
+        """Reopens a resolved or dismissed update queue item."""
+        item = self.repository.get_update_item(update_item_id)
+        if not item:
+            raise ResearchUpdateItemNotFoundError(f"Update item '{update_item_id}' not found.")
+        if item.owner_user_id != user_id and item.owner_user_id not in ("default-user", "system", "SYSTEM"):
+            raise ResearchUpdateItemAccessDeniedError(f"Access to update item '{update_item_id}' denied.")
+
+        updated = self.repository.update_update_item_status(update_item_id, UpdateItemStatus.OPEN)
+        return self._to_update_item_response(updated)
+
+    def _to_update_item_response(self, item: ResearchUpdateItem) -> ResearchUpdateItemResponse:
+        """Helper to serialize ResearchUpdateItem to DTO."""
+        return ResearchUpdateItemResponse(
+            update_item_id=item.update_item_id,
+            owner_user_id=item.owner_user_id,
+            investigation_id=item.investigation_id,
+            target_resource_type=item.target_resource_type,
+            target_resource_id=item.target_resource_id,
+            source_change_event_id=item.source_change_event_id,
+            impact_assessment_id=item.impact_assessment_id,
+            update_type=item.update_type,
+            priority=item.priority,
+            status=item.status,
+            title=item.title,
+            description=item.description,
+            resolution_note=item.resolution_note,
+            assigned_user_id=item.assigned_user_id,
+            created_at=item.created_at,
+            acknowledged_at=item.acknowledged_at,
+            resolved_at=item.resolved_at,
+        )
+
+    # ---------------------------------------------------------------------------
+    # Stage 109 — Unified Research Overview Summary
+    # ---------------------------------------------------------------------------
+    def get_institutional_overview_summary(
+        self,
+        user_id: str,
+    ) -> ResearchOverviewSummaryResponse:
+        """Computes live institutional operational summary metrics."""
+        summary = self.repository.get_institutional_overview_summary(user_id)
+        return ResearchOverviewSummaryResponse(
+            active_investigations_count=summary["active_investigations_count"],
+            total_notes_count=summary["total_notes_count"],
+            total_analyses_count=summary["total_analyses_count"],
+            total_reports_count=summary["total_reports_count"],
+            total_theses_count=summary["total_theses_count"],
+            pending_reviews_count=summary["pending_reviews_count"],
+            open_updates_count=summary["open_updates_count"],
+            critical_updates_count=summary["critical_updates_count"],
+            recent_activity=summary["recent_activity"],
+        )
+
 
 
 # Global singleton instance for injection

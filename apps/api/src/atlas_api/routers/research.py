@@ -135,6 +135,19 @@ from atlas.research.errors import (
     ResearchReviewNotFoundError,
     ResearchReviewRevisionMismatchError,
     ResearchReviewSelfApprovalForbiddenError,
+    # Stage 109 Errors
+    ResearchImpactNotFoundError,
+    ResearchKnowledgeAccessDeniedError,
+    ResearchKnowledgeEntryNotFoundError,
+    ResearchRevalidationAccessDeniedError,
+    ResearchRevalidationNotFoundError,
+    ResearchRevalidationTargetUnavailableError,
+    ResearchSourceChangeDuplicateError,
+    ResearchSourceChangeNotFoundError,
+    ResearchUpdateAlreadyResolvedError,
+    ResearchUpdateInvalidStateTransitionError,
+    ResearchUpdateItemAccessDeniedError,
+    ResearchUpdateItemNotFoundError,
 )
 from atlas.research.schemas import (
     # Stage 106 Schemas
@@ -260,6 +273,25 @@ from atlas.research.schemas import (
     UpdateAccessGrantRequest,
     UpdateCommentRequest,
     UpdateReviewRequest,
+    # Stage 109 Schemas
+    CreateRevalidationRequest,
+    CreateSourceChangeEventRequest,
+    CreateUpdateItemRequest,
+    ResearchDependencyEdgeResponse,
+    ResearchDependencyLineageResponse,
+    ResearchImpactAssessmentResponse,
+    ResearchImpactListResponse,
+    ResearchKnowledgeEntryResponse,
+    ResearchKnowledgeSearchQuery,
+    ResearchKnowledgeSearchResponse,
+    ResearchOverviewSummaryResponse,
+    ResearchRevalidationIssueResponse,
+    ResearchRevalidationResultResponse,
+    ResearchSourceChangeEventListResponse,
+    ResearchSourceChangeEventResponse,
+    ResearchUpdateItemListResponse,
+    ResearchUpdateItemResponse,
+    ResolveUpdateItemRequest,
 )
 from atlas.research.service import (
     ResearchDocumentService,
@@ -2982,6 +3014,317 @@ def list_resource_audit_events_endpoint(
 ):
     user_id = _get_user_id(user)
     return service.list_review_audit_events(resource_id, actor_id=user_id)
+
+
+# ---------------------------------------------------------------------------
+# Stage 109 Research Overview, Knowledge, Dependency Lineage, Monitoring & Lifecycle Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/research/overview/summary",
+    response_model=ResearchOverviewSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get unified institutional research overview summary counts",
+)
+def get_research_overview_summary_endpoint(
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.get_institutional_overview_summary(user_id=user_id)
+
+
+@router.post(
+    "/research/knowledge/search",
+    response_model=ResearchKnowledgeSearchResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Search across authorized research knowledge entries with structured filters",
+)
+def search_knowledge_endpoint(
+    data: ResearchKnowledgeSearchQuery,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.search_knowledge(data, user_id=user_id)
+
+
+@router.get(
+    "/research/knowledge/{entry_id}",
+    response_model=ResearchKnowledgeEntryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get single research knowledge entry by ID",
+)
+def get_knowledge_entry_endpoint(
+    entry_id: str = Path(..., description="Knowledge Entry ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_knowledge_entry(entry_id, user_id=user_id)
+    except ResearchKnowledgeEntryNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchKnowledgeAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/dependencies/lineage/{resource_type}/{resource_id}",
+    response_model=ResearchDependencyLineageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Traverse bounded upstream and downstream dependency lineage graph",
+)
+def get_dependency_lineage_endpoint(
+    resource_type: str = Path(..., description="Root resource type"),
+    resource_id: str = Path(..., description="Root resource ID"),
+    max_depth: int = Query(5, ge=1, le=10, description="Maximum traversal depth"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.get_dependency_lineage(
+        root_type=resource_type, root_id=resource_id, user_id=user_id, max_depth=max_depth
+    )
+
+
+@router.post(
+    "/research/source-changes",
+    response_model=ResearchSourceChangeEventResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Record a canonical data source revision or amendment event",
+)
+def record_source_change_endpoint(
+    data: CreateSourceChangeEventRequest,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.record_source_change_event(data, actor_id=user_id)
+    except ResearchSourceChangeDuplicateError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
+@router.get(
+    "/research/source-changes",
+    response_model=ResearchSourceChangeEventListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List detected canonical source-change events",
+)
+def list_source_changes_endpoint(
+    source_type: Optional[str] = Query(None, description="Filter by source type"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.list_source_change_events(source_type=source_type, limit=limit, offset=offset)
+
+
+@router.get(
+    "/research/source-changes/{change_event_id}",
+    response_model=ResearchSourceChangeEventResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get single source-change event by ID",
+)
+def get_source_change_endpoint(
+    change_event_id: str = Path(..., description="Change event ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    try:
+        return service.get_source_change_event(change_event_id)
+    except ResearchSourceChangeNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/research/source-changes/{change_event_id}/impacts",
+    response_model=ResearchImpactListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List evaluated research impact assessments for a source change",
+)
+def list_change_impacts_endpoint(
+    change_event_id: str = Path(..., description="Change event ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.list_impact_assessments(change_event_id=change_event_id)
+
+
+@router.get(
+    "/research/impacts",
+    response_model=ResearchImpactListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List evaluated research impact assessments",
+)
+def list_impacts_endpoint(
+    target_id: Optional[str] = Query(None, description="Filter by target research artifact ID"),
+    change_event_id: Optional[str] = Query(None, description="Filter by change event ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.list_impact_assessments(change_event_id=change_event_id, target_id=target_id)
+
+
+@router.post(
+    "/research/revalidations",
+    response_model=ResearchRevalidationResultResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Execute automated evidence and reference revalidation on a research artifact",
+)
+def run_revalidation_endpoint(
+    data: CreateRevalidationRequest,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.run_revalidation(data, actor_id=user_id)
+    except ResearchRevalidationTargetUnavailableError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchRevalidationAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/resources/{resource_type}/{resource_id}/revalidations",
+    response_model=List[ResearchRevalidationResultResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List revalidation results for a research artifact",
+)
+def list_resource_revalidations_endpoint(
+    resource_type: str = Path(..., description="Resource type"),
+    resource_id: str = Path(..., description="Resource ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.list_revalidation_results(target_id=resource_id)
+
+
+@router.get(
+    "/research/updates",
+    response_model=ResearchUpdateItemListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List actionable items in the research update queue",
+)
+def list_updates_endpoint(
+    status_filter: Optional[str] = Query(None, alias="status", description="Filter by status"),
+    investigation_id: Optional[str] = Query(None, description="Filter by investigation ID"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    st = None
+    if status_filter:
+        try:
+            from atlas.research.enums import UpdateItemStatus
+            st = UpdateItemStatus(status_filter)
+        except ValueError:
+            pass
+    return service.list_update_items(
+        user_id=user_id, status=st, investigation_id=investigation_id, limit=limit, offset=offset
+    )
+
+
+@router.post(
+    "/research/updates",
+    response_model=ResearchUpdateItemResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create an actionable research update queue item",
+)
+def create_update_item_endpoint(
+    data: CreateUpdateItemRequest,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.create_update_item(data, user_id=user_id)
+
+
+@router.post(
+    "/research/updates/{update_item_id}/acknowledge",
+    response_model=ResearchUpdateItemResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Acknowledge a research update queue item",
+)
+def acknowledge_update_endpoint(
+    update_item_id: str = Path(..., description="Update item ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.acknowledge_update_item(update_item_id, user_id=user_id)
+    except ResearchUpdateItemNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchUpdateItemAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/updates/{update_item_id}/resolve",
+    response_model=ResearchUpdateItemResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Resolve a research update queue item with resolution note",
+)
+def resolve_update_endpoint(
+    data: ResolveUpdateItemRequest,
+    update_item_id: str = Path(..., description="Update item ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.resolve_update_item(update_item_id, data=data, user_id=user_id)
+    except ResearchUpdateItemNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchUpdateItemAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/updates/{update_item_id}/dismiss",
+    response_model=ResearchUpdateItemResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Dismiss a research update queue item",
+)
+def dismiss_update_endpoint(
+    update_item_id: str = Path(..., description="Update item ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.dismiss_update_item(update_item_id, user_id=user_id)
+    except ResearchUpdateItemNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchUpdateItemAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/updates/{update_item_id}/reopen",
+    response_model=ResearchUpdateItemResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Reopen a resolved or dismissed research update queue item",
+)
+def reopen_update_endpoint(
+    update_item_id: str = Path(..., description="Update item ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.reopen_update_item(update_item_id, user_id=user_id)
+    except ResearchUpdateItemNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchUpdateItemAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
 
 
 # ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ from atlas.research.enums import (
     ClaimEvidenceRelationship,
     CommentAnchorType,
     CommentThreadStatus,
+    DependencyType,
     DocumentComparisonMode,
     DocumentFormat,
     DocumentProcessingStatus,
@@ -20,7 +21,11 @@ from atlas.research.enums import (
     ExportFormat,
     ExportStatus,
     HypothesisEvaluationOutcome,
+    ImpactCategory,
     InvestigationLifecycleStatus,
+    KnowledgeEntryType,
+    KnowledgeSourceAvailability,
+    KnowledgeStatus,
     OutlierHandlingPolicy,
     ReportBlockType,
     ReportLifecycleStatus,
@@ -43,14 +48,20 @@ from atlas.research.enums import (
     ResearchRole,
     ResearchSourceType,
     ResearchType,
+    RevalidationOutcome,
+    RevalidationStatus,
     ReviewDecisionType,
     ReviewScope,
     ReviewStatus,
     ScenarioType,
     SourceAvailabilityStatus,
+    SourceChangeType,
     ThesisArgumentType,
     ThesisLifecycleStatus,
     UnitScale,
+    UpdateItemPriority,
+    UpdateItemStatus,
+    UpdateItemType,
 )
 
 
@@ -940,4 +951,135 @@ class ResearchReviewAuditEvent:
     organization_id: Optional[str] = None
     target_revision_number: Optional[int] = None
     details: Dict[str, Any] = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Stage 109 Knowledge, Dependency Lineage, Monitoring & Lifecycle Dataclasses
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ResearchKnowledgeEntry:
+    """Indexed reference entry representing a canonical research artifact."""
+    knowledge_entry_id: str
+    entry_type: KnowledgeEntryType
+    referenced_resource_type: str
+    referenced_resource_id: str
+    owner_user_id: str
+    title: str
+    description: Optional[str] = None
+    investigation_id: Optional[str] = None
+    subject_entity_ids: List[str] = field(default_factory=list)
+    source_status: KnowledgeSourceAvailability = KnowledgeSourceAvailability.AVAILABLE
+    knowledge_status: KnowledgeStatus = KnowledgeStatus.ACTIVE
+    metadata_revision: int = 1
+    organization_id: Optional[str] = None
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    updated_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+
+
+@dataclass
+class ResearchKnowledgeCollection:
+    """User or investigation-scoped collection grouping research knowledge entries."""
+    collection_id: str
+    owner_user_id: str
+    title: str
+    description: Optional[str] = None
+    investigation_id: Optional[str] = None
+    entry_ids: List[str] = field(default_factory=list)
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    updated_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+
+
+@dataclass
+class ResearchDependencyEdge:
+    """Explicit dependency link between upstream source/analysis and downstream research artifact."""
+    edge_id: str
+    upstream_resource_type: str
+    upstream_resource_id: str
+    downstream_resource_type: str
+    downstream_resource_id: str
+    upstream_revision_id: Optional[str] = None
+    downstream_revision_id: Optional[str] = None
+    dependency_type: DependencyType = DependencyType.SOURCE_TO_EVIDENCE
+    source_reference: Optional[str] = None
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+
+
+@dataclass
+class ResearchSourceChangeEvent:
+    """Canonical event describing detected revision, amendment, or status change in a data source."""
+    change_event_id: str
+    source_type: str
+    canonical_source_id: str
+    old_revision_id: Optional[str] = None
+    new_revision_id: str = ""
+    change_type: SourceChangeType = SourceChangeType.DOCUMENT_REVISED
+    changed_fields: List[str] = field(default_factory=list)
+    detected_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    source_published_at: Optional[datetime.datetime] = None
+    provider_id: Optional[str] = None
+    details: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ResearchImpactAssessment:
+    """Evaluated mechanical and potential interpretation impact of a source change on research."""
+    impact_id: str
+    change_event_id: str
+    target_resource_type: str
+    target_resource_id: str
+    target_revision_id: Optional[str] = None
+    impact_category: ImpactCategory = ImpactCategory.DIRECT_SOURCE_REFERENCE_CHANGED
+    dependency_path: List[str] = field(default_factory=list)
+    direct_dependency: bool = True
+    review_recommended: bool = False
+    summary: str = ""
+    detected_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+
+
+@dataclass
+class ResearchRevalidationIssue:
+    """Specific finding or broken reference detected during automated revalidation."""
+    issue_id: str
+    severity: str
+    issue_type: str
+    message: str
+    target_reference: Optional[str] = None
+
+
+@dataclass
+class ResearchRevalidationResult:
+    """Result of an evidence and reference integrity revalidation execution."""
+    revalidation_id: str
+    target_type: str
+    target_id: str
+    target_revision_number: Optional[int] = None
+    status: RevalidationStatus = RevalidationStatus.COMPLETED
+    outcome: RevalidationOutcome = RevalidationOutcome.VALID_REFERENCES
+    issues: List[ResearchRevalidationIssue] = field(default_factory=list)
+    executed_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    validated_by: str = "SYSTEM"
+
+
+@dataclass
+class ResearchUpdateItem:
+    """Actionable maintenance task in the institutional research update queue."""
+    update_item_id: str
+    owner_user_id: str
+    investigation_id: Optional[str] = None
+    target_resource_type: str = ""
+    target_resource_id: str = ""
+    source_change_event_id: Optional[str] = None
+    impact_assessment_id: Optional[str] = None
+    update_type: UpdateItemType = UpdateItemType.SOURCE_CHANGE_REVIEW
+    priority: UpdateItemPriority = UpdateItemPriority.MEDIUM
+    status: UpdateItemStatus = UpdateItemStatus.OPEN
+    title: str = ""
+    description: Optional[str] = None
+    resolution_note: Optional[str] = None
+    assigned_user_id: Optional[str] = None
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    acknowledged_at: Optional[datetime.datetime] = None
+    resolved_at: Optional[datetime.datetime] = None
+
 

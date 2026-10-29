@@ -9919,6 +9919,45 @@ This document records the major architectural and product decisions established.
 835. **Cross-Tenant Isolation & Least Privilege Enforcement**: All collaboration, review, comment, quality gate, and circulation endpoints enforce authentication and tenant isolation, restricting resource mutations to authenticated users with requisite role entitlements.
 836. **Roadmap Boundary (Stage 108 of 150)**: Master engineering implementation completed for Stage 108. All Stage 109 implementation is strictly deferred.
 
+## Stage 109: Institutional-Grade Research Knowledge, Continuous Evidence Monitoring and Research Lifecycle Management Platform
+
+### Knowledge Library & Indexing
+837. **Institutional Research Knowledge Registry**: Implemented `ResearchKnowledgeEntry` unifying heterogeneous research assets across all 6 Research development stages (`INVESTIGATION`, `NOTE`, `QUESTION`, `HYPOTHESIS`, `CLAIM`, `EVIDENCE`, `ANALYSIS`, `FINDING`, `THESIS`, `REPORT`, `SOURCE_REFERENCE`).
+838. **Cross-Tenant Knowledge Search & Isolation**: Search query engine verifies authenticated ownership and explicit collaboration access rights before returning knowledge entries, guaranteeing zero cross-tenant metadata leakage.
+839. **Knowledge Availability & Lifecycle Tracking**: Classified entry statuses into `ACTIVE`, `ARCHIVED`, `DEPRECATED`, and `DRAFT`, coupled with source availability tags (`AVAILABLE`, `PENDING_VERIFICATION`, `RESTRICTED`, `UNAVAILABLE`).
+
+### Dependency Lineage Graph
+840. **Multi-Hop Research Dependency Graph**: Formalized `ResearchDependencyEdge` linking canonical sources, evidence snippets, quantitative calculations, empirical findings, investment theses, reports, and review decisions.
+841. **Cycle-Safe Bounded Lineage Traversal**: Engineered depth-first traversal engine bounded to `max_depth=5` with deterministic cycle detection, preventing infinite recursion while flagging loop anomalies.
+842. **Directed Lineage Nodes & Graph Visualization**: Provided frontend lineage graph visualizer rendering typed nodes and edge connections with source references and traversal limit badges.
+
+### Continuous Source-Change Ingestion & Monitoring
+843. **Canonical Source Change Event Model**: Built `ResearchSourceChangeEvent` capturing filing amendments (`DOCUMENT_AMENDED`), financial restatements (`FACT_RESTATED`), economic vintages (`VINTAGE_UPDATED`), news corrections (`NEWS_CORRECTED`), and entitlement changes (`ENTITLEMENT_REVOKED`).
+844. **Idempotent Source Change Deduplication**: Enforced natural composite deduplication key `(source_type, canonical_source_id, old_revision_id, new_revision_id, change_type)` to eliminate duplicate alert spam.
+845. **Multi-Field Change Tracking**: Captured specific amended items and footnotes (e.g. `Item 8 Note 3 Segment Revenue`) for granular impact mapping.
+
+### Deterministic Impact Assessment
+846. **Downstream Impact Propagation Engine**: Traverses dependency paths from modified sources down to dependent deliverables, generating `ResearchImpactAssessment` records.
+847. **Stratified Impact Categorization**: Classified impacts into `DIRECT_SOURCE_REFERENCE_CHANGED`, `INTERMEDIATE_CALCULATION_IMPACTED`, `DOWNSTREAM_FINDING_REQUIRING_REVALIDATION`, and `REPORT_ASSERTION_AFFECTED`.
+848. **Epistemic Humility & Non-Causal Guidance**: Avoided speculative or hallucinated causal certainty; impacts provide clear review recommendations rather than ungrounded conclusions.
+
+### Automated Citation & Approval Revalidation
+849. **Automated Reference & Citation Revalidation Engine**: Evaluates target reports, analyses, and findings against current source registries, detecting broken citation targets and upstream modifications.
+850. **Approval Revision Freshness Verification**: Revalidation verifies whether the inspected revision holds active formal review approval, highlighting unreviewed or modified revisions.
+851. **Granular Revalidation Issue Severity**: Categorized revalidation issues into `BLOCKING`, `WARNING`, and `INFORMATIONAL`, mapping to outcomes (`VALID_REFERENCES`, `VALID_WITH_WARNINGS`, `REQUIRES_HUMAN_REVIEW`, `INVALID_CITATIONS`, `APPROVAL_REVOCATION_RECOMMENDED`).
+
+### Research Update Queue Lifecycle State Machine
+852. **Analyst Update Queue State Machine**: Modeled `ResearchUpdateItem` with deterministic transitions: `OPEN` -> `ACKNOWLEDGED` -> `RESOLVED` / `DISMISSED` / `REOPENED`.
+853. **Mandatory Resolution Rationale**: Transitioning an update item to `RESOLVED` strictly mandates analyst resolution notes detailing evidence verification or adjustments made.
+854. **Cross-Tenant Update Task Isolation**: Update items enforce tenant ownership checks; unauthorized users cannot acknowledge or mutate another analyst's tasks.
+
+### Point-in-Time Correctness & Platform Integration
+855. **Historical Point-in-Time Immutability**: Source change detection and revalidation never silently mutate historic analysis run results, locked evidence records, or finalized reports.
+856. **Unified Institutional Research Overview**: Implemented `get_institutional_overview_summary` exposing live counts across active investigations, notes, analyses, reports, theses, pending reviews, open updates, and critical updates.
+857. **Frontend Knowledge & Updates Workspaces**: Integrated `"Knowledge Library"` and `"Updates & Monitoring"` workspaces with search, inspector, lineage graph, and revalidation modal.
+858. **Full Research Sequence Closure (Stages 104–109)**: Successfully closed the complete 6-stage Research module development sequence within the primary route `/research`.
+859. **Roadmap Boundary (Stage 109 of 150)**: Stage 109 implementation complete. Stage 110 (Portfolios) and subsequent stages are strictly deferred. Zero portfolio mutation, zero trade execution, zero autonomous AI trading agents.
+
 
 
 

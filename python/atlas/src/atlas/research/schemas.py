@@ -14,6 +14,7 @@ from atlas.research.enums import (
     CirculationStatus,
     CommentAnchorType,
     CommentThreadStatus,
+    DependencyType,
     DocumentComparisonMode,
     DocumentFormat,
     DocumentProcessingStatus,
@@ -21,7 +22,11 @@ from atlas.research.enums import (
     ExportFormat,
     ExportStatus,
     HypothesisEvaluationOutcome,
+    ImpactCategory,
     InvestigationLifecycleStatus,
+    KnowledgeEntryType,
+    KnowledgeSourceAvailability,
+    KnowledgeStatus,
     OutlierHandlingPolicy,
     ReportBlockType,
     ReportLifecycleStatus,
@@ -44,14 +49,21 @@ from atlas.research.enums import (
     ResearchRole,
     ResearchSourceType,
     ResearchType,
+    RevalidationOutcome,
+    RevalidationStatus,
     ReviewDecisionType,
     ReviewScope,
     ReviewStatus,
+    ScenarioType,
     SearchMode,
     SourceAvailabilityStatus,
+    SourceChangeType,
     ThesisArgumentType,
     ThesisLifecycleStatus,
     UnitScale,
+    UpdateItemPriority,
+    UpdateItemStatus,
+    UpdateItemType,
 )
 from atlas.research.types import ResearchDocumentKind
 
@@ -1680,4 +1692,210 @@ class ResearchReviewAuditEventListResponse(BaseModel):
     """Collection of review audit events."""
     events: List[ResearchReviewAuditEventResponse]
     total_count: int
+
+
+# ---------------------------------------------------------------------------
+# Stage 109 Knowledge, Dependency Lineage, Monitoring & Lifecycle Schemas
+# ---------------------------------------------------------------------------
+
+class ResearchKnowledgeEntryResponse(BaseModel):
+    """Record representing an indexed research knowledge entry."""
+    knowledge_entry_id: str
+    entry_type: KnowledgeEntryType
+    referenced_resource_type: str
+    referenced_resource_id: str
+    owner_user_id: str
+    title: str
+    description: Optional[str] = None
+    investigation_id: Optional[str] = None
+    subject_entity_ids: List[str] = Field(default_factory=list)
+    source_status: KnowledgeSourceAvailability
+    knowledge_status: KnowledgeStatus
+    metadata_revision: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class ResearchKnowledgeSearchQuery(BaseModel):
+    """Query criteria for searching across authorized research knowledge entries."""
+    query: Optional[str] = None
+    entry_types: Optional[List[KnowledgeEntryType]] = None
+    investigation_id: Optional[str] = None
+    entity_id: Optional[str] = None
+    source_status: Optional[KnowledgeSourceAvailability] = None
+    knowledge_status: Optional[KnowledgeStatus] = None
+    limit: int = 50
+    offset: int = 0
+
+
+class ResearchKnowledgeSearchResponse(BaseModel):
+    """Paginated collection of research knowledge entries."""
+    entries: List[ResearchKnowledgeEntryResponse]
+    total_count: int
+
+
+class ResearchDependencyEdgeResponse(BaseModel):
+    """Link between upstream dependency and downstream dependent research artifact."""
+    edge_id: str
+    upstream_resource_type: str
+    upstream_resource_id: str
+    upstream_revision_id: Optional[str] = None
+    downstream_resource_type: str
+    downstream_resource_id: str
+    downstream_revision_id: Optional[str] = None
+    dependency_type: DependencyType
+    source_reference: Optional[str] = None
+    created_at: datetime.datetime
+
+
+class ResearchDependencyLineageResponse(BaseModel):
+    """Full lineage graph for a target research artifact."""
+    root_resource_type: str
+    root_resource_id: str
+    edges: List[ResearchDependencyEdgeResponse]
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class CreateSourceChangeEventRequest(BaseModel):
+    """Request to record a canonical data source revision or amendment event."""
+    source_type: str
+    canonical_source_id: str
+    old_revision_id: Optional[str] = None
+    new_revision_id: str
+    change_type: SourceChangeType
+    changed_fields: List[str] = Field(default_factory=list)
+    source_published_at: Optional[datetime.datetime] = None
+    provider_id: Optional[str] = None
+    details: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ResearchSourceChangeEventResponse(BaseModel):
+    """Record of a detected canonical source revision or status alteration."""
+    change_event_id: str
+    source_type: str
+    canonical_source_id: str
+    old_revision_id: Optional[str] = None
+    new_revision_id: str
+    change_type: SourceChangeType
+    changed_fields: List[str]
+    detected_at: datetime.datetime
+    source_published_at: Optional[datetime.datetime] = None
+    provider_id: Optional[str] = None
+    details: Dict[str, Any]
+
+
+class ResearchSourceChangeEventListResponse(BaseModel):
+    """Collection of detected source change events."""
+    events: List[ResearchSourceChangeEventResponse]
+    total_count: int
+
+
+class ResearchImpactAssessmentResponse(BaseModel):
+    """Impact diagnosis on research artifacts originating from a source change."""
+    impact_id: str
+    change_event_id: str
+    target_resource_type: str
+    target_resource_id: str
+    target_revision_id: Optional[str] = None
+    impact_category: ImpactCategory
+    dependency_path: List[str]
+    direct_dependency: bool
+    review_recommended: bool
+    summary: str
+    detected_at: datetime.datetime
+
+
+class ResearchImpactListResponse(BaseModel):
+    """Collection of impact assessments."""
+    impacts: List[ResearchImpactAssessmentResponse]
+    total_count: int
+
+
+class CreateRevalidationRequest(BaseModel):
+    """Request to revalidate citations, data inputs, and approval state."""
+    target_type: str
+    target_id: str
+    target_revision_number: Optional[int] = None
+    initiating_change_event_id: Optional[str] = None
+
+
+class ResearchRevalidationIssueResponse(BaseModel):
+    """Specific broken reference or warning discovered during revalidation."""
+    issue_id: str
+    severity: str
+    issue_type: str
+    message: str
+    target_reference: Optional[str] = None
+
+
+class ResearchRevalidationResultResponse(BaseModel):
+    """Detailed outcome from a research revalidation execution."""
+    revalidation_id: str
+    target_type: str
+    target_id: str
+    target_revision_number: Optional[int] = None
+    status: RevalidationStatus
+    outcome: RevalidationOutcome
+    issues: List[ResearchRevalidationIssueResponse]
+    executed_at: datetime.datetime
+    validated_by: str
+
+
+class CreateUpdateItemRequest(BaseModel):
+    """Request to create an actionable research update queue item."""
+    investigation_id: Optional[str] = None
+    target_resource_type: str
+    target_resource_id: str
+    source_change_event_id: Optional[str] = None
+    impact_assessment_id: Optional[str] = None
+    update_type: UpdateItemType
+    priority: UpdateItemPriority = UpdateItemPriority.MEDIUM
+    title: str
+    description: Optional[str] = None
+
+
+class ResolveUpdateItemRequest(BaseModel):
+    """Request to resolve a research update queue item."""
+    resolution_note: str
+
+
+class ResearchUpdateItemResponse(BaseModel):
+    """Record of an actionable item in the research update queue."""
+    update_item_id: str
+    owner_user_id: str
+    investigation_id: Optional[str] = None
+    target_resource_type: str
+    target_resource_id: str
+    source_change_event_id: Optional[str] = None
+    impact_assessment_id: Optional[str] = None
+    update_type: UpdateItemType
+    priority: UpdateItemPriority
+    status: UpdateItemStatus
+    title: str
+    description: Optional[str] = None
+    resolution_note: Optional[str] = None
+    assigned_user_id: Optional[str] = None
+    created_at: datetime.datetime
+    acknowledged_at: Optional[datetime.datetime] = None
+    resolved_at: Optional[datetime.datetime] = None
+
+
+class ResearchUpdateItemListResponse(BaseModel):
+    """Collection of research update queue items."""
+    updates: List[ResearchUpdateItemResponse]
+    total_count: int
+
+
+class ResearchOverviewSummaryResponse(BaseModel):
+    """Consolidated summary metrics for the unified institutional research overview."""
+    active_investigations_count: int
+    total_notes_count: int
+    total_analyses_count: int
+    total_reports_count: int
+    total_theses_count: int
+    pending_reviews_count: int
+    open_updates_count: int
+    critical_updates_count: int
+    recent_activity: List[Dict[str, Any]] = Field(default_factory=list)
+
 

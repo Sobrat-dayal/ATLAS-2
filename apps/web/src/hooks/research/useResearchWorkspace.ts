@@ -103,10 +103,24 @@ import {
   ResearchInternalCirculationResponse,
   CreateCirculationRequest,
   ResearchApprovalStatusResponse,
+  // Stage 109 Types
+  CreateRevalidationRequest,
+  CreateResearchUpdateItemRequest,
+  ResearchDependencyLineageResponse,
+  ResearchImpactAssessmentResponse,
+  ResearchKnowledgeEntryResponse,
+  ResearchKnowledgeSearchQuery,
+  ResearchOverviewSummaryResponse,
+  ResearchRevalidationResultResponse,
+  ResearchSourceChangeEventResponse,
+  ResearchUpdateItemResponse,
+  ResolveUpdateItemRequest,
 } from "@/lib/research/types";
 
 export type ResearchTabMode =
   | "OVERVIEW"
+  | "KNOWLEDGE"
+  | "UPDATES"
   | "REVIEWS"
   | "REPORTS"
   | "THESES"
@@ -808,6 +822,33 @@ export function useResearchWorkspace() {
   const [isCirculationsLoading, setIsCirculationsLoading] = useState<boolean>(false);
   const [approvalStatus, setApprovalStatus] = useState<ResearchApprovalStatusResponse | null>(null);
 
+  // Stage 109 State: Knowledge Library, Dependency Lineage, Monitoring & Lifecycle
+  const [knowledgeEntries, setKnowledgeEntries] = useState<ResearchKnowledgeEntryResponse[]>([]);
+  const [knowledgeTotal, setKnowledgeTotal] = useState<number>(0);
+  const [isKnowledgeLoading, setIsKnowledgeLoading] = useState<boolean>(false);
+  const [knowledgeSearchQuery, setKnowledgeSearchQuery] = useState<string>("");
+  const [selectedKnowledgeEntryId, setSelectedKnowledgeEntryId] = useState<string | null>(null);
+  const [selectedKnowledgeEntry, setSelectedKnowledgeEntry] = useState<ResearchKnowledgeEntryResponse | null>(null);
+
+  const [dependencyLineage, setDependencyLineage] = useState<ResearchDependencyLineageResponse | null>(null);
+  const [isLineageLoading, setIsLineageLoading] = useState<boolean>(false);
+
+  const [sourceChangeEvents, setSourceChangeEvents] = useState<ResearchSourceChangeEventResponse[]>([]);
+  const [isSourceChangesLoading, setIsSourceChangesLoading] = useState<boolean>(false);
+  const [selectedSourceChangeEvent, setSelectedSourceChangeEvent] = useState<ResearchSourceChangeEventResponse | null>(null);
+  const [impactAssessments, setImpactAssessments] = useState<ResearchImpactAssessmentResponse[]>([]);
+  const [isImpactsLoading, setIsImpactsLoading] = useState<boolean>(false);
+
+  const [updateItems, setUpdateItems] = useState<ResearchUpdateItemResponse[]>([]);
+  const [updateItemsTotal, setUpdateItemsTotal] = useState<number>(0);
+  const [isUpdateItemsLoading, setIsUpdateItemsLoading] = useState<boolean>(false);
+  const [selectedUpdateItemId, setSelectedUpdateItemId] = useState<string | null>(null);
+
+  const [institutionalOverview, setInstitutionalOverview] = useState<ResearchOverviewSummaryResponse | null>(null);
+  const [isInstitutionalOverviewLoading, setIsInstitutionalOverviewLoading] = useState<boolean>(false);
+  const [revalidations, setRevalidations] = useState<ResearchRevalidationResultResponse[]>([]);
+  const [isRevalidating, setIsRevalidating] = useState<boolean>(false);
+
   const loadReportTemplates = useCallback(async () => {
     try {
       const res = await api.listReportTemplates();
@@ -1378,6 +1419,194 @@ export function useResearchWorkspace() {
     }
   }, []);
 
+  // -------------------------------------------------------------------------
+  // Stage 109 Knowledge, Monitoring & Lifecycle Handlers
+  // -------------------------------------------------------------------------
+  const loadInstitutionalOverview = useCallback(async () => {
+    setIsInstitutionalOverviewLoading(true);
+    try {
+      const res = await api.getOverviewSummary();
+      setInstitutionalOverview(res);
+      return res;
+    } catch (err: unknown) {
+      console.error("Failed to load institutional research overview", err);
+    } finally {
+      setIsInstitutionalOverviewLoading(false);
+    }
+  }, []);
+
+  const loadDependencyLineage = useCallback(
+    async (resourceType: string, resourceId: string, maxDepth: number = 5) => {
+      setIsLineageLoading(true);
+      try {
+        const res = await api.getDependencyLineage(resourceType, resourceId, maxDepth);
+        setDependencyLineage(res);
+        return res;
+      } catch (err: unknown) {
+        console.error("Failed to load dependency lineage", err);
+      } finally {
+        setIsLineageLoading(false);
+      }
+    },
+    []
+  );
+
+  const searchKnowledge = useCallback(
+    async (queryParam?: ResearchKnowledgeSearchQuery) => {
+      setIsKnowledgeLoading(true);
+      try {
+        const q = queryParam ?? { query: knowledgeSearchQuery || undefined, limit: 50 };
+        const res = await api.searchKnowledge(q);
+        setKnowledgeEntries(res.entries);
+        setKnowledgeTotal(res.total_count);
+        return res;
+      } catch (err: unknown) {
+        console.error("Failed to search knowledge library", err);
+      } finally {
+        setIsKnowledgeLoading(false);
+      }
+    },
+    [knowledgeSearchQuery]
+  );
+
+  const selectKnowledgeEntry = useCallback(
+    async (entryId: string) => {
+      setSelectedKnowledgeEntryId(entryId);
+      try {
+        const res = await api.getKnowledgeEntry(entryId);
+        setSelectedKnowledgeEntry(res);
+        if (res.referenced_resource_type && res.referenced_resource_id) {
+          loadDependencyLineage(res.referenced_resource_type, res.referenced_resource_id);
+        }
+        return res;
+      } catch (err: unknown) {
+        console.error("Failed to load knowledge entry", err);
+      }
+    },
+    [loadDependencyLineage]
+  );
+
+  const loadSourceChanges = useCallback(async (sourceType?: string) => {
+    setIsSourceChangesLoading(true);
+    try {
+      const res = await api.listSourceChanges({ source_type: sourceType, limit: 50 });
+      setSourceChangeEvents(res.events);
+      return res;
+    } catch (err: unknown) {
+      console.error("Failed to load source changes", err);
+    } finally {
+      setIsSourceChangesLoading(false);
+    }
+  }, []);
+
+  const selectSourceChangeEvent = useCallback(async (eventId: string) => {
+    try {
+      const ev = await api.getSourceChange(eventId);
+      setSelectedSourceChangeEvent(ev);
+      setIsImpactsLoading(true);
+      const impRes = await api.listImpacts(eventId);
+      setImpactAssessments(impRes.impacts);
+      return { event: ev, impacts: impRes.impacts };
+    } catch (err: unknown) {
+      console.error("Failed to load source change or impacts", err);
+    } finally {
+      setIsImpactsLoading(false);
+    }
+  }, []);
+
+  const loadUpdateItems = useCallback(async (params?: { status?: string; priority?: string }) => {
+    setIsUpdateItemsLoading(true);
+    try {
+      const res = await api.listUpdateItems({ ...params, limit: 50 });
+      setUpdateItems(res.items);
+      setUpdateItemsTotal(res.total_count);
+      return res;
+    } catch (err: unknown) {
+      console.error("Failed to load update items", err);
+    } finally {
+      setIsUpdateItemsLoading(false);
+    }
+  }, []);
+
+  const acknowledgeUpdate = useCallback(
+    async (updateId: string) => {
+      try {
+        const res = await api.acknowledgeUpdateItem(updateId);
+        await loadUpdateItems();
+        await loadInstitutionalOverview();
+        return res;
+      } catch (err: unknown) {
+        console.error("Failed to acknowledge update item", err);
+        throw err;
+      }
+    },
+    [loadUpdateItems, loadInstitutionalOverview]
+  );
+
+  const resolveUpdate = useCallback(
+    async (updateId: string, note: string) => {
+      try {
+        const res = await api.resolveUpdateItem(updateId, { resolution_note: note });
+        await loadUpdateItems();
+        await loadInstitutionalOverview();
+        return res;
+      } catch (err: unknown) {
+        console.error("Failed to resolve update item", err);
+        throw err;
+      }
+    },
+    [loadUpdateItems, loadInstitutionalOverview]
+  );
+
+  const dismissUpdate = useCallback(
+    async (updateId: string) => {
+      try {
+        const res = await api.dismissUpdateItem(updateId);
+        await loadUpdateItems();
+        await loadInstitutionalOverview();
+        return res;
+      } catch (err: unknown) {
+        console.error("Failed to dismiss update item", err);
+        throw err;
+      }
+    },
+    [loadUpdateItems, loadInstitutionalOverview]
+  );
+
+  const reopenUpdate = useCallback(
+    async (updateId: string) => {
+      try {
+        const res = await api.reopenUpdateItem(updateId);
+        await loadUpdateItems();
+        await loadInstitutionalOverview();
+        return res;
+      } catch (err: unknown) {
+        console.error("Failed to reopen update item", err);
+        throw err;
+      }
+    },
+    [loadUpdateItems, loadInstitutionalOverview]
+  );
+
+  const executeRevalidation = useCallback(
+    async (request: CreateRevalidationRequest) => {
+      setIsRevalidating(true);
+      try {
+        const res = await api.runRevalidation(request);
+        setRevalidations((prev) => [res, ...prev]);
+        await loadUpdateItems();
+        await loadInstitutionalOverview();
+        return res;
+      } catch (err: unknown) {
+        console.error("Failed to run automated revalidation", err);
+        throw err;
+      } finally {
+        setIsRevalidating(false);
+      }
+    },
+    [loadUpdateItems, loadInstitutionalOverview]
+  );
+
   // Selection detail hooks
   useEffect(() => {
     if (selectedReportId) {
@@ -1404,6 +1633,12 @@ export function useResearchWorkspace() {
   useEffect(() => {
     if (activeTab === "OVERVIEW") {
       loadOverview();
+      loadInstitutionalOverview();
+    } else if (activeTab === "KNOWLEDGE") {
+      searchKnowledge();
+    } else if (activeTab === "UPDATES") {
+      loadUpdateItems();
+      loadSourceChanges();
     } else if (activeTab === "REVIEWS") {
       loadReviews();
     } else if (activeTab === "REPORTS") {
@@ -1434,6 +1669,10 @@ export function useResearchWorkspace() {
   }, [
     activeTab,
     loadOverview,
+    loadInstitutionalOverview,
+    searchKnowledge,
+    loadUpdateItems,
+    loadSourceChanges,
     loadReportTemplates,
     loadReports,
     loadTheses,
@@ -1857,6 +2096,44 @@ export function useResearchWorkspace() {
     revokeCirculation,
     approvalStatus,
     loadApprovalStatus,
+
+    // Stage 109 Knowledge, Monitoring & Lifecycle
+    knowledgeEntries,
+    knowledgeTotal,
+    isKnowledgeLoading,
+    knowledgeSearchQuery,
+    setKnowledgeSearchQuery,
+    selectedKnowledgeEntryId,
+    setSelectedKnowledgeEntryId,
+    selectedKnowledgeEntry,
+    dependencyLineage,
+    isLineageLoading,
+    sourceChangeEvents,
+    isSourceChangesLoading,
+    selectedSourceChangeEvent,
+    impactAssessments,
+    isImpactsLoading,
+    updateItems,
+    updateItemsTotal,
+    isUpdateItemsLoading,
+    selectedUpdateItemId,
+    setSelectedUpdateItemId,
+    institutionalOverview,
+    isInstitutionalOverviewLoading,
+    revalidations,
+    isRevalidating,
+    loadInstitutionalOverview,
+    searchKnowledge,
+    selectKnowledgeEntry,
+    loadDependencyLineage,
+    loadSourceChanges,
+    selectSourceChangeEvent,
+    loadUpdateItems,
+    acknowledgeUpdate,
+    resolveUpdate,
+    dismissUpdate,
+    reopenUpdate,
+    executeRevalidation,
 
     // Error
     globalError,

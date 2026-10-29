@@ -14,6 +14,8 @@ import { ResearchSourceLibrary } from "./ResearchSourceLibrary";
 import { ResearchAnalysisWorkspace } from "./analysis/ResearchAnalysisWorkspace";
 import { ResearchReportsWorkspace } from "./reports/ResearchReportsWorkspace";
 import { ResearchReviewsWorkspace } from "./reviews/ResearchReviewsWorkspace";
+import { ResearchKnowledgeWorkspace } from "./knowledge/ResearchKnowledgeWorkspace";
+import { ResearchUpdatesWorkspace } from "./updates/ResearchUpdatesWorkspace";
 import { useResearchWorkspace } from "@/hooks/research/useResearchWorkspace";
 
 export function ResearchWorkspace() {
@@ -207,6 +209,36 @@ export function ResearchWorkspace() {
     circulateReport,
     revokeCirculation,
 
+    // Stage 109 Knowledge, Monitoring & Lifecycle
+    knowledgeEntries,
+    knowledgeTotal,
+    isKnowledgeLoading,
+    knowledgeSearchQuery,
+    setKnowledgeSearchQuery,
+    selectedKnowledgeEntryId,
+    selectedKnowledgeEntry,
+    dependencyLineage,
+    isLineageLoading,
+    sourceChangeEvents,
+    isSourceChangesLoading,
+    selectedSourceChangeEvent,
+    impactAssessments,
+    isImpactsLoading,
+    updateItems,
+    updateItemsTotal,
+    isUpdateItemsLoading,
+    institutionalOverview,
+    isInstitutionalOverviewLoading,
+    searchKnowledge,
+    selectKnowledgeEntry,
+    loadDependencyLineage,
+    selectSourceChangeEvent,
+    acknowledgeUpdate,
+    resolveUpdate,
+    dismissUpdate,
+    reopenUpdate,
+    executeRevalidation,
+
     globalError,
     clearError,
   } = useResearchWorkspace();
@@ -288,12 +320,66 @@ export function ResearchWorkspace() {
           <div className="h-full overflow-y-auto">
             <ResearchOverview
               overview={overview}
-              isLoading={isOverviewLoading}
+              institutionalOverview={institutionalOverview}
+              isLoading={isOverviewLoading || isInstitutionalOverviewLoading}
               onSelectInvestigation={selectInvestigation}
               onNewInvestigation={() => setIsNewDialogOpen(true)}
               onViewAllInvestigations={() => setActiveTab("INVESTIGATIONS")}
+              onNavigateTab={(t) => setActiveTab(t)}
             />
           </div>
+        )}
+
+        {activeTab === "KNOWLEDGE" && (
+          <ResearchKnowledgeWorkspace
+            entries={knowledgeEntries}
+            totalCount={knowledgeTotal}
+            isLoading={isKnowledgeLoading}
+            searchQuery={knowledgeSearchQuery}
+            onSearchChange={setKnowledgeSearchQuery}
+            onSearchSubmit={(types) => searchKnowledge({ query: knowledgeSearchQuery || undefined, entry_types: types })}
+            selectedEntryId={selectedKnowledgeEntryId}
+            selectedEntry={selectedKnowledgeEntry}
+            onSelectEntry={selectKnowledgeEntry}
+            lineage={dependencyLineage}
+            isLineageLoading={isLineageLoading}
+            onInspectLineage={(type, id) => loadDependencyLineage(type, id)}
+            onNavigateToResource={(type, id) => {
+              if (type === "REPORT") {
+                setActiveTab("REPORTS");
+                selectReport(id);
+              } else if (type === "ANALYSIS") {
+                setActiveTab("ANALYSIS");
+                selectAnalysis(id);
+              } else if (type === "INVESTIGATION") {
+                selectInvestigation(id);
+              } else if (type === "SOURCE" || type === "DOCUMENT") {
+                openDocument(id);
+              }
+            }}
+          />
+        )}
+
+        {activeTab === "UPDATES" && (
+          <ResearchUpdatesWorkspace
+            updateItems={updateItems}
+            updateItemsTotal={updateItemsTotal}
+            isUpdateItemsLoading={isUpdateItemsLoading}
+            onAcknowledgeUpdate={acknowledgeUpdate}
+            onResolveUpdate={resolveUpdate}
+            onDismissUpdate={dismissUpdate}
+            onReopenUpdate={reopenUpdate}
+            sourceChangeEvents={sourceChangeEvents}
+            isSourceChangesLoading={isSourceChangesLoading}
+            selectedSourceChangeEvent={selectedSourceChangeEvent}
+            onSelectSourceChangeEvent={selectSourceChangeEvent}
+            impactAssessments={impactAssessments}
+            isImpactsLoading={isImpactsLoading}
+            dependencyLineage={dependencyLineage}
+            isLineageLoading={isLineageLoading}
+            onInspectLineage={(type, id) => loadDependencyLineage(type, id)}
+            onExecuteRevalidation={executeRevalidation}
+          />
         )}
 
         {activeTab === "REVIEWS" && (

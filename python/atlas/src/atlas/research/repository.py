@@ -40,6 +40,7 @@ from atlas.research.domain import (
     ResearchClaimEvidence,
     ResearchComment,
     ResearchCommentThread,
+    ResearchDependencyEdge,
     ResearchDocumentProcessingRecord,
     ResearchDocumentSection,
     ResearchDocumentTable,
@@ -48,9 +49,12 @@ from atlas.research.domain import (
     ResearchFinding,
     ResearchHypothesis,
     ResearchHypothesisEvaluation,
+    ResearchImpactAssessment,
     ResearchInternalCirculation,
     ResearchInvestigation,
     ResearchInvestmentThesis,
+    ResearchKnowledgeCollection,
+    ResearchKnowledgeEntry,
     ResearchNote,
     ResearchNoteRevision,
     ResearchQuestion,
@@ -59,14 +63,18 @@ from atlas.research.domain import (
     ResearchReportRevision,
     ResearchReportSection,
     ResearchReportVerification,
+    ResearchRevalidationIssue,
+    ResearchRevalidationResult,
     ResearchReviewAssignment,
     ResearchReviewAuditEvent,
     ResearchReviewDecision,
     ResearchReviewRequest,
     ResearchScenario,
     ResearchSearchHit,
+    ResearchSourceChangeEvent,
     ResearchSourceReference,
     ResearchThesisArgument,
+    ResearchUpdateItem,
 )
 from atlas.research.enums import (
     AnalysisExecutionStatus,
@@ -76,9 +84,14 @@ from atlas.research.enums import (
     CirculationStatus,
     CommentAnchorType,
     CommentThreadStatus,
+    DependencyType,
     DocumentComparisonMode,
     EvidenceLocationType,
+    ImpactCategory,
     InvestigationLifecycleStatus,
+    KnowledgeEntryType,
+    KnowledgeSourceAvailability,
+    KnowledgeStatus,
     ReportBlockType,
     ReportLifecycleStatus,
     ReportSectionType,
@@ -86,12 +99,6 @@ from atlas.research.enums import (
     ResearchActivityAction,
     ResearchAnalysisType,
     ResearchAuditEventType,
-    ResearchPrincipalType,
-    ResearchResourceType,
-    ResearchRole,
-    ReviewDecisionType,
-    ReviewScope,
-    ReviewStatus,
     ResearchClaimCategory,
     ResearchEvidenceStatus,
     ResearchFindingReviewStatus,
@@ -99,14 +106,26 @@ from atlas.research.enums import (
     ResearchHypothesisStatus,
     ResearchNoteStatus,
     ResearchNoteType,
+    ResearchPrincipalType,
     ResearchQuestionStatus,
     ResearchReportType,
+    ResearchResourceType,
+    ResearchRole,
     ResearchSourceType,
     ResearchType,
+    RevalidationOutcome,
+    RevalidationStatus,
+    ReviewDecisionType,
+    ReviewScope,
+    ReviewStatus,
     SearchMode,
     SourceAvailabilityStatus,
+    SourceChangeType,
     ThesisArgumentType,
     ThesisLifecycleStatus,
+    UpdateItemPriority,
+    UpdateItemStatus,
+    UpdateItemType,
 )
 from atlas.research.errors import (
     ResearchAnalysisAccessDeniedError,
@@ -115,6 +134,9 @@ from atlas.research.errors import (
     ResearchAssumptionNotFoundError,
     ResearchClaimNotFoundError,
     ResearchComparisonIncompatibleError,
+    ResearchDependencyCycleDetectedError,
+    ResearchDependencyNotFoundError,
+    ResearchDependencyTraversalLimitError,
     ResearchDocumentNotFoundError,
     ResearchDocumentSectionNotFoundError,
     ResearchDocumentTableNotFoundError,
@@ -124,11 +146,14 @@ from atlas.research.errors import (
     ResearchFindingNotFoundError,
     ResearchFindingRevisionConflictError,
     ResearchHypothesisNotFoundError,
+    ResearchImpactNotFoundError,
     ResearchInvestigationNotFoundError,
     ResearchInvestigationRevisionConflictError,
     ResearchInvestmentThesisAccessDeniedError,
     ResearchInvestmentThesisNotFoundError,
     ResearchInvestmentThesisRevisionConflictError,
+    ResearchKnowledgeAccessDeniedError,
+    ResearchKnowledgeEntryNotFoundError,
     ResearchNoteNotFoundError,
     ResearchNoteRevisionConflictError,
     ResearchQuestionNotFoundError,
@@ -137,8 +162,16 @@ from atlas.research.errors import (
     ResearchReportNotFoundError,
     ResearchReportRevisionConflictError,
     ResearchReportSectionNotFoundError,
+    ResearchRevalidationAccessDeniedError,
+    ResearchRevalidationNotFoundError,
+    ResearchSourceChangeDuplicateError,
+    ResearchSourceChangeNotFoundError,
     ResearchSourceNotFoundError,
     ResearchThesisArgumentNotFoundError,
+    ResearchUpdateAlreadyResolvedError,
+    ResearchUpdateInvalidStateTransitionError,
+    ResearchUpdateItemAccessDeniedError,
+    ResearchUpdateItemNotFoundError,
 )
 from atlas.research.models import ResearchDocument
 from atlas.research.security import sanitize_markdown_text
@@ -234,10 +267,20 @@ class ResearchRepository:
         self._internal_circulations: Dict[str, ResearchInternalCirculation] = {}
         self._review_audit_events: List[ResearchReviewAuditEvent] = []
 
+        # Stage 109 Knowledge, Dependency Lineage, Monitoring & Lifecycle Stores
+        self._knowledge_entries: Dict[str, ResearchKnowledgeEntry] = {}
+        self._knowledge_collections: Dict[str, ResearchKnowledgeCollection] = {}
+        self._dependency_edges: Dict[str, ResearchDependencyEdge] = {}
+        self._source_change_events: Dict[str, ResearchSourceChangeEvent] = {}
+        self._impact_assessments: Dict[str, ResearchImpactAssessment] = {}
+        self._revalidation_results: Dict[str, List[ResearchRevalidationResult]] = {}
+        self._update_items: Dict[str, ResearchUpdateItem] = {}
+
         self._seed_baseline_investigations()
         self._seed_initial_evidence_candidates()
         self._seed_baseline_analyses()
         self._seed_baseline_reports()
+        self._seed_stage_109_knowledge_and_monitoring()
 
     # -----------------------------------------------------------------------
     # Baseline Seeding for Developer and Institutional Workflow
@@ -3943,4 +3986,569 @@ class ResearchRepository:
         with self._lock:
             evts = [e for e in self._review_audit_events if e.resource_id == resource_id]
             return sorted(copy.deepcopy(evts), key=lambda e: e.occurred_at, reverse=True)
+
+    # -----------------------------------------------------------------------
+    # Stage 109 Knowledge Library & Search Methods
+    # -----------------------------------------------------------------------
+    def index_knowledge_entry(self, entry: ResearchKnowledgeEntry) -> ResearchKnowledgeEntry:
+        """Indexes or updates an artifact reference in the knowledge library."""
+        with self._lock:
+            self._knowledge_entries[entry.knowledge_entry_id] = copy.deepcopy(entry)
+            return copy.deepcopy(entry)
+
+    def get_knowledge_entry(self, knowledge_entry_id: str) -> Optional[ResearchKnowledgeEntry]:
+        """Retrieves a single knowledge entry by ID."""
+        with self._lock:
+            entry = self._knowledge_entries.get(knowledge_entry_id)
+            return copy.deepcopy(entry) if entry else None
+
+    def search_knowledge_entries(
+        self,
+        owner_user_id: str,
+        query: Optional[str] = None,
+        entry_types: Optional[List[KnowledgeEntryType]] = None,
+        investigation_id: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        source_status: Optional[KnowledgeSourceAvailability] = None,
+        knowledge_status: Optional[KnowledgeStatus] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[List[ResearchKnowledgeEntry], int]:
+        """Performs structured, entitlement-scoped search over research knowledge entries."""
+        with self._lock:
+            results = []
+            for entry in self._knowledge_entries.values():
+                # Cross-user isolation: allow owner or public/system entries
+                if entry.owner_user_id != owner_user_id and entry.owner_user_id not in ("default-user", "system", "SYSTEM"):
+                    continue
+
+                if entry_types and entry.entry_type not in entry_types:
+                    continue
+
+                if investigation_id and entry.investigation_id != investigation_id:
+                    continue
+
+                if entity_id and entity_id not in entry.subject_entity_ids:
+                    continue
+
+                if source_status and entry.source_status != source_status:
+                    continue
+
+                if knowledge_status and entry.knowledge_status != knowledge_status:
+                    continue
+
+                if query:
+                    q_lower = query.lower()
+                    title_match = q_lower in entry.title.lower()
+                    desc_match = entry.description and q_lower in entry.description.lower()
+                    resource_match = q_lower in entry.referenced_resource_id.lower()
+                    if not (title_match or desc_match or resource_match):
+                        continue
+
+                results.append(entry)
+
+            total_count = len(results)
+            # Sort newest first
+            sorted_entries = sorted(results, key=lambda e: e.updated_at, reverse=True)
+            paged = sorted_entries[offset : offset + limit]
+            return [copy.deepcopy(e) for e in paged], total_count
+
+    # -----------------------------------------------------------------------
+    # Stage 109 Research Dependency Lineage Methods
+    # -----------------------------------------------------------------------
+    def add_dependency_edge(self, edge: ResearchDependencyEdge) -> ResearchDependencyEdge:
+        """Records an explicit dependency edge between upstream and downstream research entities."""
+        with self._lock:
+            # Check for existing duplicate edge
+            for existing in self._dependency_edges.values():
+                if (
+                    existing.upstream_resource_id == edge.upstream_resource_id
+                    and existing.downstream_resource_id == edge.downstream_resource_id
+                    and existing.dependency_type == edge.dependency_type
+                ):
+                    return copy.deepcopy(existing)
+
+            self._dependency_edges[edge.edge_id] = copy.deepcopy(edge)
+            return copy.deepcopy(edge)
+
+    def list_dependency_edges(
+        self,
+        resource_type: Optional[str] = None,
+        resource_id: Optional[str] = None,
+    ) -> List[ResearchDependencyEdge]:
+        """Lists dependency edges matching upstream or downstream coordinates."""
+        with self._lock:
+            matches = []
+            for edge in self._dependency_edges.values():
+                if resource_id:
+                    if edge.upstream_resource_id == resource_id or edge.downstream_resource_id == resource_id:
+                        matches.append(edge)
+                else:
+                    matches.append(edge)
+            return [copy.deepcopy(e) for e in matches]
+
+    def get_lineage(
+        self,
+        root_type: str,
+        root_id: str,
+        max_depth: int = 5,
+    ) -> Tuple[List[ResearchDependencyEdge], List[Dict[str, Any]]]:
+        """Traverses bounded upstream and downstream dependency graph with cycle detection."""
+        with self._lock:
+            traversed_edges: List[ResearchDependencyEdge] = []
+            visited_nodes: set = set()
+            nodes: Dict[str, Dict[str, Any]] = {}
+
+            queue: List[Tuple[str, str, int]] = [(root_type, root_id, 0)]
+            visited_nodes.add(root_id)
+            nodes[root_id] = {"id": root_id, "type": root_type, "depth": 0}
+
+            while queue:
+                curr_type, curr_id, curr_depth = queue.pop(0)
+                if curr_depth >= max_depth:
+                    continue
+
+                for edge in self._dependency_edges.values():
+                    # Check upstream dependencies (inputs to current node)
+                    if edge.downstream_resource_id == curr_id:
+                        if edge not in traversed_edges:
+                            traversed_edges.append(edge)
+                        up_id = edge.upstream_resource_id
+                        if up_id not in visited_nodes:
+                            visited_nodes.add(up_id)
+                            nodes[up_id] = {"id": up_id, "type": edge.upstream_resource_type, "depth": curr_depth - 1}
+                            queue.append((edge.upstream_resource_type, up_id, curr_depth + 1))
+
+                    # Check downstream dependents (outputs referencing current node)
+                    if edge.upstream_resource_id == curr_id:
+                        if edge not in traversed_edges:
+                            traversed_edges.append(edge)
+                        down_id = edge.downstream_resource_id
+                        if down_id not in visited_nodes:
+                            visited_nodes.add(down_id)
+                            nodes[down_id] = {"id": down_id, "type": edge.downstream_resource_type, "depth": curr_depth + 1}
+                            queue.append((edge.downstream_resource_type, down_id, curr_depth + 1))
+
+            return [copy.deepcopy(e) for e in traversed_edges], list(nodes.values())
+
+    # -----------------------------------------------------------------------
+    # Stage 109 Source Change Monitoring Methods
+    # -----------------------------------------------------------------------
+    def record_source_change_event(self, event: ResearchSourceChangeEvent) -> ResearchSourceChangeEvent:
+        """Records and deduplicates a canonical source revision or status modification event."""
+        with self._lock:
+            # Check deduplication on (canonical_source_id, new_revision_id, change_type)
+            for existing in self._source_change_events.values():
+                if (
+                    existing.canonical_source_id == event.canonical_source_id
+                    and existing.new_revision_id == event.new_revision_id
+                    and existing.change_type == event.change_type
+                ):
+                    return copy.deepcopy(existing)
+
+            self._source_change_events[event.change_event_id] = copy.deepcopy(event)
+            return copy.deepcopy(event)
+
+    def get_source_change_event(self, event_id: str) -> Optional[ResearchSourceChangeEvent]:
+        """Retrieves a source change event by ID."""
+        with self._lock:
+            evt = self._source_change_events.get(event_id)
+            return copy.deepcopy(evt) if evt else None
+
+    def list_source_change_events(
+        self,
+        source_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[List[ResearchSourceChangeEvent], int]:
+        """Lists detected source-change events with pagination."""
+        with self._lock:
+            matches = []
+            for evt in self._source_change_events.values():
+                if source_type and evt.source_type != source_type:
+                    continue
+                matches.append(evt)
+
+            total_count = len(matches)
+            sorted_events = sorted(matches, key=lambda e: e.detected_at, reverse=True)
+            paged = sorted_events[offset : offset + limit]
+            return [copy.deepcopy(e) for e in paged], total_count
+
+    # -----------------------------------------------------------------------
+    # Stage 109 Research Impact Assessment Methods
+    # -----------------------------------------------------------------------
+    def record_impact_assessment(self, impact: ResearchImpactAssessment) -> ResearchImpactAssessment:
+        """Records an assessed impact on a research artifact."""
+        with self._lock:
+            self._impact_assessments[impact.impact_id] = copy.deepcopy(impact)
+            return copy.deepcopy(impact)
+
+    def list_impact_assessments(
+        self,
+        change_event_id: Optional[str] = None,
+        target_id: Optional[str] = None,
+    ) -> List[ResearchImpactAssessment]:
+        """Lists impact assessments filtered by event ID or target artifact ID."""
+        with self._lock:
+            matches = []
+            for imp in self._impact_assessments.values():
+                if change_event_id and imp.change_event_id != change_event_id:
+                    continue
+                if target_id and imp.target_resource_id != target_id:
+                    continue
+                matches.append(imp)
+            return sorted(copy.deepcopy(matches), key=lambda i: i.detected_at, reverse=True)
+
+    # -----------------------------------------------------------------------
+    # Stage 109 Revalidation Methods
+    # -----------------------------------------------------------------------
+    def record_revalidation_result(self, result: ResearchRevalidationResult) -> ResearchRevalidationResult:
+        """Records an immutable revalidation execution result."""
+        with self._lock:
+            if result.target_id not in self._revalidation_results:
+                self._revalidation_results[result.target_id] = []
+            self._revalidation_results[result.target_id].append(copy.deepcopy(result))
+            return copy.deepcopy(result)
+
+    def get_revalidation_result(self, revalidation_id: str) -> Optional[ResearchRevalidationResult]:
+        """Retrieves a specific revalidation result by ID."""
+        with self._lock:
+            for res_list in self._revalidation_results.values():
+                for r in res_list:
+                    if r.revalidation_id == revalidation_id:
+                        return copy.deepcopy(r)
+            return None
+
+    def list_revalidation_results(self, target_id: str) -> List[ResearchRevalidationResult]:
+        """Lists revalidation results for a target research artifact."""
+        with self._lock:
+            res_list = self._revalidation_results.get(target_id, [])
+            return sorted(copy.deepcopy(res_list), key=lambda r: r.executed_at, reverse=True)
+
+    # -----------------------------------------------------------------------
+    # Stage 109 Research Update Queue Methods
+    # -----------------------------------------------------------------------
+    def create_update_item(self, item: ResearchUpdateItem) -> ResearchUpdateItem:
+        """Adds an actionable research maintenance item to the update queue."""
+        with self._lock:
+            self._update_items[item.update_item_id] = copy.deepcopy(item)
+            return copy.deepcopy(item)
+
+    def get_update_item(self, update_item_id: str) -> Optional[ResearchUpdateItem]:
+        """Retrieves a research update item by ID."""
+        with self._lock:
+            item = self._update_items.get(update_item_id)
+            return copy.deepcopy(item) if item else None
+
+    def list_update_items(
+        self,
+        owner_user_id: str,
+        status: Optional[UpdateItemStatus] = None,
+        investigation_id: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[List[ResearchUpdateItem], int]:
+        """Lists research update items for an authorized owner."""
+        with self._lock:
+            matches = []
+            for item in self._update_items.values():
+                if item.owner_user_id != owner_user_id and item.owner_user_id not in ("default-user", "system", "SYSTEM"):
+                    continue
+                if status and item.status != status:
+                    continue
+                if investigation_id and item.investigation_id != investigation_id:
+                    continue
+                matches.append(item)
+
+            total_count = len(matches)
+            sorted_items = sorted(matches, key=lambda i: i.created_at, reverse=True)
+            paged = sorted_items[offset : offset + limit]
+            return [copy.deepcopy(i) for e in paged], total_count
+
+    def update_update_item_status(
+        self,
+        update_item_id: str,
+        status: UpdateItemStatus,
+        resolution_note: Optional[str] = None,
+    ) -> ResearchUpdateItem:
+        """Transitions an update item to a new status with auditable resolution note."""
+        with self._lock:
+            item = self._update_items.get(update_item_id)
+            if not item:
+                raise ResearchUpdateItemNotFoundError(f"Research update item '{update_item_id}' not found.")
+
+            now = datetime.datetime.now(datetime.timezone.utc)
+            item.status = status
+            if status == UpdateItemStatus.ACKNOWLEDGED and not item.acknowledged_at:
+                item.acknowledged_at = now
+            elif status == UpdateItemStatus.RESOLVED:
+                item.resolved_at = now
+                if resolution_note:
+                    item.resolution_note = resolution_note
+            elif resolution_note:
+                item.resolution_note = resolution_note
+
+            return copy.deepcopy(item)
+
+    # -----------------------------------------------------------------------
+    # Stage 109 Research Overview Summary Metrics
+    # -----------------------------------------------------------------------
+    def get_institutional_overview_summary(self, user_id: str) -> Dict[str, Any]:
+        """Computes live institutional summary counts across research operations."""
+        with self._lock:
+            active_invs = len([i for i in self._investigations.values() if i.status == InvestigationLifecycleStatus.ACTIVE])
+            total_notes = len(self._notes)
+            total_analyses = len(self._analyses)
+            total_reports = len(self._reports)
+            total_theses = len(self._theses)
+            pending_reviews = len([r for r in self._review_requests.values() if r.status in (ReviewStatus.SUBMITTED, ReviewStatus.IN_REVIEW)])
+            open_updates = len([u for u in self._update_items.values() if u.status in (UpdateItemStatus.OPEN, UpdateItemStatus.ACKNOWLEDGED, UpdateItemStatus.IN_PROGRESS)])
+            critical_updates = len([u for u in self._update_items.values() if u.status in (UpdateItemStatus.OPEN, UpdateItemStatus.IN_PROGRESS) and u.priority == UpdateItemPriority.CRITICAL])
+
+            recent_acts = []
+            for act in self._activity[-10:]:
+                action_str = act.action_type.value if hasattr(act.action_type, "value") else str(act.action_type)
+                summary_str = act.details.get("summary") or act.details.get("title") or f"{action_str} on {act.object_type} {act.object_id}"
+                recent_acts.append({
+                    "activity_id": act.activity_id,
+                    "investigation_id": act.investigation_id,
+                    "action": action_str,
+                    "summary": summary_str,
+                    "occurred_at": act.occurred_at.isoformat() if hasattr(act.occurred_at, "isoformat") else str(act.occurred_at),
+                })
+
+            return {
+                "active_investigations_count": active_invs,
+                "total_notes_count": total_notes,
+                "total_analyses_count": total_analyses,
+                "total_reports_count": total_reports,
+                "total_theses_count": total_theses,
+                "pending_reviews_count": pending_reviews,
+                "open_updates_count": open_updates,
+                "critical_updates_count": critical_updates,
+                "recent_activity": sorted(recent_acts, key=lambda a: a["occurred_at"], reverse=True),
+            }
+
+    # -----------------------------------------------------------------------
+    # Stage 109 Seeding for Baseline Knowledge & Dependency Lineage
+    # -----------------------------------------------------------------------
+    def _seed_stage_109_knowledge_and_monitoring(self):
+        """Seeds canonical knowledge entries, dependency edges, source changes, and update items."""
+        now = datetime.datetime.now(datetime.timezone.utc)
+        user_id = "default-user"
+
+        # Ensure canonical cross-stage investigation, report, and thesis IDs are resolvable
+        if "inv-apple-fy24-margins" in self._investigations and "inv-aapl-services-margin" not in self._investigations:
+            inv_alias = copy.deepcopy(self._investigations["inv-apple-fy24-margins"])
+            inv_alias.investigation_id = "inv-aapl-services-margin"
+            self._investigations["inv-aapl-services-margin"] = inv_alias
+
+        if "rep-apple-services-expansion-fy24" in self._reports and "rep-aapl-fy24-initiation" not in self._reports:
+            rep_alias = copy.deepcopy(self._reports["rep-apple-services-expansion-fy24"])
+            rep_alias.report_id = "rep-aapl-fy24-initiation"
+            self._reports["rep-aapl-fy24-initiation"] = rep_alias
+
+        if "the-apple-services-moat-fy24" in self._theses and "th-aapl-margin-expansion" not in self._theses:
+            th_alias = copy.deepcopy(self._theses["the-apple-services-moat-fy24"])
+            th_alias.thesis_id = "th-aapl-margin-expansion"
+            self._theses["th-aapl-margin-expansion"] = th_alias
+
+        # Index Investigations
+        for inv_id, inv in self._investigations.items():
+            self._knowledge_entries[f"ke-inv-{inv_id}"] = ResearchKnowledgeEntry(
+                knowledge_entry_id=f"ke-inv-{inv_id}",
+                entry_type=KnowledgeEntryType.RESEARCH_INVESTIGATION,
+                referenced_resource_type="INVESTIGATION",
+                referenced_resource_id=inv_id,
+                owner_user_id=inv.owner_user_id,
+                title=inv.title,
+                description=inv.research_objective or inv.description,
+                investigation_id=inv_id,
+                subject_entity_ids=[inv.primary_subject_entity_id] if inv.primary_subject_entity_id else [],
+                source_status=KnowledgeSourceAvailability.AVAILABLE,
+                knowledge_status=KnowledgeStatus.ACTIVE,
+                created_at=inv.created_at,
+                updated_at=inv.updated_at,
+            )
+
+        # Index Reports
+        for rep_id, rep in self._reports.items():
+            self._knowledge_entries[f"ke-rep-{rep_id}"] = ResearchKnowledgeEntry(
+                knowledge_entry_id=f"ke-rep-{rep_id}",
+                entry_type=KnowledgeEntryType.RESEARCH_REPORT,
+                referenced_resource_type="REPORT",
+                referenced_resource_id=rep_id,
+                owner_user_id=rep.owner_user_id,
+                title=rep.title,
+                description=f"Institutional {rep.report_type.value} report",
+                investigation_id=rep.investigation_id,
+                subject_entity_ids=[rep.primary_subject_id] if rep.primary_subject_id else [],
+                source_status=KnowledgeSourceAvailability.AVAILABLE,
+                knowledge_status=KnowledgeStatus.ACTIVE,
+                created_at=rep.created_at,
+                updated_at=rep.updated_at,
+            )
+
+        # Index Theses
+        for th_id, th in self._theses.items():
+            self._knowledge_entries[f"ke-th-{th_id}"] = ResearchKnowledgeEntry(
+                knowledge_entry_id=f"ke-th-{th_id}",
+                entry_type=KnowledgeEntryType.RESEARCH_THESIS,
+                referenced_resource_type="THESIS",
+                referenced_resource_id=th_id,
+                owner_user_id=th.owner_user_id,
+                title=f"Thesis: {th.thesis_statement[:60]}",
+                description=th.thesis_statement,
+                investigation_id=th.investigation_id,
+                subject_entity_ids=[th.primary_subject_id] if th.primary_subject_id else [],
+                source_status=KnowledgeSourceAvailability.AVAILABLE,
+                knowledge_status=KnowledgeStatus.ACTIVE,
+                created_at=th.created_at,
+                updated_at=th.updated_at,
+            )
+
+        # Index Analyses
+        for an_id, an in self._analyses.items():
+            self._knowledge_entries[f"ke-an-{an_id}"] = ResearchKnowledgeEntry(
+                knowledge_entry_id=f"ke-an-{an_id}",
+                entry_type=KnowledgeEntryType.RESEARCH_ANALYSIS,
+                referenced_resource_type="ANALYSIS",
+                referenced_resource_id=an_id,
+                owner_user_id=an.owner_user_id,
+                title=an.title,
+                description=an.description,
+                investigation_id=an.investigation_id,
+                subject_entity_ids=[an.primary_subject_entity_id] if an.primary_subject_entity_id else [],
+                source_status=KnowledgeSourceAvailability.AVAILABLE,
+                knowledge_status=KnowledgeStatus.ACTIVE,
+                created_at=an.created_at,
+                updated_at=an.updated_at,
+            )
+
+        # Index Findings
+        for fn_id, fn in self._findings.items():
+            self._knowledge_entries[f"ke-fn-{fn_id}"] = ResearchKnowledgeEntry(
+                knowledge_entry_id=f"ke-fn-{fn_id}",
+                entry_type=KnowledgeEntryType.RESEARCH_FINDING,
+                referenced_resource_type="FINDING",
+                referenced_resource_id=fn_id,
+                owner_user_id=fn.author_user_id,
+                title=f"Finding: {fn.statement[:60]}",
+                description=fn.statement,
+                investigation_id=fn.investigation_id,
+                subject_entity_ids=[],
+                source_status=KnowledgeSourceAvailability.AVAILABLE,
+                knowledge_status=KnowledgeStatus.ACTIVE,
+                created_at=fn.created_at,
+                updated_at=fn.updated_at,
+            )
+
+        # Seed Dependency Edges: AAPL Filing -> Evidence -> Margin Claim -> Finding -> Thesis -> Report
+        self._dependency_edges["dep-edge-001"] = ResearchDependencyEdge(
+            edge_id="dep-edge-001",
+            upstream_resource_type="SOURCE",
+            upstream_resource_id="src-sec-aapl-10k-2024",
+            upstream_revision_id="rev-001",
+            downstream_resource_type="EVIDENCE",
+            downstream_resource_id="ev-aapl-services-rev-001",
+            dependency_type=DependencyType.SOURCE_TO_EVIDENCE,
+            source_reference="SEC Form 10-K FY2024 Item 7 MD&A",
+        )
+        self._dependency_edges["dep-edge-002"] = ResearchDependencyEdge(
+            edge_id="dep-edge-002",
+            upstream_resource_type="EVIDENCE",
+            upstream_resource_id="ev-aapl-services-rev-001",
+            downstream_resource_type="ANALYSIS",
+            downstream_resource_id="an-aapl-gross-margin-trend",
+            dependency_type=DependencyType.SOURCE_TO_ANALYSIS,
+            source_reference="Services Revenue Fact Item",
+        )
+        self._dependency_edges["dep-edge-003"] = ResearchDependencyEdge(
+            edge_id="dep-edge-003",
+            upstream_resource_type="ANALYSIS",
+            upstream_resource_id="an-aapl-gross-margin-trend",
+            downstream_resource_type="FINDING",
+            downstream_resource_id="fnd-aapl-services-margin-growth",
+            dependency_type=DependencyType.ANALYSIS_TO_FINDING,
+            source_reference="Analysis Run run-aapl-gm-001",
+        )
+        self._dependency_edges["dep-edge-004"] = ResearchDependencyEdge(
+            edge_id="dep-edge-004",
+            upstream_resource_type="FINDING",
+            upstream_resource_id="fnd-aapl-services-margin-growth",
+            downstream_resource_type="THESIS",
+            downstream_resource_id="th-aapl-margin-expansion",
+            dependency_type=DependencyType.FINDING_TO_THESIS,
+            source_reference="Core Bull Thesis Pillar",
+        )
+        self._dependency_edges["dep-edge-005"] = ResearchDependencyEdge(
+            edge_id="dep-edge-005",
+            upstream_resource_type="THESIS",
+            upstream_resource_id="th-aapl-margin-expansion",
+            downstream_resource_type="REPORT",
+            downstream_resource_id="rep-aapl-fy24-initiation",
+            dependency_type=DependencyType.THESIS_TO_REPORT,
+            source_reference="Section: Investment Thesis",
+        )
+
+        # Seed Canonical Source Change Event: Apple Form 10-K/A Amendment
+        change_evt = ResearchSourceChangeEvent(
+            change_event_id="sce-aapl-10ka-2024",
+            source_type="DOCUMENT",
+            canonical_source_id="src-sec-aapl-10k-2024",
+            old_revision_id="rev-001",
+            new_revision_id="rev-002-amendment",
+            change_type=SourceChangeType.DOCUMENT_AMENDED,
+            changed_fields=["Item 8 Financial Statements Note 3 Revenue"],
+            detected_at=now - datetime.timedelta(hours=2),
+            source_published_at=now - datetime.timedelta(hours=4),
+            provider_id="SEC_EDGAR",
+            details={
+                "amendment_reason": "Form 10-K/A explanatory note clarifying segment revenue reclassification",
+                "affected_filing_accession": "0000320193-24-000106",
+            },
+        )
+        self._source_change_events[change_evt.change_event_id] = change_evt
+
+        # Seed Impact Assessment originating from this source change
+        impact_rec = ResearchImpactAssessment(
+            impact_id="imp-aapl-services-margin-001",
+            change_event_id=change_evt.change_event_id,
+            target_resource_type="REPORT",
+            target_resource_id="rep-aapl-fy24-initiation",
+            target_revision_id="rev-1",
+            impact_category=ImpactCategory.DIRECT_SOURCE_REFERENCE_CHANGED,
+            dependency_path=[
+                "src-sec-aapl-10k-2024",
+                "ev-aapl-services-rev-001",
+                "an-aapl-gross-margin-trend",
+                "fnd-aapl-services-margin-growth",
+                "th-aapl-margin-expansion",
+                "rep-aapl-fy24-initiation",
+            ],
+            direct_dependency=True,
+            review_recommended=True,
+            summary="Apple Form 10-K amendment filed with segment revenue footnote reclassification. Verification recommended for Services margin calculation.",
+            detected_at=now - datetime.timedelta(hours=2),
+        )
+        self._impact_assessments[impact_rec.impact_id] = impact_rec
+
+        # Seed Research Update Queue Item for the Analyst
+        update_item = ResearchUpdateItem(
+            update_item_id="upd-aapl-services-margin-review",
+            owner_user_id=user_id,
+            investigation_id="inv-aapl-services-margin",
+            target_resource_type="REPORT",
+            target_resource_id="rep-aapl-fy24-initiation",
+            source_change_event_id=change_evt.change_event_id,
+            impact_assessment_id=impact_rec.impact_id,
+            update_type=UpdateItemType.SOURCE_CHANGE_REVIEW,
+            priority=UpdateItemPriority.HIGH,
+            status=UpdateItemStatus.OPEN,
+            title="Review Apple Form 10-K/A Amendment Impact on Services Margin",
+            description="SEC Form 10-K/A amendment detected for AAPL FY2024. Review referenced evidence and determine whether an analysis refresh is required.",
+            created_at=now - datetime.timedelta(hours=2),
+        )
+        self._update_items[update_item.update_item_id] = update_item
+
 

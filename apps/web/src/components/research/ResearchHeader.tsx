@@ -27,7 +27,7 @@ export function ResearchHeader({
                 FINANCIAL RESEARCH PLATFORM
               </h1>
               <Badge variant="outline" className="font-mono text-[10px]">
-                STAGE 108 RESEARCH OPERATIONS & REVIEW WORKFLOWS
+                STAGE 109 COMPLETE INSTITUTIONAL RESEARCH PLATFORM
               </Badge>
               {activeCount > 0 && (
                 <Badge variant="primary" className="text-[10px]">
@@ -36,7 +36,7 @@ export function ResearchHeader({
               )}
             </div>
             <p className="text-xs text-atlas-text-muted">
-              Source-verified financial research, structured investment theses, anchored review workflows, quality gates, exact revision approvals, and controlled internal circulation.
+              Institutional-grade research knowledge library, multi-hop dependency lineage, continuous source-change monitoring, automated citation revalidation, and research lifecycle management.
             </p>
           </div>
         </div>
@@ -52,6 +52,26 @@ export function ResearchHeader({
               }`}
             >
               Overview
+            </button>
+            <button
+              onClick={() => onTabChange("KNOWLEDGE")}
+              className={`rounded-xs px-3 py-1 text-xs font-medium transition-colors ${
+                activeTab === "KNOWLEDGE"
+                  ? "bg-atlas-accent text-white"
+                  : "text-atlas-text-secondary hover:text-atlas-text-primary"
+              }`}
+            >
+              Knowledge Library
+            </button>
+            <button
+              onClick={() => onTabChange("UPDATES")}
+              className={`rounded-xs px-3 py-1 text-xs font-medium transition-colors ${
+                activeTab === "UPDATES"
+                  ? "bg-atlas-accent text-white"
+                  : "text-atlas-text-secondary hover:text-atlas-text-primary"
+              }`}
+            >
+              Updates & Monitoring
             </button>
             <button
               onClick={() => onTabChange("REVIEWS")}

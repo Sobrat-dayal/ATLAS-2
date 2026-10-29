@@ -22,6 +22,15 @@ import {
   ResearchRole,
   CommentThreadStatus,
   CirculationStatus,
+  // Stage 109 Types
+  KnowledgeEntryType,
+  KnowledgeStatus,
+  KnowledgeSourceAvailability,
+  SourceChangeType,
+  ImpactCategory,
+  RevalidationOutcome,
+  UpdateItemStatus,
+  UpdateItemPriority,
 } from "./types";
 
 /**
@@ -544,6 +553,171 @@ export function getCirculationStatusDisplay(status: CirculationStatus): {
       return { label: "Expired", variant: "default" };
     default:
       return { label: status, variant: "default" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Stage 109 Display Helpers
+// ---------------------------------------------------------------------------
+
+export function getKnowledgeEntryTypeDisplay(type: KnowledgeEntryType): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (type) {
+    case "RESEARCH_INVESTIGATION":
+      return { label: "Investigation", variant: "primary" };
+    case "RESEARCH_REPORT":
+      return { label: "Report", variant: "positive" };
+    case "RESEARCH_THESIS":
+      return { label: "Thesis", variant: "warning" };
+    case "RESEARCH_ANALYSIS":
+      return { label: "Analysis", variant: "default" };
+    case "RESEARCH_FINDING":
+      return { label: "Finding", variant: "outline" };
+    case "RESEARCH_EVIDENCE":
+      return { label: "Evidence", variant: "positive" };
+    case "RESEARCH_CLAIM":
+      return { label: "Claim", variant: "outline" };
+    case "RESEARCH_NOTE":
+      return { label: "Note", variant: "default" };
+    case "RESEARCH_SOURCE_REFERENCE":
+      return { label: "Source", variant: "default" };
+    default:
+      return { label: type, variant: "default" };
+  }
+}
+
+export function getKnowledgeStatusDisplay(status: KnowledgeStatus): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (status) {
+    case "ACTIVE":
+      return { label: "Active", variant: "positive" };
+    case "ARCHIVED":
+      return { label: "Archived", variant: "outline" };
+    case "DEPRECATED":
+      return { label: "Deprecated", variant: "negative" };
+    case "DRAFT":
+    default:
+      return { label: "Draft", variant: "warning" };
+  }
+}
+
+export function getKnowledgeSourceAvailabilityDisplay(status: KnowledgeSourceAvailability): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (status) {
+    case "AVAILABLE":
+      return { label: "Available", variant: "positive" };
+    case "PENDING_VERIFICATION":
+      return { label: "Pending Verification", variant: "warning" };
+    case "RESTRICTED":
+      return { label: "Restricted", variant: "negative" };
+    case "UNAVAILABLE":
+    default:
+      return { label: "Unavailable", variant: "outline" };
+  }
+}
+
+export function getSourceChangeTypeDisplay(type: SourceChangeType): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (type) {
+    case "DOCUMENT_AMENDED":
+      return { label: "Filing Amended", variant: "warning" };
+    case "FACT_RESTATED":
+      return { label: "Fact Restated", variant: "negative" };
+    case "VINTAGE_UPDATED":
+      return { label: "Vintage Updated", variant: "primary" };
+    case "NEWS_CORRECTED":
+      return { label: "News Corrected", variant: "warning" };
+    case "ENTITLEMENT_REVOKED":
+      return { label: "Entitlement Revoked", variant: "negative" };
+    default:
+      return { label: type, variant: "default" };
+  }
+}
+
+export function getImpactCategoryDisplay(cat: ImpactCategory): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (cat) {
+    case "DIRECT_SOURCE_REFERENCE_CHANGED":
+      return { label: "Direct Source Reference Changed", variant: "negative" };
+    case "INTERMEDIATE_CALCULATION_IMPACTED":
+      return { label: "Calculation Impacted", variant: "warning" };
+    case "DOWNSTREAM_FINDING_REQUIRING_REVALIDATION":
+      return { label: "Finding Needs Revalidation", variant: "warning" };
+    case "REPORT_ASSERTION_AFFECTED":
+      return { label: "Report Assertion Affected", variant: "negative" };
+    default:
+      return { label: cat, variant: "default" };
+  }
+}
+
+export function getRevalidationOutcomeDisplay(outcome: RevalidationOutcome): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (outcome) {
+    case "VALID_REFERENCES":
+      return { label: "Valid References", variant: "positive" };
+    case "VALID_WITH_WARNINGS":
+      return { label: "Valid with Warnings", variant: "warning" };
+    case "REQUIRES_HUMAN_REVIEW":
+      return { label: "Requires Review", variant: "warning" };
+    case "INVALID_CITATIONS":
+      return { label: "Invalid Citations", variant: "negative" };
+    case "APPROVAL_REVOCATION_RECOMMENDED":
+      return { label: "Approval Revocation Advised", variant: "negative" };
+    default:
+      return { label: outcome, variant: "default" };
+  }
+}
+
+export function getUpdateItemStatusDisplay(status: UpdateItemStatus): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (status) {
+    case "OPEN":
+      return { label: "Open", variant: "warning" };
+    case "ACKNOWLEDGED":
+      return { label: "Acknowledged", variant: "primary" };
+    case "IN_PROGRESS":
+      return { label: "In Progress", variant: "primary" };
+    case "RESOLVED":
+      return { label: "Resolved", variant: "positive" };
+    case "DISMISSED":
+      return { label: "Dismissed", variant: "outline" };
+    case "SUPERSEDED":
+      return { label: "Superseded", variant: "outline" };
+    case "REOPENED":
+      return { label: "Reopened", variant: "negative" };
+    default:
+      return { label: status, variant: "default" };
+  }
+}
+
+export function getUpdateItemPriorityDisplay(priority: UpdateItemPriority): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (priority) {
+    case "CRITICAL":
+      return { label: "Critical", variant: "negative" };
+    case "HIGH":
+      return { label: "High", variant: "warning" };
+    case "MEDIUM":
+      return { label: "Medium", variant: "primary" };
+    case "LOW":
+    default:
+      return { label: "Low", variant: "outline" };
   }
 }
 

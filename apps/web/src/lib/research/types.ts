@@ -1819,4 +1819,265 @@ export interface ResearchReviewAuditEventListResponse {
   total_count: number;
 }
 
+// ---------------------------------------------------------------------------
+// Stage 109 Research Knowledge, Monitoring & Lifecycle Types
+// ---------------------------------------------------------------------------
+
+export type KnowledgeEntryType =
+  | "RESEARCH_INVESTIGATION"
+  | "RESEARCH_NOTE"
+  | "RESEARCH_QUESTION"
+  | "RESEARCH_HYPOTHESIS"
+  | "RESEARCH_CLAIM"
+  | "RESEARCH_EVIDENCE"
+  | "RESEARCH_ANALYSIS"
+  | "RESEARCH_FINDING"
+  | "RESEARCH_THESIS"
+  | "RESEARCH_REPORT"
+  | "RESEARCH_SOURCE_REFERENCE";
+
+export type KnowledgeStatus = "ACTIVE" | "ARCHIVED" | "DEPRECATED" | "DRAFT";
+
+export type KnowledgeSourceAvailability =
+  | "AVAILABLE"
+  | "PENDING_VERIFICATION"
+  | "UNAVAILABLE"
+  | "RESTRICTED";
+
+export type DependencyType =
+  | "SOURCE_TO_EVIDENCE"
+  | "SOURCE_TO_ANALYSIS"
+  | "EVIDENCE_TO_CLAIM"
+  | "ANALYSIS_TO_FINDING"
+  | "FINDING_TO_THESIS"
+  | "THESIS_TO_REPORT"
+  | "ANALYSIS_TO_REPORT"
+  | "REVIEW_APPROVAL_TO_REPORT";
+
+export type SourceChangeType =
+  | "DOCUMENT_AMENDED"
+  | "FACT_RESTATED"
+  | "VINTAGE_UPDATED"
+  | "NEWS_CORRECTED"
+  | "ENTITLEMENT_REVOKED";
+
+export type ImpactCategory =
+  | "DIRECT_SOURCE_REFERENCE_CHANGED"
+  | "INTERMEDIATE_CALCULATION_IMPACTED"
+  | "DOWNSTREAM_FINDING_REQUIRING_REVALIDATION"
+  | "REPORT_ASSERTION_AFFECTED";
+
+export type RevalidationStatus =
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "COMPLETED_WITH_WARNINGS"
+  | "FAILED";
+
+export type RevalidationOutcome =
+  | "VALID_REFERENCES"
+  | "VALID_WITH_WARNINGS"
+  | "REQUIRES_HUMAN_REVIEW"
+  | "INVALID_CITATIONS"
+  | "APPROVAL_REVOCATION_RECOMMENDED";
+
+export type UpdateItemType =
+  | "SOURCE_CHANGE_REVIEW"
+  | "REVALIDATION_FAILURE"
+  | "APPROVAL_EXPIRATION"
+  | "PERIOD_ROLLOVER_SCHEDULED";
+
+export type UpdateItemStatus =
+  | "OPEN"
+  | "ACKNOWLEDGED"
+  | "IN_PROGRESS"
+  | "RESOLVED"
+  | "DISMISSED"
+  | "SUPERSEDED"
+  | "REOPENED";
+
+export type UpdateItemPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export interface ResearchKnowledgeEntryResponse {
+  knowledge_entry_id: string;
+  entry_type: KnowledgeEntryType;
+  referenced_resource_type: string;
+  referenced_resource_id: string;
+  owner_user_id: string;
+  title: string;
+  description?: string | null;
+  investigation_id?: string | null;
+  subject_entity_ids: string[];
+  source_status: KnowledgeSourceAvailability;
+  knowledge_status: KnowledgeStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResearchKnowledgeSearchQuery {
+  query?: string | null;
+  entry_types?: KnowledgeEntryType[] | null;
+  subject_entity_ids?: string[] | null;
+  investigation_id?: string | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ResearchKnowledgeSearchResponse {
+  total_count: number;
+  entries: ResearchKnowledgeEntryResponse[];
+  offset: number;
+  limit: number;
+}
+
+export interface ResearchDependencyEdgeResponse {
+  edge_id: string;
+  upstream_resource_type: string;
+  upstream_resource_id: string;
+  upstream_revision_id?: string | null;
+  downstream_resource_type: string;
+  downstream_resource_id: string;
+  downstream_revision_id?: string | null;
+  dependency_type: DependencyType;
+  source_reference?: string | null;
+  created_at?: string;
+}
+
+export interface ResearchDependencyLineageNode {
+  id: string;
+  type: string;
+  label?: string;
+}
+
+export interface ResearchDependencyLineageResponse {
+  root_resource_type: string;
+  root_resource_id: string;
+  nodes: ResearchDependencyLineageNode[];
+  edges: ResearchDependencyEdgeResponse[];
+  has_cycle: boolean;
+  max_depth_reached: boolean;
+}
+
+export interface ResearchSourceChangeEventResponse {
+  change_event_id: string;
+  source_type: string;
+  canonical_source_id: string;
+  old_revision_id?: string | null;
+  new_revision_id: string;
+  change_type: SourceChangeType;
+  changed_fields: string[];
+  detected_at: string;
+  source_published_at?: string | null;
+  provider_id?: string | null;
+  details: Record<string, unknown>;
+}
+
+export interface ResearchSourceChangeEventListResponse {
+  events: ResearchSourceChangeEventResponse[];
+  total_count: number;
+}
+
+export interface ResearchImpactAssessmentResponse {
+  impact_id: string;
+  change_event_id: string;
+  target_resource_type: string;
+  target_resource_id: string;
+  target_revision_id?: string | null;
+  impact_category: ImpactCategory;
+  dependency_path: string[];
+  direct_dependency: boolean;
+  review_recommended: boolean;
+  summary: string;
+  detected_at: string;
+}
+
+export interface ResearchImpactListResponse {
+  impacts: ResearchImpactAssessmentResponse[];
+  total_count: number;
+}
+
+export interface CreateRevalidationRequest {
+  target_type: string;
+  target_id: string;
+  target_revision_number?: number | null;
+}
+
+export interface ResearchRevalidationIssueResponse {
+  issue_id: string;
+  severity: string;
+  issue_type: string;
+  message: string;
+  target_reference?: string | null;
+}
+
+export interface ResearchRevalidationResultResponse {
+  revalidation_id: string;
+  target_type: string;
+  target_id: string;
+  target_revision_number: number;
+  status: RevalidationStatus;
+  outcome: RevalidationOutcome;
+  issues: ResearchRevalidationIssueResponse[];
+  executed_at: string;
+  actor_id: string;
+}
+
+export interface ResearchUpdateItemResponse {
+  update_item_id: string;
+  owner_user_id: string;
+  investigation_id?: string | null;
+  target_resource_type: string;
+  target_resource_id: string;
+  source_change_event_id?: string | null;
+  update_type: UpdateItemType;
+  priority: UpdateItemPriority;
+  status: UpdateItemStatus;
+  title: string;
+  description?: string | null;
+  created_at: string;
+  acknowledged_at?: string | null;
+  resolved_at?: string | null;
+  resolution_note?: string | null;
+}
+
+export interface ResearchUpdateItemListResponse {
+  items: ResearchUpdateItemResponse[];
+  total_count: number;
+}
+
+export interface CreateResearchUpdateItemRequest {
+  investigation_id?: string | null;
+  target_resource_type: string;
+  target_resource_id: string;
+  source_change_event_id?: string | null;
+  update_type: UpdateItemType;
+  priority: UpdateItemPriority;
+  title: string;
+  description?: string | null;
+}
+
+export interface ResolveUpdateItemRequest {
+  resolution_note: string;
+}
+
+export interface ResearchOverviewActivityItem {
+  activity_id: string;
+  investigation_id: string;
+  action: string;
+  summary: string;
+  occurred_at: string;
+}
+
+export interface ResearchOverviewSummaryResponse {
+  active_investigations_count: number;
+  total_notes_count: number;
+  total_analyses_count: number;
+  total_reports_count: number;
+  total_theses_count: number;
+  pending_reviews_count: number;
+  open_updates_count: number;
+  critical_updates_count: number;
+  recent_activity: ResearchOverviewActivityItem[];
+}
+
 

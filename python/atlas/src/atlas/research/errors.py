@@ -651,3 +651,88 @@ class ResearchQualityGateFailedError(ResearchDomainError):
     """Raised when a report fails required blocking quality gates prior to finalization."""
     pass
 
+
+# ---------------------------------------------------------------------------
+# Stage 109 Knowledge, Dependency Lineage, Monitoring & Lifecycle Errors
+# ---------------------------------------------------------------------------
+
+class ResearchKnowledgeEntryNotFoundError(ResearchDomainError):
+    """Raised when a research knowledge entry ID cannot be found."""
+    pass
+
+
+class ResearchKnowledgeAccessDeniedError(ResearchDomainError):
+    """Raised when access to a research knowledge entry is unauthorized."""
+    pass
+
+
+class ResearchKnowledgeTypeUnsupportedError(ResearchDomainError):
+    """Raised when attempting to index or query an unsupported knowledge entry type."""
+    pass
+
+
+class ResearchDependencyNotFoundError(ResearchDomainError):
+    """Raised when a dependency edge cannot be located."""
+    pass
+
+
+class ResearchDependencyCycleDetectedError(ResearchDomainError):
+    """Raised when a cycle is detected during dependency lineage traversal."""
+    pass
+
+
+class ResearchDependencyTraversalLimitError(ResearchDomainError):
+    """Raised when lineage traversal exceeds maximum depth or node budget."""
+    pass
+
+
+class ResearchSourceChangeNotFoundError(ResearchDomainError):
+    """Raised when a source-change event cannot be found."""
+    pass
+
+
+class ResearchSourceChangeDuplicateError(ResearchDomainError):
+    """Raised when attempting to ingest a duplicate source-change event."""
+    pass
+
+
+class ResearchImpactNotFoundError(ResearchDomainError):
+    """Raised when an impact assessment record cannot be found."""
+    pass
+
+
+class ResearchRevalidationNotFoundError(ResearchDomainError):
+    """Raised when a revalidation result record cannot be found."""
+    pass
+
+
+class ResearchRevalidationAccessDeniedError(ResearchDomainError):
+    """Raised when an unauthorized user attempts to trigger revalidation."""
+    pass
+
+
+class ResearchRevalidationTargetUnavailableError(ResearchDomainError):
+    """Raised when the target resource for revalidation does not exist."""
+    pass
+
+
+class ResearchUpdateItemNotFoundError(ResearchDomainError):
+    """Raised when a research update queue item cannot be found."""
+    pass
+
+
+class ResearchUpdateItemAccessDeniedError(ResearchDomainError):
+    """Raised when an unauthorized user attempts to mutate an update queue item."""
+    pass
+
+
+class ResearchUpdateInvalidStateTransitionError(ResearchDomainError):
+    """Raised when an update item transition violates the state machine."""
+    pass
+
+
+class ResearchUpdateAlreadyResolvedError(ResearchDomainError):
+    """Raised when attempting to re-resolve an already resolved update item without reopening."""
+    pass
+
+

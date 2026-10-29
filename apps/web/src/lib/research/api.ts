@@ -96,6 +96,21 @@ import {
   UpdateAccessGrantRequest,
   UpdateCommentRequest,
   UpdateReviewRequest,
+  // Stage 109 Types
+  CreateRevalidationRequest,
+  CreateResearchUpdateItemRequest,
+  ResearchDependencyLineageResponse,
+  ResearchImpactListResponse,
+  ResearchKnowledgeEntryResponse,
+  ResearchKnowledgeSearchQuery,
+  ResearchKnowledgeSearchResponse,
+  ResearchOverviewSummaryResponse,
+  ResearchRevalidationResultResponse,
+  ResearchSourceChangeEventListResponse,
+  ResearchSourceChangeEventResponse,
+  ResearchUpdateItemListResponse,
+  ResearchUpdateItemResponse,
+  ResolveUpdateItemRequest,
 } from "./types";
 
 function getBaseApiUrl(): string {
@@ -1448,5 +1463,165 @@ export async function listResourceAuditEvents(
   const url = `${getBaseApiUrl()}/api/v1/research/resources/${resourceType}/${resourceId}/audit-events`;
   const res = await fetch(url, { method: "GET", headers: getHeaders() });
   return handleResponse<ResearchReviewAuditEventListResponse>(res);
+}
+
+// ---------------------------------------------------------------------------
+// Stage 109 Research Knowledge, Monitoring & Lifecycle Methods
+// ---------------------------------------------------------------------------
+
+export async function getOverviewSummary(): Promise<ResearchOverviewSummaryResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/overview/summary`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchOverviewSummaryResponse>(res);
+}
+
+export async function searchKnowledge(
+  query: ResearchKnowledgeSearchQuery
+): Promise<ResearchKnowledgeSearchResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/knowledge/search`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(query),
+  });
+  return handleResponse<ResearchKnowledgeSearchResponse>(res);
+}
+
+export async function getKnowledgeEntry(
+  entryId: string
+): Promise<ResearchKnowledgeEntryResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/knowledge/${entryId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchKnowledgeEntryResponse>(res);
+}
+
+export async function getDependencyLineage(
+  resourceType: string,
+  resourceId: string,
+  maxDepth: number = 5
+): Promise<ResearchDependencyLineageResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/dependencies/lineage/${resourceType}/${resourceId}?max_depth=${maxDepth}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchDependencyLineageResponse>(res);
+}
+
+export async function listSourceChanges(params?: {
+  source_type?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<ResearchSourceChangeEventListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.source_type) searchParams.set("source_type", params.source_type);
+  if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
+  if (params?.offset !== undefined) searchParams.set("offset", String(params.offset));
+  const qs = searchParams.toString();
+  const url = `${getBaseApiUrl()}/api/v1/research/source-changes${qs ? `?${qs}` : ""}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchSourceChangeEventListResponse>(res);
+}
+
+export async function getSourceChange(
+  eventId: string
+): Promise<ResearchSourceChangeEventResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/source-changes/${eventId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchSourceChangeEventResponse>(res);
+}
+
+export async function listImpacts(
+  eventId: string
+): Promise<ResearchImpactListResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/source-changes/${eventId}/impacts`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchImpactListResponse>(res);
+}
+
+export async function runRevalidation(
+  request: CreateRevalidationRequest
+): Promise<ResearchRevalidationResultResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/revalidations`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(request),
+  });
+  return handleResponse<ResearchRevalidationResultResponse>(res);
+}
+
+export async function listRevalidations(
+  resourceType: string,
+  resourceId: string
+): Promise<ResearchRevalidationResultResponse[]> {
+  const url = `${getBaseApiUrl()}/api/v1/research/resources/${resourceType}/${resourceId}/revalidations`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchRevalidationResultResponse[]>(res);
+}
+
+export async function listUpdateItems(params?: {
+  status?: string;
+  priority?: string;
+  investigation_id?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<ResearchUpdateItemListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.status) searchParams.set("status", params.status);
+  if (params?.priority) searchParams.set("priority", params.priority);
+  if (params?.investigation_id) searchParams.set("investigation_id", params.investigation_id);
+  if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
+  if (params?.offset !== undefined) searchParams.set("offset", String(params.offset));
+  const qs = searchParams.toString();
+  const url = `${getBaseApiUrl()}/api/v1/research/updates${qs ? `?${qs}` : ""}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchUpdateItemListResponse>(res);
+}
+
+export async function createUpdateItem(
+  data: CreateResearchUpdateItemRequest
+): Promise<ResearchUpdateItemResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/updates`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchUpdateItemResponse>(res);
+}
+
+export async function acknowledgeUpdateItem(
+  updateId: string
+): Promise<ResearchUpdateItemResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/updates/${updateId}/acknowledge`;
+  const res = await fetch(url, { method: "POST", headers: getHeaders() });
+  return handleResponse<ResearchUpdateItemResponse>(res);
+}
+
+export async function resolveUpdateItem(
+  updateId: string,
+  data: ResolveUpdateItemRequest
+): Promise<ResearchUpdateItemResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/updates/${updateId}/resolve`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchUpdateItemResponse>(res);
+}
+
+export async function dismissUpdateItem(
+  updateId: string
+): Promise<ResearchUpdateItemResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/updates/${updateId}/dismiss`;
+  const res = await fetch(url, { method: "POST", headers: getHeaders() });
+  return handleResponse<ResearchUpdateItemResponse>(res);
+}
+
+export async function reopenUpdateItem(
+  updateId: string
+): Promise<ResearchUpdateItemResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/updates/${updateId}/reopen`;
+  const res = await fetch(url, { method: "POST", headers: getHeaders() });
+  return handleResponse<ResearchUpdateItemResponse>(res);
 }
 
