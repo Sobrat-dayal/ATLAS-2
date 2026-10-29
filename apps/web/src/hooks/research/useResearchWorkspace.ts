@@ -85,10 +85,29 @@ import {
   ThesisLifecycleStatus,
   ThesisArgumentType,
   ExportFormat,
+  // Stage 108 Types
+  ResearchRole,
+  ResearchResourceType,
+  ReviewStatus,
+  ReviewDecisionType,
+  CommentThreadStatus,
+  ResearchAccessGrantResponse,
+  CreateAccessGrantRequest,
+  UpdateAccessGrantRequest,
+  ResearchReviewRequestResponse,
+  CreateReviewRequest,
+  CreateReviewDecisionRequest,
+  ResearchCommentThreadResponse,
+  CreateCommentThreadRequest,
+  QualityGateResultResponse,
+  ResearchInternalCirculationResponse,
+  CreateCirculationRequest,
+  ResearchApprovalStatusResponse,
 } from "@/lib/research/types";
 
 export type ResearchTabMode =
   | "OVERVIEW"
+  | "REVIEWS"
   | "REPORTS"
   | "THESES"
   | "INVESTIGATIONS"
@@ -773,6 +792,22 @@ export function useResearchWorkspace() {
   const [reportTypeFilter, setReportTypeFilter] = useState<ResearchReportType | undefined>(undefined);
   const [reportSearchQuery, setReportSearchQuery] = useState<string>("");
 
+  // Stage 108 Reviews & Governance State
+  const [reviews, setReviews] = useState<ResearchReviewRequestResponse[]>([]);
+  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
+  const [currentReview, setCurrentReview] = useState<ResearchReviewRequestResponse | null>(null);
+  const [isReviewsLoading, setIsReviewsLoading] = useState<boolean>(false);
+  const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatus | undefined>(undefined);
+  const [participants, setParticipants] = useState<ResearchAccessGrantResponse[]>([]);
+  const [isParticipantsLoading, setIsParticipantsLoading] = useState<boolean>(false);
+  const [comments, setComments] = useState<ResearchCommentThreadResponse[]>([]);
+  const [isCommentsLoading, setIsCommentsLoading] = useState<boolean>(false);
+  const [qualityGateResult, setQualityGateResult] = useState<QualityGateResultResponse | null>(null);
+  const [isQualityGateRunning, setIsQualityGateRunning] = useState<boolean>(false);
+  const [circulations, setCirculations] = useState<ResearchInternalCirculationResponse[]>([]);
+  const [isCirculationsLoading, setIsCirculationsLoading] = useState<boolean>(false);
+  const [approvalStatus, setApprovalStatus] = useState<ResearchApprovalStatusResponse | null>(null);
+
   const loadReportTemplates = useCallback(async () => {
     try {
       const res = await api.listReportTemplates();
@@ -1104,6 +1139,245 @@ export function useResearchWorkspace() {
     }
   };
 
+  // -------------------------------------------------------------------------
+  // Stage 108 Review, Quality Gates, Comments & Circulation Actions
+  // -------------------------------------------------------------------------
+  const loadReviews = useCallback(async (targetId?: string) => {
+    setIsReviewsLoading(true);
+    setGlobalError(null);
+    try {
+      const res = await api.listReviewRequests({
+        targetId: targetId || (selectedReportId ?? undefined),
+        status: reviewStatusFilter,
+      });
+      setReviews(res.reviews);
+      if (res.reviews.length > 0 && !selectedReviewId) {
+        setSelectedReviewId(res.reviews[0].review_request_id);
+        setCurrentReview(res.reviews[0]);
+      }
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to load review requests.");
+    } finally {
+      setIsReviewsLoading(false);
+    }
+  }, [selectedReportId, reviewStatusFilter, selectedReviewId]);
+
+  const selectReview = useCallback(async (reviewId: string) => {
+    setSelectedReviewId(reviewId);
+    try {
+      const rev = await api.getReviewRequest(reviewId);
+      setCurrentReview(rev);
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to load review details.");
+    }
+  }, []);
+
+  const submitReview = useCallback(async (data: CreateReviewRequest) => {
+    try {
+      const newRev = await api.createReviewRequest(data);
+      setReviews((prev) => [newRev, ...prev]);
+      setSelectedReviewId(newRev.review_request_id);
+      setCurrentReview(newRev);
+      return newRev;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to submit review request.");
+      throw err;
+    }
+  }, []);
+
+  const decideReview = useCallback(async (reviewId: string, data: CreateReviewDecisionRequest) => {
+    try {
+      const dec = await api.decideReview(reviewId, data);
+      await selectReview(reviewId);
+      await loadReviews();
+      return dec;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to record review decision.");
+      throw err;
+    }
+  }, [selectReview, loadReviews]);
+
+  const cancelReview = useCallback(async (reviewId: string) => {
+    try {
+      const res = await api.cancelReviewRequest(reviewId);
+      await selectReview(reviewId);
+      await loadReviews();
+      return res;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to cancel review request.");
+      throw err;
+    }
+  }, [selectReview, loadReviews]);
+
+  const loadParticipants = useCallback(async (resourceType: ResearchResourceType, resourceId: string) => {
+    setIsParticipantsLoading(true);
+    try {
+      const res = await api.listResourceParticipants(resourceType, resourceId);
+      setParticipants(res.grants);
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to load participants.");
+    } finally {
+      setIsParticipantsLoading(false);
+    }
+  }, []);
+
+  const grantParticipant = useCallback(
+    async (resourceType: ResearchResourceType, resourceId: string, data: CreateAccessGrantRequest) => {
+      try {
+        const grant = await api.createResourceParticipant(resourceType, resourceId, data);
+        setParticipants((prev) => [grant, ...prev]);
+        return grant;
+      } catch (err: unknown) {
+        setGlobalError(err instanceof Error ? err.message : "Failed to grant access.");
+        throw err;
+      }
+    },
+    []
+  );
+
+  const updateParticipant = useCallback(async (grantId: string, roleOrData: ResearchRole | UpdateAccessGrantRequest) => {
+    try {
+      const data: UpdateAccessGrantRequest = typeof roleOrData === "string" ? { role: roleOrData } : roleOrData;
+      const updated = await api.updateParticipantGrant(grantId, data);
+      setParticipants((prev) => prev.map((g) => (g.grant_id === grantId ? updated : g)));
+      return updated;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to update participant role.");
+      throw err;
+    }
+  }, []);
+
+  const revokeParticipant = useCallback(async (grantId: string) => {
+    try {
+      const revoked = await api.revokeParticipantGrant(grantId);
+      setParticipants((prev) => prev.map((g) => (g.grant_id === grantId ? revoked : g)));
+      return revoked;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to revoke participant access.");
+      throw err;
+    }
+  }, []);
+
+  const loadComments = useCallback(async (resourceType: string, resourceId: string, revisionNumber?: number) => {
+    setIsCommentsLoading(true);
+    try {
+      const res = await api.listComments(resourceType, resourceId, revisionNumber);
+      setComments(res.threads);
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to load comment threads.");
+    } finally {
+      setIsCommentsLoading(false);
+    }
+  }, []);
+
+  const createCommentThread = useCallback(
+    async (resourceType: string, resourceId: string, data: CreateCommentThreadRequest) => {
+      try {
+        const thread = await api.createCommentThread(resourceType, resourceId, data);
+        setComments((prev) => [thread, ...prev]);
+        return thread;
+      } catch (err: unknown) {
+        setGlobalError(err instanceof Error ? err.message : "Failed to post comment thread.");
+        throw err;
+      }
+    },
+    []
+  );
+
+  const addCommentReply = useCallback(async (threadId: string, body: string) => {
+    try {
+      const reply = await api.addCommentReply(threadId, { body });
+      setComments((prev) =>
+        prev.map((t) => (t.thread_id === threadId ? { ...t, comments: [...t.comments, reply] } : t))
+      );
+      return reply;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to reply to comment.");
+      throw err;
+    }
+  }, []);
+
+  const resolveCommentThread = useCallback(async (threadId: string) => {
+    try {
+      const updated = await api.resolveCommentThread(threadId);
+      setComments((prev) => prev.map((t) => (t.thread_id === threadId ? updated : t)));
+      return updated;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to resolve comment thread.");
+      throw err;
+    }
+  }, []);
+
+  const reopenCommentThread = useCallback(async (threadId: string) => {
+    try {
+      const updated = await api.reopenCommentThread(threadId);
+      setComments((prev) => prev.map((t) => (t.thread_id === threadId ? updated : t)));
+      return updated;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to reopen comment thread.");
+      throw err;
+    }
+  }, []);
+
+  const runQualityGate = useCallback(async (reportId: string, revisionNumber?: number) => {
+    setIsQualityGateRunning(true);
+    try {
+      const res = await api.runQualityGate(reportId, { revision_number: revisionNumber });
+      setQualityGateResult(res);
+      return res;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to evaluate quality gates.");
+      throw err;
+    } finally {
+      setIsQualityGateRunning(false);
+    }
+  }, []);
+
+  const loadCirculations = useCallback(async (reportId: string) => {
+    setIsCirculationsLoading(true);
+    try {
+      const res = await api.listCirculations(reportId);
+      setCirculations(res.circulations);
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to load circulation records.");
+    } finally {
+      setIsCirculationsLoading(false);
+    }
+  }, []);
+
+  const circulateReport = useCallback(async (reportId: string, data: CreateCirculationRequest) => {
+    try {
+      const circ = await api.createCirculation(reportId, data);
+      setCirculations((prev) => [circ, ...prev]);
+      return circ;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to circulate report.");
+      throw err;
+    }
+  }, []);
+
+  const revokeCirculation = useCallback(async (circulationId: string) => {
+    try {
+      const revoked = await api.revokeCirculation(circulationId);
+      setCirculations((prev) => prev.map((c) => (c.circulation_id === circulationId ? revoked : c)));
+      return revoked;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to revoke circulation.");
+      throw err;
+    }
+  }, []);
+
+  const loadApprovalStatus = useCallback(async (reportId: string, revisionNumber?: number) => {
+    try {
+      const status = await api.getReportApprovalStatus(reportId, revisionNumber);
+      setApprovalStatus(status);
+      return status;
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to check approval status.");
+      throw err;
+    }
+  }, []);
+
   // Selection detail hooks
   useEffect(() => {
     if (selectedReportId) {
@@ -1130,6 +1404,8 @@ export function useResearchWorkspace() {
   useEffect(() => {
     if (activeTab === "OVERVIEW") {
       loadOverview();
+    } else if (activeTab === "REVIEWS") {
+      loadReviews();
     } else if (activeTab === "REPORTS") {
       loadReportTemplates();
       loadReports();
@@ -1544,6 +1820,43 @@ export function useResearchWorkspace() {
     deleteThesis,
     createThesisArgument,
     deleteThesisArgument,
+
+    // Stage 108 Reviews, Governance & Circulation
+    reviews,
+    selectedReviewId,
+    setSelectedReviewId,
+    selectReview,
+    currentReview,
+    isReviewsLoading,
+    reviewStatusFilter,
+    setReviewStatusFilter,
+    loadReviews,
+    submitReview,
+    decideReview,
+    cancelReview,
+    participants,
+    isParticipantsLoading,
+    loadParticipants,
+    grantParticipant,
+    updateParticipant,
+    revokeParticipant,
+    comments,
+    isCommentsLoading,
+    loadComments,
+    createCommentThread,
+    addCommentReply,
+    resolveCommentThread,
+    reopenCommentThread,
+    qualityGateResult,
+    isQualityGateRunning,
+    runQualityGate,
+    circulations,
+    isCirculationsLoading,
+    loadCirculations,
+    circulateReport,
+    revokeCirculation,
+    approvalStatus,
+    loadApprovalStatus,
 
     // Error
     globalError,

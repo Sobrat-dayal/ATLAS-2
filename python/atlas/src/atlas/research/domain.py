@@ -9,7 +9,10 @@ from atlas.research.enums import (
     AnalysisFrequency,
     AnalysisInputPolicy,
     AssumptionSourceType,
+    CirculationStatus,
     ClaimEvidenceRelationship,
+    CommentAnchorType,
+    CommentThreadStatus,
     DocumentComparisonMode,
     DocumentFormat,
     DocumentProcessingStatus,
@@ -25,6 +28,7 @@ from atlas.research.enums import (
     ReportSnapshotPolicy,
     ResearchActivityAction,
     ResearchAnalysisType,
+    ResearchAuditEventType,
     ResearchClaimCategory,
     ResearchEvidenceStatus,
     ResearchFindingReviewStatus,
@@ -32,10 +36,16 @@ from atlas.research.enums import (
     ResearchHypothesisStatus,
     ResearchNoteStatus,
     ResearchNoteType,
+    ResearchPrincipalType,
     ResearchQuestionStatus,
     ResearchReportType,
+    ResearchResourceType,
+    ResearchRole,
     ResearchSourceType,
     ResearchType,
+    ReviewDecisionType,
+    ReviewScope,
+    ReviewStatus,
     ScenarioType,
     SourceAvailabilityStatus,
     ThesisArgumentType,
@@ -789,3 +799,145 @@ class ResearchReportExport:
     completed_at: Optional[datetime.datetime] = None
     expiry_at: Optional[datetime.datetime] = None
     error_message: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Stage 108 Collaboration, Review, Comments & Circulation Domain Entities
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ResearchAccessGrant:
+    """Explicit access permission granted to a user or organization role."""
+    grant_id: str
+    resource_type: ResearchResourceType
+    resource_id: str
+    principal_type: ResearchPrincipalType
+    principal_id: str
+    role: ResearchRole
+    granted_by: str
+    organization_id: Optional[str] = None
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    expires_at: Optional[datetime.datetime] = None
+    revoked_at: Optional[datetime.datetime] = None
+
+
+@dataclass
+class ResearchReviewRequest:
+    """Formal review request targeting an exact revision of a report or investigation."""
+    review_request_id: str
+    target_type: str
+    target_id: str
+    target_revision_number: int
+    target_content_hash: str
+    requested_by: str
+    assigned_reviewer_id: str
+    review_scope: ReviewScope
+    review_round: int
+    status: ReviewStatus
+    organization_id: Optional[str] = None
+    due_date: Optional[datetime.datetime] = None
+    instructions: Optional[str] = None
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    updated_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    completed_at: Optional[datetime.datetime] = None
+
+
+@dataclass
+class ResearchReviewAssignment:
+    """Individual reviewer assignment under a review request."""
+    assignment_id: str
+    review_request_id: str
+    reviewer_user_id: str
+    role: str
+    status: str
+    assigned_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    completed_at: Optional[datetime.datetime] = None
+
+
+@dataclass
+class ResearchReviewDecision:
+    """Recorded human review decision explicitly bound to a content revision."""
+    decision_id: str
+    review_request_id: str
+    reviewer_user_id: str
+    target_revision_number: int
+    target_content_hash: str
+    decision: ReviewDecisionType
+    decision_comment: Optional[str] = None
+    decided_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+
+
+@dataclass
+class ResearchCommentThread:
+    """Discussion thread anchored to an exact section, block, or evidence item."""
+    thread_id: str
+    resource_type: str
+    resource_id: str
+    target_revision_number: int
+    anchor_type: CommentAnchorType
+    anchor_reference: str
+    created_by: str
+    anchor_text: Optional[str] = None
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    resolution_status: CommentThreadStatus = CommentThreadStatus.OPEN
+    resolved_by: Optional[str] = None
+    resolved_at: Optional[datetime.datetime] = None
+    comments_count: int = 1
+    is_stale: bool = False
+
+
+@dataclass
+class ResearchComment:
+    """Individual message within an anchored review comment thread."""
+    comment_id: str
+    thread_id: str
+    author_user_id: str
+    body: str
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    updated_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    edit_revision: int = 1
+
+
+@dataclass
+class QualityGateResult:
+    """Quality gate and verification readiness evaluation."""
+    gate_run_id: str
+    report_id: str
+    revision_number: int
+    executed_at: datetime.datetime
+    eligible_for_review: bool
+    eligible_for_finalization: bool
+    blocking_issues_count: int
+    warnings_count: int
+    issues: List[Dict[str, Any]]
+    checklist: List[Dict[str, Any]]
+
+
+@dataclass
+class ResearchInternalCirculation:
+    """Controlled internal circulation of an approved or finalized research report."""
+    circulation_id: str
+    report_id: str
+    revision_number: int
+    initiated_by: str
+    recipient_user_ids: List[str]
+    organization_id: Optional[str] = None
+    status: CirculationStatus = CirculationStatus.ACTIVE
+    notes: Optional[str] = None
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    revoked_at: Optional[datetime.datetime] = None
+
+
+@dataclass
+class ResearchReviewAuditEvent:
+    """Immutable audit trail record for research governance and review operations."""
+    audit_event_id: str
+    actor_user_id: str
+    resource_type: str
+    resource_id: str
+    action: str
+    occurred_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+    organization_id: Optional[str] = None
+    target_revision_number: Optional[int] = None
+    details: Dict[str, Any] = field(default_factory=dict)
+

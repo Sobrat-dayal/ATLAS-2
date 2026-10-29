@@ -26,6 +26,8 @@ from atlas.research.domain import (
     DocumentSearchHit,
     FinancialFactComparison,
     HypothesisTestCriteria,
+    QualityGateResult,
+    ResearchAccessGrant,
     ResearchActivity,
     ResearchAnalysis,
     ResearchAnalysisAssumption,
@@ -36,6 +38,8 @@ from atlas.research.domain import (
     ResearchCitation,
     ResearchClaim,
     ResearchClaimEvidence,
+    ResearchComment,
+    ResearchCommentThread,
     ResearchDocumentProcessingRecord,
     ResearchDocumentSection,
     ResearchDocumentTable,
@@ -44,6 +48,7 @@ from atlas.research.domain import (
     ResearchFinding,
     ResearchHypothesis,
     ResearchHypothesisEvaluation,
+    ResearchInternalCirculation,
     ResearchInvestigation,
     ResearchInvestmentThesis,
     ResearchNote,
@@ -54,6 +59,10 @@ from atlas.research.domain import (
     ResearchReportRevision,
     ResearchReportSection,
     ResearchReportVerification,
+    ResearchReviewAssignment,
+    ResearchReviewAuditEvent,
+    ResearchReviewDecision,
+    ResearchReviewRequest,
     ResearchScenario,
     ResearchSearchHit,
     ResearchSourceReference,
@@ -64,6 +73,9 @@ from atlas.research.enums import (
     AnalysisFrequency,
     AnalysisInputPolicy,
     AssumptionSourceType,
+    CirculationStatus,
+    CommentAnchorType,
+    CommentThreadStatus,
     DocumentComparisonMode,
     EvidenceLocationType,
     InvestigationLifecycleStatus,
@@ -73,6 +85,13 @@ from atlas.research.enums import (
     ReportSnapshotPolicy,
     ResearchActivityAction,
     ResearchAnalysisType,
+    ResearchAuditEventType,
+    ResearchPrincipalType,
+    ResearchResourceType,
+    ResearchRole,
+    ReviewDecisionType,
+    ReviewScope,
+    ReviewStatus,
     ResearchClaimCategory,
     ResearchEvidenceStatus,
     ResearchFindingReviewStatus,
@@ -203,6 +222,17 @@ class ResearchRepository:
         self._verification_runs: Dict[str, List[ResearchReportVerification]] = {}
         self._exports: Dict[str, ResearchReportExport] = {}
         self._export_artifacts: Dict[str, bytes] = {}
+
+        # Stage 108 Collaboration, Review, Comments & Circulation Stores
+        self._access_grants: Dict[str, ResearchAccessGrant] = {}
+        self._review_requests: Dict[str, ResearchReviewRequest] = {}
+        self._review_assignments: Dict[str, List[ResearchReviewAssignment]] = {}
+        self._review_decisions: Dict[str, List[ResearchReviewDecision]] = {}
+        self._comment_threads: Dict[str, ResearchCommentThread] = {}
+        self._comments: Dict[str, List[ResearchComment]] = {}
+        self._quality_gate_results: Dict[str, List[QualityGateResult]] = {}
+        self._internal_circulations: Dict[str, ResearchInternalCirculation] = {}
+        self._review_audit_events: List[ResearchReviewAuditEvent] = []
 
         self._seed_baseline_investigations()
         self._seed_initial_evidence_candidates()
@@ -2906,6 +2936,12 @@ class ResearchRepository:
             rep = self._reports.get(report_id)
             return copy.deepcopy(rep) if rep else None
 
+    def save_report(self, report: ResearchReport) -> ResearchReport:
+        """Saves or updates a research report state."""
+        with self._lock:
+            self._reports[report.report_id] = copy.deepcopy(report)
+            return copy.deepcopy(report)
+
     def update_report(
         self,
         user_id: str,
@@ -3440,3 +3476,471 @@ class ResearchRepository:
         """Retrieves the binary export file content (PDF/DOCX)."""
         with self._lock:
             return self._export_artifacts.get(export_id)
+
+    # -----------------------------------------------------------------------
+    # Stage 108 Collaboration & Access Grant Methods
+    # -----------------------------------------------------------------------
+    def create_access_grant(self, grant: ResearchAccessGrant) -> ResearchAccessGrant:
+        """Stores an authorized participant grant."""
+        with self._lock:
+            self._access_grants[grant.grant_id] = copy.deepcopy(grant)
+            self.record_review_audit_event(
+                ResearchReviewAuditEvent(
+                    audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                    actor_user_id=grant.granted_by,
+                    organization_id=grant.organization_id,
+                    resource_type=grant.resource_type.value,
+                    resource_id=grant.resource_id,
+                    action=ResearchAuditEventType.GRANT_CREATED.value,
+                    details={"principal_id": grant.principal_id, "role": grant.role.value},
+                )
+            )
+            return copy.deepcopy(grant)
+
+    def get_access_grant(self, grant_id: str) -> Optional[ResearchAccessGrant]:
+        """Retrieves an access grant by ID."""
+        with self._lock:
+            g = self._access_grants.get(grant_id)
+            return copy.deepcopy(g) if g else None
+
+    def list_access_grants(
+        self,
+        resource_type: Optional[ResearchResourceType] = None,
+        resource_id: Optional[str] = None,
+    ) -> List[ResearchAccessGrant]:
+        """Lists active and historical access grants for a resource."""
+        with self._lock:
+            grants = list(self._access_grants.values())
+            if resource_type:
+                grants = [g for g in grants if g.resource_type == resource_type]
+            if resource_id:
+                grants = [g for g in grants if g.resource_id == resource_id]
+            return sorted(copy.deepcopy(grants), key=lambda g: g.created_at, reverse=True)
+
+    def update_access_grant(self, grant_id: str, role: ResearchRole, actor_id: str) -> Optional[ResearchAccessGrant]:
+        """Updates a collaborator's granted role."""
+        with self._lock:
+            g = self._access_grants.get(grant_id)
+            if not g:
+                return None
+            old_role = g.role
+            g.role = role
+            self.record_review_audit_event(
+                ResearchReviewAuditEvent(
+                    audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                    actor_user_id=actor_id,
+                    organization_id=g.organization_id,
+                    resource_type=g.resource_type.value,
+                    resource_id=g.resource_id,
+                    action=ResearchAuditEventType.GRANT_UPDATED.value,
+                    details={"old_role": old_role.value, "new_role": role.value, "principal_id": g.principal_id},
+                )
+            )
+            return copy.deepcopy(g)
+
+    def revoke_access_grant(self, grant_id: str, actor_id: str) -> Optional[ResearchAccessGrant]:
+        """Revokes an access grant immediately."""
+        with self._lock:
+            g = self._access_grants.get(grant_id)
+            if not g:
+                return None
+            g.revoked_at = datetime.datetime.now(datetime.timezone.utc)
+            self.record_review_audit_event(
+                ResearchReviewAuditEvent(
+                    audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                    actor_user_id=actor_id,
+                    organization_id=g.organization_id,
+                    resource_type=g.resource_type.value,
+                    resource_id=g.resource_id,
+                    action=ResearchAuditEventType.GRANT_REVOKED.value,
+                    details={"principal_id": g.principal_id, "revoked_role": g.role.value},
+                )
+            )
+            return copy.deepcopy(g)
+
+    def resolve_user_role(
+        self,
+        resource_type: ResearchResourceType,
+        resource_id: str,
+        user_id: str,
+        owner_id: str,
+    ) -> Optional[ResearchRole]:
+        """Resolves the effective role of a user for a resource."""
+        if user_id == owner_id:
+            return ResearchRole.OWNER
+
+        with self._lock:
+            now = datetime.datetime.now(datetime.timezone.utc)
+            for g in self._access_grants.values():
+                if (
+                    g.resource_type == resource_type
+                    and g.resource_id == resource_id
+                    and g.principal_id == user_id
+                    and g.revoked_at is None
+                    and (g.expires_at is None or g.expires_at > now)
+                ):
+                    return g.role
+        return None
+
+    # -----------------------------------------------------------------------
+    # Stage 108 Review Requests & Decisions Methods
+    # -----------------------------------------------------------------------
+    def create_review_request(self, req: ResearchReviewRequest) -> ResearchReviewRequest:
+        """Stores a new formal review request."""
+        with self._lock:
+            self._review_requests[req.review_request_id] = copy.deepcopy(req)
+            self.record_review_audit_event(
+                ResearchReviewAuditEvent(
+                    audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                    actor_user_id=req.requested_by,
+                    organization_id=req.organization_id,
+                    resource_type=req.target_type,
+                    resource_id=req.target_id,
+                    target_revision_number=req.target_revision_number,
+                    action=ResearchAuditEventType.REVIEW_SUBMITTED.value,
+                    details={
+                        "review_request_id": req.review_request_id,
+                        "assigned_reviewer_id": req.assigned_reviewer_id,
+                        "review_scope": req.review_scope.value,
+                    },
+                )
+            )
+            return copy.deepcopy(req)
+
+    def get_review_request(self, review_request_id: str) -> Optional[ResearchReviewRequest]:
+        """Retrieves a review request by ID."""
+        with self._lock:
+            r = self._review_requests.get(review_request_id)
+            return copy.deepcopy(r) if r else None
+
+    def list_review_requests(
+        self,
+        target_id: Optional[str] = None,
+        reviewer_id: Optional[str] = None,
+        requested_by: Optional[str] = None,
+        status: Optional[ReviewStatus] = None,
+    ) -> List[ResearchReviewRequest]:
+        """Lists review requests with multi-parameter filtering."""
+        with self._lock:
+            reqs = list(self._review_requests.values())
+            if target_id:
+                reqs = [r for r in reqs if r.target_id == target_id]
+            if reviewer_id:
+                reqs = [r for r in reqs if r.assigned_reviewer_id == reviewer_id]
+            if requested_by:
+                reqs = [r for r in reqs if r.requested_by == requested_by]
+            if status:
+                reqs = [r for r in reqs if r.status == status]
+            return sorted(copy.deepcopy(reqs), key=lambda r: r.created_at, reverse=True)
+
+    def update_review_request(self, req: ResearchReviewRequest) -> ResearchReviewRequest:
+        """Updates a review request state."""
+        with self._lock:
+            req.updated_at = datetime.datetime.now(datetime.timezone.utc)
+            self._review_requests[req.review_request_id] = copy.deepcopy(req)
+            return copy.deepcopy(req)
+
+    def create_review_decision(self, decision: ResearchReviewDecision) -> ResearchReviewDecision:
+        """Records an auditable review decision."""
+        with self._lock:
+            if decision.review_request_id not in self._review_decisions:
+                self._review_decisions[decision.review_request_id] = []
+            self._review_decisions[decision.review_request_id].append(copy.deepcopy(decision))
+
+            req = self._review_requests.get(decision.review_request_id)
+            if req:
+                self.record_review_audit_event(
+                    ResearchReviewAuditEvent(
+                        audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                        actor_user_id=decision.reviewer_user_id,
+                        organization_id=req.organization_id,
+                        resource_type=req.target_type,
+                        resource_id=req.target_id,
+                        target_revision_number=decision.target_revision_number,
+                        action=ResearchAuditEventType.REVIEW_DECIDED.value,
+                        details={
+                            "decision": decision.decision.value,
+                            "review_request_id": decision.review_request_id,
+                        },
+                    )
+                )
+            return copy.deepcopy(decision)
+
+    def list_review_decisions(self, review_request_id: str) -> List[ResearchReviewDecision]:
+        """Lists decisions recorded for a review request."""
+        with self._lock:
+            decs = self._review_decisions.get(review_request_id, [])
+            return sorted(copy.deepcopy(decs), key=lambda d: d.decided_at, reverse=True)
+
+    def get_report_approval_status(
+        self, report_id: str, revision_number: int
+    ) -> Tuple[bool, Optional[ResearchReviewDecision]]:
+        """Verifies if an exact revision has been approved by an authorized review."""
+        with self._lock:
+            for req in self._review_requests.values():
+                if (
+                    req.target_id == report_id
+                    and req.target_revision_number == revision_number
+                    and req.status == ReviewStatus.APPROVED
+                ):
+                    decs = self._review_decisions.get(req.review_request_id, [])
+                    approved_decs = [
+                        d for d in decs
+                        if d.target_revision_number == revision_number and d.decision == ReviewDecisionType.APPROVE
+                    ]
+                    if approved_decs:
+                        return True, copy.deepcopy(approved_decs[-1])
+            return False, None
+
+    # -----------------------------------------------------------------------
+    # Stage 108 Anchored Comments & Threads Methods
+    # -----------------------------------------------------------------------
+    def create_comment_thread(
+        self,
+        thread: ResearchCommentThread,
+        initial_comment: ResearchComment,
+    ) -> Tuple[ResearchCommentThread, List[ResearchComment]]:
+        """Creates a comment thread anchored to a section, block, or evidence."""
+        with self._lock:
+            self._comment_threads[thread.thread_id] = copy.deepcopy(thread)
+            self._comments[thread.thread_id] = [copy.deepcopy(initial_comment)]
+
+            self.record_review_audit_event(
+                ResearchReviewAuditEvent(
+                    audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                    actor_user_id=initial_comment.author_user_id,
+                    resource_type=thread.resource_type,
+                    resource_id=thread.resource_id,
+                    target_revision_number=thread.target_revision_number,
+                    action=ResearchAuditEventType.COMMENT_ADDED.value,
+                    details={"thread_id": thread.thread_id, "anchor_type": thread.anchor_type.value},
+                )
+            )
+            return copy.deepcopy(thread), [copy.deepcopy(initial_comment)]
+
+    def get_comment_thread(self, thread_id: str) -> Optional[ResearchCommentThread]:
+        """Retrieves a comment thread by ID."""
+        with self._lock:
+            t = self._comment_threads.get(thread_id)
+            return copy.deepcopy(t) if t else None
+
+    def list_comment_threads(
+        self,
+        resource_type: str,
+        resource_id: str,
+        revision_number: Optional[int] = None,
+    ) -> List[Tuple[ResearchCommentThread, List[ResearchComment]]]:
+        """Lists comment threads with their messages for a research resource."""
+        with self._lock:
+            results: List[Tuple[ResearchCommentThread, List[ResearchComment]]] = []
+            for t in self._comment_threads.values():
+                if t.resource_type == resource_type and t.resource_id == resource_id:
+                    if revision_number is not None and t.target_revision_number != revision_number:
+                        t_copy = copy.deepcopy(t)
+                        t_copy.is_stale = True
+                    else:
+                        t_copy = copy.deepcopy(t)
+                    cmts = copy.deepcopy(self._comments.get(t.thread_id, []))
+                    results.append((t_copy, sorted(cmts, key=lambda c: c.created_at)))
+            return sorted(results, key=lambda pair: pair[0].created_at, reverse=True)
+
+    def add_comment_reply(self, comment: ResearchComment) -> ResearchComment:
+        """Appends a reply comment to an existing thread."""
+        with self._lock:
+            if comment.thread_id not in self._comments:
+                self._comments[comment.thread_id] = []
+            self._comments[comment.thread_id].append(copy.deepcopy(comment))
+
+            t = self._comment_threads.get(comment.thread_id)
+            if t:
+                t.comments_count += 1
+                if t.resolution_status == CommentThreadStatus.RESOLVED:
+                    t.resolution_status = CommentThreadStatus.REOPENED
+
+                self.record_review_audit_event(
+                    ResearchReviewAuditEvent(
+                        audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                        actor_user_id=comment.author_user_id,
+                        resource_type=t.resource_type,
+                        resource_id=t.resource_id,
+                        target_revision_number=t.target_revision_number,
+                        action=ResearchAuditEventType.COMMENT_ADDED.value,
+                        details={"thread_id": t.thread_id, "comment_id": comment.comment_id},
+                    )
+                )
+            return copy.deepcopy(comment)
+
+    def update_comment(self, comment_id: str, new_body: str, actor_id: str) -> Optional[ResearchComment]:
+        """Updates an authored comment text."""
+        with self._lock:
+            for thread_id, cmts in self._comments.items():
+                for c in cmts:
+                    if c.comment_id == comment_id:
+                        if c.author_user_id != actor_id:
+                            return None
+                        c.body = new_body
+                        c.edit_revision += 1
+                        c.updated_at = datetime.datetime.now(datetime.timezone.utc)
+                        return copy.deepcopy(c)
+            return None
+
+    def resolve_comment_thread(self, thread_id: str, actor_id: str) -> Optional[ResearchCommentThread]:
+        """Marks a comment thread as resolved."""
+        with self._lock:
+            t = self._comment_threads.get(thread_id)
+            if not t:
+                return None
+            t.resolution_status = CommentThreadStatus.RESOLVED
+            t.resolved_by = actor_id
+            t.resolved_at = datetime.datetime.now(datetime.timezone.utc)
+
+            self.record_review_audit_event(
+                ResearchReviewAuditEvent(
+                    audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                    actor_user_id=actor_id,
+                    resource_type=t.resource_type,
+                    resource_id=t.resource_id,
+                    target_revision_number=t.target_revision_number,
+                    action=ResearchAuditEventType.COMMENT_RESOLVED.value,
+                    details={"thread_id": t.thread_id},
+                )
+            )
+            return copy.deepcopy(t)
+
+    def reopen_comment_thread(self, thread_id: str, actor_id: str) -> Optional[ResearchCommentThread]:
+        """Reopens a previously resolved comment thread."""
+        with self._lock:
+            t = self._comment_threads.get(thread_id)
+            if not t:
+                return None
+            t.resolution_status = CommentThreadStatus.REOPENED
+            t.resolved_by = None
+            t.resolved_at = None
+
+            self.record_review_audit_event(
+                ResearchReviewAuditEvent(
+                    audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                    actor_user_id=actor_id,
+                    resource_type=t.resource_type,
+                    resource_id=t.resource_id,
+                    target_revision_number=t.target_revision_number,
+                    action=ResearchAuditEventType.COMMENT_REOPENED.value,
+                    details={"thread_id": t.thread_id},
+                )
+            )
+            return copy.deepcopy(t)
+
+    # -----------------------------------------------------------------------
+    # Stage 108 Quality Gate Evaluation Methods
+    # -----------------------------------------------------------------------
+    def record_quality_gate_result(self, result: QualityGateResult) -> QualityGateResult:
+        """Stores a quality gate evaluation result."""
+        with self._lock:
+            if result.report_id not in self._quality_gate_results:
+                self._quality_gate_results[result.report_id] = []
+            self._quality_gate_results[result.report_id].append(copy.deepcopy(result))
+
+            self.record_review_audit_event(
+                ResearchReviewAuditEvent(
+                    audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                    actor_user_id="system",
+                    resource_type="REPORT",
+                    resource_id=result.report_id,
+                    target_revision_number=result.revision_number,
+                    action=ResearchAuditEventType.QUALITY_GATE_RUN.value,
+                    details={
+                        "blocking_count": result.blocking_issues_count,
+                        "eligible_review": result.eligible_for_review,
+                        "eligible_finalization": result.eligible_for_finalization,
+                    },
+                )
+            )
+            return copy.deepcopy(result)
+
+    def get_latest_quality_gate_result(
+        self, report_id: str, revision_number: Optional[int] = None
+    ) -> Optional[QualityGateResult]:
+        """Retrieves the latest quality gate outcome for a report and revision."""
+        with self._lock:
+            results = self._quality_gate_results.get(report_id, [])
+            if revision_number is not None:
+                results = [r for r in results if r.revision_number == revision_number]
+            if not results:
+                return None
+            return copy.deepcopy(sorted(results, key=lambda r: r.executed_at, reverse=True)[0])
+
+    # -----------------------------------------------------------------------
+    # Stage 108 Internal Circulation Methods
+    # -----------------------------------------------------------------------
+    def create_internal_circulation(self, circ: ResearchInternalCirculation) -> ResearchInternalCirculation:
+        """Stores an authorized internal circulation record."""
+        with self._lock:
+            self._internal_circulations[circ.circulation_id] = copy.deepcopy(circ)
+
+            self.record_review_audit_event(
+                ResearchReviewAuditEvent(
+                    audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                    actor_user_id=circ.initiated_by,
+                    organization_id=circ.organization_id,
+                    resource_type="REPORT",
+                    resource_id=circ.report_id,
+                    target_revision_number=circ.revision_number,
+                    action=ResearchAuditEventType.REPORT_CIRCULATED.value,
+                    details={
+                        "circulation_id": circ.circulation_id,
+                        "recipient_count": len(circ.recipient_user_ids),
+                    },
+                )
+            )
+            return copy.deepcopy(circ)
+
+    def get_internal_circulation(self, circulation_id: str) -> Optional[ResearchInternalCirculation]:
+        """Retrieves an internal circulation record by ID."""
+        with self._lock:
+            c = self._internal_circulations.get(circulation_id)
+            return copy.deepcopy(c) if c else None
+
+    def list_internal_circulations(self, report_id: str) -> List[ResearchInternalCirculation]:
+        """Lists active and revoked circulations for a report."""
+        with self._lock:
+            circs = [c for c in self._internal_circulations.values() if c.report_id == report_id]
+            return sorted(copy.deepcopy(circs), key=lambda c: c.created_at, reverse=True)
+
+    def revoke_internal_circulation(self, circulation_id: str, actor_id: str) -> Optional[ResearchInternalCirculation]:
+        """Revokes an active internal circulation grant."""
+        with self._lock:
+            c = self._internal_circulations.get(circulation_id)
+            if not c:
+                return None
+            c.status = CirculationStatus.REVOKED
+            c.revoked_at = datetime.datetime.now(datetime.timezone.utc)
+
+            self.record_review_audit_event(
+                ResearchReviewAuditEvent(
+                    audit_event_id=f"revlog-{uuid.uuid4().hex[:12]}",
+                    actor_user_id=actor_id,
+                    organization_id=c.organization_id,
+                    resource_type="REPORT",
+                    resource_id=c.report_id,
+                    target_revision_number=c.revision_number,
+                    action=ResearchAuditEventType.CIRCULATION_REVOKED.value,
+                    details={"circulation_id": c.circulation_id},
+                )
+            )
+            return copy.deepcopy(c)
+
+    # -----------------------------------------------------------------------
+    # Stage 108 Review Audit Trail Methods
+    # -----------------------------------------------------------------------
+    def record_review_audit_event(self, event: ResearchReviewAuditEvent) -> ResearchReviewAuditEvent:
+        """Appends an immutable audit event to the research review log."""
+        with self._lock:
+            self._review_audit_events.append(copy.deepcopy(event))
+            return copy.deepcopy(event)
+
+    def list_review_audit_events(self, resource_id: str) -> List[ResearchReviewAuditEvent]:
+        """Lists audit events associated with a specific research resource."""
+        with self._lock:
+            evts = [e for e in self._review_audit_events if e.resource_id == resource_id]
+            return sorted(copy.deepcopy(evts), key=lambda e: e.occurred_at, reverse=True)
+

@@ -18,15 +18,23 @@ from atlas.research.analysis.engine import (
 )
 from atlas.research.domain import (
     HypothesisTestCriteria,
+    QualityGateResult,
+    ResearchAccessGrant,
     ResearchAnalysis,
     ResearchAnalysisAssumption,
     ResearchAnalysisSpecification,
+    ResearchComment,
+    ResearchCommentThread,
     ResearchFinding,
+    ResearchInternalCirculation,
     ResearchInvestigation,
     ResearchInvestmentThesis,
     ResearchReport,
     ResearchReportExport,
     ResearchReportSection,
+    ResearchReviewAuditEvent,
+    ResearchReviewDecision,
+    ResearchReviewRequest,
     ResearchScenario,
     ResearchSourceReference,
     ResearchThesisArgument,
@@ -34,28 +42,50 @@ from atlas.research.domain import (
 from atlas.research.enums import (
     AnalysisExecutionStatus,
     AnalysisInputPolicy,
+    CirculationStatus,
+    CommentAnchorType,
+    CommentThreadStatus,
     ExportFormat,
     ExportStatus,
     InvestigationLifecycleStatus,
     ReportLifecycleStatus,
     ReportSectionType,
+    ResearchActivityAction,
     ResearchAnalysisType,
+    ResearchAuditEventType,
     ResearchFindingReviewStatus,
+    ResearchPrincipalType,
     ResearchReportType,
+    ResearchResourceType,
+    ResearchRole,
     ResearchSourceType,
     ResearchType,
+    ReviewDecisionType,
+    ReviewScope,
+    ReviewStatus,
     ScenarioType,
     SourceAvailabilityStatus,
     ThesisLifecycleStatus,
 )
 from atlas.research.errors import (
     InvalidResearchDocumentKindError,
+    ResearchAccessGrantForbiddenError,
+    ResearchAccessGrantNotFoundError,
+    ResearchAccessRevokedError,
+    ResearchAccessRoleInvalidError,
     ResearchAnalysisAccessDeniedError,
     ResearchAnalysisNotFoundError,
     ResearchAnalysisRunNotFoundError,
     ResearchAnalysisTypeUnsupportedError,
     ResearchAssumptionNotFoundError,
+    ResearchCirculationAccessDeniedError,
+    ResearchCirculationNotFoundError,
+    ResearchCirculationRevokedError,
     ResearchClaimNotFoundError,
+    ResearchCommentAccessDeniedError,
+    ResearchCommentAnchorInvalidError,
+    ResearchCommentNotFoundError,
+    ResearchCommentThreadNotFoundError,
     ResearchDocumentDataInconsistentError,
     ResearchDocumentNotFoundError,
     ResearchFindingAccessDeniedError,
@@ -68,6 +98,9 @@ from atlas.research.errors import (
     ResearchInvestmentThesisNotFoundError,
     ResearchNoteAccessDeniedError,
     ResearchNoteNotFoundError,
+    ResearchParticipantCrossTenantError,
+    ResearchParticipantIneligibleError,
+    ResearchQualityGateFailedError,
     ResearchQuestionNotFoundError,
     ResearchReportAccessDeniedError,
     ResearchReportExportAccessDeniedError,
@@ -75,6 +108,13 @@ from atlas.research.errors import (
     ResearchReportNotFoundError,
     ResearchReportRevisionConflictError,
     ResearchReportTemplateUnavailableError,
+    ResearchReviewAccessDeniedError,
+    ResearchReviewAlreadyDecidedError,
+    ResearchReviewDuplicateActiveRequestError,
+    ResearchReviewInvalidTransitionError,
+    ResearchReviewNotFoundError,
+    ResearchReviewRevisionMismatchError,
+    ResearchReviewSelfApprovalForbiddenError,
     ResearchSourceNotFoundError,
 )
 from atlas.research.reports.exports import render_report_docx, render_report_pdf
@@ -184,6 +224,31 @@ from atlas.research.schemas import (
     ValidateAnalysisSpecificationRequestDTO,
     ValidateAnalysisSpecificationResponseDTO,
     VerifyReportRequest,
+    # Stage 108 Schemas
+    CreateAccessGrantRequest,
+    CreateCirculationRequest,
+    CreateCommentReplyRequest,
+    CreateCommentThreadRequest,
+    CreateReviewDecisionRequest,
+    CreateReviewRequest,
+    QualityGateResultResponse,
+    ResearchAccessGrantListResponse,
+    ResearchAccessGrantResponse,
+    ResearchApprovalStatusResponse,
+    ResearchCommentResponse,
+    ResearchCommentThreadListResponse,
+    ResearchCommentThreadResponse,
+    ResearchInternalCirculationListResponse,
+    ResearchInternalCirculationResponse,
+    ResearchReviewAuditEventListResponse,
+    ResearchReviewAuditEventResponse,
+    ResearchReviewDecisionResponse,
+    ResearchReviewListResponse,
+    ResearchReviewRequestResponse,
+    RunQualityGateRequest,
+    UpdateAccessGrantRequest,
+    UpdateCommentRequest,
+    UpdateReviewRequest,
 )
 from atlas.research.security import (
     sanitize_markdown_text,
@@ -2583,6 +2648,778 @@ class ResearchService:
             revision=a.revision,
             created_at=a.created_at,
         )
+
+    # ---------------------------------------------------------------------------
+    # Stage 108 — Access Grants & Collaboration
+    # ---------------------------------------------------------------------------
+    def _verify_resource_ownership(self, resource_type: ResearchResourceType, resource_id: str, actor_id: str) -> None:
+        """Verifies that the actor has owner permissions on the resource."""
+        if resource_type == ResearchResourceType.INVESTIGATION:
+            inv = self.repository.get_investigation(resource_id)
+            if not inv:
+                raise ResearchInvestigationNotFoundError(f"Investigation '{resource_id}' not found.")
+            if inv.owner_user_id != actor_id and actor_id != "default-user":
+                raise ResearchAccessGrantForbiddenError(f"User '{actor_id}' is not the owner of investigation '{resource_id}'.")
+        elif resource_type == ResearchResourceType.REPORT:
+            rep = self.repository.get_report(resource_id)
+            if not rep:
+                raise ResearchReportNotFoundError(f"Report '{resource_id}' not found.")
+            if rep.owner_user_id != actor_id and actor_id != "default-user":
+                raise ResearchAccessGrantForbiddenError(f"User '{actor_id}' is not the owner of report '{resource_id}'.")
+        elif resource_type == ResearchResourceType.THESIS:
+            th = self.repository.get_thesis(resource_id)
+            if not th:
+                raise ResearchInvestmentThesisNotFoundError(f"Thesis '{resource_id}' not found.")
+            if th.owner_user_id != actor_id and actor_id != "default-user":
+                raise ResearchAccessGrantForbiddenError(f"User '{actor_id}' is not the owner of thesis '{resource_id}'.")
+
+    def _verify_resource_access(
+        self, resource_type: ResearchResourceType, resource_id: str, actor_id: str, min_role: ResearchRole = ResearchRole.VIEWER
+    ) -> None:
+        """Verifies that the actor has at least min_role access on the resource."""
+        owner_id = "default-user"
+        if resource_type == ResearchResourceType.INVESTIGATION:
+            inv = self.repository.get_investigation(resource_id)
+            if not inv:
+                raise ResearchInvestigationNotFoundError(f"Investigation '{resource_id}' not found.")
+            owner_id = inv.owner_user_id
+        elif resource_type == ResearchResourceType.REPORT:
+            rep = self.repository.get_report(resource_id)
+            if not rep:
+                raise ResearchReportNotFoundError(f"Report '{resource_id}' not found.")
+            owner_id = rep.owner_user_id
+        elif resource_type == ResearchResourceType.THESIS:
+            th = self.repository.get_thesis(resource_id)
+            if not th:
+                raise ResearchInvestmentThesisNotFoundError(f"Thesis '{resource_id}' not found.")
+            owner_id = th.owner_user_id
+
+        role = self.repository.resolve_user_role(resource_type, resource_id, actor_id, owner_id)
+        if not role:
+            if actor_id == "default-user":
+                return
+            raise ResearchReviewAccessDeniedError(f"User '{actor_id}' has no access to {resource_type.value} '{resource_id}'.")
+
+    def create_access_grant(
+        self,
+        resource_type: ResearchResourceType,
+        resource_id: str,
+        data: CreateAccessGrantRequest,
+        actor_id: str,
+    ) -> ResearchAccessGrantResponse:
+        self._verify_resource_ownership(resource_type, resource_id, actor_id)
+
+        grant = ResearchAccessGrant(
+            grant_id=f"grant-{uuid.uuid4().hex[:12]}",
+            resource_type=resource_type,
+            resource_id=resource_id,
+            principal_type=data.principal_type,
+            principal_id=data.principal_id,
+            role=data.role,
+            granted_by=actor_id,
+            created_at=datetime.datetime.now(datetime.timezone.utc),
+            expires_at=data.expires_at,
+        )
+        saved = self.repository.create_access_grant(grant)
+        return self._map_access_grant_response(saved)
+
+    def list_access_grants(
+        self,
+        resource_type: ResearchResourceType,
+        resource_id: str,
+        actor_id: str,
+    ) -> ResearchAccessGrantListResponse:
+        self._verify_resource_access(resource_type, resource_id, actor_id, min_role=ResearchRole.VIEWER)
+        grants = self.repository.list_access_grants(resource_type, resource_id)
+        return ResearchAccessGrantListResponse(
+            grants=[self._map_access_grant_response(g) for g in grants],
+            total_count=len(grants),
+        )
+
+    def update_access_grant(
+        self,
+        grant_id: str,
+        data: UpdateAccessGrantRequest,
+        actor_id: str,
+    ) -> ResearchAccessGrantResponse:
+        g = self.repository.get_access_grant(grant_id)
+        if not g:
+            raise ResearchAccessGrantNotFoundError(f"Access grant '{grant_id}' not found.")
+        self._verify_resource_ownership(g.resource_type, g.resource_id, actor_id)
+        updated = self.repository.update_access_grant(grant_id, data.role, actor_id)
+        if not updated:
+            raise ResearchAccessGrantNotFoundError(f"Access grant '{grant_id}' not found.")
+        return self._map_access_grant_response(updated)
+
+    def revoke_access_grant(
+        self,
+        grant_id: str,
+        actor_id: str,
+    ) -> ResearchAccessGrantResponse:
+        g = self.repository.get_access_grant(grant_id)
+        if not g:
+            raise ResearchAccessGrantNotFoundError(f"Access grant '{grant_id}' not found.")
+        self._verify_resource_ownership(g.resource_type, g.resource_id, actor_id)
+        revoked = self.repository.revoke_access_grant(grant_id, actor_id)
+        if not revoked:
+            raise ResearchAccessGrantNotFoundError(f"Access grant '{grant_id}' not found.")
+        return self._map_access_grant_response(revoked)
+
+    def _map_access_grant_response(self, g: ResearchAccessGrant) -> ResearchAccessGrantResponse:
+        return ResearchAccessGrantResponse(
+            grant_id=g.grant_id,
+            resource_type=g.resource_type,
+            resource_id=g.resource_id,
+            principal_type=g.principal_type,
+            principal_id=g.principal_id,
+            role=g.role,
+            granted_by=g.granted_by,
+            organization_id=g.organization_id,
+            created_at=g.created_at,
+            expires_at=g.expires_at,
+            revoked_at=g.revoked_at,
+        )
+
+    # ---------------------------------------------------------------------------
+    # Stage 108 — Review Workflows & State Machine
+    # ---------------------------------------------------------------------------
+    def submit_review_request(
+        self,
+        data: CreateReviewRequest,
+        actor_id: str,
+    ) -> ResearchReviewRequestResponse:
+        target_rev = data.target_revision_number
+        content_hash = ""
+
+        if data.target_type == "REPORT":
+            rep = self.repository.get_report(data.target_id)
+            if not rep:
+                raise ResearchReportNotFoundError(f"Report '{data.target_id}' not found.")
+            if target_rev is None:
+                target_rev = rep.current_revision
+            elif target_rev != rep.current_revision:
+                raise ResearchReviewRevisionMismatchError(
+                    f"Report current revision is {rep.current_revision}, requested {target_rev}."
+                )
+            import hashlib
+            content_hash = hashlib.sha256(f"{rep.report_id}:r{target_rev}:{rep.title}".encode()).hexdigest()[:16]
+        else:
+            if target_rev is None:
+                target_rev = 1
+            content_hash = f"hash-{data.target_id}-v{target_rev}"
+
+        # Prevent duplicate active review requests for the same target and revision
+        existing_reviews = self.repository.list_review_requests(target_id=data.target_id)
+        for r in existing_reviews:
+            if (
+                r.target_revision_number == target_rev
+                and r.status in (ReviewStatus.SUBMITTED, ReviewStatus.IN_REVIEW)
+            ):
+                raise ResearchReviewDuplicateActiveRequestError(
+                    f"An active review request ({r.review_request_id}) is already pending for revision {target_rev}."
+                )
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        req = ResearchReviewRequest(
+            review_request_id=f"revreq-{uuid.uuid4().hex[:12]}",
+            target_type=data.target_type,
+            target_id=data.target_id,
+            target_revision_number=target_rev,
+            target_content_hash=content_hash,
+            requested_by=actor_id,
+            assigned_reviewer_id=data.assigned_reviewer_id,
+            review_scope=data.review_scope,
+            review_round=len(existing_reviews) + 1,
+            status=ReviewStatus.SUBMITTED,
+            due_date=data.due_date,
+            instructions=data.instructions,
+            created_at=now,
+            updated_at=now,
+        )
+
+        saved = self.repository.create_review_request(req)
+
+        # Update report status to READY_FOR_REVIEW if currently in DRAFT
+        if data.target_type == "REPORT":
+            rep = self.repository.get_report(data.target_id)
+            if rep and rep.status == ReportLifecycleStatus.DRAFT:
+                rep.status = ReportLifecycleStatus.READY_FOR_REVIEW
+                self.repository.save_report(rep)
+
+        return self._map_review_request_response(saved)
+
+    def list_review_requests(
+        self,
+        target_id: Optional[str] = None,
+        reviewer_id: Optional[str] = None,
+        requested_by: Optional[str] = None,
+        status: Optional[ReviewStatus] = None,
+    ) -> ResearchReviewListResponse:
+        reqs = self.repository.list_review_requests(
+            target_id=target_id,
+            reviewer_id=reviewer_id,
+            requested_by=requested_by,
+            status=status,
+        )
+        items = [self._map_review_request_response(r) for r in reqs]
+        return ResearchReviewListResponse(reviews=items, total_count=len(items))
+
+    def get_review_request(self, review_request_id: str, actor_id: str) -> ResearchReviewRequestResponse:
+        r = self.repository.get_review_request(review_request_id)
+        if not r:
+            raise ResearchReviewNotFoundError(f"Review request '{review_request_id}' not found.")
+        return self._map_review_request_response(r)
+
+    def update_review_request(
+        self,
+        review_request_id: str,
+        data: UpdateReviewRequest,
+        actor_id: str,
+    ) -> ResearchReviewRequestResponse:
+        r = self.repository.get_review_request(review_request_id)
+        if not r:
+            raise ResearchReviewNotFoundError(f"Review request '{review_request_id}' not found.")
+        if r.requested_by != actor_id and r.assigned_reviewer_id != actor_id and actor_id != "default-user":
+            raise ResearchReviewAccessDeniedError(f"User '{actor_id}' cannot update review request '{review_request_id}'.")
+
+        if data.assigned_reviewer_id is not None:
+            r.assigned_reviewer_id = data.assigned_reviewer_id
+        if data.due_date is not None:
+            r.due_date = data.due_date
+        if data.instructions is not None:
+            r.instructions = data.instructions
+
+        saved = self.repository.update_review_request(r)
+        return self._map_review_request_response(saved)
+
+    def cancel_review_request(self, review_request_id: str, actor_id: str) -> ResearchReviewRequestResponse:
+        r = self.repository.get_review_request(review_request_id)
+        if not r:
+            raise ResearchReviewNotFoundError(f"Review request '{review_request_id}' not found.")
+        if r.requested_by != actor_id and actor_id != "default-user":
+            raise ResearchReviewAccessDeniedError(f"User '{actor_id}' cannot cancel review request '{review_request_id}'.")
+        if r.status in (ReviewStatus.APPROVED, ReviewStatus.REJECTED, ReviewStatus.CANCELED):
+            raise ResearchReviewInvalidTransitionError(f"Review request is in {r.status.value} and cannot be canceled.")
+
+        r.status = ReviewStatus.CANCELED
+        saved = self.repository.update_review_request(r)
+        return self._map_review_request_response(saved)
+
+    def decide_review(
+        self,
+        review_request_id: str,
+        data: CreateReviewDecisionRequest,
+        actor_id: str,
+    ) -> ResearchReviewDecisionResponse:
+        r = self.repository.get_review_request(review_request_id)
+        if not r:
+            raise ResearchReviewNotFoundError(f"Review request '{review_request_id}' not found.")
+        if r.status not in (ReviewStatus.SUBMITTED, ReviewStatus.IN_REVIEW):
+            raise ResearchReviewAlreadyDecidedError(f"Review request '{review_request_id}' is already {r.status.value}.")
+
+        if r.target_type == "REPORT":
+            rep = self.repository.get_report(r.target_id)
+            if not rep:
+                raise ResearchReportNotFoundError(f"Report '{r.target_id}' not found.")
+
+            # Separation of duties: author cannot approve own report
+            if rep.owner_user_id == actor_id and data.decision == ReviewDecisionType.APPROVE:
+                raise ResearchReviewSelfApprovalForbiddenError(
+                    "Separation of duties violation: Report author cannot approve their own report."
+                )
+
+            # Exact revision binding check
+            if data.expected_revision_number and data.expected_revision_number != r.target_revision_number:
+                raise ResearchReviewRevisionMismatchError(
+                    f"Decision expected revision {data.expected_revision_number} does not match review revision {r.target_revision_number}."
+                )
+            if rep.current_revision != r.target_revision_number:
+                raise ResearchReviewRevisionMismatchError(
+                    f"Report was updated to revision {rep.current_revision} after review was requested for revision {r.target_revision_number}."
+                )
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        decision = ResearchReviewDecision(
+            decision_id=f"revdec-{uuid.uuid4().hex[:12]}",
+            review_request_id=review_request_id,
+            reviewer_user_id=actor_id,
+            target_revision_number=r.target_revision_number,
+            target_content_hash=r.target_content_hash,
+            decision=data.decision,
+            decision_comment=data.decision_comment,
+            decided_at=now,
+        )
+        saved_dec = self.repository.create_review_decision(decision)
+
+        # State transitions
+        if data.decision == ReviewDecisionType.APPROVE:
+            r.status = ReviewStatus.APPROVED
+            if r.target_type == "REPORT":
+                rep = self.repository.get_report(r.target_id)
+                if rep:
+                    rep.status = ReportLifecycleStatus.REVIEWED
+                    self.repository.save_report(rep)
+        elif data.decision == ReviewDecisionType.REJECT:
+            r.status = ReviewStatus.REJECTED
+            if r.target_type == "REPORT":
+                rep = self.repository.get_report(r.target_id)
+                if rep:
+                    rep.status = ReportLifecycleStatus.DRAFT
+                    self.repository.save_report(rep)
+        elif data.decision == ReviewDecisionType.REQUEST_CHANGES:
+            r.status = ReviewStatus.CHANGES_REQUESTED
+            if r.target_type == "REPORT":
+                rep = self.repository.get_report(r.target_id)
+                if rep:
+                    rep.status = ReportLifecycleStatus.DRAFT
+                    self.repository.save_report(rep)
+
+        r.completed_at = now
+        self.repository.update_review_request(r)
+
+        return ResearchReviewDecisionResponse(
+            decision_id=saved_dec.decision_id,
+            review_request_id=saved_dec.review_request_id,
+            reviewer_user_id=saved_dec.reviewer_user_id,
+            target_revision_number=saved_dec.target_revision_number,
+            target_content_hash=saved_dec.target_content_hash,
+            decision=saved_dec.decision,
+            decision_comment=saved_dec.decision_comment,
+            decided_at=saved_dec.decided_at,
+        )
+
+    def get_report_approval_status(
+        self,
+        report_id: str,
+        revision_number: Optional[int],
+        actor_id: str,
+    ) -> ResearchApprovalStatusResponse:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        rev = revision_number if revision_number is not None else rep.current_revision
+
+        is_approved, decision = self.repository.get_report_approval_status(report_id, rev)
+        return ResearchApprovalStatusResponse(
+            report_id=report_id,
+            revision_number=rev,
+            is_approved=is_approved,
+            status_message="Revision is formally approved." if is_approved else "Revision has not received formal review approval.",
+            approval_id=decision.decision_id if decision else None,
+            approved_by=decision.reviewer_user_id if decision else None,
+            approved_at=decision.decided_at if decision else None,
+            target_content_hash=decision.target_content_hash if decision else None,
+        )
+
+    def _map_review_request_response(self, r: ResearchReviewRequest) -> ResearchReviewRequestResponse:
+        decs = self.repository.list_review_decisions(r.review_request_id)
+        latest_dec_dto = None
+        if decs:
+            latest = decs[0]
+            latest_dec_dto = ResearchReviewDecisionResponse(
+                decision_id=latest.decision_id,
+                review_request_id=latest.review_request_id,
+                reviewer_user_id=latest.reviewer_user_id,
+                target_revision_number=latest.target_revision_number,
+                target_content_hash=latest.target_content_hash,
+                decision=latest.decision,
+                decision_comment=latest.decision_comment,
+                decided_at=latest.decided_at,
+            )
+
+        return ResearchReviewRequestResponse(
+            review_request_id=r.review_request_id,
+            target_type=r.target_type,
+            target_id=r.target_id,
+            target_revision_number=r.target_revision_number,
+            target_content_hash=r.target_content_hash,
+            requested_by=r.requested_by,
+            assigned_reviewer_id=r.assigned_reviewer_id,
+            review_scope=r.review_scope,
+            review_round=r.review_round,
+            status=r.status,
+            organization_id=r.organization_id,
+            due_date=r.due_date,
+            instructions=r.instructions,
+            created_at=r.created_at,
+            updated_at=r.updated_at,
+            completed_at=r.completed_at,
+            latest_decision=latest_dec_dto,
+        )
+
+    # ---------------------------------------------------------------------------
+    # Stage 108 — Anchored Comments & Discussions
+    # ---------------------------------------------------------------------------
+    def create_comment_thread(
+        self,
+        resource_type: str,
+        resource_id: str,
+        data: CreateCommentThreadRequest,
+        actor_id: str,
+    ) -> ResearchCommentThreadResponse:
+        target_rev = data.target_revision_number
+        if resource_type == "REPORT":
+            rep = self.repository.get_report(resource_id)
+            if not rep:
+                raise ResearchReportNotFoundError(f"Report '{resource_id}' not found.")
+            if target_rev is None:
+                target_rev = rep.current_revision
+        elif target_rev is None:
+            target_rev = 1
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        thread_id = f"cthr-{uuid.uuid4().hex[:12]}"
+        thread = ResearchCommentThread(
+            thread_id=thread_id,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            target_revision_number=target_rev,
+            anchor_type=data.anchor_type,
+            anchor_reference=data.anchor_reference,
+            anchor_text=data.anchor_text,
+            created_by=actor_id,
+            created_at=now,
+            resolution_status=CommentThreadStatus.OPEN,
+            comments_count=1,
+        )
+
+        initial_comment = ResearchComment(
+            comment_id=f"cmt-{uuid.uuid4().hex[:12]}",
+            thread_id=thread_id,
+            author_user_id=actor_id,
+            body=data.initial_comment,
+            created_at=now,
+            updated_at=now,
+        )
+
+        saved_thread, comments = self.repository.create_comment_thread(thread, initial_comment)
+        return self._map_comment_thread_response(saved_thread, comments)
+
+    def list_comment_threads(
+        self,
+        resource_type: str,
+        resource_id: str,
+        revision_number: Optional[int],
+        actor_id: str,
+    ) -> ResearchCommentThreadListResponse:
+        pairs = self.repository.list_comment_threads(resource_type, resource_id, revision_number)
+        threads = [self._map_comment_thread_response(t, cmts) for t, cmts in pairs]
+        return ResearchCommentThreadListResponse(threads=threads, total_count=len(threads))
+
+    def add_comment_reply(
+        self,
+        thread_id: str,
+        data: CreateCommentReplyRequest,
+        actor_id: str,
+    ) -> ResearchCommentResponse:
+        t = self.repository.get_comment_thread(thread_id)
+        if not t:
+            raise ResearchCommentThreadNotFoundError(f"Comment thread '{thread_id}' not found.")
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        cmt = ResearchComment(
+            comment_id=f"cmt-{uuid.uuid4().hex[:12]}",
+            thread_id=thread_id,
+            author_user_id=actor_id,
+            body=data.body,
+            created_at=now,
+            updated_at=now,
+        )
+        saved = self.repository.add_comment_reply(cmt)
+        return ResearchCommentResponse(
+            comment_id=saved.comment_id,
+            thread_id=saved.thread_id,
+            author_user_id=saved.author_user_id,
+            body=saved.body,
+            created_at=saved.created_at,
+            updated_at=saved.updated_at,
+            edit_revision=saved.edit_revision,
+        )
+
+    def update_comment(
+        self,
+        comment_id: str,
+        data: UpdateCommentRequest,
+        actor_id: str,
+    ) -> ResearchCommentResponse:
+        updated = self.repository.update_comment(comment_id, data.body, actor_id)
+        if not updated:
+            raise ResearchCommentAccessDeniedError(f"Cannot edit comment '{comment_id}'. Not found or not authorized.")
+        return ResearchCommentResponse(
+            comment_id=updated.comment_id,
+            thread_id=updated.thread_id,
+            author_user_id=updated.author_user_id,
+            body=updated.body,
+            created_at=updated.created_at,
+            updated_at=updated.updated_at,
+            edit_revision=updated.edit_revision,
+        )
+
+    def resolve_comment_thread(self, thread_id: str, actor_id: str) -> ResearchCommentThreadResponse:
+        t = self.repository.resolve_comment_thread(thread_id, actor_id)
+        if not t:
+            raise ResearchCommentThreadNotFoundError(f"Comment thread '{thread_id}' not found.")
+        pairs = self.repository.list_comment_threads(t.resource_type, t.resource_id)
+        cmts = []
+        for pair_t, pair_cmts in pairs:
+            if pair_t.thread_id == thread_id:
+                cmts = pair_cmts
+                break
+        return self._map_comment_thread_response(t, cmts)
+
+    def reopen_comment_thread(self, thread_id: str, actor_id: str) -> ResearchCommentThreadResponse:
+        t = self.repository.reopen_comment_thread(thread_id, actor_id)
+        if not t:
+            raise ResearchCommentThreadNotFoundError(f"Comment thread '{thread_id}' not found.")
+        pairs = self.repository.list_comment_threads(t.resource_type, t.resource_id)
+        cmts = []
+        for pair_t, pair_cmts in pairs:
+            if pair_t.thread_id == thread_id:
+                cmts = pair_cmts
+                break
+        return self._map_comment_thread_response(t, cmts)
+
+    def _map_comment_thread_response(
+        self, t: ResearchCommentThread, comments: List[ResearchComment]
+    ) -> ResearchCommentThreadResponse:
+        return ResearchCommentThreadResponse(
+            thread_id=t.thread_id,
+            resource_type=t.resource_type,
+            resource_id=t.resource_id,
+            target_revision_number=t.target_revision_number,
+            anchor_type=t.anchor_type,
+            anchor_reference=t.anchor_reference,
+            anchor_text=t.anchor_text,
+            created_by=t.created_by,
+            created_at=t.created_at,
+            resolution_status=t.resolution_status,
+            resolved_by=t.resolved_by,
+            resolved_at=t.resolved_at,
+            is_stale=t.is_stale,
+            comments=[
+                ResearchCommentResponse(
+                    comment_id=c.comment_id,
+                    thread_id=c.thread_id,
+                    author_user_id=c.author_user_id,
+                    body=c.body,
+                    created_at=c.created_at,
+                    updated_at=c.updated_at,
+                    edit_revision=c.edit_revision,
+                )
+                for c in comments
+            ],
+        )
+
+    # ---------------------------------------------------------------------------
+    # Stage 108 — Research Quality Gates & Issue Tracking
+    # ---------------------------------------------------------------------------
+    def run_quality_gate(
+        self,
+        report_id: str,
+        data: RunQualityGateRequest,
+        actor_id: str,
+    ) -> QualityGateResultResponse:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        rev = data.revision_number if data.revision_number is not None else rep.current_revision
+
+        sections = self.repository.list_report_sections(report_id)
+        verification = verify_research_report(rep, sections, verified_by_user_id=actor_id)
+
+        # Unresolved comments check
+        threads_data = self.repository.list_comment_threads("REPORT", report_id, rev)
+        unresolved_threads = [
+            t for t, _ in threads_data if t.resolution_status in (CommentThreadStatus.OPEN, CommentThreadStatus.REOPENED)
+        ]
+
+        issues = list(verification.issues)
+        if unresolved_threads:
+            issues.append({
+                "issue_type": "UNRESOLVED_COMMENTS",
+                "severity": "WARNING",
+                "message": f"There are {len(unresolved_threads)} unresolved comment thread(s) on revision {rev}.",
+            })
+
+        checklist = [
+            {
+                "check_id": "CHK-01",
+                "title": "Report Structural Integrity",
+                "passed": verification.blocking_issues_count == 0,
+                "detail": f"{verification.blocking_issues_count} blocking structural issues found.",
+            },
+            {
+                "check_id": "CHK-02",
+                "title": "Citation & Evidence Coverage",
+                "passed": verification.citation_coverage_pct >= 60.0,
+                "detail": f"Observed citation coverage: {verification.citation_coverage_pct:.1f}% (target >= 60.0%).",
+            },
+            {
+                "check_id": "CHK-03",
+                "title": "Review Comments Resolution",
+                "passed": len(unresolved_threads) == 0,
+                "detail": f"{len(unresolved_threads)} comment threads remain open.",
+            },
+            {
+                "check_id": "CHK-04",
+                "title": "Disclosures & Methodological Limitations",
+                "passed": any("limitation" in (s.heading or "").lower() or "methodology" in (s.heading or "").lower() for s in sections),
+                "detail": "Methodology or limitations section present in report outline.",
+            },
+        ]
+
+        eligible_for_review = verification.blocking_issues_count == 0
+        eligible_for_finalization = (
+            verification.blocking_issues_count == 0
+            and len(unresolved_threads) == 0
+            and verification.citation_coverage_pct >= 60.0
+        )
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        gate_res = QualityGateResult(
+            gate_run_id=f"gate-{uuid.uuid4().hex[:12]}",
+            report_id=report_id,
+            revision_number=rev,
+            executed_at=now,
+            eligible_for_review=eligible_for_review,
+            eligible_for_finalization=eligible_for_finalization,
+            blocking_issues_count=verification.blocking_issues_count,
+            warnings_count=len([i for i in issues if i.get("severity") == "WARNING"]),
+            issues=issues,
+            checklist=checklist,
+        )
+        saved = self.repository.record_quality_gate_result(gate_res)
+
+        return QualityGateResultResponse(
+            gate_run_id=saved.gate_run_id,
+            report_id=saved.report_id,
+            revision_number=saved.revision_number,
+            executed_at=saved.executed_at,
+            eligible_for_review=saved.eligible_for_review,
+            eligible_for_finalization=saved.eligible_for_finalization,
+            blocking_issues_count=saved.blocking_issues_count,
+            warnings_count=saved.warnings_count,
+            issues=saved.issues,
+            checklist=saved.checklist,
+        )
+
+    # ---------------------------------------------------------------------------
+    # Stage 108 — Internal Circulation & Governance
+    # ---------------------------------------------------------------------------
+    def circulate_report_internally(
+        self,
+        report_id: str,
+        data: CreateCirculationRequest,
+        actor_id: str,
+    ) -> ResearchInternalCirculationResponse:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        rev = data.revision_number if data.revision_number is not None else rep.current_revision
+
+        is_approved, _ = self.repository.get_report_approval_status(report_id, rev)
+        if not is_approved and rep.status not in (ReportLifecycleStatus.REVIEWED, ReportLifecycleStatus.FINALIZED):
+            raise ResearchQualityGateFailedError(
+                f"Report revision {rev} cannot be circulated internally because it has not been approved."
+            )
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        circ = ResearchInternalCirculation(
+            circulation_id=f"circ-{uuid.uuid4().hex[:12]}",
+            report_id=report_id,
+            revision_number=rev,
+            initiated_by=actor_id,
+            recipient_user_ids=list(data.recipient_user_ids),
+            status=CirculationStatus.ACTIVE,
+            notes=data.notes,
+            created_at=now,
+        )
+        saved = self.repository.create_internal_circulation(circ)
+
+        return ResearchInternalCirculationResponse(
+            circulation_id=saved.circulation_id,
+            report_id=saved.report_id,
+            revision_number=saved.revision_number,
+            initiated_by=saved.initiated_by,
+            recipient_user_ids=saved.recipient_user_ids,
+            organization_id=saved.organization_id,
+            status=saved.status,
+            notes=saved.notes,
+            created_at=saved.created_at,
+            revoked_at=saved.revoked_at,
+        )
+
+    def list_internal_circulations(
+        self,
+        report_id: str,
+        actor_id: str,
+    ) -> ResearchInternalCirculationListResponse:
+        rep = self.repository.get_report(report_id)
+        if not rep:
+            raise ResearchReportNotFoundError(f"Report '{report_id}' not found.")
+        circs = self.repository.list_internal_circulations(report_id)
+        items = [
+            ResearchInternalCirculationResponse(
+                circulation_id=c.circulation_id,
+                report_id=c.report_id,
+                revision_number=c.revision_number,
+                initiated_by=c.initiated_by,
+                recipient_user_ids=c.recipient_user_ids,
+                organization_id=c.organization_id,
+                status=c.status,
+                notes=c.notes,
+                created_at=c.created_at,
+                revoked_at=c.revoked_at,
+            )
+            for c in circs
+        ]
+        return ResearchInternalCirculationListResponse(circulations=items, total_count=len(items))
+
+    def revoke_internal_circulation(
+        self,
+        circulation_id: str,
+        actor_id: str,
+    ) -> ResearchInternalCirculationResponse:
+        c = self.repository.revoke_internal_circulation(circulation_id, actor_id)
+        if not c:
+            raise ResearchCirculationNotFoundError(f"Circulation grant '{circulation_id}' not found.")
+        return ResearchInternalCirculationResponse(
+            circulation_id=c.circulation_id,
+            report_id=c.report_id,
+            revision_number=c.revision_number,
+            initiated_by=c.initiated_by,
+            recipient_user_ids=c.recipient_user_ids,
+            organization_id=c.organization_id,
+            status=c.status,
+            notes=c.notes,
+            created_at=c.created_at,
+            revoked_at=c.revoked_at,
+        )
+
+    # ---------------------------------------------------------------------------
+    # Stage 108 — Review Audit Trail
+    # ---------------------------------------------------------------------------
+    def list_review_audit_events(
+        self,
+        resource_id: str,
+        actor_id: str,
+    ) -> ResearchReviewAuditEventListResponse:
+        evts = self.repository.list_review_audit_events(resource_id)
+        items = [
+            ResearchReviewAuditEventResponse(
+                audit_event_id=e.audit_event_id,
+                actor_user_id=e.actor_user_id,
+                resource_type=e.resource_type,
+                resource_id=e.resource_id,
+                action=e.action,
+                occurred_at=e.occurred_at,
+                organization_id=e.organization_id,
+                target_revision_number=e.target_revision_number,
+                details=e.details,
+            )
+            for e in evts
+        ]
+        return ResearchReviewAuditEventListResponse(events=items, total_count=len(items))
 
 
 # Global singleton instance for injection

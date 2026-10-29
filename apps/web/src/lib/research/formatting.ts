@@ -16,6 +16,12 @@ import {
   ThesisArgumentType,
   ExportFormat,
   VerificationIssueSeverity,
+  // Stage 108 Types
+  ReviewStatus,
+  ReviewDecisionType,
+  ResearchRole,
+  CommentThreadStatus,
+  CirculationStatus,
 } from "./types";
 
 /**
@@ -419,6 +425,125 @@ export function getVerificationSeverityDisplay(severity: VerificationIssueSeveri
     case "INFORMATIONAL":
     default:
       return { label: "Info", variant: "outline" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Stage 108 — Collaboration & Review Formatting Helpers
+// ---------------------------------------------------------------------------
+
+export function getReviewStatusDisplay(status: ReviewStatus): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (status) {
+    case "DRAFT":
+      return { label: "Draft", variant: "outline" };
+    case "SUBMITTED":
+      return { label: "Submitted", variant: "primary" };
+    case "IN_REVIEW":
+      return { label: "In Review", variant: "warning" };
+    case "CHANGES_REQUESTED":
+      return { label: "Changes Requested", variant: "warning" };
+    case "APPROVED":
+      return { label: "Approved", variant: "positive" };
+    case "REJECTED":
+      return { label: "Rejected", variant: "negative" };
+    case "CANCELED":
+      return { label: "Canceled", variant: "default" };
+    case "SUPERSEDED":
+      return { label: "Superseded", variant: "outline" };
+    default:
+      return { label: status, variant: "default" };
+  }
+}
+
+export function getReviewDecisionDisplay(decision: ReviewDecisionType): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (decision) {
+    case "APPROVE":
+      return { label: "Approve Revision", variant: "positive" };
+    case "REQUEST_CHANGES":
+      return { label: "Request Changes", variant: "warning" };
+    case "REJECT":
+      return { label: "Reject Revision", variant: "negative" };
+    default:
+      return { label: decision, variant: "default" };
+  }
+}
+
+export function getResearchRoleDisplay(role: ResearchRole): {
+  label: string;
+  description: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (role) {
+    case "OWNER":
+      return {
+        label: "Owner",
+        description: "Full administrative ownership, participant governance, and finalization rights.",
+        variant: "primary",
+      };
+    case "EDITOR":
+      return {
+        label: "Editor",
+        description: "Can author sections, update claims, execute analyses, and submit revisions for review.",
+        variant: "positive",
+      };
+    case "REVIEWER":
+      return {
+        label: "Reviewer",
+        description: "Assigned peer reviewer with rights to comment, request changes, and issue approval decisions.",
+        variant: "warning",
+      };
+    case "COMMENTER":
+      return {
+        label: "Commenter",
+        description: "Can view all research and participate in anchored discussion threads.",
+        variant: "outline",
+      };
+    case "VIEWER":
+      return {
+        label: "Viewer",
+        description: "Read-only access to approved versions, evidence, and published analyses.",
+        variant: "default",
+      };
+    default:
+      return { label: role, description: "", variant: "default" };
+  }
+}
+
+export function getCommentThreadStatusDisplay(status: CommentThreadStatus): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (status) {
+    case "OPEN":
+      return { label: "Open", variant: "warning" };
+    case "RESOLVED":
+      return { label: "Resolved", variant: "positive" };
+    case "REOPENED":
+      return { label: "Reopened", variant: "negative" };
+    default:
+      return { label: status, variant: "default" };
+  }
+}
+
+export function getCirculationStatusDisplay(status: CirculationStatus): {
+  label: string;
+  variant: "default" | "primary" | "positive" | "negative" | "warning" | "outline";
+} {
+  switch (status) {
+    case "ACTIVE":
+      return { label: "Active Circulation", variant: "positive" };
+    case "REVOKED":
+      return { label: "Revoked", variant: "negative" };
+    case "EXPIRED":
+      return { label: "Expired", variant: "default" };
+    default:
+      return { label: status, variant: "default" };
   }
 }
 

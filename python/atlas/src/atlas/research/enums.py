@@ -454,3 +454,100 @@ class VerificationIssueType(str, Enum):
     UNRESOLVED_CONTRADICTION = "UNRESOLVED_CONTRADICTION"
     STRUCTURE_INCOMPLETE = "STRUCTURE_INCOMPLETE"
 
+
+# ---------------------------------------------------------------------------
+# Stage 108 Collaboration, Review, Comments & Circulation Enums
+# ---------------------------------------------------------------------------
+
+class ResearchRole(str, Enum):
+    """Institutional roles for collaborative research operations."""
+    OWNER = "OWNER"
+    EDITOR = "EDITOR"
+    REVIEWER = "REVIEWER"
+    COMMENTER = "COMMENTER"
+    VIEWER = "VIEWER"
+
+
+class ResearchPrincipalType(str, Enum):
+    """Types of principals permitted in research access grants."""
+    USER = "USER"
+    ORGANIZATION_ROLE = "ORGANIZATION_ROLE"
+
+
+class ResearchResourceType(str, Enum):
+    """Resource domains supporting collaborative research grants."""
+    INVESTIGATION = "INVESTIGATION"
+    REPORT = "REPORT"
+    THESIS = "THESIS"
+
+
+class ReviewScope(str, Enum):
+    """Declared scope for an institutional review request."""
+    FULL_REPORT = "FULL_REPORT"
+    DOCUMENT_CONTENT = "DOCUMENT_CONTENT"
+    SOURCE_EVIDENCE = "SOURCE_EVIDENCE"
+    FINANCIAL_ANALYSIS = "FINANCIAL_ANALYSIS"
+    EDITORIAL_QUALITY = "EDITORIAL_QUALITY"
+
+
+class ReviewStatus(str, Enum):
+    """Lifecycle state machine for institutional review cycles."""
+    DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    IN_REVIEW = "IN_REVIEW"
+    CHANGES_REQUESTED = "CHANGES_REQUESTED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    CANCELED = "CANCELED"
+    SUPERSEDED = "SUPERSEDED"
+
+
+class ReviewDecisionType(str, Enum):
+    """Formal decision outcomes rendered by an authorized reviewer."""
+    APPROVE = "APPROVE"
+    REQUEST_CHANGES = "REQUEST_CHANGES"
+    REJECT = "REJECT"
+
+
+class CommentAnchorType(str, Enum):
+    """Anchor targets for review comments within research objects."""
+    REPORT_SECTION = "REPORT_SECTION"
+    REPORT_BLOCK = "REPORT_BLOCK"
+    TEXT_RANGE = "TEXT_RANGE"
+    CITATION = "CITATION"
+    EVIDENCE_REFERENCE = "EVIDENCE_REFERENCE"
+    ANALYSIS_RUN = "ANALYSIS_RUN"
+    RESEARCH_FINDING = "RESEARCH_FINDING"
+
+
+class CommentThreadStatus(str, Enum):
+    """Resolution lifecycle for review comment threads."""
+    OPEN = "OPEN"
+    RESOLVED = "RESOLVED"
+    REOPENED = "REOPENED"
+    OBSOLETE = "OBSOLETE"
+
+
+class CirculationStatus(str, Enum):
+    """Status of controlled internal research report circulation."""
+    ACTIVE = "ACTIVE"
+    REVOKED = "REVOKED"
+
+
+class ResearchAuditEventType(str, Enum):
+    """Auditable actions in research collaboration and review operations."""
+    GRANT_CREATED = "GRANT_CREATED"
+    GRANT_UPDATED = "GRANT_UPDATED"
+    GRANT_REVOKED = "GRANT_REVOKED"
+    REVIEW_SUBMITTED = "REVIEW_SUBMITTED"
+    REVIEW_ASSIGNED = "REVIEW_ASSIGNED"
+    REVIEW_DECIDED = "REVIEW_DECIDED"
+    REVIEW_CANCELED = "REVIEW_CANCELED"
+    COMMENT_ADDED = "COMMENT_ADDED"
+    COMMENT_RESOLVED = "COMMENT_RESOLVED"
+    COMMENT_REOPENED = "COMMENT_REOPENED"
+    QUALITY_GATE_RUN = "QUALITY_GATE_RUN"
+    REPORT_CIRCULATED = "REPORT_CIRCULATED"
+    CIRCULATION_REVOKED = "CIRCULATION_REVOKED"
+
+

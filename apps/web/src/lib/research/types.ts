@@ -1554,14 +1554,269 @@ export interface UpdateResearchThesisDTO {
   catalysts_summary?: string | null;
 }
 
-export interface CreateThesisArgumentDTO {
-  argument_type: ThesisArgumentType;
-  statement: string;
-  claim_ids?: string[];
-  evidence_ids?: string[];
-  analysis_run_ids?: string[];
-  finding_ids?: string[];
-  limitations?: string[];
+// ---------------------------------------------------------------------------
+// Stage 108 — Collaboration, Review, Evidence Governance & Circulation Types
+// ---------------------------------------------------------------------------
+
+export type ResearchRole = "OWNER" | "EDITOR" | "REVIEWER" | "COMMENTER" | "VIEWER";
+
+export type ResearchPrincipalType = "USER" | "TEAM" | "GROUP";
+
+export type ResearchResourceType = "INVESTIGATION" | "REPORT" | "THESIS";
+
+export type ReviewScope =
+  | "FULL_REPORT"
+  | "DOCUMENT_CONTENT"
+  | "FINANCIAL_MODEL"
+  | "CITATION_AUDIT";
+
+export type ReviewStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "IN_REVIEW"
+  | "CHANGES_REQUESTED"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELED"
+  | "SUPERSEDED";
+
+export type ReviewDecisionType = "APPROVE" | "REQUEST_CHANGES" | "REJECT";
+
+export type CommentAnchorType =
+  | "REPORT_SECTION"
+  | "CONTENT_BLOCK"
+  | "TEXT_RANGE"
+  | "CITATION"
+  | "ANALYSIS_RUN"
+  | "FINDING";
+
+export type CommentThreadStatus = "OPEN" | "RESOLVED" | "REOPENED";
+
+export type CirculationStatus = "ACTIVE" | "REVOKED" | "EXPIRED";
+
+export type ResearchAuditEventType =
+  | "GRANT_CREATED"
+  | "GRANT_UPDATED"
+  | "GRANT_REVOKED"
+  | "REVIEW_SUBMITTED"
+  | "REVIEW_DECIDED"
+  | "COMMENT_ADDED"
+  | "COMMENT_RESOLVED"
+  | "COMMENT_REOPENED"
+  | "QUALITY_GATE_RUN"
+  | "REPORT_CIRCULATED"
+  | "CIRCULATION_REVOKED";
+
+export interface ResearchAccessGrantResponse {
+  grant_id: string;
+  resource_type: ResearchResourceType;
+  resource_id: string;
+  principal_type: ResearchPrincipalType;
+  principal_id: string;
+  role: ResearchRole;
+  granted_by: string;
+  organization_id?: string | null;
+  created_at: string;
+  expires_at?: string | null;
+  revoked_at?: string | null;
+}
+
+export interface ResearchAccessGrantListResponse {
+  grants: ResearchAccessGrantResponse[];
+  total_count: number;
+}
+
+export interface CreateAccessGrantRequest {
+  principal_type?: ResearchPrincipalType;
+  principal_id: string;
+  role: ResearchRole;
+  expires_at?: string | null;
+}
+
+export interface UpdateAccessGrantRequest {
+  role: ResearchRole;
+}
+
+export interface ResearchReviewDecisionResponse {
+  decision_id: string;
+  review_request_id: string;
+  reviewer_user_id: string;
+  target_revision_number: number;
+  target_content_hash: string;
+  decision: ReviewDecisionType;
+  decision_comment?: string | null;
+  decided_at: string;
+}
+
+export interface CreateReviewDecisionRequest {
+  decision: ReviewDecisionType;
+  decision_comment?: string | null;
+  expected_revision_number?: number | null;
+}
+
+export interface ResearchReviewRequestResponse {
+  review_request_id: string;
+  target_type: ResearchResourceType;
+  target_id: string;
+  target_revision_number: number;
+  target_content_hash: string;
+  requested_by: string;
+  assigned_reviewer_id: string;
+  review_scope: ReviewScope;
+  review_round: number;
+  status: ReviewStatus;
+  organization_id?: string | null;
+  due_date?: string | null;
+  instructions?: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string | null;
+  latest_decision?: ResearchReviewDecisionResponse | null;
+}
+
+export interface ResearchReviewListResponse {
+  reviews: ResearchReviewRequestResponse[];
+  total_count: number;
+}
+
+export interface CreateReviewRequest {
+  target_type?: ResearchResourceType;
+  target_id: string;
+  target_revision_number?: number | null;
+  assigned_reviewer_id: string;
+  review_scope?: ReviewScope;
+  due_date?: string | null;
+  instructions?: string | null;
+}
+
+export interface UpdateReviewRequest {
+  assigned_reviewer_id?: string;
+  due_date?: string | null;
+  instructions?: string | null;
+}
+
+export interface ResearchApprovalStatusResponse {
+  report_id: string;
+  revision_number: number;
+  is_approved: boolean;
+  status_message: string;
+  approval_id?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  target_content_hash?: string | null;
+}
+
+export interface ResearchCommentResponse {
+  comment_id: string;
+  thread_id: string;
+  author_user_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  edit_revision: number;
+}
+
+export interface ResearchCommentThreadResponse {
+  thread_id: string;
+  resource_type: string;
+  resource_id: string;
+  target_revision_number: number;
+  anchor_type: CommentAnchorType;
+  anchor_reference: string;
+  anchor_text?: string | null;
+  created_by: string;
+  created_at: string;
+  resolution_status: CommentThreadStatus;
+  resolved_by?: string | null;
+  resolved_at?: string | null;
+  comments: ResearchCommentResponse[];
+  is_stale?: boolean;
+}
+
+export interface ResearchCommentThreadListResponse {
+  threads: ResearchCommentThreadResponse[];
+  total_count: number;
+}
+
+export interface CreateCommentThreadRequest {
+  target_revision_number?: number | null;
+  anchor_type?: CommentAnchorType;
+  anchor_reference: string;
+  anchor_text?: string | null;
+  initial_comment: string;
+}
+
+export interface CreateCommentReplyRequest {
+  body: string;
+}
+
+export interface UpdateCommentRequest {
+  body: string;
+}
+
+export interface QualityGateCheckItem {
+  check_id: string;
+  title: string;
+  passed: boolean;
+  detail: string;
+}
+
+export interface QualityGateResultResponse {
+  gate_run_id: string;
+  report_id: string;
+  revision_number: number;
+  executed_at: string;
+  eligible_for_review: boolean;
+  eligible_for_finalization: boolean;
+  blocking_issues_count: number;
+  warnings_count: number;
+  issues: Record<string, unknown>[];
+  checklist: QualityGateCheckItem[];
+}
+
+export interface RunQualityGateRequest {
+  revision_number?: number | null;
+}
+
+export interface ResearchInternalCirculationResponse {
+  circulation_id: string;
+  report_id: string;
+  revision_number: number;
+  initiated_by: string;
+  recipient_user_ids: string[];
+  organization_id?: string | null;
+  status: CirculationStatus;
+  notes?: string | null;
+  created_at: string;
+  revoked_at?: string | null;
+}
+
+export interface ResearchInternalCirculationListResponse {
+  circulations: ResearchInternalCirculationResponse[];
+  total_count: number;
+}
+
+export interface CreateCirculationRequest {
+  revision_number?: number | null;
+  recipient_user_ids: string[];
+  notes?: string | null;
+}
+
+export interface ResearchReviewAuditEventResponse {
+  audit_event_id: string;
+  actor_user_id: string;
+  resource_type: string;
+  resource_id: string;
+  action: string;
+  occurred_at: string;
+  organization_id?: string | null;
+  target_revision_number?: number | null;
+  details: Record<string, unknown>;
+}
+
+export interface ResearchReviewAuditEventListResponse {
+  events: ResearchReviewAuditEventResponse[];
+  total_count: number;
 }
 
 

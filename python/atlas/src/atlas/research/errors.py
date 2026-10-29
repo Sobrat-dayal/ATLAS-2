@@ -541,3 +541,113 @@ class ResearchInvestmentThesisRevisionConflictError(ResearchDomainError):
 class ResearchThesisArgumentNotFoundError(ResearchDomainError):
     """Raised when a thesis argument ID cannot be found."""
     pass
+
+
+# ---------------------------------------------------------------------------
+# Stage 108 Collaboration, Review, Comments & Circulation Errors
+# ---------------------------------------------------------------------------
+
+class ResearchAccessGrantNotFoundError(ResearchDomainError):
+    """Raised when an access grant ID cannot be found."""
+    pass
+
+
+class ResearchAccessGrantForbiddenError(ResearchDomainError):
+    """Raised when an unauthorized user attempts to manage access grants."""
+    pass
+
+
+class ResearchAccessRoleInvalidError(ResearchDomainError):
+    """Raised when an invalid research role assignment is attempted."""
+    pass
+
+
+class ResearchAccessRevokedError(ResearchDomainError):
+    """Raised when attempting an operation under a revoked grant."""
+    pass
+
+
+class ResearchParticipantIneligibleError(ResearchDomainError):
+    """Raised when a proposed collaborator or reviewer is not eligible."""
+    pass
+
+
+class ResearchParticipantCrossTenantError(ResearchDomainError):
+    """Raised when an operation crosses unauthorized tenant boundaries."""
+    pass
+
+
+class ResearchReviewNotFoundError(ResearchDomainError):
+    """Raised when a review request ID cannot be found."""
+    pass
+
+
+class ResearchReviewAccessDeniedError(ResearchDomainError):
+    """Raised when an unauthorized user attempts to access or act on a review."""
+    pass
+
+
+class ResearchReviewInvalidTransitionError(ResearchDomainError):
+    """Raised when an invalid review state machine transition is attempted."""
+    pass
+
+
+class ResearchReviewSelfApprovalForbiddenError(ResearchDomainError):
+    """Raised when an author attempts to approve their own report under separation of duties."""
+    pass
+
+
+class ResearchReviewAlreadyDecidedError(ResearchDomainError):
+    """Raised when attempting to decide an already completed or superseded review."""
+    pass
+
+
+class ResearchReviewRevisionMismatchError(ResearchDomainError):
+    """Raised when an approval decision targets a stale or modified report revision."""
+    pass
+
+
+class ResearchReviewDuplicateActiveRequestError(ResearchDomainError):
+    """Raised when an active review request already exists for the target revision."""
+    pass
+
+
+class ResearchCommentThreadNotFoundError(ResearchDomainError):
+    """Raised when a comment thread ID cannot be found."""
+    pass
+
+
+class ResearchCommentNotFoundError(ResearchDomainError):
+    """Raised when a specific comment ID cannot be found."""
+    pass
+
+
+class ResearchCommentAccessDeniedError(ResearchDomainError):
+    """Raised when an unauthorized user attempts to comment or edit a comment."""
+    pass
+
+
+class ResearchCommentAnchorInvalidError(ResearchDomainError):
+    """Raised when a comment anchor references a nonexistent block or section."""
+    pass
+
+
+class ResearchCirculationNotFoundError(ResearchDomainError):
+    """Raised when an internal circulation record cannot be found."""
+    pass
+
+
+class ResearchCirculationAccessDeniedError(ResearchDomainError):
+    """Raised when an unauthorized user attempts to circulate a report."""
+    pass
+
+
+class ResearchCirculationRevokedError(ResearchDomainError):
+    """Raised when attempting to access a report via a revoked circulation grant."""
+    pass
+
+
+class ResearchQualityGateFailedError(ResearchDomainError):
+    """Raised when a report fails required blocking quality gates prior to finalization."""
+    pass
+

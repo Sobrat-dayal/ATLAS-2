@@ -13,6 +13,7 @@ import { ResearchSourceDiscovery } from "./ResearchSourceDiscovery";
 import { ResearchSourceLibrary } from "./ResearchSourceLibrary";
 import { ResearchAnalysisWorkspace } from "./analysis/ResearchAnalysisWorkspace";
 import { ResearchReportsWorkspace } from "./reports/ResearchReportsWorkspace";
+import { ResearchReviewsWorkspace } from "./reviews/ResearchReviewsWorkspace";
 import { useResearchWorkspace } from "@/hooks/research/useResearchWorkspace";
 
 export function ResearchWorkspace() {
@@ -173,6 +174,39 @@ export function ResearchWorkspace() {
     createThesisArgument,
     deleteThesisArgument,
 
+    // Stage 108 Reviews & Governance
+    reviews,
+    selectedReviewId,
+    currentReview,
+    isReviewsLoading,
+    reviewStatusFilter,
+    setReviewStatusFilter,
+    selectReview,
+    submitReview,
+    decideReview,
+    cancelReview,
+    participants,
+    isParticipantsLoading,
+    loadParticipants,
+    grantParticipant,
+    updateParticipant,
+    revokeParticipant,
+    comments,
+    isCommentsLoading,
+    loadComments,
+    createCommentThread,
+    addCommentReply,
+    resolveCommentThread,
+    reopenCommentThread,
+    qualityGateResult,
+    isQualityGateRunning,
+    runQualityGate,
+    circulations,
+    isCirculationsLoading,
+    loadCirculations,
+    circulateReport,
+    revokeCirculation,
+
     globalError,
     clearError,
   } = useResearchWorkspace();
@@ -260,6 +294,43 @@ export function ResearchWorkspace() {
               onViewAllInvestigations={() => setActiveTab("INVESTIGATIONS")}
             />
           </div>
+        )}
+
+        {activeTab === "REVIEWS" && (
+          <ResearchReviewsWorkspace
+            reviews={reviews}
+            selectedReviewId={selectedReviewId}
+            currentReview={currentReview}
+            isReviewsLoading={isReviewsLoading}
+            reviewStatusFilter={reviewStatusFilter}
+            setReviewStatusFilter={setReviewStatusFilter}
+            availableReports={reports}
+            qualityGateResult={qualityGateResult}
+            isQualityGateRunning={isQualityGateRunning}
+            participants={participants}
+            isParticipantsLoading={isParticipantsLoading}
+            comments={comments}
+            isCommentsLoading={isCommentsLoading}
+            circulations={circulations}
+            isCirculationsLoading={isCirculationsLoading}
+            onSelectReview={selectReview}
+            onSubmitReview={submitReview}
+            onDecideReview={decideReview}
+            onCancelReview={cancelReview}
+            onRunQualityGate={runQualityGate}
+            onLoadParticipants={loadParticipants}
+            onGrantParticipant={grantParticipant}
+            onUpdateParticipant={updateParticipant}
+            onRevokeParticipant={revokeParticipant}
+            onLoadComments={loadComments}
+            onAddCommentThread={createCommentThread}
+            onAddCommentReply={addCommentReply}
+            onResolveCommentThread={resolveCommentThread}
+            onReopenCommentThread={reopenCommentThread}
+            onLoadCirculations={loadCirculations}
+            onCirculateReport={circulateReport}
+            onRevokeCirculation={revokeCirculation}
+          />
         )}
 
         {(activeTab === "REPORTS" || activeTab === "THESES") && (

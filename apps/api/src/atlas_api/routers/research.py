@@ -55,8 +55,13 @@ from atlas.research.enums import (
     ReportLifecycleStatus,
     ResearchAnalysisType,
     ResearchReportType,
+    ResearchResourceType,
+    ResearchRole,
     ResearchSourceType,
     ResearchType,
+    ReviewDecisionType,
+    ReviewScope,
+    ReviewStatus,
 )
 from atlas.research.errors import (
     ResearchAnalysisAccessDeniedError,
@@ -108,6 +113,28 @@ from atlas.research.errors import (
     ResearchSourceNotFoundError,
     ResearchSourceUrlUnsafeError,
     ResearchThesisArgumentNotFoundError,
+    # Stage 108 Errors
+    ResearchAccessGrantForbiddenError,
+    ResearchAccessGrantNotFoundError,
+    ResearchAccessRevokedError,
+    ResearchAccessRoleInvalidError,
+    ResearchCirculationAccessDeniedError,
+    ResearchCirculationNotFoundError,
+    ResearchCirculationRevokedError,
+    ResearchCommentAccessDeniedError,
+    ResearchCommentAnchorInvalidError,
+    ResearchCommentNotFoundError,
+    ResearchCommentThreadNotFoundError,
+    ResearchParticipantCrossTenantError,
+    ResearchParticipantIneligibleError,
+    ResearchQualityGateFailedError,
+    ResearchReviewAccessDeniedError,
+    ResearchReviewAlreadyDecidedError,
+    ResearchReviewDuplicateActiveRequestError,
+    ResearchReviewInvalidTransitionError,
+    ResearchReviewNotFoundError,
+    ResearchReviewRevisionMismatchError,
+    ResearchReviewSelfApprovalForbiddenError,
 )
 from atlas.research.schemas import (
     # Stage 106 Schemas
@@ -209,6 +236,30 @@ from atlas.research.schemas import (
     ValidateAnalysisSpecificationRequestDTO,
     ValidateAnalysisSpecificationResponseDTO,
     VerifyReportRequest,
+    # Stage 108 Schemas
+    CreateAccessGrantRequest,
+    CreateCirculationRequest,
+    CreateCommentReplyRequest,
+    CreateCommentThreadRequest,
+    CreateReviewDecisionRequest,
+    CreateReviewRequest,
+    QualityGateResultResponse,
+    ResearchAccessGrantListResponse,
+    ResearchAccessGrantResponse,
+    ResearchApprovalStatusResponse,
+    ResearchCommentResponse,
+    ResearchCommentThreadListResponse,
+    ResearchCommentThreadResponse,
+    ResearchInternalCirculationListResponse,
+    ResearchInternalCirculationResponse,
+    ResearchReviewAuditEventListResponse,
+    ResearchReviewDecisionResponse,
+    ResearchReviewListResponse,
+    ResearchReviewRequestResponse,
+    RunQualityGateRequest,
+    UpdateAccessGrantRequest,
+    UpdateCommentRequest,
+    UpdateReviewRequest,
 )
 from atlas.research.service import (
     ResearchDocumentService,
@@ -2485,6 +2536,452 @@ def delete_thesis_argument_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ResearchInvestmentThesisAccessDeniedError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Stage 108 Collaboration, Review Workflows, Quality Gates & Circulation
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/research/resources/{resource_type}/{resource_id}/participants",
+    response_model=ResearchAccessGrantListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List access grants and collaborators for a research resource",
+)
+def list_resource_participants_endpoint(
+    resource_type: ResearchResourceType = Path(..., description="Resource type"),
+    resource_id: str = Path(..., description="Resource ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.list_access_grants(resource_type, resource_id, actor_id=user_id)
+    except (ResearchInvestigationNotFoundError, ResearchReportNotFoundError, ResearchInvestmentThesisNotFoundError) as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReviewAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/resources/{resource_type}/{resource_id}/participants",
+    response_model=ResearchAccessGrantResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Grant collaboration access to a user on a research resource",
+)
+def create_resource_participant_endpoint(
+    resource_type: ResearchResourceType = Path(..., description="Resource type"),
+    resource_id: str = Path(..., description="Resource ID"),
+    payload: CreateAccessGrantRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.create_access_grant(resource_type, resource_id, payload, actor_id=user_id)
+    except (ResearchInvestigationNotFoundError, ResearchReportNotFoundError, ResearchInvestmentThesisNotFoundError) as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except (ResearchAccessGrantForbiddenError, ResearchReviewAccessDeniedError) as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.patch(
+    "/research/participants/{grant_id}",
+    response_model=ResearchAccessGrantResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update participant role grant",
+)
+def update_participant_grant_endpoint(
+    grant_id: str = Path(..., description="Access grant ID"),
+    payload: UpdateAccessGrantRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.update_access_grant(grant_id, payload, actor_id=user_id)
+    except ResearchAccessGrantNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except (ResearchAccessGrantForbiddenError, ResearchReviewAccessDeniedError) as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.delete(
+    "/research/participants/{grant_id}",
+    response_model=ResearchAccessGrantResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Revoke participant access grant",
+)
+def revoke_participant_grant_endpoint(
+    grant_id: str = Path(..., description="Access grant ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.revoke_access_grant(grant_id, actor_id=user_id)
+    except ResearchAccessGrantNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except (ResearchAccessGrantForbiddenError, ResearchReviewAccessDeniedError) as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/reviews",
+    response_model=ResearchReviewListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List or query formal research review requests",
+)
+def list_review_requests_endpoint(
+    target_id: Optional[str] = Query(None, description="Target report or thesis ID"),
+    reviewer_id: Optional[str] = Query(None, description="Assigned reviewer ID"),
+    requested_by: Optional[str] = Query(None, description="Requester user ID"),
+    status_filter: Optional[ReviewStatus] = Query(None, alias="status", description="Review status filter"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    return service.list_review_requests(
+        target_id=target_id,
+        reviewer_id=reviewer_id,
+        requested_by=requested_by,
+        status=status_filter,
+    )
+
+
+@router.post(
+    "/research/reviews",
+    response_model=ResearchReviewRequestResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit a research report or thesis for formal peer review",
+)
+def create_review_request_endpoint(
+    payload: CreateReviewRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.submit_review_request(payload, actor_id=user_id)
+    except (ResearchReportNotFoundError, ResearchInvestmentThesisNotFoundError) as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReviewDuplicateActiveRequestError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except (ResearchReviewRevisionMismatchError, ResearchReviewSelfApprovalForbiddenError) as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/research/reviews/{review_id}",
+    response_model=ResearchReviewRequestResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get details of a specific review request",
+)
+def get_review_request_endpoint(
+    review_id: str = Path(..., description="Review request ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_review_request(review_id, actor_id=user_id)
+    except ResearchReviewNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.patch(
+    "/research/reviews/{review_id}",
+    response_model=ResearchReviewRequestResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update review instructions or assigned reviewer",
+)
+def update_review_request_endpoint(
+    review_id: str = Path(..., description="Review request ID"),
+    payload: UpdateReviewRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.update_review_request(review_id, payload, actor_id=user_id)
+    except ResearchReviewNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReviewAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/reviews/{review_id}/cancel",
+    response_model=ResearchReviewRequestResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Cancel an active review request",
+)
+def cancel_review_request_endpoint(
+    review_id: str = Path(..., description="Review request ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.cancel_review_request(review_id, actor_id=user_id)
+    except ResearchReviewNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReviewAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ResearchReviewInvalidTransitionError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/research/reviews/{review_id}/decisions",
+    response_model=ResearchReviewDecisionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit a formal review decision (Approve, Request Changes, Reject)",
+)
+def decide_review_endpoint(
+    review_id: str = Path(..., description="Review request ID"),
+    payload: CreateReviewDecisionRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.decide_review(review_id, payload, actor_id=user_id)
+    except ResearchReviewNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchReviewAlreadyDecidedError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except ResearchReviewSelfApprovalForbiddenError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except (ResearchReviewRevisionMismatchError, ResearchReviewInvalidTransitionError) as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/research/reports/{report_id}/approval-status",
+    response_model=ResearchApprovalStatusResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get formal review approval certification status for a report revision",
+)
+def get_report_approval_status_endpoint(
+    report_id: str = Path(..., description="Report ID"),
+    revision_number: Optional[int] = Query(None, description="Optional target revision number"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.get_report_approval_status(report_id, revision_number=revision_number, actor_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/research/resources/{resource_type}/{resource_id}/comments",
+    response_model=ResearchCommentThreadListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List anchored comment threads for a research resource",
+)
+def list_comments_endpoint(
+    resource_type: str = Path(..., description="Resource type e.g. REPORT, INVESTIGATION"),
+    resource_id: str = Path(..., description="Resource ID"),
+    revision_number: Optional[int] = Query(None, description="Target revision number"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.list_comment_threads(resource_type, resource_id, revision_number=revision_number, actor_id=user_id)
+
+
+@router.post(
+    "/research/resources/{resource_type}/{resource_id}/comments",
+    response_model=ResearchCommentThreadResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create an anchored comment thread on a section, block, or evidence",
+)
+def create_comment_thread_endpoint(
+    resource_type: str = Path(..., description="Resource type e.g. REPORT, INVESTIGATION"),
+    resource_id: str = Path(..., description="Resource ID"),
+    payload: CreateCommentThreadRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.create_comment_thread(resource_type, resource_id, payload, actor_id=user_id)
+    except (ResearchReportNotFoundError, ResearchInvestigationNotFoundError) as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchCommentAnchorInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/research/comment-threads/{thread_id}/replies",
+    response_model=ResearchCommentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Post a reply in an existing comment thread",
+)
+def add_comment_reply_endpoint(
+    thread_id: str = Path(..., description="Comment thread ID"),
+    payload: CreateCommentReplyRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.add_comment_reply(thread_id, payload, actor_id=user_id)
+    except ResearchCommentThreadNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.patch(
+    "/research/comments/{comment_id}",
+    response_model=ResearchCommentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Edit an authored comment body",
+)
+def update_comment_endpoint(
+    comment_id: str = Path(..., description="Comment ID"),
+    payload: UpdateCommentRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.update_comment(comment_id, payload, actor_id=user_id)
+    except (ResearchCommentNotFoundError, ResearchCommentAccessDeniedError) as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/comment-threads/{thread_id}/resolve",
+    response_model=ResearchCommentThreadResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Resolve a comment thread",
+)
+def resolve_comment_thread_endpoint(
+    thread_id: str = Path(..., description="Comment thread ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.resolve_comment_thread(thread_id, actor_id=user_id)
+    except ResearchCommentThreadNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/research/comment-threads/{thread_id}/reopen",
+    response_model=ResearchCommentThreadResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Reopen a resolved comment thread",
+)
+def reopen_comment_thread_endpoint(
+    thread_id: str = Path(..., description="Comment thread ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.reopen_comment_thread(thread_id, actor_id=user_id)
+    except ResearchCommentThreadNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/research/reports/{report_id}/quality-gate",
+    response_model=QualityGateResultResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Execute comprehensive governance quality gate evaluation on report revision",
+)
+def run_quality_gate_endpoint(
+    report_id: str = Path(..., description="Report ID"),
+    payload: RunQualityGateRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.run_quality_gate(report_id, payload, actor_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/research/reports/{report_id}/circulation",
+    response_model=ResearchInternalCirculationListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List internal circulation records for a research report",
+)
+def list_circulations_endpoint(
+    report_id: str = Path(..., description="Report ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.list_internal_circulations(report_id, actor_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/research/reports/{report_id}/circulation",
+    response_model=ResearchInternalCirculationResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Circulate an approved or finalized report to internal recipients",
+)
+def create_circulation_endpoint(
+    report_id: str = Path(..., description="Report ID"),
+    payload: CreateCirculationRequest = ...,
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.circulate_report_internally(report_id, payload, actor_id=user_id)
+    except ResearchReportNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchQualityGateFailedError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except ResearchCirculationAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.post(
+    "/research/circulation/{circulation_id}/revoke",
+    response_model=ResearchInternalCirculationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Revoke an internal circulation grant",
+)
+def revoke_circulation_endpoint(
+    circulation_id: str = Path(..., description="Circulation ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    try:
+        return service.revoke_internal_circulation(circulation_id, actor_id=user_id)
+    except ResearchCirculationNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResearchCirculationAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get(
+    "/research/resources/{resource_type}/{resource_id}/audit-events",
+    response_model=ResearchReviewAuditEventListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List collaboration and review audit trail events for a resource",
+)
+def list_resource_audit_events_endpoint(
+    resource_type: str = Path(..., description="Resource type"),
+    resource_id: str = Path(..., description="Resource ID"),
+    service: ResearchService = Depends(get_research_service),
+    user: AuthPrincipal = Depends(get_current_user),
+):
+    user_id = _get_user_id(user)
+    return service.list_review_audit_events(resource_id, actor_id=user_id)
 
 
 # ---------------------------------------------------------------------------

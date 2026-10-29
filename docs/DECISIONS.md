@@ -9883,6 +9883,42 @@ This document records the major architectural and product decisions established.
 813. **Zero Autonomous Trade Generation**: Preserved strict boundary prohibiting automated buy/sell recommendations, portfolio rebalancing, or direct market execution.
 814. **Roadmap Boundary (Stage 107 of 150)**: Master engineering implementation completed for Stage 107. All Stage 108 implementation is strictly deferred.
 
+## Stage 108: Institutional Research Collaboration, Analyst Review, Evidence Governance and Approval Workflow Platform
+
+### Participant Governance & Granular Research Access Grants
+815. **Participant Governance & Granular Research Access Grants**: Engineered `ResearchAccessGrant` domain model supporting resource targets (`INVESTIGATION`, `REPORT`, `THESIS`) and hierarchical roles: `OWNER` (full control, participant management, finalization), `EDITOR` (author revisions, edit content), `REVIEWER` (issue formal review decisions, request changes), `COMMENTER` (post anchored discussions), and `VIEWER` (read-only audit).
+816. **Principal Polymorphism & Expiration Lifecycle**: Supported both individual users (`USER`) and institutional teams (`TEAM` / `GROUP`), with optional ISO 8601 expiration timestamps (`expires_at`) and audit-traceable revocations (`revoked_at`).
+817. **Dynamic Role Resolution Engine**: Created `resolve_user_role` repository method unifying direct ownership check (user ID equals resource owner) and explicit access grants with role precedence to ensure deterministic privilege determination across all research actions.
+
+### Institutional Research Review State Machine & Revision Pinning
+818. **Canonical Research Review Request**: Formalized `ResearchReviewRequest` capturing target resource, revision number (`target_revision_number`), cryptographic SHA-256 fingerprint (`target_content_hash`), review scope (`FULL_REPORT`, `SECTION_SPECIFIC`, `FINANCIAL_ANALYSIS`, `THESIS_VALIDATION`, `EVIDENCE_INTEGRITY`), round index, and instructions.
+819. **Strict Research Review State Machine**: Implemented deterministic transition graph: `DRAFT` -> `SUBMITTED` -> `IN_REVIEW` -> `CHANGES_REQUESTED` | `APPROVED` | `REJECTED`, alongside terminal transitions `CANCELED` and `SUPERSEDED`.
+820. **Exact Revision Binding & Anti-Tampering Concurrency**: When a review request is submitted, it binds to the exact revision and content hash of the target report or thesis. If the author mutates the document creating a higher revision while review is pending, subsequent review decisions fail with `ResearchReviewRevisionMismatchError` (HTTP 400), preventing approvals of unreviewed content.
+
+### Separation of Duties & Quality Gates
+821. **Separation of Duties & Author Self-Approval Prohibition**: Implemented hard regulatory control forbidding report authors/owners from issuing an `APPROVE` decision on their own research submissions (`reviewer_user_id == target_resource.owner_user_id`), raising `ResearchReviewSelfApprovalForbiddenError` (HTTP 403).
+822. **Formal Review Decisions with Auditable Rationale**: Captured `ResearchReviewDecision` containing decision type (`APPROVE`, `REQUEST_CHANGES`, `REJECT`), reviewer ID, revision number, content hash, decision comments, and timestamp.
+823. **Synchronized Report Lifecycle Progression**: Recording an `APPROVE` decision automatically updates the report lifecycle to `REVIEWED`, while `REQUEST_CHANGES` sets review status to `CHANGES_REQUESTED` to prompt author iteration.
+824. **Automated Governance Quality Gates Engine**: Engineered `run_quality_gate` performing multi-rule verification: minimum structural sections, zero unresolved blocking comments, all citations linked to active sources, absence of placeholder content, and formal review approval verification.
+825. **Multi-Severity Quality Gate Diagnostics**: Classified findings into `BLOCKING` issues (preventing internal circulation and sign-off), `WARNING` items, and passed checklist criteria (`checks_passed`), returning `can_circulate` boolean flag.
+
+### Anchored Discussions & Staleness Tracking
+826. **Anchored Discussion Threads & Comment Model**: Built `ResearchCommentThread` enabling targeted commentary anchored to granular entities: `REPORT_SECTION`, `CONTENT_BLOCK`, `TEXT_RANGE`, `CITATION`, `ANALYSIS_RUN`, and `FINDING`.
+827. **Revision Staleness Detection for Anchored Threads**: Threads track the `target_revision_number` at time of creation; when a newer report revision is generated, `is_stale` is automatically evaluated and surfaced in UI badges to warn reviewers that the underlying content has changed.
+828. **Thread Resolution Lifecycle & Verification Audit**: Supported thread states `OPEN`, `RESOLVED`, and `REOPENED` with resolution metadata (`resolved_by`, `resolved_at`), enabling reviewers to verify whether all critique items have been addressed.
+
+### Controlled Internal Circulation & Operations Audit Trail
+829. **Controlled Internal Circulation & Sharing Platform**: Formalized `ResearchInternalCirculation` enabling restricted distribution of reviewed and approved reports to explicit internal recipients (`authorized_recipient_ids`, `authorized_team_ids`).
+830. **Circulation Approval Prerequisite**: Circulating a report strictly requires verified `APPROVED` or `FINALIZED` status; attempting to circulate draft or unreviewed research raises `ResearchCirculationForbiddenError` (HTTP 400).
+831. **Circulation Revocation & Distribution Audit**: Supported immediate circulation revocation (`revoke_internal_circulation`) with timestamp tracking, audit logging, and watermark restriction guidance (`WATERMARK_CONFIDENTIAL`).
+832. **Comprehensive Research Operations Audit Trail**: Implemented `record_review_audit_event` and `list_review_audit_events` capturing immutable log entries across all operational events (`GRANT_CREATED`, `REVIEW_SUBMITTED`, `REVIEW_DECIDED`, `COMMENT_ADDED`, `COMMENT_RESOLVED`, `QUALITY_GATE_RUN`, `REPORT_CIRCULATED`, `CIRCULATION_REVOKED`).
+
+### Frontend Research Reviews Workspace & Safety Boundaries
+833. **Frontend Research Reviews Workspace**: Integrated `"Reviews & Governance"` tab into `/research` supporting three-pane workflow: `ResearchReviewQueue` (filterable by status, scope, priority), `ResearchReviewDetail` (target metadata, assigned reviewers, instructions, decision controls), and `ResearchCommentSidebar` (anchored discussions and replies).
+834. **Interactive Collaboration Modals**: Developed `ResearchParticipantsModal` (manage collaborators, grant/change/revoke roles), `ResearchCirculationDialog` (distribute approved reports to internal recipients, inspect active circulations), and `NewReviewDialog` (submit reports for peer review).
+835. **Cross-Tenant Isolation & Least Privilege Enforcement**: All collaboration, review, comment, quality gate, and circulation endpoints enforce authentication and tenant isolation, restricting resource mutations to authenticated users with requisite role entitlements.
+836. **Roadmap Boundary (Stage 108 of 150)**: Master engineering implementation completed for Stage 108. All Stage 109 implementation is strictly deferred.
+
 
 
 

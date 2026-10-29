@@ -11,6 +11,9 @@ from atlas.research.enums import (
     AnalysisFrequency,
     AnalysisInputPolicy,
     AssumptionSourceType,
+    CirculationStatus,
+    CommentAnchorType,
+    CommentThreadStatus,
     DocumentComparisonMode,
     DocumentFormat,
     DocumentProcessingStatus,
@@ -26,6 +29,7 @@ from atlas.research.enums import (
     ReportSnapshotPolicy,
     ResearchActivityAction,
     ResearchAnalysisType,
+    ResearchAuditEventType,
     ResearchClaimCategory,
     ResearchEvidenceStatus,
     ResearchFindingReviewStatus,
@@ -33,10 +37,16 @@ from atlas.research.enums import (
     ResearchHypothesisStatus,
     ResearchNoteStatus,
     ResearchNoteType,
+    ResearchPrincipalType,
     ResearchQuestionStatus,
     ResearchReportType,
+    ResearchResourceType,
+    ResearchRole,
     ResearchSourceType,
     ResearchType,
+    ReviewDecisionType,
+    ReviewScope,
+    ReviewStatus,
     SearchMode,
     SourceAvailabilityStatus,
     ThesisArgumentType,
@@ -1437,3 +1447,237 @@ class ResearchReportExportListResponse(BaseModel):
     """Collection of export jobs for a report."""
     exports: List[ResearchReportExportResponse]
     total_count: int
+
+
+# ---------------------------------------------------------------------------
+# Stage 108 Collaboration, Review, Comments & Circulation Schemas
+# ---------------------------------------------------------------------------
+
+class CreateAccessGrantRequest(BaseModel):
+    """Request payload to grant research access to a principal."""
+    principal_type: ResearchPrincipalType = ResearchPrincipalType.USER
+    principal_id: str
+    role: ResearchRole
+    expires_at: Optional[datetime.datetime] = None
+
+
+class UpdateAccessGrantRequest(BaseModel):
+    """Request payload to change an existing research role grant."""
+    role: ResearchRole
+
+
+class ResearchAccessGrantResponse(BaseModel):
+    """Access grant record returned to authorized clients."""
+    grant_id: str
+    resource_type: ResearchResourceType
+    resource_id: str
+    principal_type: ResearchPrincipalType
+    principal_id: str
+    role: ResearchRole
+    granted_by: str
+    organization_id: Optional[str] = None
+    created_at: datetime.datetime
+    expires_at: Optional[datetime.datetime] = None
+    revoked_at: Optional[datetime.datetime] = None
+
+
+class ResearchAccessGrantListResponse(BaseModel):
+    """Collection of access grants for a resource."""
+    grants: List[ResearchAccessGrantResponse]
+    total_count: int
+
+
+class CreateReviewRequest(BaseModel):
+    """Request to initiate a formal review round on a research object."""
+    target_type: str = "REPORT"
+    target_id: str
+    target_revision_number: Optional[int] = None
+    assigned_reviewer_id: str
+    review_scope: ReviewScope = ReviewScope.FULL_REPORT
+    due_date: Optional[datetime.datetime] = None
+    instructions: Optional[str] = None
+
+
+class UpdateReviewRequest(BaseModel):
+    """Request to modify non-decision review metadata."""
+    assigned_reviewer_id: Optional[str] = None
+    due_date: Optional[datetime.datetime] = None
+    instructions: Optional[str] = None
+
+
+class CreateReviewDecisionRequest(BaseModel):
+    """Formal decision submission from an assigned reviewer."""
+    decision: ReviewDecisionType
+    decision_comment: Optional[str] = None
+    expected_revision_number: Optional[int] = None
+
+
+class ResearchReviewDecisionResponse(BaseModel):
+    """Recorded review decision audit representation."""
+    decision_id: str
+    review_request_id: str
+    reviewer_user_id: str
+    target_revision_number: int
+    target_content_hash: str
+    decision: ReviewDecisionType
+    decision_comment: Optional[str] = None
+    decided_at: datetime.datetime
+
+
+class ResearchReviewRequestResponse(BaseModel):
+    """Detailed review request record."""
+    review_request_id: str
+    target_type: str
+    target_id: str
+    target_revision_number: int
+    target_content_hash: str
+    requested_by: str
+    assigned_reviewer_id: str
+    review_scope: ReviewScope
+    review_round: int
+    status: ReviewStatus
+    organization_id: Optional[str] = None
+    due_date: Optional[datetime.datetime] = None
+    instructions: Optional[str] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    completed_at: Optional[datetime.datetime] = None
+    latest_decision: Optional[ResearchReviewDecisionResponse] = None
+
+
+class ResearchReviewListResponse(BaseModel):
+    """Queue of review requests."""
+    reviews: List[ResearchReviewRequestResponse]
+    total_count: int
+
+
+class ResearchApprovalStatusResponse(BaseModel):
+    """Point-in-time approval certification status for a report revision."""
+    report_id: str
+    revision_number: int
+    is_approved: bool
+    status_message: str
+    approval_id: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime.datetime] = None
+    target_content_hash: Optional[str] = None
+
+
+class CreateCommentThreadRequest(BaseModel):
+    """Request to anchor a new review discussion thread."""
+    target_revision_number: Optional[int] = None
+    anchor_type: CommentAnchorType = CommentAnchorType.REPORT_SECTION
+    anchor_reference: str
+    anchor_text: Optional[str] = None
+    initial_comment: str
+
+
+class CreateCommentReplyRequest(BaseModel):
+    """Request to post a reply within an existing comment thread."""
+    body: str
+
+
+class UpdateCommentRequest(BaseModel):
+    """Request to edit an authored comment body."""
+    body: str
+
+
+class ResearchCommentResponse(BaseModel):
+    """Individual comment representation."""
+    comment_id: str
+    thread_id: str
+    author_user_id: str
+    body: str
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    edit_revision: int
+
+
+class ResearchCommentThreadResponse(BaseModel):
+    """Full thread representation with comments."""
+    thread_id: str
+    resource_type: str
+    resource_id: str
+    target_revision_number: int
+    anchor_type: CommentAnchorType
+    anchor_reference: str
+    anchor_text: Optional[str] = None
+    created_by: str
+    created_at: datetime.datetime
+    resolution_status: CommentThreadStatus
+    resolved_by: Optional[str] = None
+    resolved_at: Optional[datetime.datetime] = None
+    comments: List[ResearchCommentResponse]
+    is_stale: bool = False
+
+
+class ResearchCommentThreadListResponse(BaseModel):
+    """Collection of anchored comment threads."""
+    threads: List[ResearchCommentThreadResponse]
+    total_count: int
+
+
+class RunQualityGateRequest(BaseModel):
+    """Request to evaluate a report revision against governance quality gates."""
+    revision_number: Optional[int] = None
+
+
+class QualityGateResultResponse(BaseModel):
+    """Audit response from a quality gate evaluation run."""
+    gate_run_id: str
+    report_id: str
+    revision_number: int
+    executed_at: datetime.datetime
+    eligible_for_review: bool
+    eligible_for_finalization: bool
+    blocking_issues_count: int
+    warnings_count: int
+    issues: List[Dict[str, Any]]
+    checklist: List[Dict[str, Any]]
+
+
+class CreateCirculationRequest(BaseModel):
+    """Request to internally circulate an approved or finalized report."""
+    revision_number: Optional[int] = None
+    recipient_user_ids: List[str] = Field(default_factory=list)
+    notes: Optional[str] = None
+
+
+class ResearchInternalCirculationResponse(BaseModel):
+    """Record of an active or revoked internal report circulation."""
+    circulation_id: str
+    report_id: str
+    revision_number: int
+    initiated_by: str
+    recipient_user_ids: List[str]
+    organization_id: Optional[str] = None
+    status: CirculationStatus
+    notes: Optional[str] = None
+    created_at: datetime.datetime
+    revoked_at: Optional[datetime.datetime] = None
+
+
+class ResearchInternalCirculationListResponse(BaseModel):
+    """Collection of internal circulations."""
+    circulations: List[ResearchInternalCirculationResponse]
+    total_count: int
+
+
+class ResearchReviewAuditEventResponse(BaseModel):
+    """Audit trail record of collaboration and review operations."""
+    audit_event_id: str
+    actor_user_id: str
+    resource_type: str
+    resource_id: str
+    action: str
+    occurred_at: datetime.datetime
+    organization_id: Optional[str] = None
+    target_revision_number: Optional[int] = None
+    details: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ResearchReviewAuditEventListResponse(BaseModel):
+    """Collection of review audit events."""
+    events: List[ResearchReviewAuditEventResponse]
+    total_count: int
+

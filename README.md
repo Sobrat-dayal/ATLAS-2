@@ -1259,6 +1259,41 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly).
 - **Documentation**: See `docs/RESEARCH_THESIS_AND_REPORT_STUDIO.md` and `docs/DECISIONS.md`.
 
+## Institutional-Grade Research Collaboration, Analyst Review, Evidence Governance and Approval Workflow Platform (Stage 108)
+- **Architecture**: Institutional-grade research collaboration, formal review state machine, anchored evidence governance, and controlled internal circulation platform integrated into `/research` (Module 9). Extends Stage 104-107 research workflows with the multi-analyst oversight, revision-bound sign-offs, and compliance auditing required for professional research operations.
+- **Participant Governance & Granular Access Grants**:
+  - Hierarchical research roles: `OWNER` (full administration and participant management), `EDITOR` (drafting and revision authoring), `REVIEWER` (formal review decisions and change requests), `COMMENTER` (anchored discussions), and `VIEWER` (read-only audit).
+  - Principal polymorphism: Supports both individual users (`USER`) and institutional teams (`TEAM`/`GROUP`).
+  - Time-bounded and revocable: Explicit ISO 8601 expiration dates (`expires_at`) and audit-traceable revocations (`revoked_at`).
+  - Unified role resolution: Deterministic evaluation prioritizing direct resource ownership and highest granted role.
+- **Formal Review State Machine & Exact Revision Pinning**:
+  - Deterministic lifecycle states: `DRAFT` -> `SUBMITTED` -> `IN_REVIEW` -> `CHANGES_REQUESTED` | `APPROVED` | `REJECTED`, alongside terminal transitions `CANCELED` and `SUPERSEDED`.
+  - Anti-tampering revision binding: Review requests pin strictly to `target_revision_number` and its SHA-256 `target_content_hash`. Author edits during pending review cause subsequent review decisions to fail with `ResearchReviewRevisionMismatchError` (HTTP 400), preventing approvals of unreviewed alterations.
+  - Review scopes: `FULL_REPORT`, `SECTION_SPECIFIC`, `FINANCIAL_ANALYSIS`, `THESIS_VALIDATION`, and `EVIDENCE_INTEGRITY`.
+- **Separation of Duties & Automated Quality Gates**:
+  - Author self-approval block: Hard institutional guard prohibiting authors and owners from issuing an `APPROVE` decision on their own research (`ResearchReviewSelfApprovalForbiddenError`, HTTP 403).
+  - Multi-severity quality gate engine (`run_quality_gate`): Evaluates mandatory structural sections, flags unresolved blocking comment threads, checks citation integrity, scans for placeholder text, and verifies formal review approval.
+  - Granular gate diagnostics: Returns `BLOCKING` issues (preventing internal circulation), `WARNING` items, and passed checklist criteria (`checks_passed`).
+- **Anchored Discussion Threads & Staleness Tracking**:
+  - Anchored comment model: Discussions are attached directly to underlying research entities (`REPORT_SECTION`, `CONTENT_BLOCK`, `TEXT_RANGE`, `CITATION`, `ANALYSIS_RUN`, `FINDING`).
+  - Revision staleness tracking: Automatically evaluates `is_stale: bool` when underlying report revisions increment, badging outdated threads to alert reviewers.
+  - Resolution lifecycle: Tracks `OPEN` -> `RESOLVED` <-> `REOPENED` with resolver identity and timestamp.
+- **Controlled Internal Circulation & Operations Audit Trail**:
+  - Regulated distribution: Formalized `ResearchInternalCirculation` permitting sharing only for verified `APPROVED` or `FINALIZED` reports (`ResearchCirculationForbiddenError`, HTTP 400 for drafts).
+  - Recipient boundary control: Restricts access to explicit user lists or internal departments with immediate revocation capability.
+  - Complete audit trail: Immutable event logging for all participant grants, review submissions, decisions, comments, gate evaluations, and circulations.
+- **Frontend Research Reviews Workspace (`/research`)**:
+  - Integrated `"Reviews & Governance"` tab into the central `/research` navigation.
+  - 3-pane review studio: `ResearchReviewQueue` (queue filtering by status and scope), `ResearchReviewDetail` (target metadata, review instructions, quality gate summary, decision actions), and `ResearchCommentSidebar` (anchored discussion threads, replies, and staleness badges).
+  - Dedicated operational dialogs: `ResearchParticipantsModal` (collaborator role management), `ResearchCirculationDialog` (recipient distribution and revocation), and `NewReviewDialog` (submitting reports for peer review).
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_research_collaboration_and_review_v1.py` + full research suite (`test_research_foundation_v1.py`, `test_research_document_intelligence_v1.py`, `test_research_analysis_v1.py`, `test_research_reports_v1.py`) (68/68 passed in 6.91s).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (93/93 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Frontend linter: `npx eslint src/components/research/reviews/` (0 errors).
+  - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
+- **Documentation**: See `docs/RESEARCH_COLLABORATION_REVIEW_AND_GOVERNANCE.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

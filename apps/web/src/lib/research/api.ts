@@ -70,6 +70,32 @@ import {
   UpdateReportSectionDTO,
   UpdateResearchReportDTO,
   UpdateResearchThesisDTO,
+  // Stage 108 Types
+  CreateAccessGrantRequest,
+  CreateCirculationRequest,
+  CreateCommentReplyRequest,
+  CreateCommentThreadRequest,
+  CreateReviewDecisionRequest,
+  CreateReviewRequest,
+  QualityGateResultResponse,
+  ResearchAccessGrantListResponse,
+  ResearchAccessGrantResponse,
+  ResearchApprovalStatusResponse,
+  ResearchCommentResponse,
+  ResearchCommentThreadListResponse,
+  ResearchCommentThreadResponse,
+  ResearchInternalCirculationListResponse,
+  ResearchInternalCirculationResponse,
+  ResearchReviewAuditEventListResponse,
+  ResearchReviewDecisionResponse,
+  ResearchReviewListResponse,
+  ResearchReviewRequestResponse,
+  ResearchResourceType,
+  ReviewStatus,
+  RunQualityGateRequest,
+  UpdateAccessGrantRequest,
+  UpdateCommentRequest,
+  UpdateReviewRequest,
 } from "./types";
 
 function getBaseApiUrl(): string {
@@ -1188,5 +1214,239 @@ export async function deleteThesisArgument(
   const url = `${getBaseApiUrl()}/api/v1/research/theses/${thesisId}/arguments/${argumentId}`;
   const res = await fetch(url, { method: "DELETE", headers: getHeaders() });
   return handleResponse<{ success: boolean; message: string }>(res);
+}
+
+// ---------------------------------------------------------------------------
+// Stage 108 — Collaboration, Review, Comments & Circulation API Endpoints
+// ---------------------------------------------------------------------------
+
+export async function listResourceParticipants(
+  resourceType: ResearchResourceType,
+  resourceId: string
+): Promise<ResearchAccessGrantListResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/resources/${resourceType}/${resourceId}/participants`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchAccessGrantListResponse>(res);
+}
+
+export async function createResourceParticipant(
+  resourceType: ResearchResourceType,
+  resourceId: string,
+  data: CreateAccessGrantRequest
+): Promise<ResearchAccessGrantResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/resources/${resourceType}/${resourceId}/participants`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchAccessGrantResponse>(res);
+}
+
+export async function updateParticipantGrant(
+  grantId: string,
+  data: UpdateAccessGrantRequest
+): Promise<ResearchAccessGrantResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/participants/${grantId}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchAccessGrantResponse>(res);
+}
+
+export async function revokeParticipantGrant(grantId: string): Promise<ResearchAccessGrantResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/participants/${grantId}`;
+  const res = await fetch(url, { method: "DELETE", headers: getHeaders() });
+  return handleResponse<ResearchAccessGrantResponse>(res);
+}
+
+export async function listReviewRequests(params?: {
+  targetId?: string;
+  reviewerId?: string;
+  requestedBy?: string;
+  status?: ReviewStatus;
+}): Promise<ResearchReviewListResponse> {
+  const query = new URLSearchParams();
+  if (params?.targetId) query.append("target_id", params.targetId);
+  if (params?.reviewerId) query.append("reviewer_id", params.reviewerId);
+  if (params?.requestedBy) query.append("requested_by", params.requestedBy);
+  if (params?.status) query.append("status", params.status);
+
+  const qs = query.toString() ? `?${query.toString()}` : "";
+  const url = `${getBaseApiUrl()}/api/v1/research/reviews${qs}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchReviewListResponse>(res);
+}
+
+export async function createReviewRequest(
+  data: CreateReviewRequest
+): Promise<ResearchReviewRequestResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reviews`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchReviewRequestResponse>(res);
+}
+
+export async function getReviewRequest(reviewId: string): Promise<ResearchReviewRequestResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reviews/${reviewId}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchReviewRequestResponse>(res);
+}
+
+export async function updateReviewRequest(
+  reviewId: string,
+  data: UpdateReviewRequest
+): Promise<ResearchReviewRequestResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reviews/${reviewId}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchReviewRequestResponse>(res);
+}
+
+export async function cancelReviewRequest(reviewId: string): Promise<ResearchReviewRequestResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reviews/${reviewId}/cancel`;
+  const res = await fetch(url, { method: "POST", headers: getHeaders() });
+  return handleResponse<ResearchReviewRequestResponse>(res);
+}
+
+export async function decideReview(
+  reviewId: string,
+  data: CreateReviewDecisionRequest
+): Promise<ResearchReviewDecisionResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reviews/${reviewId}/decisions`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchReviewDecisionResponse>(res);
+}
+
+export async function getReportApprovalStatus(
+  reportId: string,
+  revisionNumber?: number
+): Promise<ResearchApprovalStatusResponse> {
+  const qs = revisionNumber !== undefined ? `?revision_number=${revisionNumber}` : "";
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/approval-status${qs}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchApprovalStatusResponse>(res);
+}
+
+export async function listComments(
+  resourceType: string,
+  resourceId: string,
+  revisionNumber?: number
+): Promise<ResearchCommentThreadListResponse> {
+  const qs = revisionNumber !== undefined ? `?revision_number=${revisionNumber}` : "";
+  const url = `${getBaseApiUrl()}/api/v1/research/resources/${resourceType}/${resourceId}/comments${qs}`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchCommentThreadListResponse>(res);
+}
+
+export async function createCommentThread(
+  resourceType: string,
+  resourceId: string,
+  data: CreateCommentThreadRequest
+): Promise<ResearchCommentThreadResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/resources/${resourceType}/${resourceId}/comments`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchCommentThreadResponse>(res);
+}
+
+export async function addCommentReply(
+  threadId: string,
+  data: CreateCommentReplyRequest
+): Promise<ResearchCommentResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/comment-threads/${threadId}/replies`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchCommentResponse>(res);
+}
+
+export async function updateComment(
+  commentId: string,
+  data: UpdateCommentRequest
+): Promise<ResearchCommentResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/comments/${commentId}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchCommentResponse>(res);
+}
+
+export async function resolveCommentThread(threadId: string): Promise<ResearchCommentThreadResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/comment-threads/${threadId}/resolve`;
+  const res = await fetch(url, { method: "POST", headers: getHeaders() });
+  return handleResponse<ResearchCommentThreadResponse>(res);
+}
+
+export async function reopenCommentThread(threadId: string): Promise<ResearchCommentThreadResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/comment-threads/${threadId}/reopen`;
+  const res = await fetch(url, { method: "POST", headers: getHeaders() });
+  return handleResponse<ResearchCommentThreadResponse>(res);
+}
+
+export async function runQualityGate(
+  reportId: string,
+  data?: RunQualityGateRequest
+): Promise<QualityGateResultResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/quality-gate`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data || {}),
+  });
+  return handleResponse<QualityGateResultResponse>(res);
+}
+
+export async function listCirculations(reportId: string): Promise<ResearchInternalCirculationListResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/circulation`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchInternalCirculationListResponse>(res);
+}
+
+export async function createCirculation(
+  reportId: string,
+  data: CreateCirculationRequest
+): Promise<ResearchInternalCirculationResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/reports/${reportId}/circulation`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ResearchInternalCirculationResponse>(res);
+}
+
+export async function revokeCirculation(circulationId: string): Promise<ResearchInternalCirculationResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/circulation/${circulationId}/revoke`;
+  const res = await fetch(url, { method: "POST", headers: getHeaders() });
+  return handleResponse<ResearchInternalCirculationResponse>(res);
+}
+
+export async function listResourceAuditEvents(
+  resourceType: string,
+  resourceId: string
+): Promise<ResearchReviewAuditEventListResponse> {
+  const url = `${getBaseApiUrl()}/api/v1/research/resources/${resourceType}/${resourceId}/audit-events`;
+  const res = await fetch(url, { method: "GET", headers: getHeaders() });
+  return handleResponse<ResearchReviewAuditEventListResponse>(res);
 }
 

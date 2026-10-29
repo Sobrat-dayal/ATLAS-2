@@ -27,7 +27,7 @@ export function ResearchHeader({
                 FINANCIAL RESEARCH PLATFORM
               </h1>
               <Badge variant="outline" className="font-mono text-[10px]">
-                STAGE 107 RESEARCH THESIS & ANALYST REPORT STUDIO
+                STAGE 108 RESEARCH OPERATIONS & REVIEW WORKFLOWS
               </Badge>
               {activeCount > 0 && (
                 <Badge variant="primary" className="text-[10px]">
@@ -36,7 +36,7 @@ export function ResearchHeader({
               )}
             </div>
             <p className="text-xs text-atlas-text-muted">
-              Source-verified financial analysis, structured investment theses, institutional report authoring, claim-to-evidence verification, reproducible quantitative embedding, and publication-ready export.
+              Source-verified financial research, structured investment theses, anchored review workflows, quality gates, exact revision approvals, and controlled internal circulation.
             </p>
           </div>
         </div>
@@ -52,6 +52,16 @@ export function ResearchHeader({
               }`}
             >
               Overview
+            </button>
+            <button
+              onClick={() => onTabChange("REVIEWS")}
+              className={`rounded-xs px-3 py-1 text-xs font-medium transition-colors ${
+                activeTab === "REVIEWS"
+                  ? "bg-atlas-accent text-white"
+                  : "text-atlas-text-secondary hover:text-atlas-text-primary"
+              }`}
+            >
+              Reviews & Governance
             </button>
             <button
               onClick={() => onTabChange("REPORTS")}
