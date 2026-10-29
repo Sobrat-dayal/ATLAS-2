@@ -111,7 +111,7 @@ export function ResearchReportPreview({
                         </p>
                       ) : blk.block_type === "QUOTE" ? (
                         <blockquote className="border-l-2 border-atlas-accent pl-4 py-1 italic font-serif text-atlas-text-secondary">
-                          "{blk.text_content}"
+                          &ldquo;{blk.text_content}&rdquo;
                         </blockquote>
                       ) : blk.block_type === "FINANCIAL_TABLE" && blk.table_content ? (
                         <div className="overflow-x-auto border border-atlas-border-default rounded-xs bg-atlas-surface-0 font-sans my-3">
@@ -144,12 +144,12 @@ export function ResearchReportPreview({
                             {blk.chart_spec?.series_name || "Quantitative Analysis Chart"}
                           </div>
                           <div className="flex items-end justify-around h-24 gap-3 px-6 bg-atlas-surface-0 rounded-xs border border-atlas-border-default p-2">
-                            {(blk.chart_spec?.data_points || []).map((dp: any, i: number) => (
+                            {(blk.chart_spec?.data_points || []).map((dp: { period?: string; value?: number }, i: number) => (
                               <div key={i} className="flex flex-col items-center gap-1 flex-1">
                                 <div
                                   className="w-full bg-atlas-accent rounded-t-xs"
                                   style={{
-                                    height: `${Math.min(100, Math.max(15, dp.value * 2.5))}%`,
+                                    height: `${Math.min(100, Math.max(15, (dp.value ?? 0) * 2.5))}%`,
                                   }}
                                 />
                                 <span className="font-mono text-[9px] text-atlas-text-muted">
@@ -173,7 +173,7 @@ export function ResearchReportPreview({
               IMPORTANT REGULATORY DISCLOSURES & RESEARCH CERTIFICATIONS
             </span>
             <p className="leading-relaxed">
-              This institutional research report has been prepared for institutional and qualified clients solely for informational and analytical purposes. It does not constitute an offer, solicitation, or recommendation to buy or sell any security, derivative, or financial instrument. Past performance is not indicative of future results. All statements of fact are derived from verified regulatory filings (SEC Forms 10-K, 10-Q, 8-K) and macroeconomic statistical releases. Opinions, estimates, and projections reflect the author's judgment as of the research cutoff date and are subject to change without notice.
+              This institutional research report has been prepared for institutional and qualified clients solely for informational and analytical purposes. It does not constitute an offer, solicitation, or recommendation to buy or sell any security, derivative, or financial instrument. Past performance is not indicative of future results. All statements of fact are derived from verified regulatory filings (SEC Forms 10-K, 10-Q, 8-K) and macroeconomic statistical releases. Opinions, estimates, and projections reflect the author&apos;s judgment as of the research cutoff date and are subject to change without notice.
             </p>
             <div className="flex items-center justify-between pt-2 border-t border-atlas-border-default/40 font-mono text-[9px]">
               <span>ATLAS FINANCIAL RESEARCH PLATFORM</span>

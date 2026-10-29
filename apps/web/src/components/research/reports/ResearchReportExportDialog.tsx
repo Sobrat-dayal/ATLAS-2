@@ -41,8 +41,8 @@ export function ResearchReportExportDialog({
         include_citations: includeCitations,
         include_charts: includeCharts,
       });
-    } catch (err: any) {
-      setError(err.message || "Failed to generate report export.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to generate report export.");
     } finally {
       setIsExporting(false);
     }
@@ -60,7 +60,10 @@ export function ResearchReportExportDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-xl rounded-sm border border-atlas-border-default bg-atlas-surface-0 shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div
+        className="w-full max-w-xl rounded-sm border border-atlas-border-default bg-atlas-surface-0 shadow-xl overflow-hidden flex flex-col max-h-[85vh]"
+        data-report-id={reportId}
+      >
         <div className="flex items-center justify-between border-b border-atlas-border-default bg-atlas-surface-1 px-4 py-3">
           <div>
             <h3 className="text-sm font-bold text-atlas-text-primary">

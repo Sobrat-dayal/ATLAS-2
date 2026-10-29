@@ -41,7 +41,10 @@ export function ResearchReportVerificationPanel({
   };
 
   return (
-    <div className="flex h-full flex-col bg-atlas-surface-0 border-l border-atlas-border-default overflow-hidden">
+    <div
+      className="flex h-full flex-col bg-atlas-surface-0 border-l border-atlas-border-default overflow-hidden"
+      data-report-id={reportId}
+    >
       {/* Top Header */}
       <div className="flex items-center justify-between border-b border-atlas-border-default bg-atlas-surface-1 px-3 py-2.5">
         <div>

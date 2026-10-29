@@ -40,8 +40,8 @@ export function NewThesisDialog({ isOpen, onClose, onSubmit }: NewThesisDialogPr
         conviction_score: Number(convictionScore) / 100,
       });
       onClose();
-    } catch (err: any) {
-      setError(err.message || "Failed to create investment thesis.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create investment thesis.");
     } finally {
       setIsSubmitting(false);
     }

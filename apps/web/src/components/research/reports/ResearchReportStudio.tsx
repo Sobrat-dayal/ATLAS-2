@@ -12,6 +12,7 @@ import {
   ReportSectionType,
   ResearchReportContentBlock,
   CreateReportExportDTO,
+  CompareReportRevisionsResponse,
 } from "@/lib/research/types";
 import { getReportStatusDisplay, getReportTypeDisplay } from "@/lib/research/formatting";
 import { ResearchReportOutline } from "./ResearchReportOutline";
@@ -40,7 +41,7 @@ interface ResearchReportStudioProps {
   onDeleteSection: (sectionId: string) => Promise<void>;
   onMoveSection: (sectionId: string, direction: "up" | "down") => Promise<void>;
   onVerify: () => Promise<void>;
-  onCompareRevisions: (baseRev: number, targetRev: number) => Promise<any>;
+  onCompareRevisions: (baseRev: number, targetRev: number) => Promise<CompareReportRevisionsResponse>;
   onExport: (data: CreateReportExportDTO) => Promise<ResearchReportExport>;
   onOpenSource?: (sourceId: string) => void;
 }
@@ -50,13 +51,11 @@ export function ResearchReportStudio({
   sections,
   selectedSectionId,
   onSelectSection,
-  templates,
   revisions,
   verification,
   isVerifying,
   exports,
   onBack,
-  onUpdateReport,
   onFinalizeReport,
   onCreateSection,
   onUpdateSection,

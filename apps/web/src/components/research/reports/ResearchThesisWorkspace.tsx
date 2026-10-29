@@ -9,9 +9,7 @@ import {
   CreateThesisArgumentDTO,
 } from "@/lib/research/types";
 import {
-  formatResearchDate,
   getThesisStatusDisplay,
-  getThesisArgumentTypeDisplay,
 } from "@/lib/research/formatting";
 
 interface ResearchThesisWorkspaceProps {
@@ -23,8 +21,8 @@ interface ResearchThesisWorkspaceProps {
   onSelectThesis: (id: string) => void;
   onNewThesis: () => void;
   onDeleteThesis: (id: string) => void;
-  onCreateArgument: (thesisId: string, data: CreateThesisArgumentDTO) => Promise<any>;
-  onDeleteArgument: (argumentId: string) => Promise<any>;
+  onCreateArgument: (thesisId: string, data: CreateThesisArgumentDTO) => Promise<ResearchThesisArgument>;
+  onDeleteArgument: (argumentId: string) => Promise<void>;
   onOpenSource?: (sourceId: string) => void;
 }
 
@@ -33,13 +31,11 @@ export function ResearchThesisWorkspace({
   selectedThesisId,
   currentThesis,
   argumentsList,
-  isLoading,
   onSelectThesis,
   onNewThesis,
   onDeleteThesis,
   onCreateArgument,
   onDeleteArgument,
-  onOpenSource,
 }: ResearchThesisWorkspaceProps) {
   const [isAddingArg, setIsAddingArg] = useState(false);
   const [argType, setArgType] = useState<ThesisArgumentType>("BULL_CASE");

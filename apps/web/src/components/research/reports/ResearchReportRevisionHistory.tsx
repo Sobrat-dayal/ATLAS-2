@@ -2,13 +2,13 @@
 
 import React, { useState } from "react";
 import { Badge, Button } from "@/design-system";
-import { ResearchReportRevision } from "@/lib/research/types";
+import { ResearchReportRevision, CompareReportRevisionsResponse } from "@/lib/research/types";
 import { formatResearchDate } from "@/lib/research/formatting";
 
 interface ResearchReportRevisionHistoryProps {
   reportId: string;
   revisions: ResearchReportRevision[];
-  onCompareRevisions: (baseRev: number, targetRev: number) => Promise<any>;
+  onCompareRevisions: (baseRev: number, targetRev: number) => Promise<CompareReportRevisionsResponse>;
 }
 
 export function ResearchReportRevisionHistory({
@@ -18,7 +18,7 @@ export function ResearchReportRevisionHistory({
 }: ResearchReportRevisionHistoryProps) {
   const [baseRev, setBaseRev] = useState<number>(revisions.length > 1 ? revisions[revisions.length - 1].revision_number : 1);
   const [targetRev, setTargetRev] = useState<number>(revisions.length > 0 ? revisions[0].revision_number : 1);
-  const [diffResult, setDiffResult] = useState<any | null>(null);
+  const [diffResult, setDiffResult] = useState<CompareReportRevisionsResponse | null>(null);
   const [isComparing, setIsComparing] = useState(false);
 
   const handleCompare = async () => {
@@ -32,7 +32,10 @@ export function ResearchReportRevisionHistory({
   };
 
   return (
-    <div className="flex h-full flex-col bg-atlas-surface-0 border-l border-atlas-border-default overflow-hidden">
+    <div
+      className="flex h-full flex-col bg-atlas-surface-0 border-l border-atlas-border-default overflow-hidden"
+      data-report-id={reportId}
+    >
       <div className="border-b border-atlas-border-default bg-atlas-surface-1 px-3 py-2.5">
         <span className="text-xs font-bold text-atlas-text-primary uppercase tracking-wider block">
           Revision History & Audit Log
@@ -86,7 +89,7 @@ export function ResearchReportRevisionHistory({
       {diffResult && (
         <div className="p-3 border-b border-atlas-border-default bg-atlas-surface-1 text-xs space-y-1.5 max-h-48 overflow-y-auto">
           <div className="flex items-center justify-between font-mono text-[10px] text-atlas-text-muted">
-            <span>Diff Summary (r{diffResult.base_revision} → r{diffResult.target_revision})</span>
+            <span>Diff Summary (r{diffResult.base_revision_number} → r{diffResult.target_revision_number})</span>
             <button
               onClick={() => setDiffResult(null)}
               className="text-atlas-text-muted hover:text-atlas-text-primary"
@@ -98,25 +101,25 @@ export function ResearchReportRevisionHistory({
             <div className="p-1 bg-atlas-surface-0 border border-atlas-border-default rounded-xs">
               <span className="text-atlas-text-muted block">Modified Secs</span>
               <span className="font-bold text-atlas-accent">
-                {diffResult.modified_sections?.length || 0}
+                {diffResult.sections_modified?.length || 0}
               </span>
             </div>
             <div className="p-1 bg-atlas-surface-0 border border-atlas-border-default rounded-xs">
               <span className="text-atlas-text-muted block">Added Secs</span>
               <span className="font-bold text-atlas-positive">
-                {diffResult.added_sections?.length || 0}
+                {diffResult.sections_added?.length || 0}
               </span>
             </div>
             <div className="p-1 bg-atlas-surface-0 border border-atlas-border-default rounded-xs">
               <span className="text-atlas-text-muted block">Removed Secs</span>
               <span className="font-bold text-atlas-negative">
-                {diffResult.removed_sections?.length || 0}
+                {diffResult.sections_removed?.length || 0}
               </span>
             </div>
           </div>
-          {diffResult.metadata_diff && Object.keys(diffResult.metadata_diff).length > 0 && (
-            <div className="text-[10px] text-atlas-text-muted font-mono pt-1">
-              Title / Header metadata changed between revisions.
+          {diffResult.diff_unified && (
+            <div className="text-[10px] text-atlas-text-muted font-mono pt-1 truncate">
+              {diffResult.diff_unified.split("\n")[0]}
             </div>
           )}
         </div>

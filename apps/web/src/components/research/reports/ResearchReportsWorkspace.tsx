@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Badge, Button } from "@/design-system";
+import { Button } from "@/design-system";
 import {
   ResearchReport,
   ResearchReportSection,
@@ -24,8 +24,7 @@ import {
   CreateThesisArgumentDTO,
   ReportLifecycleStatus,
   ResearchReportType,
-  ReportSectionType,
-  ResearchReportContentBlock,
+  CompareReportRevisionsResponse,
 } from "@/lib/research/types";
 import { ResearchReportsList } from "./ResearchReportsList";
 import { ResearchReportStudio } from "./ResearchReportStudio";
@@ -63,25 +62,25 @@ interface ResearchReportsWorkspaceProps {
 
   // Actions
   onSelectReport: (id: string | null) => void;
-  onCreateReport: (data: CreateResearchReportDTO) => Promise<any>;
-  onUpdateReport: (reportId: string, data: UpdateResearchReportDTO) => Promise<any>;
-  onFinalizeReport: (reportId: string, data: FinalizeResearchReportDTO) => Promise<any>;
-  onDeleteReport: (reportId: string) => Promise<any>;
+  onCreateReport: (data: CreateResearchReportDTO) => Promise<ResearchReport>;
+  onUpdateReport: (reportId: string, data: UpdateResearchReportDTO) => Promise<ResearchReport>;
+  onFinalizeReport: (reportId: string, data: FinalizeResearchReportDTO) => Promise<ResearchReport>;
+  onDeleteReport: (reportId: string) => Promise<void>;
   onSelectSection: (sectionId: string) => void;
-  onCreateSection: (reportId: string, data: CreateReportSectionDTO) => Promise<any>;
-  onUpdateSection: (sectionId: string, data: UpdateReportSectionDTO) => Promise<any>;
-  onDeleteSection: (sectionId: string) => Promise<any>;
-  onReorderSections: (reportId: string, data: ReorderReportSectionsDTO) => Promise<any>;
-  onVerifyReport: (reportId: string, data?: VerifyReportDTO) => Promise<any>;
-  onCompareRevisions: (reportId: string, baseRev: number, targetRev: number) => Promise<any>;
-  onCreateExport: (reportId: string, data: CreateReportExportDTO) => Promise<any>;
+  onCreateSection: (reportId: string, data: CreateReportSectionDTO) => Promise<ResearchReportSection>;
+  onUpdateSection: (sectionId: string, data: UpdateReportSectionDTO) => Promise<ResearchReportSection>;
+  onDeleteSection: (sectionId: string) => Promise<void>;
+  onReorderSections: (reportId: string, data: ReorderReportSectionsDTO) => Promise<ResearchReportSection[]>;
+  onVerifyReport: (reportId: string, data?: VerifyReportDTO) => Promise<ResearchReportVerification>;
+  onCompareRevisions: (reportId: string, baseRev: number, targetRev: number) => Promise<CompareReportRevisionsResponse>;
+  onCreateExport: (reportId: string, data: CreateReportExportDTO) => Promise<ResearchReportExport>;
 
   onSelectThesis: (id: string | null) => void;
-  onCreateThesis: (data: CreateThesisDTO) => Promise<any>;
-  onUpdateThesis: (thesisId: string, data: UpdateThesisDTO) => Promise<any>;
-  onDeleteThesis: (thesisId: string) => Promise<any>;
-  onCreateThesisArgument: (thesisId: string, data: CreateThesisArgumentDTO) => Promise<any>;
-  onDeleteThesisArgument: (argumentId: string) => Promise<any>;
+  onCreateThesis: (data: CreateThesisDTO) => Promise<ResearchInvestmentThesis>;
+  onUpdateThesis: (thesisId: string, data: UpdateThesisDTO) => Promise<ResearchInvestmentThesis>;
+  onDeleteThesis: (thesisId: string) => Promise<void>;
+  onCreateThesisArgument: (thesisId: string, data: CreateThesisArgumentDTO) => Promise<ResearchThesisArgument>;
+  onDeleteThesisArgument: (argumentId: string) => Promise<void>;
 
   onOpenSource?: (sourceId: string) => void;
 }
@@ -128,7 +127,6 @@ export function ResearchReportsWorkspace({
 
   onSelectThesis,
   onCreateThesis,
-  onUpdateThesis,
   onDeleteThesis,
   onCreateThesisArgument,
   onDeleteThesisArgument,

@@ -1196,6 +1196,69 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly).
 - **Documentation**: See `docs/RESEARCH_SOURCE_DISCOVERY_AND_DOCUMENT_INTELLIGENCE.md` and `docs/DECISIONS.md`.
 
+## Institutional-Grade Financial Research Analysis, Evidence-Backed Hypothesis Evaluation, and Reproducible Analytical Workbenches (Stage 106)
+- **Architecture**: Institutional-grade reproducible financial calculation, cross-sectional peer benchmarking, and evidence-backed hypothesis evaluation workbench integrated into `/research` (Module 9). Extends Stage 104 Research Foundation and Stage 105 Document Intelligence by bridging verified filing observations and canonical statement facts into auditable, reproducible analytical runs.
+- **Canonical Research Analysis Domain & Controlled Analysis Types**:
+  - `ResearchAnalysis` entity with stable identifiers, user ownership, investigation scoping, monotonic optimistic concurrency versioning (`revision`), and reproducible execution runs (`ResearchAnalysisRun`).
+  - 13 controlled institutional analysis types: `FINANCIAL_TREND`, `FINANCIAL_RATIO_ANALYSIS`, `PEER_BENCHMARKING`, `CROSS_SECTIONAL_VALUATION`, `HISTORICAL_GROWTH_PROFILE`, `PROFITABILITY_QUALITY_ANALYSIS`, `CAPITAL_STRUCTURE_SOLVENCY`, `CASH_FLOW_SUSTAINABILITY`, `MACROECONOMIC_CORRELATION`, `HYPOTHESIS_EVALUATION`, `ASSUMPTION_SENSITIVITY`, `EARNINGS_VARIANCE`, and `CUSTOM_EXPRESSION`.
+- **Rigorous Financial Mathematics & Safe AST Evaluation**:
+  - Period-over-period differences ($\Delta$), percentage changes ($\%\Delta$) with mandatory zero-base division guards and negative-base warnings, and compound annual growth rate (CAGR) with strictly positive endpoint constraints.
+  - Sandboxed AST expression engine (`SafeExpressionEvaluator`) rejecting arbitrary Python/SQL/shell execution, `eval()`, `exec()`, imports, and function calls, while bounding expression depth and node count.
+- **Cross-Sectional Peer Benchmarking & Hypothesis Evaluation**:
+  - Reuses Stage 87 verified Peer Groups with non-parametric median, first quartile ($Q_1$), third quartile ($Q_3$), sample mean, dispersion metrics, explicit eligible count ($N$), and comparability divergence warnings.
+  - Deterministic test criteria linked to Stage 104 Hypotheses, evaluating observations into explicit supporting vs. contradicting evidence lists and institutional outcomes (`CRITERIA_MET`, `CRITERIA_NOT_MET`, `MIXED_RESULTS`, `INCONCLUSIVE`, `INSUFFICIENT_DATA`) without hyperbole or universal truth claims.
+- **Epistemic Research Findings & Assumptions / Sensitivity**:
+  - Categorization of findings into `OBSERVED_FACT`, `CALCULATED_RESULT`, `STATISTICAL_OBSERVATION`, `ANALYST_INTERPRETATION`, and `INCONCLUSIVE_RESULT` with auditable review statuses and mandatory limitation disclosures.
+  - User-defined `ResearchAssumption` records generating bounded scenario matrices with non-predictive institutional disclosures.
+  - Cryptographic watermarked source observation manifests indexing SEC EDGAR Form 10-K accession numbers, reporting dates, fact concepts, and versioned formula contracts.
+- **Institutional Analysis Workbench (`/research`)**:
+  - Split-pane workspace (`ResearchAnalysisWorkspace.tsx`) featuring time series bar charts with CAGR badges, cross-sectional peer benchmark bars with median lines, macro observation timelines, live hypothesis criteria testers, findings editors, and provenance audit drawers.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_research_analysis_v1.py` + Stage 104/105 suites (45/45 passed).
+  - Backend linter: `uv run ruff check` on all research code (0 errors).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (78/78 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly).
+- **Documentation**: See `docs/RESEARCH_ANALYSIS_AND_HYPOTHESIS_EVALUATION.md` and `docs/DECISIONS.md`.
+
+## Institutional-Grade Investment Research Thesis, Evidence-Based Research Synthesis & Professional Analyst Report Studio (Stage 107)
+- **Architecture**: Institutional-grade investment research report authoring studio and structured thesis synthesis workbench inside `/research` (Module 9). Transforms raw research notes, filing disclosures (SEC Forms 10-K, 10-Q, 8-K), and reproducible quantitative analysis runs into publication-grade, audited investment research memorandums and structured investment theses.
+- **Structured Investment Theses & Argument Taxonomy**:
+  - Central thesis statements with explicit time horizons (`time_horizon`), target entity mapping (`primary_subject_id`), and quantifiable conviction scores (`0.0 - 1.0`).
+  - Categorized thesis arguments: `BULL_CASE`, `BEAR_CASE`, `BASE_CASE`, `CATALYST`, `KEY_RISK`, `CORE_ASSUMPTION`, and `CONTRADICTING_EVIDENCE`.
+  - Direct epistemic anchoring to Stage 104 investigation claims, Stage 105 filing evidence, Stage 106 reproducible analysis runs, and explicit analytical limitations.
+- **Institutional Report Studio & Governance**:
+  - Institutional report taxonomy: Company Coverage, Equity Initiation, Earnings Review, Macroeconomic Outlook, Industry Primer, Investment Thesis, Event Reaction Memo, and Risk Assessment Brief.
+  - 6 built-in institutional templates (`tpl-company-research`, `tpl-equity-initiation`, `tpl-earnings-review`, `tpl-macro-research`, `tpl-investment-thesis`, `tpl-general-memo`) enforcing mandatory governance sections (Executive Summary, Financial Analysis, Valuation Framework, Risks, Methodology, Disclaimers).
+  - Rich structured block model: Headings, narrative paragraphs, bullet/numbered lists, quotes, financial tables, analysis tables, and chart embeds.
+- **Multi-Vector Verification Engine**:
+  - Structural completeness checking presence of all required sections per template.
+  - Citation integrity validating every cited evidence ID against authorized repository sources, immediately flagging missing, broken, restricted, or withdrawn sources.
+  - Analysis run integrity verifying embedded Stage 106 quantitative runs, alerting on outdated or unverified runs.
+  - Look-ahead & temporal cutoff audit: Strictly enforces publication cutoff timestamps (`research_cutoff`), generating blocking violations (`POINT_IN_TIME_CONFLICT`) if any embedded fact, metric, or cited disclosure has a timestamp subsequent to the cutoff date.
+  - Publication gatekeeper: Reports cannot be finalized or published while blocking verification violations remain unresolved.
+- **Point-in-Time Research Snapshots & Immutability**:
+  - Strict optimistic concurrency control (`expected_revision`) preventing overwrites in multi-analyst workflows.
+  - Auditable revision history capturing author ID, content hash, word counts, and revision summaries.
+  - Full unified diff comparison engine (`compare_report_revisions`) tracking added, removed, and modified sections between any two revisions.
+  - Finalization gatekeeper: Finalized reports are frozen into immutable point-in-time publication records.
+- **Zero-External-Dependency Document Export**:
+  - Institutional PDF-1.4: Direct binary generation using Python standard library `io.BytesIO`. Emits clean, standards-compliant PDF catalogs, pages, font dictionaries, tables, headers, and disclaimers.
+  - Office Word DOCX: Direct OpenXML archive packaging via Python's built-in `zipfile` module.
+  - Mandatory disclaimers: Automatic injection of institutional regulatory notices, certification statements, and source attribution tables.
+- **Frontend Institutional Report Studio & Thesis Workspace (`/research`)**:
+  - Dedicated `/research` sub-view with navigation switchers `"Reports & Theses"` supporting split tabs between Institutional Analyst Reports and Structured Investment Theses.
+  - Professional 3-pane authoring studio (`ResearchReportStudio.tsx`) integrating `ResearchReportOutline` (drag-and-drop section hierarchy), `ResearchReportEditor` (rich content block authoring and embed controls), and tabbed right-hand inspector panels (`ResearchReportVerificationPanel`, `ResearchReportEvidencePanel`, `ResearchReportRevisionHistory`).
+  - Print-ready document preview (`ResearchReportPreview.tsx`) rendering high-fidelity executive document layouts with table of contents and compliance notices, and `ResearchReportExportDialog.tsx` triggering background jobs and binary downloads.
+  - Structured Investment Thesis Workspace (`ResearchThesisWorkspace.tsx`) with bull/bear case synthesis, assumptions, risks, catalysts, and linked analysis runs.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_research_reports_v1.py` + full research suite (`test_research_foundation_v1.py`, `test_research_document_intelligence_v1.py`, `test_research_analysis_v1.py`) (59/59 passed in 12.15s).
+  - Backend linter: `uv run ruff check` on all research code (0 errors).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (88/88 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly).
+- **Documentation**: See `docs/RESEARCH_THESIS_AND_REPORT_STUDIO.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

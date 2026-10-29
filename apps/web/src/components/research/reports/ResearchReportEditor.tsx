@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Badge, Button } from "@/design-system";
 import {
   ResearchReportSection,
@@ -19,24 +19,20 @@ export function ResearchReportEditor({
   onUpdateSection,
   isFinalized = false,
 }: ResearchReportEditorProps) {
-  const [title, setTitle] = useState("");
-  const [blocks, setBlocks] = useState<ResearchReportContentBlock[]>([]);
+  const [prevSectionId, setPrevSectionId] = useState(section?.section_id);
+  const [title, setTitle] = useState(section?.title || "");
+  const [blocks, setBlocks] = useState<ResearchReportContentBlock[]>(section?.blocks || []);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (section) {
-      setTitle(section.title);
-      setBlocks(section.blocks || []);
-      setIsDirty(false);
-      setError(null);
-    } else {
-      setTitle("");
-      setBlocks([]);
-      setIsDirty(false);
-    }
-  }, [section]);
+  if (section && section.section_id !== prevSectionId) {
+    setPrevSectionId(section.section_id);
+    setTitle(section.title);
+    setBlocks(section.blocks || []);
+    setIsDirty(false);
+    setError(null);
+  }
 
   if (!section) {
     return (
@@ -107,8 +103,8 @@ export function ResearchReportEditor({
     try {
       await onUpdateSection(section.section_id, title, blocks, section.revision);
       setIsDirty(false);
-    } catch (err: any) {
-      setError(err.message || "Failed to save section edits.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save section edits.");
     } finally {
       setIsSaving(false);
     }
@@ -159,7 +155,7 @@ export function ResearchReportEditor({
 
       {/* Editor Workspace */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4 max-w-4xl mx-auto w-full">
-        {blocks.map((block, idx) => (
+        {blocks.map((block) => (
           <div
             key={block.block_id}
             className="rounded-xs border border-atlas-border-default bg-atlas-surface-1/40 p-3 relative group transition-colors hover:border-atlas-border-strong"
@@ -281,11 +277,11 @@ export function ResearchReportEditor({
                     <span>Verified Point-in-Time Run</span>
                   </div>
                   <div className="flex items-end justify-around h-20 gap-2 px-4">
-                    {(block.chart_spec?.data_points || []).map((dp: any, i: number) => (
+                    {(block.chart_spec?.data_points || []).map((dp: { period?: string; value?: number }, i: number) => (
                       <div key={i} className="flex flex-col items-center gap-1 flex-1">
                         <div
                           className="w-full bg-atlas-accent/80 rounded-t-xs transition-all"
-                          style={{ height: `${Math.min(100, Math.max(15, dp.value * 2.5))}%` }}
+                          style={{ height: `${Math.min(100, Math.max(15, (dp.value ?? 0) * 2.5))}%` }}
                         />
                         <span className="font-mono text-[9px] text-atlas-text-muted">{dp.period}</span>
                       </div>

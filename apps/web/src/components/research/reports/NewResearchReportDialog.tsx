@@ -63,8 +63,8 @@ export function NewResearchReportDialog({
         research_cutoff: researchCutoff ? `${researchCutoff}T23:59:59Z` : undefined,
       });
       onClose();
-    } catch (err: any) {
-      setError(err.message || "Failed to instantiate research report.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to instantiate research report.");
     } finally {
       setIsSubmitting(false);
     }
