@@ -269,4 +269,23 @@ from atlas.portfolios.performance import (
     get_canonical_benchmark,
     list_canonical_benchmarks,
 )
+from atlas.portfolios.exposure import (
+    AssetClass,
+    ConcentrationScope,
+    ExposureBasis,
+    ExposureDataCompleteness,
+    ExposureDimension,
+    GeographyPolicy,
+    LookThroughStatus,
+    SectorTaxonomy,
+    PortfolioExposureError,
+    PortfolioExposureNotFoundError,
+    PortfolioExposureAccessDeniedError,
+    PortfolioExposureNavInvalidError,
+    PortfolioExposureEngine,
+    PortfolioExposureService,
+    FundLookThroughEngine,
+    HistoricalAllocationEngine,
+    ClassificationRegistry,
+)
 

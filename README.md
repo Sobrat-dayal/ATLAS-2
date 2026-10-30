@@ -1414,6 +1414,53 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
 - **Documentation**: See `docs/PORTFOLIO_PERFORMANCE_ENGINE.md` and `docs/DECISIONS.md`.
 
+## Portfolio Allocation, Exposure Intelligence & Concentration Analytics (Stage 112)
+- **Mathematical Foundations & Partition Reconciliation**:
+  - Exact Python `Decimal` partition weight mathematics relative to verified Net Asset Value ($w_i = v_i / \text{NAV}$).
+  - Positive NAV validation guardrails preventing divide-by-zero or non-positive NAV distortions (`PortfolioExposureNavInvalidError`).
+  - Strict partition reconciliation verification requiring category weights to sum to exactly $1.000000$ within $10^{-4}$ tolerance.
+  - Verified Part X reference fixture: $\$20,000.00$ NAV partitioned into $\$15,000.00$ Equity ($75.0\%$) and $\$5,000.00$ Cash ($25.0\%$) with $100.0\%$ reconciliation.
+- **Concentration Analytics & Effective Holdings ($N_{\text{eff}}$)**:
+  - Exact Herfindahl-Hirschman Index calculation ($\text{HHI} = \sum w_i^2$) and normalized index scale ($\text{HHI}_{\text{idx}} = 10,000 \times \text{HHI}$).
+  - Effective number of bets indicator ($N_{\text{eff}} = \frac{1}{\text{HHI}}$).
+  - Quantile concentration ladders: Top 1, Top 3, Top 5, Top 10, and Top 20 cumulative concentration weights.
+  - Institutional diversification regimes: `HIGHLY_DIVERSIFIED` ($\text{HHI} < 0.15$), `MODERATELY_CONCENTRATED` ($0.15 \le \text{HHI} < 0.25$), and `HIGHLY_CONCENTRATED` ($\text{HHI} \ge 0.25$).
+  - Verified Part XXVIII reference fixture: $50\%, 25\%, 25\%$ weights yield $\text{HHI} = 0.3750$ ($\text{HHI}_{\text{idx}} = 3,750$) and $N_{\text{eff}} = 2.67$.
+- **Ultimate Parent Issuer Consolidation**:
+  - Consolidation grouping distinct instrument share classes (e.g. GOOG and GOOGL) and global cross-listings (e.g. INFY local equity and INFY ADR) under their canonical ultimate parent issuer entity.
+- **Fund & ETF Look-Through Decomposition**:
+  - `FundLookThroughEngine` decomposing collective investment vehicles (SPY, QQQ) into underlying constituents proportional to portfolio fund weights ($w_{\text{effective}}(k) = W_F \cdot w_{k,F}$).
+  - Verified Part XXXII reference fixture: $\$100,000$ NAV with $\$60,000$ direct AAPL ($60.0\%$) and $\$40,000$ SPY ($40.0\%$ with $7.2\%$ AAPL) calculates $2.88\%$ look-through weight and $62.88\%$ total effective AAPL exposure.
+  - Recursion depth and cycle detection safeguards preventing circular reference loops.
+  - Explicit residual unmapped constituent bucket ensuring $100\%$ fund reconciliation.
+  - Pairwise and consolidated cross-fund constituent overlap analysis ($\sum \min(w_{k,A}, w_{k,B})$).
+- **Multi-Dimensional Taxonomies & Geographic Policies**:
+  - 7 canonical asset classes: Equity, Fixed Income, Cash Equivalent, Commodity, Real Estate, Alternative, Derivative.
+  - GICS 11 sectors and 25 industry groups with hierarchical roll-up.
+  - Tri-policy geographic categorization: Country of Legal Domicile, Corporate Headquarters, and Primary Listing Country, mapped via ISO 3166-1 alpha-2 codes.
+  - Denomination currency risk analysis isolating unhedged foreign denomination exposure from base reporting currency.
+- **Historical Allocation & Drift Analytics**:
+  - Historical daily and period-end allocation time series.
+  - Date-to-date allocation drift measuring percentage-point shift ($\Delta w_i$), basis-point drift ($\Delta \text{bps}_i$), and absolute valuation delta.
+- **Cryptographic Provenance & Quality Tiers**:
+  - SHA-256 digest computed over valuation timestamps, position identifiers, taxonomy version tags, and calculation parameters.
+  - Data completeness tiers: `COMPLETE`, `COMPLETE_WITH_FALLBACKS`, `PARTIAL_UNMAPPED`, and `INCOMPLETE`.
+  - 17 REST endpoints exposed under `/api/v1/portfolios/{portfolio_id}/exposures/...`.
+  - Multi-tenant isolation and ownership verification on all endpoints.
+- **Professional Bloomberg-Style Frontend Workspaces (`/portfolios`)**:
+  - "Allocation & Exposures" workspace with KPI summary cards (NAV, Cash Weight, Top 1, Top 5, HHI, Reconciliation Badge).
+  - Multi-tab dimension views: GICS Sectors, Asset Classes, Geographic Exposure (with policy switcher), Currency Exposure, Portfolio Concentration (with quantile ladder and securities/issuers toggle), ETF Look-Through & Overlap Matrix, Historical Allocation & Date-to-Date Drift, and Data Quality & Provenance inspector.
+- **Strict Roadmap Boundaries**:
+  - Stage 112 exclusively delivers portfolio allocation, exposure intelligence, concentration, look-through, and drift analytics.
+  - Strictly deferred: Stage 113 (Portfolio Attribution / Brinson-Fachler), Stage 114 (Portfolio Optimization / Markowitz / Black-Litterman), Stages 115–118 (Risk / VaR / Stress Testing), and Stages 143–149 (Order Execution / Automated Trading). Zero live broker orders.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_portfolio_exposure_v1.py` (8/8 passed).
+  - Full portfolio backend regression suite: 21/21 passed (Stages 110, 111, 112).
+  - Frontend unit tests: `pnpm --filter web test` (122/122 passed).
+  - Frontend typecheck: `npx tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
+- **Documentation**: See `docs/PORTFOLIO_ALLOCATION_AND_EXPOSURE_ANALYTICS.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

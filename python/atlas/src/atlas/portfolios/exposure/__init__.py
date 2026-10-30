@@ -1,0 +1,128 @@
+"""
+ATLAS Portfolios Exposure & Allocation Analytics Module (Stage 112).
+"""
+
+from atlas.portfolios.exposure.engine import PortfolioExposureEngine
+from atlas.portfolios.exposure.enums import (
+    AssetClass,
+    ConcentrationScope,
+    ExposureBasis,
+    ExposureDataCompleteness,
+    ExposureDimension,
+    GeographyPolicy,
+    LookThroughStatus,
+    SectorTaxonomy,
+)
+from atlas.portfolios.exposure.errors import (
+    PortfolioExposureAccessDeniedError,
+    PortfolioExposureCurrencyMismatchError,
+    PortfolioExposureDataQualityError,
+    PortfolioExposureError,
+    PortfolioExposureLookThroughCycleError,
+    PortfolioExposureLookThroughDepthExceededError,
+    PortfolioExposureNavInvalidError,
+    PortfolioExposureNotFoundError,
+    PortfolioExposureReconciliationFailedError,
+    PortfolioExposureUnknownInstrumentError,
+)
+from atlas.portfolios.exposure.historical import HistoricalAllocationEngine
+from atlas.portfolios.exposure.lookthrough import FundLookThroughEngine
+from atlas.portfolios.exposure.models import (
+    AllocationChangeItem,
+    ConcentrationSummary,
+    CrossFundOverlapItem,
+    ExposureCategoryRow,
+    ExposureDataQuality,
+    ExposureDimensionResult,
+    FundConstituentItem,
+    FundLookThroughResult,
+    HistoricalAllocationPoint,
+    IssuerWeightItem,
+    PortfolioExposureRun,
+    SecurityWeightItem,
+)
+from atlas.portfolios.exposure.registry import (
+    ClassificationRegistry,
+    InstrumentClassification,
+)
+from atlas.portfolios.exposure.schemas import (
+    AllocationChangeResponse,
+    CalculateExposureRequest,
+    ConcentrationSummaryResponse,
+    CrossFundOverlapResponse,
+    ExposureCategoryResponse,
+    ExposureDataQualityResponse,
+    ExposureDimensionResponse,
+    FundConstituentResponse,
+    FundLookThroughResponse,
+    HistoricalAllocationPointResponse,
+    IssuerWeightResponse,
+    PortfolioExposureRunResponse,
+    SecurityWeightResponse,
+)
+from atlas.portfolios.exposure.service import PortfolioExposureService
+from atlas.portfolios.exposure.weights import (
+    calculate_concentration_hhi,
+    calculate_top_n_weights,
+    calculate_weight,
+    validate_nav_denominator,
+    verify_partition_reconciliation,
+)
+
+__all__ = [
+    "PortfolioExposureEngine",
+    "AssetClass",
+    "ConcentrationScope",
+    "ExposureBasis",
+    "ExposureDataCompleteness",
+    "ExposureDimension",
+    "GeographyPolicy",
+    "LookThroughStatus",
+    "SectorTaxonomy",
+    "PortfolioExposureError",
+    "PortfolioExposureNotFoundError",
+    "PortfolioExposureAccessDeniedError",
+    "PortfolioExposureNavInvalidError",
+    "PortfolioExposureLookThroughDepthExceededError",
+    "PortfolioExposureLookThroughCycleError",
+    "PortfolioExposureReconciliationFailedError",
+    "PortfolioExposureCurrencyMismatchError",
+    "PortfolioExposureDataQualityError",
+    "PortfolioExposureUnknownInstrumentError",
+    "HistoricalAllocationEngine",
+    "FundLookThroughEngine",
+    "AllocationChangeItem",
+    "ConcentrationSummary",
+    "CrossFundOverlapItem",
+    "ExposureCategoryRow",
+    "ExposureDataQuality",
+    "ExposureDimensionResult",
+    "FundConstituentItem",
+    "FundLookThroughResult",
+    "HistoricalAllocationPoint",
+    "IssuerWeightItem",
+    "PortfolioExposureRun",
+    "SecurityWeightItem",
+    "ClassificationRegistry",
+    "InstrumentClassification",
+    "CalculateExposureRequest",
+    "PortfolioExposureRunResponse",
+    "ExposureCategoryResponse",
+    "ExposureDimensionResponse",
+    "SecurityWeightResponse",
+    "IssuerWeightResponse",
+    "ConcentrationSummaryResponse",
+    "FundConstituentResponse",
+    "FundLookThroughResponse",
+    "CrossFundOverlapResponse",
+    "HistoricalAllocationPointResponse",
+    "AllocationChangeResponse",
+    "ExposureDataQualityResponse",
+    "PortfolioExposureService",
+    "validate_nav_denominator",
+    "calculate_weight",
+    "calculate_concentration_hhi",
+    "calculate_top_n_weights",
+    "verify_partition_reconciliation",
+]
+

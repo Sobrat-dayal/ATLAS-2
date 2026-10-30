@@ -10046,3 +10046,52 @@ This document records the major architectural and product decisions established.
 908. **Interactive SVG Performance Charts**: Delivered high-precision Time-Weighted Growth of $100 chart with benchmark overlay and cash flow milestone markers, plus historical monetary valuation equity curve.
 909. **Methodology & Formula Audit Inspector**: Designed slide-over inspector detailing exact mathematical equations, day-count conventions, SHA-256 provenance hash, and discrete subperiod audit tables.
 910. **Strict Roadmap Boundaries**: Stage 111 exclusively delivers portfolio performance calculations. Strictly deferred Stage 112 (Allocation/Exposure), Stage 113 (Attribution), Stage 114 (Optimization), Stages 115–118 (Risk/VaR/Sharpe/Sortino), and Stages 143–149 (Backtesting/Paper Trading/Trading Execution). Zero live broker order placement.
+
+
+## STAGE 112 — INSTITUTIONAL-GRADE PORTFOLIO ALLOCATION, EXPOSURE INTELLIGENCE AND CONCENTRATION ANALYTICS PLATFORM
+
+### Mathematical Foundations & Partition Reconciliation Engine
+911. **Canonical Exposure Domain Architecture**: Established unified exposure intelligence module in `atlas.portfolios.exposure` managing calculation runs, multi-dimensional classification engines, ETF look-through decomposition, concentration analytics, and cryptographic run snapshots.
+912. **Exact Decimal Partition Weight Math**: Formulated all allocation and partition weights with exact Python `Decimal` arithmetic relative to verified Net Asset Value ($w_i = v_i / \text{NAV}$), strictly preventing floating-point drift.
+913. **Non-Positive NAV Denominator Guardrail**: Enforced strict validation on denominator valuation ($V \le 0.00$), raising a typed `PortfolioExposureNavInvalidError` to prevent divide-by-zero or inverted relative proportions.
+914. **Deterministic Partition Sum Reconciliation**: Implemented automated reconciliation verification requiring partition weights across exhaustive dimensions (asset classes, sectors, countries, currencies) to sum to exactly $1.000000$ within $10^{-4}$ tolerance, flagging `RECONCILIATION_WARNING` or `RECONCILIATION_FAILED` otherwise.
+915. **Part X Allocation Fixture Verification**: Mathematically validated the Part X canonical reference fixture: $\$20,000.00$ Net Asset Value partitioned into $\$15,000.00$ Equity ($75.0\%$) and $\$5,000.00$ Cash ($25.0\%$) with $100.0\%$ partition reconciliation.
+
+### Concentration Analytics, HHI & Effective Holdings ($N_{\text{eff}}$)
+916. **Herfindahl-Hirschman Index (HHI) Engine**: Built exact HHI calculation ($\text{HHI} = \sum w_i^2$) and normalized conventional index scale ($\text{HHI}_{\text{idx}} = 10,000 \times \text{HHI}$) across both security-level and ultimate parent issuer-level scopes.
+917. **Effective Number of Bets ($N_{\text{eff}}$)**: Engineered $N_{\text{eff}} = \frac{1}{\text{HHI}}$ indicator representing the equivalent number of equal-sized holdings providing the identical diversification profile.
+918. **Quantile Concentration Ladders**: Computed Top 1, Top 3, Top 5, Top 10, and Top 20 cumulative concentration metrics with quantile rankings.
+919. **Institutional Diversification Regimes**: Standardized concentration classification into `HIGHLY_DIVERSIFIED` ($\text{HHI} < 0.15$), `MODERATELY_CONCENTRATED` ($0.15 \le \text{HHI} < 0.25$), and `HIGHLY_CONCENTRATED` ($\text{HHI} \ge 0.25$).
+920. **Part XXVIII Concentration Fixture Verification**: Mathematically validated Part XXVIII reference fixture ($50\%, 25\%, 25\%$ weights) yielding exact $\text{HHI} = 0.3750$ ($\text{HHI}_{\text{idx}} = 3,750$) and $N_{\text{eff}} = 2.67$.
+
+### Issuer Aggregation & Security Roll-up
+921. **Ultimate Parent Issuer Consolidation**: Engineered issuer aggregation grouping disparate instrument share classes (e.g. GOOG Class C and GOOGL Class A) and cross-border listings (e.g. INFY local equity and INFY ADR) under their canonical issuer entity, preventing hidden single-issuer concentration.
+922. **Cross-Instrument Weight Aggregation**: Consolidated issuer weights by summing direct equity holdings, fixed-income instruments, and indirect fund look-through exposures associated with each issuer UUID.
+
+### Fund & ETF Look-Through Decomposition & Cross-Fund Overlap
+923. **Recursive ETF Look-Through Decomposition**: Engineered `FundLookThroughEngine` decomposing collective investment vehicles (SPY, QQQ) into their constituent securities proportional to the fund's portfolio weight ($w_{\text{effective}}(k) = W_F \cdot w_{k,F}$).
+924. **Part XXXII ETF Look-Through Fixture Verification**: Mathematically validated Part XXXII reference fixture: $\$100,000$ NAV with $\$60,000$ direct AAPL ($60.0\%$) and $\$40,000$ SPY ($40.0\%$ containing $7.2\%$ AAPL) correctly calculates $2.88\%$ indirect AAPL look-through weight and $62.88\%$ total effective AAPL exposure.
+925. **Look-Through Recursion Depth & Cycle Prevention**: Enforced strict recursion limit (default depth 3) and cycle detection graph tracking to prevent infinite loops in fund-of-funds structures (`PortfolioExposureLookThroughCycleError`).
+926. **Explicit Residual Unmapped Constituent Bucket**: Created explicit `residual_unmapped` constituent row for non-disclosed or sub-threshold holdings to ensure $100\%$ fund reconciliation.
+927. **Cross-Fund Overlap Engine**: Implemented pairwise constituent overlap matrix ($\sum \min(w_{k,A}, w_{k,B})$) and consolidated portfolio overlap tracking duplicated exposures across multiple ETF holdings.
+
+### Multi-Dimensional Taxonomies & Geographic Policies
+928. **Canonical Asset Class Registry**: Classified holdings across 7 mutually exclusive asset classes: Equity, Fixed Income, Cash Equivalent, Commodity, Real Estate, Alternative, Derivative.
+929. **GICS 11 Sectors & 25 Industry Groups**: Integrated standard 11 GICS sectors and 25 industry groups with hierarchical roll-up and benchmark comparative deltas.
+930. **Tri-Policy Geographic Engine**: Built geographic categorization supporting three distinct regulatory perspectives: Country of Legal Domicile, Country of Corporate Headquarters, and Primary Exchange Listing Country, with ISO 3166-1 alpha-2 resolution and regional aggregations.
+931. **Denomination Currency Exposure**: Computed portfolio currency exposure isolating unhedged foreign denomination assets from base reporting currency.
+
+### Historical Allocation & Allocation Drift Analytics
+932. **Historical Time-Series Allocation Engine**: Extracted historical daily and period-end asset class, sector, and top holding allocations across custom time horizons.
+933. **Date-to-Date Allocation Drift Engine**: Engineered date-to-date drift calculation measuring allocation change ($\Delta w_i = w_i(t_2) - w_i(t_1)$), basis point drift ($\Delta \text{bps}_i = 10,000 \cdot \Delta w_i$), and absolute valuation variance.
+
+### Cryptographic Provenance, Quality Tiers & Security
+934. **Cryptographic Input Hashing (`sha256`)**: Generated SHA-256 digests over valuation timestamps, position identifiers, taxonomy version tags, and look-through parameters for regulatory auditability and tamper detection.
+935. **Data Completeness Tiers**: Classified mapping status into `COMPLETE`, `COMPLETE_WITH_FALLBACKS`, `PARTIAL_UNMAPPED`, and `INCOMPLETE`, logging unmapped security counts and missing price indicators.
+936. **Comprehensive Typed Error Hierarchy**: Implemented domain exceptions including `PortfolioExposureNavInvalidError`, `PortfolioExposureLookThroughCycleError`, `PortfolioExposureReconciliationFailedError`, and `PortfolioExposureUnknownInstrumentError`.
+937. **FastAPI REST Exposure Endpoints**: Exposed 17 high-performance REST endpoints under `/api/v1/portfolios/{portfolio_id}/exposures/...` with comprehensive filtering and Pydantic V2 DTOs.
+938. **Multi-Tenant Isolation & Ownership Enforcement**: Enforced strict tenant isolation, verifying portfolio ownership before generating or serving exposure analytics and returning HTTP 403/404 on cross-tenant access.
+
+### Bloomberg-Style Professional Frontend Workspaces
+939. **Integrated `/portfolios` Allocation Workspace**: Built professional Bloomberg-style workspace under the "Allocation & Exposures" tab featuring KPI summary cards, interactive sector and asset-class panels, geographic policy switchers, currency exposure views, concentration quantile ladders, ETF look-through inspector, cross-fund overlap matrix, and date-to-date drift tables.
+940. **Strict Roadmap Boundaries & Deferrals**: Stage 112 exclusively delivers portfolio allocation, exposure intelligence, concentration, look-through, and drift analytics. Strictly deferred Stage 113 (Portfolio Attribution / Brinson-Fachler), Stage 114 (Portfolio Optimization / Markowitz / Black-Litterman), Stages 115–118 (Risk / VaR / Stress Testing), and Stages 143–149 (Order Execution / Automated Trading). Zero live broker order execution.

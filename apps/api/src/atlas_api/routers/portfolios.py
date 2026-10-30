@@ -6,7 +6,7 @@ and ledger reconciliation.
 """
 
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, List, Optional
 
@@ -61,6 +61,38 @@ from atlas.portfolios.performance import (
     SubperiodReturnDTO,
     list_canonical_benchmarks,
 )
+from atlas.portfolios.exposure import (
+    AllocationChangeItem,
+    AllocationChangeResponse,
+    CalculateExposureRequest,
+    ConcentrationSummary,
+    ConcentrationSummaryResponse,
+    CrossFundOverlapItem,
+    CrossFundOverlapResponse,
+    ExposureBasis,
+    ExposureCategoryRow,
+    ExposureCategoryResponse,
+    ExposureDataQuality,
+    ExposureDataQualityResponse,
+    ExposureDimension,
+    ExposureDimensionResponse,
+    ExposureDimensionResult,
+    FundConstituentItem,
+    FundConstituentResponse,
+    FundLookThroughResponse,
+    FundLookThroughResult,
+    GeographyPolicy,
+    HistoricalAllocationPoint,
+    HistoricalAllocationPointResponse,
+    IssuerWeightItem,
+    IssuerWeightResponse,
+    PortfolioExposureError,
+    PortfolioExposureRun,
+    PortfolioExposureRunResponse,
+    PortfolioExposureService,
+    SecurityWeightItem,
+    SecurityWeightResponse,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from atlas_api.auth.dependencies import get_current_user
@@ -72,6 +104,7 @@ router = APIRouter(prefix="/portfolios", tags=["Portfolios"])
 # Singleton service instances for in-memory persistence across requests
 _service_instance: Optional[PortfolioService] = None
 _perf_service_instance: Optional[PortfolioPerformanceService] = None
+_exposure_service_instance: Optional[PortfolioExposureService] = None
 
 
 def get_portfolio_service(request: Request) -> PortfolioService:
@@ -90,8 +123,17 @@ def get_performance_service(
     return _perf_service_instance
 
 
+def get_exposure_service(
+    portfolio_service: Annotated[PortfolioService, Depends(get_portfolio_service)]
+) -> PortfolioExposureService:
+    global _exposure_service_instance
+    if _exposure_service_instance is None or _exposure_service_instance.portfolio_service is not portfolio_service:
+        _exposure_service_instance = PortfolioExposureService(portfolio_service)
+    return _exposure_service_instance
+
+
 def _handle_error(e: Exception) -> None:
-    if isinstance(e, (PortfolioError, PortfolioPerformanceError)):
+    if isinstance(e, (PortfolioError, PortfolioPerformanceError, PortfolioExposureError)):
         raise HTTPException(
             status_code=e.status_code,
             detail={"code": e.code, "message": e.message},
@@ -100,6 +142,171 @@ def _handle_error(e: Exception) -> None:
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail={"code": "INTERNAL_SERVER_ERROR", "message": str(e)},
+    )
+
+
+def _map_category_to_response(c: ExposureCategoryRow) -> ExposureCategoryResponse:
+    return ExposureCategoryResponse(
+        category_id=c.category_id,
+        category_label=c.category_label,
+        base_value=c.base_value,
+        weight=c.weight,
+        percentage=c.percentage,
+        position_count=c.position_count,
+        direct_value=c.direct_value,
+        look_through_value=c.look_through_value,
+        is_residual=c.is_residual,
+        is_unclassified=c.is_unclassified,
+        parent_category_id=c.parent_category_id,
+        subcategories=[_map_category_to_response(sub) for sub in c.subcategories],
+    )
+
+
+def _map_dim_to_response(d: ExposureDimensionResult) -> ExposureDimensionResponse:
+    return ExposureDimensionResponse(
+        dimension=d.dimension,
+        total_base_value=d.total_base_value,
+        total_weight=d.total_weight,
+        reconciled=d.reconciled,
+        reconciliation_discrepancy=d.reconciliation_discrepancy,
+        categories=[_map_category_to_response(c) for c in d.categories],
+    )
+
+
+def _map_sec_weight_to_response(s: SecurityWeightItem) -> SecurityWeightResponse:
+    return SecurityWeightResponse(
+        instrument_id=s.instrument_id,
+        symbol=s.symbol,
+        name=s.name,
+        asset_class=s.asset_class,
+        base_value=s.base_value,
+        weight=s.weight,
+        percentage=s.percentage,
+        direct_weight=s.direct_weight,
+        look_through_weight=s.look_through_weight,
+        effective_shares=s.effective_shares,
+        rank=s.rank,
+    )
+
+
+def _map_issuer_weight_to_response(i: IssuerWeightItem) -> IssuerWeightResponse:
+    return IssuerWeightResponse(
+        issuer_id=i.issuer_id,
+        issuer_name=i.issuer_name,
+        country_code=i.country_code,
+        base_value=i.base_value,
+        weight=i.weight,
+        percentage=i.percentage,
+        constituent_instruments=i.constituent_instruments,
+        rank=i.rank,
+    )
+
+
+def _map_concentration_to_response(c: ConcentrationSummary) -> ConcentrationSummaryResponse:
+    return ConcentrationSummaryResponse(
+        top1_weight=c.top1_weight,
+        top3_weight=c.top3_weight,
+        top5_weight=c.top5_weight,
+        top10_weight=c.top10_weight,
+        top20_weight=c.top20_weight,
+        herfindahl_index=c.herfindahl_index,
+        herfindahl_index_normalized=c.herfindahl_index_normalized,
+        effective_number_of_holdings=c.effective_number_of_holdings,
+        total_positions=c.total_positions,
+        direct_holdings_count=c.direct_holdings_count,
+        look_through_holdings_count=c.look_through_holdings_count,
+    )
+
+
+def _map_constituent_to_response(fc: FundConstituentItem) -> FundConstituentResponse:
+    return FundConstituentResponse(
+        parent_fund_id=fc.parent_fund_id,
+        constituent_instrument_id=fc.constituent_instrument_id,
+        constituent_symbol=fc.constituent_symbol,
+        constituent_name=fc.constituent_name,
+        constituent_asset_class=fc.constituent_asset_class,
+        constituent_sector=fc.constituent_sector,
+        constituent_country=fc.constituent_country,
+        constituent_currency=fc.constituent_currency,
+        constituent_weight_in_fund=fc.constituent_weight_in_fund,
+        effective_base_value=fc.effective_base_value,
+        effective_portfolio_weight=fc.effective_portfolio_weight,
+        is_residual=fc.is_residual,
+    )
+
+
+def _map_fund_to_response(f: FundLookThroughResult) -> FundLookThroughResponse:
+    return FundLookThroughResponse(
+        fund_instrument_id=f.fund_instrument_id,
+        fund_symbol=f.fund_symbol,
+        fund_name=f.fund_name,
+        fund_base_value=f.fund_base_value,
+        fund_weight_in_portfolio=f.fund_weight_in_portfolio,
+        as_of_date=f.as_of_date,
+        status=f.status,
+        coverage_ratio=f.coverage_ratio,
+        residual_weight=f.residual_weight,
+        residual_base_value=f.residual_base_value,
+        constituents=[_map_constituent_to_response(c) for c in f.constituents],
+    )
+
+
+def _map_overlap_to_response(o: CrossFundOverlapItem) -> CrossFundOverlapResponse:
+    return CrossFundOverlapResponse(
+        constituent_symbol=o.constituent_symbol,
+        constituent_name=o.constituent_name,
+        total_effective_weight=o.total_effective_weight,
+        total_effective_value=o.total_effective_value,
+        funds_involved=o.funds_involved,
+        weights_by_fund=o.weights_by_fund,
+    )
+
+
+def _map_quality_to_response(q: ExposureDataQuality) -> ExposureDataQualityResponse:
+    return ExposureDataQualityResponse(
+        completeness=q.completeness,
+        total_positions=q.total_positions,
+        classified_positions=q.classified_positions,
+        unclassified_positions=q.unclassified_positions,
+        classification_coverage_ratio=q.classification_coverage_ratio,
+        valuation_coverage_ratio=q.valuation_coverage_ratio,
+        fx_coverage_ratio=q.fx_coverage_ratio,
+        warnings=q.warnings,
+        errors=q.errors,
+        reconciled=q.reconciled,
+        reconciliation_discrepancy=q.reconciliation_discrepancy,
+    )
+
+
+def _map_run_to_response(run: PortfolioExposureRun) -> PortfolioExposureRunResponse:
+    return PortfolioExposureRunResponse(
+        run_id=run.run_id,
+        portfolio_id=run.portfolio_id,
+        account_ids=run.account_ids,
+        as_of_date=run.as_of_date,
+        calculated_at=run.calculated_at,
+        base_currency=run.base_currency,
+        exposure_basis=run.exposure_basis,
+        geography_policy=run.geography_policy,
+        look_through_applied=run.look_through_applied,
+        total_nav=run.total_nav,
+        gross_exposure=run.gross_exposure,
+        cash_value=run.cash_value,
+        cash_weight=run.cash_weight,
+        input_hash=run.input_hash,
+        calculation_version=run.calculation_version,
+        reconciled=run.reconciled,
+        data_quality=_map_quality_to_response(run.data_quality),
+        asset_classes=_map_dim_to_response(run.asset_classes),
+        sectors=_map_dim_to_response(run.sectors),
+        industries=_map_dim_to_response(run.industries),
+        countries=_map_dim_to_response(run.countries),
+        currencies=_map_dim_to_response(run.currencies),
+        concentration=_map_concentration_to_response(run.concentration),
+        security_weights=[_map_sec_weight_to_response(s) for s in run.security_weights],
+        issuer_weights=[_map_issuer_weight_to_response(i) for i in run.issuer_weights],
+        funds=[_map_fund_to_response(f) for f in run.funds],
+        cross_fund_overlap=[_map_overlap_to_response(o) for o in run.cross_fund_overlap],
     )
 
 
@@ -1155,3 +1362,371 @@ async def get_performance_data_quality(
         )
     except Exception as e:
         _handle_error(e)
+
+
+# ---------------------------------------------------------------------------
+# Stage 112: Portfolio Allocation, Exposure, and Concentration Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{portfolio_id}/exposures/calculate", response_model=PortfolioExposureRunResponse)
+async def calculate_portfolio_exposure(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    payload: CalculateExposureRequest,
+) -> PortfolioExposureRunResponse:
+    """Calculate multi-dimensional allocation and exposure decomposition."""
+    try:
+        run = exposure_service.calculate_portfolio_exposure(portfolio_id, current_user.sub, payload)
+        return _map_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/exposures", response_model=PortfolioExposureRunResponse)
+async def get_latest_exposure(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    exposure_basis: ExposureBasis = Query(default=ExposureBasis.NET_ASSET_VALUE),
+    geography_policy: GeographyPolicy = Query(default=GeographyPolicy.ISSUER_DOMICILE),
+    enable_look_through: bool = Query(default=True),
+    force_recalculate: bool = Query(default=False),
+) -> PortfolioExposureRunResponse:
+    """Retrieve the latest exposure run or trigger a fresh calculation."""
+    try:
+        run = exposure_service.get_latest_exposure(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            exposure_basis=exposure_basis,
+            geography_policy=geography_policy,
+            enable_look_through=enable_look_through,
+            force_recalculate=force_recalculate,
+        )
+        return _map_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/exposures/runs", response_model=List[PortfolioExposureRunResponse])
+async def list_exposure_runs(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+) -> List[PortfolioExposureRunResponse]:
+    """List all calculated exposure runs for a portfolio."""
+    try:
+        runs = exposure_service.list_exposure_runs(portfolio_id, current_user.sub)
+        return [_map_run_to_response(r) for r in runs]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/exposures/runs/{run_id}", response_model=PortfolioExposureRunResponse)
+async def get_exposure_run(
+    portfolio_id: str,
+    run_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+) -> PortfolioExposureRunResponse:
+    """Retrieve a specific historical exposure run by run ID."""
+    try:
+        run = exposure_service.get_exposure_run(portfolio_id, run_id, current_user.sub)
+        return _map_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/allocations/asset-classes", response_model=ExposureDimensionResponse)
+async def get_asset_class_allocation(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    exposure_basis: ExposureBasis = Query(default=ExposureBasis.NET_ASSET_VALUE),
+    enable_look_through: bool = Query(default=True),
+) -> ExposureDimensionResponse:
+    """Retrieve canonical asset-class allocation breakdown."""
+    try:
+        dim = exposure_service.get_asset_class_allocation(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            exposure_basis=exposure_basis,
+            enable_look_through=enable_look_through,
+        )
+        return _map_dim_to_response(dim)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/allocations/sectors", response_model=ExposureDimensionResponse)
+async def get_sector_exposure(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    exposure_basis: ExposureBasis = Query(default=ExposureBasis.NET_ASSET_VALUE),
+    enable_look_through: bool = Query(default=True),
+) -> ExposureDimensionResponse:
+    """Retrieve GICS sector classification breakdown."""
+    try:
+        dim = exposure_service.get_sector_exposure(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            exposure_basis=exposure_basis,
+            enable_look_through=enable_look_through,
+        )
+        return _map_dim_to_response(dim)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/allocations/industries", response_model=ExposureDimensionResponse)
+async def get_industry_exposure(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    exposure_basis: ExposureBasis = Query(default=ExposureBasis.NET_ASSET_VALUE),
+    enable_look_through: bool = Query(default=True),
+) -> ExposureDimensionResponse:
+    """Retrieve GICS industry group/industry classification breakdown."""
+    try:
+        dim = exposure_service.get_industry_exposure(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            exposure_basis=exposure_basis,
+            enable_look_through=enable_look_through,
+        )
+        return _map_dim_to_response(dim)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/allocations/countries", response_model=ExposureDimensionResponse)
+async def get_country_exposure(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    exposure_basis: ExposureBasis = Query(default=ExposureBasis.NET_ASSET_VALUE),
+    geography_policy: GeographyPolicy = Query(default=GeographyPolicy.ISSUER_DOMICILE),
+    enable_look_through: bool = Query(default=True),
+) -> ExposureDimensionResponse:
+    """Retrieve geographic allocation and country exposure breakdown."""
+    try:
+        dim = exposure_service.get_country_exposure(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            exposure_basis=exposure_basis,
+            geography_policy=geography_policy,
+            enable_look_through=enable_look_through,
+        )
+        return _map_dim_to_response(dim)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/allocations/currencies", response_model=ExposureDimensionResponse)
+async def get_currency_exposure(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    exposure_basis: ExposureBasis = Query(default=ExposureBasis.NET_ASSET_VALUE),
+    enable_look_through: bool = Query(default=True),
+) -> ExposureDimensionResponse:
+    """Retrieve currency denomination exposure breakdown."""
+    try:
+        dim = exposure_service.get_currency_exposure(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            exposure_basis=exposure_basis,
+            enable_look_through=enable_look_through,
+        )
+        return _map_dim_to_response(dim)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/concentration/securities", response_model=List[SecurityWeightResponse])
+async def get_security_weights(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    exposure_basis: ExposureBasis = Query(default=ExposureBasis.NET_ASSET_VALUE),
+    enable_look_through: bool = Query(default=True),
+) -> List[SecurityWeightResponse]:
+    """Retrieve individual security-level weights and effective exposures."""
+    try:
+        weights = exposure_service.get_security_weights(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            exposure_basis=exposure_basis,
+            enable_look_through=enable_look_through,
+        )
+        return [_map_sec_weight_to_response(s) for s in weights]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/concentration/issuers", response_model=List[IssuerWeightResponse])
+async def get_issuer_weights(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    exposure_basis: ExposureBasis = Query(default=ExposureBasis.NET_ASSET_VALUE),
+    enable_look_through: bool = Query(default=True),
+) -> List[IssuerWeightResponse]:
+    """Retrieve consolidated ultimate economic issuer concentration."""
+    try:
+        issuers = exposure_service.get_issuer_weights(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            exposure_basis=exposure_basis,
+            enable_look_through=enable_look_through,
+        )
+        return [_map_issuer_weight_to_response(i) for i in issuers]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/concentration/summary", response_model=ConcentrationSummaryResponse)
+async def get_concentration_summary(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    exposure_basis: ExposureBasis = Query(default=ExposureBasis.NET_ASSET_VALUE),
+    enable_look_through: bool = Query(default=True),
+) -> ConcentrationSummaryResponse:
+    """Retrieve concentration statistics (Top 1/3/5/10/20, HHI, and Effective Number of Holdings)."""
+    try:
+        summary = exposure_service.get_concentration_summary(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            exposure_basis=exposure_basis,
+            enable_look_through=enable_look_through,
+        )
+        return _map_concentration_to_response(summary)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/lookthrough", response_model=List[FundLookThroughResponse])
+async def get_look_through_details(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+) -> List[FundLookThroughResponse]:
+    """Retrieve decomposed constituent look-through for all funds in portfolio."""
+    try:
+        funds = exposure_service.get_look_through_details(portfolio_id, current_user.sub)
+        return [_map_fund_to_response(f) for f in funds]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/lookthrough/funds/{instrument_id}", response_model=FundLookThroughResponse)
+async def get_fund_look_through(
+    portfolio_id: str,
+    instrument_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+) -> FundLookThroughResponse:
+    """Retrieve constituent look-through decomposition for a specific fund."""
+    try:
+        fund = exposure_service.get_fund_look_through(portfolio_id, instrument_id, current_user.sub)
+        if not fund:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "FUND_NOT_FOUND", "message": f"Fund '{instrument_id}' not found in portfolio."},
+            )
+        return _map_fund_to_response(fund)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/lookthrough/overlap", response_model=List[CrossFundOverlapResponse])
+async def get_cross_fund_overlap(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+) -> List[CrossFundOverlapResponse]:
+    """Retrieve cross-fund constituent overlap analysis across all ETF/fund holdings."""
+    try:
+        overlaps = exposure_service.get_cross_fund_overlap(portfolio_id, current_user.sub)
+        return [_map_overlap_to_response(o) for o in overlaps]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/exposures/history", response_model=List[HistoricalAllocationPointResponse])
+async def get_historical_exposures(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    dimension: ExposureDimension = Query(default=ExposureDimension.ASSET_CLASS),
+) -> List[HistoricalAllocationPointResponse]:
+    """Retrieve historical allocation trajectory for a specified dimension."""
+    try:
+        points = exposure_service.get_historical_exposures(portfolio_id, current_user.sub, dimension)
+        return [
+            HistoricalAllocationPointResponse(
+                as_of_date=p.as_of_date,
+                dimension=p.dimension,
+                category_id=p.category_id,
+                category_label=p.category_label,
+                weight=p.weight,
+                base_value=p.base_value,
+                base_currency=p.base_currency,
+            )
+            for p in points
+        ]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/exposures/changes", response_model=List[AllocationChangeResponse])
+async def get_allocation_changes(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    dimension: ExposureDimension = Query(default=ExposureDimension.ASSET_CLASS),
+) -> List[AllocationChangeResponse]:
+    """Calculate date-to-date allocation drift and weight changes (delta_w = w_t2 - w_t1)."""
+    try:
+        changes = exposure_service.get_allocation_changes(
+            portfolio_id, current_user.sub, dimension, start_date, end_date
+        )
+        return [
+            AllocationChangeResponse(
+                dimension=c.dimension,
+                category_id=c.category_id,
+                category_label=c.category_label,
+                start_date=c.start_date,
+                end_date=c.end_date,
+                start_weight=c.start_weight,
+                end_weight=c.end_weight,
+                weight_change_pct=c.weight_change_pct,
+                weight_change_bps=c.weight_change_bps,
+                start_value=c.start_value,
+                end_value=c.end_value,
+                value_change=c.value_change,
+            )
+            for c in changes
+        ]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/exposures/data-quality", response_model=ExposureDataQualityResponse)
+async def get_exposure_data_quality(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    exposure_service: Annotated[PortfolioExposureService, Depends(get_exposure_service)],
+) -> ExposureDataQualityResponse:
+    """Retrieve classification coverage, valuation audit, and reconciliation status."""
+    try:
+        quality = exposure_service.get_data_quality(portfolio_id, current_user.sub)
+        return _map_quality_to_response(quality)
+    except Exception as e:
+        _handle_error(e)
+
