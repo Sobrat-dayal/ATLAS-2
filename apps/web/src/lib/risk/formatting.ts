@@ -502,3 +502,95 @@ export function getModelDiagnosticStatusBadge(status: ModelDiagnosticStatus): St
       };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Stage 118: Options and Fixed-Income Risk Formatting Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Formats option Delta sensitivity (e.g. 0.6368 -> "+0.6368").
+ */
+export function formatGreeksDelta(val: number | null | undefined, decimals: number = 4): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  const sign = val > 0 ? '+' : '';
+  return `${sign}${val.toFixed(decimals)}`;
+}
+
+/**
+ * Formats option Gamma curvature (e.g. 0.01876 -> "0.0188").
+ */
+export function formatGreeksGamma(val: number | null | undefined, decimals: number = 4): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return val.toFixed(decimals);
+}
+
+/**
+ * Formats option Vega per 1% vol point (e.g. 0.3752 -> "0.3752").
+ */
+export function formatGreeksVega(val: number | null | undefined, decimals: number = 4): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return `${val.toFixed(decimals)}`;
+}
+
+/**
+ * Formats calendar-day Theta (e.g. -0.0176 -> "-0.0176").
+ */
+export function formatGreeksTheta(val: number | null | undefined, decimals: number = 4): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return `${val.toFixed(decimals)}`;
+}
+
+/**
+ * Formats Rho per 1 basis point (e.g. 0.0053 -> "+0.0053").
+ */
+export function formatGreeksRho(val: number | null | undefined, decimals: number = 4): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  const sign = val > 0 ? '+' : '';
+  return `${sign}${val.toFixed(decimals)}`;
+}
+
+/**
+ * Formats Macaulay or Modified Duration in years (e.g. 1.8594 -> "1.86 yrs").
+ */
+export function formatDuration(val: number | null | undefined, decimals: number = 2): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return `${val.toFixed(decimals)} yrs`;
+}
+
+/**
+ * Formats bond Convexity (e.g. 1.814 -> "1.81").
+ */
+export function formatConvexity(val: number | null | undefined, decimals: number = 2): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return val.toFixed(decimals);
+}
+
+/**
+ * Formats Dollar Value of an 01 (DV01) in currency units (e.g. 90.7 -> "$90.70").
+ */
+export function formatDV01(val: number | null | undefined, currency: string = 'USD'): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(val);
+}
+
+/**
+ * Formats clean or dirty bond price (e.g. 99.5 -> "99.50").
+ */
+export function formatBondPrice(val: number | null | undefined, decimals: number = 2): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return val.toFixed(decimals);
+}
+
+/**
+ * Formats bond yield percentage (e.g. 0.0425 -> "4.25%").
+ */
+export function formatYield(val: number | null | undefined, decimals: number = 2): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return `${(val * 100).toFixed(decimals)}%`;
+}
+

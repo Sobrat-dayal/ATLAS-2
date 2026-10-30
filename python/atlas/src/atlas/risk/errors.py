@@ -369,3 +369,159 @@ class RiskStage117SourceRestrictedError(RiskError):
 class RiskStage117RunNotFoundError(RiskError):
     status_code: int = 404
     code: str = "RISK_STAGE117_RUN_NOT_FOUND"
+
+
+# ---------------------------------------------------------------------------
+# Stage 118: Options and Fixed-Income Risk Foundations Errors
+# ---------------------------------------------------------------------------
+
+
+class RiskOptionContractIncompleteError(RiskError):
+    """Option contract specification is missing mandatory fields (strike, expiry, style, etc.)."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_CONTRACT_INCOMPLETE"
+
+
+class RiskOptionExerciseStyleUnsupportedError(RiskError):
+    """Exercise style (e.g. Bermudan/American) is not supported by the requested pricing model."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_EXERCISE_STYLE_UNSUPPORTED"
+
+
+class RiskOptionExpiredError(RiskError):
+    """Option contract has expired (T <= 0)."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_EXPIRED"
+
+
+class RiskOptionImpliedVolatilityMissingError(RiskError):
+    """Implied volatility is required for analytical option pricing but is missing."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_IMPLIED_VOLATILITY_MISSING"
+
+
+class RiskOptionImpliedVolatilityNonPositiveError(RiskError):
+    """Implied volatility must be strictly positive (sigma > 0)."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_IMPLIED_VOLATILITY_NON_POSITIVE"
+
+
+class RiskOptionUnderlyingPriceNonPositiveError(RiskError):
+    """Underlying asset price must be strictly positive (S > 0)."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_UNDERLYING_PRICE_NON_POSITIVE"
+
+
+class RiskOptionStrikeNonPositiveError(RiskError):
+    """Option strike price must be strictly positive (K > 0)."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_STRIKE_NON_POSITIVE"
+
+
+class RiskOptionTimeToExpiryNegativeError(RiskError):
+    """Time to expiration cannot be negative."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_TIME_TO_EXPIRY_NEGATIVE"
+
+
+class RiskOptionMultiplierInvalidError(RiskError):
+    """Option contract multiplier must be positive (e.g. 100)."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_MULTIPLIER_INVALID"
+
+
+class RiskOptionModelRepricingFailedError(RiskError):
+    """Repricing option contract under scenario shift failed."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_MODEL_REPRICING_FAILED"
+
+
+class RiskOptionParityCheckFailedError(RiskError):
+    """Put-call parity check failed beyond numerical tolerance."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_PARITY_CHECK_FAILED"
+
+
+class RiskOptionPositionQuantityZeroError(RiskError):
+    """Option position quantity cannot be zero."""
+    status_code: int = 400
+    code: str = "RISK_OPTION_POSITION_QUANTITY_ZERO"
+
+
+class RiskBondCashflowIncompleteError(RiskError):
+    """Bond instrument specification lacks maturity, face value, or coupon frequency."""
+    status_code: int = 400
+    code: str = "RISK_BOND_CASHFLOW_INCOMPLETE"
+
+
+class RiskBondYieldSolverFailedError(RiskError):
+    """Yield-to-maturity numerical solver failed to converge."""
+    status_code: int = 400
+    code: str = "RISK_BOND_YIELD_SOLVER_FAILED"
+
+
+class RiskBondCleanPriceNonPositiveError(RiskError):
+    """Bond clean price must be strictly positive."""
+    status_code: int = 400
+    code: str = "RISK_BOND_CLEAN_PRICE_NON_POSITIVE"
+
+
+class RiskBondDirtyPriceNonPositiveError(RiskError):
+    """Bond dirty price must be strictly positive."""
+    status_code: int = 400
+    code: str = "RISK_BOND_DIRTY_PRICE_NON_POSITIVE"
+
+
+class RiskBondMaturityBeforeSettlementError(RiskError):
+    """Bond maturity date must be after settlement date."""
+    status_code: int = 400
+    code: str = "RISK_BOND_MATURITY_BEFORE_SETTLEMENT"
+
+
+class RiskBondCouponFrequencyInvalidError(RiskError):
+    """Bond coupon frequency must be one of ANNUAL, SEMI_ANNUAL, QUARTERLY, MONTHLY."""
+    status_code: int = 400
+    code: str = "RISK_BOND_COUPON_FREQUENCY_INVALID"
+
+
+class RiskBondDayCountConventionUnsupportedError(RiskError):
+    """Requested day count convention is not supported."""
+    status_code: int = 400
+    code: str = "RISK_BOND_DAY_COUNT_CONVENTION_UNSUPPORTED"
+
+
+class RiskBondFaceValueNonPositiveError(RiskError):
+    """Bond face value must be strictly positive."""
+    status_code: int = 400
+    code: str = "RISK_BOND_FACE_VALUE_NON_POSITIVE"
+
+
+class RiskBondKeyRateTenorInvalidError(RiskError):
+    """Key rate tenor schedule is invalid or out of bounds."""
+    status_code: int = 400
+    code: str = "RISK_BOND_KEY_RATE_TENOR_INVALID"
+
+
+class RiskBondCurveMissingError(RiskError):
+    """Required benchmark or discount yield curve was not found."""
+    status_code: int = 404
+    code: str = "RISK_BOND_CURVE_MISSING"
+
+
+class RiskBondCurveInsufficientPointsError(RiskError):
+    """Yield curve definition must contain at least 2 tenor points."""
+    status_code: int = 400
+    code: str = "RISK_BOND_CURVE_INSUFFICIENT_POINTS"
+
+
+class RiskBondSensitivitiesUnavailableError(RiskError):
+    """Bond sensitivities (duration/convexity/DV01) could not be computed."""
+    status_code: int = 400
+    code: str = "RISK_BOND_SENSITIVITIES_UNAVAILABLE"
+
+
+class RiskStage118SourceRestrictedError(RiskError):
+    """Access to proprietary derivatives or bond pricing feeds is restricted."""
+    status_code: int = 403
+    code: str = "RISK_STAGE118_SOURCE_RESTRICTED"
+

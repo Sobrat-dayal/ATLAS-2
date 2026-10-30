@@ -10320,3 +10320,72 @@ This document records the major architectural and product decisions established.
 1078. **16 Production REST Endpoints**: Implemented complete REST router under `/api/v1/risk/...` covering factor catalog, factor calculation, exposures, contributions, diagnostics, concentration snapshots, issuer consolidation, currency risks, sector attribution, cross-exposures, and benchmark active factors.
 1079. **Interactive Bloomberg-Style UI Workspaces**: Built `<FactorRiskWorkspace />`, `<ConcentrationWorkspace />`, `<CurrencyRiskWorkspace />`, `<SectorRiskWorkspace />`, and `<CrossExposureWorkspace />` embedded in `/risk`.
 1080. **Strict Roadmap Scope Discipline**: Options Greeks (Delta, Gamma, Vega, Theta, Rho), Fixed-Income Duration, Convexity, DV01, Key Rate Duration, and credit spread duration are strictly deferred to Stage 118.
+
+## Stage 118: Build Options and Fixed-Income Risk Foundations
+
+### Architectural Positioning & System Invariants
+1081. **Read-Only Derivatives & Bond Analytics**: Options Greeks and Fixed-Income duration/convexity/DV01 calculations operate strictly as read-only decision-support risk intelligence, never mutating Stage 110 positions, transactions, or cash balances, and never submitting live broker orders or automated hedging trades.
+1082. **Comprehensive Stage 118 Domain Exceptions**: Added 25 typed domain exceptions (RiskOptionContractIncompleteError, RiskOptionExerciseStyleUnsupportedError, RiskOptionExpiredError, RiskOptionImpliedVolatilityNonPositiveError, RiskOptionUnderlyingPriceNonPositiveError, RiskOptionStrikeNonPositiveError, RiskOptionTimeToExpiryNegativeError, RiskOptionMultiplierInvalidError, RiskOptionParityCheckFailedError, RiskBondCashflowIncompleteError, RiskBondYieldSolverFailedError, RiskBondCleanPriceNonPositiveError, RiskBondDirtyPriceNonPositiveError, RiskBondMaturityBeforeSettlementError, RiskBondCouponFrequencyInvalidError, RiskBondDayCountConventionUnsupportedError, RiskBondFaceValueNonPositiveError, RiskBondKeyRateTenorInvalidError, RiskBondCurveMissingError, etc.) mapped to explicit HTTP status codes.
+
+### Black-Scholes-Merton Options Pricing & Greek Sensitivities
+1083. **Closed-Form European BSM Engine**: Implemented standard Black-Scholes-Merton model for European calls and puts: d1 = [ln(S/K) + (r - q + 0.5 * sigma^2)T] / (sigma * sqrt(T)), d2 = d1 - sigma * sqrt(T), C = S e^(-qT) N(d1) - K e^(-rT) N(d2), and P = K e^(-rT) N(-d2) - S e^(-qT) N(-d1).
+1084. **Analytical Greek Formulations**:
+   - Delta (Δ): Call Delta = e^(-qT) N(d1), Put Delta = -e^(-qT) N(-d1) = e^(-qT) [N(d1) - 1.0].
+   - Gamma (Γ): Identical for Call and Put: Gamma = [e^(-qT) phi(d1)] / [S * sigma * sqrt(T)].
+   - Vega (V): Identical for Call and Put: Vega_unit = S e^(-qT) phi(d1) sqrt(T); Vega per 1% vol point = 0.01 * Vega_unit.
+   - Theta (Θ): Calendar-year Theta_year and calendar-day Theta_day = Theta_year / 365.
+   - Rho (ρ): Unit rate Rho_unit and basis-point Rho_1bp = 0.0001 * Rho_unit.
+1085. **Part XVII Reference Fixture Verification**: Reconciled European Call BSM parameters to 10 decimal places with S=100, K=100, r=0.05, q=0.0, sigma=0.20, T=1.0:
+   - Call Price = 10.4505835722
+   - Delta = 0.6368306512
+   - Gamma = 0.01876201735
+   - Vega (unit vol) = 37.5240346917
+   - Vega (per 1% vol point) = 0.3752403469
+   - Theta (calendar year) = -6.4140275464
+   - Theta (calendar day, /365) = -0.0175726782
+   - Rho (unit rate) = 53.2324815454
+   - Rho (per 1 bp) = 0.0053232482
+   - Intrinsic Value = 0.0, Time Value = 10.4505835722
+   - Put-Call Parity Difference < 1e-10.
+1086. **Exact Put-Call Parity Balance**: Enforced no-arbitrage condition C - P = S e^(-qT) - K e^(-rT) with automated validation diagnostics.
+1087. **Finite-Difference Bump Verification**: Validated analytical Greeks against central finite difference perturbations (Delta_num, Gamma_num, Vega_num) within 1e-4 tolerance.
+
+### Position Multipliers & Nonlinear Taylor Repricing
+1088. **Position Multiplier Scaling (QM = Q × M)**: Formally scaled per-contract Greeks by total contracts quantity Q and contract multiplier M (e.g. 100 shares per equity option contract), ensuring position Delta units = QM * Delta, Delta notional = QM * Delta * S, and Vega = QM * Vega_1vp.
+1089. **Part XXI Reference Fixture Verification**: Reconciled 2 Long Contracts x 100 Multiplier (QM = 200) on the reference call, verifying Delta Units = 127.3661302, Delta-Equivalent Notional = ,736.61302, and Vega per 1% vol point = 75.04806938.
+1090. **Nonlinear Taylor Approximation vs Full Model Repricing**: Evaluated simultaneous Greek Taylor series dV ~= Delta * dS + 0.5 * Gamma * dS^2 + Vega * dvol - Theta * dt + Rho * dr against exact full BSM model re-evaluations across spot (+/-1%), implied volatility (+/-1 pt), interest rates (+25 bps), and 1-day time decay shocks.
+1091. **Portfolio-Level Net vs Gross Derivatives Aggregation**: Aggregated Net Delta Notional (directional exposure), Gross Delta Notional (total size), Net Vega, Gross Vega, Net Theta, Net Rho, and underlying asset buckets across all options positions.
+
+### Fixed-Income Cash-Flow Engine & Day-Count Conventions
+1092. **Day-Count Accrual Mechanics**: Implemented exact year-fraction calculations across Actual/Actual (ACT_ACT), Actual/365 Fixed (ACT_365F), Actual/360 (ACT_360), and 30/360 US/Bond Basis (THIRTY_360).
+1093. **Clean Price vs Dirty Price Accounting**: Maintained rigorous market convention Dirty Price = Clean Price + Accrued Interest, correctly accruing interest between previous coupon payment date and settlement date.
+1094. **Multi-Period Cash-Flow Schedules**: Projected exact payment dates, periodic coupon cash flows, and principal repayments across Annual, Semi-Annual, Quarterly, and Monthly coupon frequencies.
+
+### Yield to Maturity (YTM) Solver & Duration/Convexity
+1095. **Robust Root-Finding YTM Solver**: Implemented Newton-Raphson solver with analytical price derivative dP/dy with automatic bisection fallback across [-0.30, 3.0] yields matching target dirty prices to 1e-9 precision.
+1096. **Macaulay & Modified Duration Analytics**: Formulated Macaulay duration D_Mac = (1/P) sum t_j PV(CF_j) and Modified duration D_mod = D_Mac / (1 + y/m) quantifying first-order percentage price sensitivity to interest rate shifts.
+1097. **Bond Convexity Curvature**: Formulated analytical convexity C = (1/P) sum [t_j (t_j + 1/m) CF_j] / (1 + y/m)^(m*t_j + 2) capturing second-order curvature effects.
+1098. **DV01 / PV01 Risk Measurement**: Computed Dollar Value of an 01 (DV01) as positive risk magnitude P * D_mod * 0.0001 (and position DV01 = MV * D_mod * 0.0001), representing portfolio P&L per +1 bp yield shift.
+1099. **Part XLII Reference Fixture Verification**: Reconciled Zero-Coupon Bond fixture (Face=100, T=1.0, Coupon=0%, y=5%, m=1) to 10 decimal places:
+   - Price P = 100 / 1.05 = 95.2380952381
+   - Macaulay Duration = 1.0
+   - Modified Duration = 1 / 1.05 = 0.9523809524
+   - Convexity = 2 / (1.05)^2 = 1.8140589569
+   - DV01 per 100 Face = 100 / (1.05)^2 * 0.0001 = 0.0090702948.
+1100. **Part XLIII Reference Fixture Verification**: Reconciled Two-Year 5% Par Bond fixture (Face=100, Coupon=5% annual, y=5%, T=2, m=1) to 10 decimal places:
+   - Cash flows: Year 1 = 5, Year 2 = 105
+   - Dirty Price = 5 / 1.05 + 105 / 1.05^2 = 100.0
+   - Macaulay Duration = [1(5/1.05) + 2(105/1.05^2)] / 100 = 1.9523809524
+   - Modified Duration = 1.9523809524 / 1.05 = 1.8594104308.
+
+### Key-Rate Duration & Term-Structure Sensitivities
+1101. **Linear Key-Rate Tenor Allocation**: Allocated individual bond cash flows across standardized key-rate tenor vertices (6M, 1Y, 2Y, 3Y, 5Y, 7Y, 10Y, 20Y, 30Y) using linear triangle weighting w_k = (T_{k+1} - t_j) / (T_{k+1} - T_k).
+1102. **Exact Key-Rate Additivity**: Proved and verified that the sum of Key-Rate Durations across all tenors identically equals the bond's Modified Duration (sum KRD_k === D_mod), and sum KRD_DV01_k === DV01, eliminating residual leakage.
+1103. **Calibrated Sovereign Yield Curve**: Modeled zero/par rate term structure (1M to 30Y) with exact continuous discount factors DF(T) = exp(-r * T) and linear tenor interpolation.
+
+### Portfolio Synthesis, UI Workspaces & Scope Boundaries
+1104. **Cross-Asset Instrument Sensitivities Synthesis**: United direct Equity delta (1.0 per unit), Options Delta-Equivalent Notional ($), and Fixed-Income DV01 ($) into a unified cross-asset risk synthesis under /risk.
+1105. **12 Production REST Endpoints**: Implemented complete REST router under /api/v1/risk/... covering options models, option calculation, portfolio options risk summary, position Greeks, underlying buckets, fixed income models, bond calculation, portfolio fixed income summary, bond cash flows, portfolio DV01, yield curves, and cross-asset sensitivities.
+1106. **Professional Bloomberg-Style Terminals**: Delivered <OptionsRiskWorkspace /> and <FixedIncomeRiskWorkspace /> featuring real-time Greeks calculation, nonlinear shock comparison, cash flow schedule drilldown, key-rate term structure, and yield curve visualization.
+1107. **Strict Roadmap Scope Discipline**: Global Saved module (/saved), full exchange-grade options order routing, comprehensive QuantLib bindings, paper trading, and autonomous AI trading agents (Stages 141-149) are strictly deferred.
+

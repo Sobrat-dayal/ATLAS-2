@@ -27,6 +27,16 @@ import {
   getPortfolioCurrencyRisk,
   getPortfolioSectorRisk,
   getPortfolioCrossExposure,
+  calculateOptionsRisk,
+  getPortfolioOptionsRisk,
+  getPortfolioOptionsGreeks,
+  getPortfolioOptionsUnderlyings,
+  calculateFixedIncomeRisk,
+  getPortfolioFixedIncomeRisk,
+  getPortfolioBondCashflows,
+  getPortfolioFixedIncomeDV01,
+  getPortfolioFixedIncomeCurves,
+  getPortfolioInstrumentSensitivities,
 } from "@/lib/risk/api";
 import {
   AnnualizationPolicy,
@@ -56,6 +66,16 @@ import {
   FactorRiskRunDTO,
   SectorRiskSnapshotDTO,
   SecurityFactorExposureDTO,
+  CalculateFixedIncomeRiskRequestDTO,
+  CalculateOptionsRiskRequestDTO,
+  BondCashFlowScheduleDTO,
+  BondSensitivitiesResultDTO,
+  InterestRateCurveDefinitionDTO,
+  OptionGreeksResultDTO,
+  OptionPositionRiskDTO,
+  PortfolioFixedIncomeRiskSummaryDTO,
+  PortfolioInstrumentSensitivitiesSummaryDTO,
+  PortfolioOptionsRiskSummaryDTO,
 } from "@/lib/risk/types";
 
 export type RiskTab =
@@ -65,6 +85,8 @@ export type RiskTab =
   | "currency"
   | "sectors"
   | "cross_exposure"
+  | "options"
+  | "fixed_income"
   | "tail_risk"
   | "scenarios"
   | "diagnostics"
@@ -176,6 +198,21 @@ export interface UseRiskTerminalReturn {
   setSelectedConcentrationDimension: (dim: ConcentrationDimension) => void;
   setSelectedCrossRowDim: (dim: string) => void;
   setSelectedCrossColDim: (dim: string) => void;
+
+  // Stage 118: Options & Fixed Income
+  optionsSummary: PortfolioOptionsRiskSummaryDTO | null;
+  loadingOptions: boolean;
+  fixedIncomeSummary: PortfolioFixedIncomeRiskSummaryDTO | null;
+  loadingFixedIncome: boolean;
+  sensitivitiesSummary: PortfolioInstrumentSensitivitiesSummaryDTO | null;
+  curveDefinition: InterestRateCurveDefinitionDTO | null;
+  selectedBondCashFlows: BondCashFlowScheduleDTO | null;
+  fetchOptionsRiskAction: () => Promise<void>;
+  calculateOptionContractAction: (req: CalculateOptionsRiskRequestDTO) => Promise<OptionGreeksResultDTO>;
+  fetchFixedIncomeRiskAction: () => Promise<void>;
+  calculateBondContractAction: (req: CalculateFixedIncomeRiskRequestDTO) => Promise<BondSensitivitiesResultDTO>;
+  fetchBondCashFlowsAction: (instrumentId: string) => Promise<void>;
+
   refresh: () => Promise<void>;
 }
 
@@ -244,6 +281,15 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
   const [loadingSector, setLoadingSector] = useState<boolean>(false);
   const [loadingCross, setLoadingCross] = useState<boolean>(false);
 
+  // Stage 118 State: Options & Fixed Income
+  const [optionsSummary, setOptionsSummary] = useState<PortfolioOptionsRiskSummaryDTO | null>(null);
+  const [loadingOptions, setLoadingOptions] = useState<boolean>(false);
+  const [fixedIncomeSummary, setFixedIncomeSummary] = useState<PortfolioFixedIncomeRiskSummaryDTO | null>(null);
+  const [loadingFixedIncome, setLoadingFixedIncome] = useState<boolean>(false);
+  const [sensitivitiesSummary, setSensitivitiesSummary] = useState<PortfolioInstrumentSensitivitiesSummaryDTO | null>(null);
+  const [curveDefinition, setCurveDefinition] = useState<InterestRateCurveDefinitionDTO | null>(null);
+  const [selectedBondCashFlows, setSelectedBondCashFlows] = useState<BondCashFlowScheduleDTO | null>(null);
+
   // Load portfolios list and catalogs on mount
   useEffect(() => {
     let mounted = true;
@@ -304,7 +350,7 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     try {
       const accountParam = selectedAccountId === "ALL" ? undefined : selectedAccountId;
 
-      const [summaryRes, volRes, ddRes, benchRes, contribRes, runsRes, tailRes, factorRes, concRes, currRes, secRes, crossRes] =
+      const [summaryRes, volRes, ddRes, benchRes, contribRes, runsRes, tailRes, factorRes, concRes, currRes, secRes, crossRes, optRes, fiRes, curveRes, sensRes] =
         await Promise.all([
           getPortfolioRiskSummary(selectedPortfolioId, accountParam).catch(() => null),
           getPortfolioVolatility(selectedPortfolioId, {
@@ -329,6 +375,10 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
           getPortfolioCurrencyRisk(selectedPortfolioId).catch(() => null),
           getPortfolioSectorRisk(selectedPortfolioId).catch(() => null),
           getPortfolioCrossExposure(selectedPortfolioId, selectedCrossRowDim, selectedCrossColDim).catch(() => null),
+        getPortfolioOptionsRisk(selectedPortfolioId).catch(() => null),
+        getPortfolioFixedIncomeRisk(selectedPortfolioId).catch(() => null),
+        getPortfolioFixedIncomeCurves(selectedPortfolioId).catch(() => null),
+        getPortfolioInstrumentSensitivities(selectedPortfolioId).catch(() => null),
         ]);
 
       setSummary(summaryRes);
@@ -359,6 +409,10 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
       if (currRes) setCurrencySnapshot(currRes);
       if (secRes) setSectorSnapshot(secRes);
       if (crossRes) setCrossExposureMatrix(crossRes);
+      if (optRes) setOptionsSummary(optRes);
+      if (fiRes) setFixedIncomeSummary(fiRes);
+      if (curveRes) setCurveDefinition(curveRes);
+      if (sensRes) setSensitivitiesSummary(sensRes);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -753,6 +807,51 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     setSelectedConcentrationDimension,
     setSelectedCrossRowDim,
     setSelectedCrossColDim,
+
+    // Stage 118 Returns
+    optionsSummary,
+    loadingOptions,
+    fixedIncomeSummary,
+    loadingFixedIncome,
+    sensitivitiesSummary,
+    curveDefinition,
+    selectedBondCashFlows,
+    fetchOptionsRiskAction: async () => {
+      if (!selectedPortfolioId) return;
+      setLoadingOptions(true);
+      try {
+        const res = await getPortfolioOptionsRisk(selectedPortfolioId);
+        setOptionsSummary(res);
+      } finally {
+        setLoadingOptions(false);
+      }
+    },
+    calculateOptionContractAction: async (req: CalculateOptionsRiskRequestDTO) => {
+      return calculateOptionsRisk(req);
+    },
+    fetchFixedIncomeRiskAction: async () => {
+      if (!selectedPortfolioId) return;
+      setLoadingFixedIncome(true);
+      try {
+        const res = await getPortfolioFixedIncomeRisk(selectedPortfolioId);
+        setFixedIncomeSummary(res);
+      } finally {
+        setLoadingFixedIncome(false);
+      }
+    },
+    calculateBondContractAction: async (req: CalculateFixedIncomeRiskRequestDTO) => {
+      return calculateFixedIncomeRisk(req);
+    },
+    fetchBondCashFlowsAction: async (instrumentId: string) => {
+      if (!selectedPortfolioId) return;
+      try {
+        const res = await getPortfolioBondCashflows(selectedPortfolioId, instrumentId);
+        setSelectedBondCashFlows(res);
+      } catch {
+        // silent fallback
+      }
+    },
+
     refresh: loadRiskData,
   };
 }

@@ -50,6 +50,10 @@ import { CurrencyRiskWorkspace } from "./currency/CurrencyRiskWorkspace";
 import { SectorRiskWorkspace } from "./sectors/SectorRiskWorkspace";
 import { CrossExposureWorkspace } from "./cross/CrossExposureWorkspace";
 
+// Stage 118 Components
+import { OptionsRiskWorkspace } from "./options/OptionsRiskWorkspace";
+import { FixedIncomeRiskWorkspace } from "./fixed-income/FixedIncomeRiskWorkspace";
+
 interface RiskTerminalWorkspaceProps {
   initialPortfolioId?: string;
 }
@@ -65,6 +69,8 @@ export function RiskTerminalWorkspace({ initialPortfolioId }: RiskTerminalWorksp
     { id: "currency", label: "Currency & FX", icon: <Globe className="h-3.5 w-3.5 text-emerald-400" /> },
     { id: "sectors", label: "Sector Attribution", icon: <PieChart className="h-3.5 w-3.5 text-amber-400" /> },
     { id: "cross_exposure", label: "Cross-Exposure", icon: <Grid className="h-3.5 w-3.5 text-indigo-400" /> },
+    { id: "options", label: "Options & Greeks", icon: <Sliders className="h-3.5 w-3.5 text-amber-400" /> },
+    { id: "fixed_income", label: "Fixed-Income & Curves", icon: <Activity className="h-3.5 w-3.5 text-emerald-400" /> },
     { id: "tail_risk", label: "VaR & Expected Shortfall", icon: <ShieldAlert className="h-3.5 w-3.5 text-rose-400" /> },
     { id: "scenarios", label: "Scenario Stress Testing", icon: <Zap className="h-3.5 w-3.5 text-amber-400" /> },
     { id: "diagnostics", label: "VaR Backtest & Kupiec", icon: <Scale className="h-3.5 w-3.5 text-emerald-400" /> },
@@ -300,6 +306,31 @@ export function RiskTerminalWorkspace({ initialPortfolioId }: RiskTerminalWorksp
                 onSelectDimensions={terminal.loadCrossExposureAction}
                 loading={terminal.loadingCross}
                 onRefresh={() => terminal.loadCrossExposureAction()}
+              />
+            )}
+
+            {/* Stage 118 Tab: Options & Greeks */}
+            {terminal.activeTab === "options" && (
+              <OptionsRiskWorkspace
+                portfolioId={terminal.selectedPortfolioId}
+                optionsSummary={terminal.optionsSummary}
+                loading={terminal.loadingOptions}
+                onRefresh={terminal.fetchOptionsRiskAction}
+                onCalculateOption={terminal.calculateOptionContractAction}
+              />
+            )}
+
+            {/* Stage 118 Tab: Fixed-Income & Yield Curves */}
+            {terminal.activeTab === "fixed_income" && (
+              <FixedIncomeRiskWorkspace
+                portfolioId={terminal.selectedPortfolioId}
+                fixedIncomeSummary={terminal.fixedIncomeSummary}
+                curveDefinition={terminal.curveDefinition}
+                selectedBondCashFlows={terminal.selectedBondCashFlows}
+                loading={terminal.loadingFixedIncome}
+                onRefresh={terminal.fetchFixedIncomeRiskAction}
+                onCalculateBond={terminal.calculateBondContractAction}
+                onFetchCashFlows={terminal.fetchBondCashFlowsAction}
               />
             )}
 

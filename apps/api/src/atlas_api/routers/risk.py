@@ -14,6 +14,14 @@ from atlas.portfolios.service import PortfolioService
 from atlas.risk.enums import (
     AnnualizationPolicy,
     ConcentrationDimension,
+    BondPricingModelId,
+    CouponFrequency,
+    CouponType,
+    DayCountConvention,
+    ExerciseStyle,
+    OptionType,
+    OptionsPricingModelId,
+    YieldCurveInterpolation,
     CurrencyExposureType,
     ExpectedShortfallMethod,
     FactorFamily,
@@ -64,6 +72,19 @@ from atlas.risk.models import (
     ScenarioShock,
     SectorRiskItem,
     SectorRiskSnapshot,
+    BondCashFlowItem,
+    BondCashFlowSchedule,
+    BondPositionRiskResult,
+    BondSensitivitiesResult,
+    InterestRateCurveDefinition,
+    KeyRateSensitivityItem,
+    OptionContractRiskInput,
+    OptionGreeksResult,
+    OptionPositionRiskResult,
+    PortfolioFixedIncomeRiskSummary,
+    PortfolioInstrumentSensitivitiesSummary,
+    PortfolioOptionsRiskSummary,
+    YieldCurvePoint,
     SecurityFactorExposure,
     TailRiskCalculationRun,
     VaRBacktestRun,
@@ -115,6 +136,20 @@ from atlas.risk.schemas import (
     ScenarioShockDTO,
     SectorRiskItemDTO,
     SectorRiskSnapshotDTO,
+    BondCashFlowItemDTO,
+    BondCashFlowScheduleDTO,
+    BondPositionRiskDTO,
+    BondSensitivitiesResultDTO,
+    CalculateFixedIncomeRiskRequest,
+    CalculateOptionsRiskRequest,
+    InterestRateCurveDefinitionDTO,
+    KeyRateSensitivityItemDTO,
+    OptionGreeksResultDTO,
+    OptionPositionRiskDTO,
+    PortfolioFixedIncomeRiskSummaryDTO,
+    PortfolioInstrumentSensitivitiesSummaryDTO,
+    PortfolioOptionsRiskSummaryDTO,
+    YieldCurvePointDTO,
     SecurityFactorExposureDTO,
     TailRiskCalculationRunDTO,
     VaRBacktestRunDTO,
@@ -463,6 +498,203 @@ def _map_backtest_run_to_dto(b: VaRBacktestRun) -> VaRBacktestRunDTO:
 
 
 # -------------------------------------------------------------------------
+
+
+def _map_option_greeks_to_dto(g: OptionGreeksResult) -> OptionGreeksResultDTO:
+    return OptionGreeksResultDTO(
+        theoretical_price=g.theoretical_price,
+        delta=g.delta,
+        gamma=g.gamma,
+        vega=g.vega,
+        vega_per_vol_point=g.vega_per_vol_point,
+        theta=g.theta,
+        theta_per_day=g.theta_per_day,
+        rho=g.rho,
+        rho_per_basis_point=g.rho_per_basis_point,
+        intrinsic_value=g.intrinsic_value,
+        time_value=g.time_value,
+        implied_volatility=g.implied_volatility,
+        d1=g.d1,
+        d2=g.d2,
+        put_call_parity_diff=g.put_call_parity_diff,
+        is_pricing_valid=g.is_pricing_valid,
+        pricing_model=str(g.pricing_model),
+    )
+
+
+def _map_option_position_to_dto(p: OptionPositionRiskResult) -> OptionPositionRiskDTO:
+    return OptionPositionRiskDTO(
+        position_id=p.position_id,
+        instrument_id=p.instrument_id,
+        underlying_symbol=p.underlying_symbol,
+        option_type=p.option_type,
+        exercise_style=p.exercise_style,
+        strike_price=p.strike_price,
+        time_to_expiry_years=p.time_to_expiry_years,
+        contracts_quantity=p.contracts_quantity,
+        contract_multiplier=p.contract_multiplier,
+        position_market_value=p.position_market_value,
+        underlying_price=p.underlying_price,
+        currency=p.currency,
+        base_currency=p.base_currency,
+        fx_rate_to_base=p.fx_rate_to_base,
+        per_contract_greeks=_map_option_greeks_to_dto(p.per_contract_greeks),
+        position_delta_units=p.position_delta_units,
+        position_delta_notional=p.position_delta_notional,
+        position_gamma_units=p.position_gamma_units,
+        position_vega_per_vol_point=p.position_vega_per_vol_point,
+        position_theta_per_day=p.position_theta_per_day,
+        position_rho_per_basis_point=p.position_rho_per_basis_point,
+        base_currency_delta_notional=p.base_currency_delta_notional,
+        base_currency_vega_per_vol_point=p.base_currency_vega_per_vol_point,
+        base_currency_theta_per_day=p.base_currency_theta_per_day,
+        base_currency_rho_per_basis_point=p.base_currency_rho_per_basis_point,
+        approximate_pnl_shock=p.approximate_pnl_shock,
+        full_reprice_pnl_shock=p.full_reprice_pnl_shock,
+    )
+
+
+def _map_portfolio_options_summary_to_dto(s: PortfolioOptionsRiskSummary) -> PortfolioOptionsRiskSummaryDTO:
+    return PortfolioOptionsRiskSummaryDTO(
+        portfolio_id=s.portfolio_id,
+        as_of=s.as_of.isoformat(),
+        base_currency=s.base_currency,
+        total_options_market_value=s.total_options_market_value,
+        options_count=s.options_count,
+        net_delta_notional=s.net_delta_notional,
+        gross_delta_notional=s.gross_delta_notional,
+        net_vega_per_vol_point=s.net_vega_per_vol_point,
+        gross_vega_per_vol_point=s.gross_vega_per_vol_point,
+        net_theta_per_day=s.net_theta_per_day,
+        net_rho_per_basis_point=s.net_rho_per_basis_point,
+        underlying_exposures=s.underlying_exposures,
+        positions=[_map_option_position_to_dto(p) for p in s.positions],
+        is_complete=s.is_complete,
+        warnings=s.warnings,
+    )
+
+
+def _map_bond_cash_flow_schedule_to_dto(s: BondCashFlowSchedule) -> BondCashFlowScheduleDTO:
+    return BondCashFlowScheduleDTO(
+        instrument_id=s.instrument_id,
+        face_value=s.face_value,
+        coupon_rate=s.coupon_rate,
+        coupon_frequency=s.coupon_frequency,
+        day_count_convention=s.day_count_convention,
+        settlement_date=s.settlement_date.isoformat(),
+        maturity_date=s.maturity_date.isoformat(),
+        cash_flows=[
+            BondCashFlowItemDTO(
+                period_index=c.period_index,
+                payment_date=c.payment_date.isoformat(),
+                year_fraction=c.year_fraction,
+                coupon_amount=c.coupon_amount,
+                principal_amount=c.principal_amount,
+                total_cash_flow=c.total_cash_flow,
+                discount_factor=c.discount_factor,
+                present_value=c.present_value,
+            )
+            for c in s.cash_flows
+        ],
+        accrued_interest=s.accrued_interest,
+        clean_price=s.clean_price,
+        dirty_price=s.dirty_price,
+    )
+
+
+def _map_bond_sensitivities_to_dto(s: BondSensitivitiesResult) -> BondSensitivitiesResultDTO:
+    return BondSensitivitiesResultDTO(
+        clean_price=s.clean_price,
+        accrued_interest=s.accrued_interest,
+        dirty_price=s.dirty_price,
+        yield_to_maturity=s.yield_to_maturity,
+        macaulay_duration=s.macaulay_duration,
+        modified_duration=s.modified_duration,
+        convexity=s.convexity,
+        dv01_per_100_face=s.dv01_per_100_face,
+        effective_duration=s.effective_duration,
+        effective_convexity=s.effective_convexity,
+        key_rate_durations=[
+            KeyRateSensitivityItemDTO(
+                tenor_name=k.tenor_name,
+                tenor_years=k.tenor_years,
+                key_rate_duration=k.key_rate_duration,
+                key_rate_dv01=k.key_rate_dv01,
+            )
+            for k in s.key_rate_durations
+        ],
+        pricing_model=str(s.pricing_model),
+    )
+
+
+def _map_bond_position_to_dto(p: BondPositionRiskResult) -> BondPositionRiskDTO:
+    return BondPositionRiskDTO(
+        position_id=p.position_id,
+        instrument_id=p.instrument_id,
+        issuer_name=p.issuer_name,
+        face_value=p.face_value,
+        quantity=p.quantity,
+        currency=p.currency,
+        base_currency=p.base_currency,
+        fx_rate_to_base=p.fx_rate_to_base,
+        market_value=p.market_value,
+        sensitivities=_map_bond_sensitivities_to_dto(p.sensitivities),
+        position_dv01=p.position_dv01,
+        base_currency_dv01=p.base_currency_dv01,
+        cash_flow_schedule=_map_bond_cash_flow_schedule_to_dto(p.cash_flow_schedule) if p.cash_flow_schedule else None,
+    )
+
+
+def _map_portfolio_fixed_income_summary_to_dto(s: PortfolioFixedIncomeRiskSummary) -> PortfolioFixedIncomeRiskSummaryDTO:
+    return PortfolioFixedIncomeRiskSummaryDTO(
+        portfolio_id=s.portfolio_id,
+        as_of=s.as_of.isoformat(),
+        base_currency=s.base_currency,
+        total_fixed_income_market_value=s.total_fixed_income_market_value,
+        bonds_count=s.bonds_count,
+        portfolio_weighted_modified_duration=s.portfolio_weighted_modified_duration,
+        portfolio_weighted_macaulay_duration=s.portfolio_weighted_macaulay_duration,
+        portfolio_weighted_convexity=s.portfolio_weighted_convexity,
+        portfolio_weighted_yield=s.portfolio_weighted_yield,
+        portfolio_total_dv01=s.portfolio_total_dv01,
+        key_rate_dv01_profile=s.key_rate_dv01_profile,
+        positions=[_map_bond_position_to_dto(p) for p in s.positions],
+        is_complete=s.is_complete,
+        warnings=s.warnings,
+    )
+
+
+def _map_yield_curve_to_dto(c: InterestRateCurveDefinition) -> InterestRateCurveDefinitionDTO:
+    return InterestRateCurveDefinitionDTO(
+        curve_id=c.curve_id,
+        currency=c.currency,
+        as_of=c.as_of.isoformat(),
+        interpolation_method=c.interpolation_method,
+        points=[
+            YieldCurvePointDTO(
+                tenor_years=pt.tenor_years,
+                rate=pt.rate,
+                label=pt.label,
+                discount_factor=pt.discount_factor,
+            )
+            for pt in c.points
+        ],
+    )
+
+
+def _map_instrument_sensitivities_to_dto(s: PortfolioInstrumentSensitivitiesSummary) -> PortfolioInstrumentSensitivitiesSummaryDTO:
+    return PortfolioInstrumentSensitivitiesSummaryDTO(
+        portfolio_id=s.portfolio_id,
+        as_of=s.as_of.isoformat(),
+        base_currency=s.base_currency,
+        total_portfolio_value=s.total_portfolio_value,
+        options_summary=_map_portfolio_options_summary_to_dto(s.options_summary) if s.options_summary else None,
+        fixed_income_summary=_map_portfolio_fixed_income_summary_to_dto(s.fixed_income_summary) if s.fixed_income_summary else None,
+        net_equity_delta_equivalent=s.net_equity_delta_equivalent,
+        net_fixed_income_dv01=s.net_fixed_income_dv01,
+    )
+
+
 # Core Risk Registry & Calculation Endpoints
 # -------------------------------------------------------------------------
 
@@ -1577,5 +1809,211 @@ def get_portfolio_factor_benchmark(
             "benchmark_exposures": {fid: (1.0 if "MKT" in fid else 0.0) for fid in run.factor_ids},
             "active_factor_exposures": run.active_factor_exposures,
         }
+    except Exception as e:
+        _handle_error(e)
+
+
+
+# -------------------------------------------------------------------------
+# Stage 118: Options and Fixed-Income Risk Endpoints
+# -------------------------------------------------------------------------
+
+
+@router.get("/options/models")
+def get_options_models(
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> List[Dict[str, Any]]:
+    """Returns available options pricing models and supported exercise styles."""
+    return [
+        {
+            "model_id": OptionsPricingModelId.EUROPEAN_BLACK_SCHOLES_MERTON,
+            "display_name": "Black-Scholes-Merton (European)",
+            "supported_styles": ["EUROPEAN"],
+            "description": "Standard continuous-time analytical option pricing and closed-form Greeks.",
+        },
+        {
+            "model_id": OptionsPricingModelId.EUROPEAN_BLACK_76,
+            "display_name": "Black-76 (Futures & Commodity Options)",
+            "supported_styles": ["EUROPEAN"],
+            "description": "Black-76 model for European options on futures and commodity indices.",
+        },
+        {
+            "model_id": OptionsPricingModelId.NUMERICAL_BUMP_REPRICE,
+            "display_name": "Numerical Bump & Reprice",
+            "supported_styles": ["EUROPEAN", "AMERICAN"],
+            "description": "Finite-difference perturbation across spot, implied volatility, rate, and time.",
+        },
+    ]
+
+
+@router.post("/options/calculate", response_model=OptionGreeksResultDTO)
+def calculate_options_risk(
+    request: CalculateOptionsRiskRequest,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> OptionGreeksResultDTO:
+    """Computes theoretical price, Greeks, and intrinsic/time values for an option contract."""
+    try:
+        res = service.calculate_options_risk(request)
+        return _map_option_greeks_to_dto(res)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/options", response_model=PortfolioOptionsRiskSummaryDTO)
+def get_portfolio_options_risk(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> PortfolioOptionsRiskSummaryDTO:
+    """Retrieves portfolio-level aggregated options risk and underlying exposures."""
+    try:
+        summary = service.get_portfolio_options_risk(portfolio_id=portfolio_id, user_id=current_user.sub)
+        return _map_portfolio_options_summary_to_dto(summary)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/options/greeks", response_model=List[OptionPositionRiskDTO])
+def get_portfolio_options_greeks(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> List[OptionPositionRiskDTO]:
+    """Retrieves position-level options Greeks with multiplier scaling."""
+    try:
+        summary = service.get_portfolio_options_risk(portfolio_id=portfolio_id, user_id=current_user.sub)
+        dto = _map_portfolio_options_summary_to_dto(summary)
+        return dto.positions
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/options/underlyings")
+def get_portfolio_options_underlyings(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> Dict[str, Dict[str, float]]:
+    """Retrieves aggregated options Greeks partitioned by underlying asset."""
+    try:
+        summary = service.get_portfolio_options_risk(portfolio_id=portfolio_id, user_id=current_user.sub)
+        return summary.underlying_exposures
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/fixed-income/models")
+def get_fixed_income_models(
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> List[Dict[str, Any]]:
+    """Returns available fixed-income pricing models and yield solvers."""
+    return [
+        {
+            "model_id": BondPricingModelId.DISCOUNTED_CASHFLOW,
+            "display_name": "Discounted Cash Flow (DCF)",
+            "description": "Standard multi-period coupon discounting, accrued interest, and yield-to-maturity root solving.",
+        },
+        {
+            "model_id": BondPricingModelId.YIELD_DURATION_CONVEXITY,
+            "display_name": "Duration & Convexity Taylor Expansion",
+            "description": "First and second order yield sensitivities with DV01 calculation.",
+        },
+        {
+            "model_id": BondPricingModelId.CURVE_BUMP_REPRICE,
+            "display_name": "Key-Rate Curve Bump & Reprice",
+            "description": "Tenor vertex bumping along the calibrated sovereign yield curve.",
+        },
+    ]
+
+
+@router.post("/fixed-income/calculate", response_model=BondSensitivitiesResultDTO)
+def calculate_fixed_income_risk(
+    request: CalculateFixedIncomeRiskRequest,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> BondSensitivitiesResultDTO:
+    """Computes standalone bond clean/dirty price, YTM, Macaulay/Modified duration, and DV01."""
+    try:
+        res = service.calculate_fixed_income_risk(request)
+        return _map_bond_sensitivities_to_dto(res)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/fixed-income", response_model=PortfolioFixedIncomeRiskSummaryDTO)
+def get_portfolio_fixed_income_risk(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> PortfolioFixedIncomeRiskSummaryDTO:
+    """Retrieves aggregated portfolio fixed-income duration, convexity, and total DV01."""
+    try:
+        summary = service.get_portfolio_fixed_income_risk(portfolio_id=portfolio_id, user_id=current_user.sub)
+        return _map_portfolio_fixed_income_summary_to_dto(summary)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/fixed-income/cashflows", response_model=BondCashFlowScheduleDTO)
+def get_portfolio_bond_cashflows(
+    portfolio_id: str,
+    instrument_id: str = "US_10Y_BENCHMARK",
+    service: Annotated[RiskService, Depends(get_risk_service)] = None,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)] = None,
+) -> BondCashFlowScheduleDTO:
+    """Retrieves projected coupon and principal schedule for a bond instrument."""
+    try:
+        sched = service.get_bond_cash_flows(portfolio_id=portfolio_id, instrument_id=instrument_id, user_id=current_user.sub)
+        return _map_bond_cash_flow_schedule_to_dto(sched)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/fixed-income/dv01")
+def get_portfolio_fixed_income_dv01(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> Dict[str, Any]:
+    """Retrieves total portfolio DV01 and key-rate tenor distribution."""
+    try:
+        summary = service.get_portfolio_fixed_income_risk(portfolio_id=portfolio_id, user_id=current_user.sub)
+        return {
+            "portfolio_id": portfolio_id,
+            "total_dv01": summary.portfolio_total_dv01,
+            "weighted_modified_duration": summary.portfolio_weighted_modified_duration,
+            "weighted_yield": summary.portfolio_weighted_yield,
+            "key_rate_dv01_profile": summary.key_rate_dv01_profile,
+        }
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/fixed-income/curves", response_model=InterestRateCurveDefinitionDTO)
+def get_portfolio_fixed_income_curves(
+    portfolio_id: str,
+    curve_id: str = "US_TREASURY_SOVEREIGN",
+    service: Annotated[RiskService, Depends(get_risk_service)] = None,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)] = None,
+) -> InterestRateCurveDefinitionDTO:
+    """Retrieves calibrated benchmark sovereign yield curve points and discount factors."""
+    try:
+        curve = service.get_yield_curve_risk(portfolio_id=portfolio_id, curve_id=curve_id, user_id=current_user.sub)
+        return _map_yield_curve_to_dto(curve)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/instrument-sensitivities", response_model=PortfolioInstrumentSensitivitiesSummaryDTO)
+def get_portfolio_instrument_sensitivities(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> PortfolioInstrumentSensitivitiesSummaryDTO:
+    """Retrieves cross-asset risk synthesis across equity delta, options Greeks, and bond DV01."""
+    try:
+        summary = service.get_instrument_sensitivities(portfolio_id=portfolio_id, user_id=current_user.sub)
+        return _map_instrument_sensitivities_to_dto(summary)
     except Exception as e:
         _handle_error(e)

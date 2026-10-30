@@ -10,19 +10,24 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .enums import (
     AnnualizationPolicy,
+    BondPricingModelId,
     ConcentrationDimension,
+    CouponFrequency,
+    CouponType,
     CurrencyExposureType,
     DataCoverageStatus,
+    DayCountConvention,
     DrawdownEpisodeStatus,
+    ExerciseStyle,
     ExpectedShortfallMethod,
     FactorFamily,
     FactorReturnBasis,
     KupiecTestStatus,
     ModelDiagnosticStatus,
-    DataCoverageStatus,
-    DrawdownEpisodeStatus,
-    ExpectedShortfallMethod,
-    KupiecTestStatus,
+    OptionContractStatus,
+    OptionSettlementType,
+    OptionsPricingModelId,
+    OptionType,
     ReturnBasis,
     RiskCalculationStatus,
     RiskMetricCode,
@@ -34,6 +39,7 @@ from .enums import (
     ScenarioType,
     ShockTargetType,
     VaRModelType,
+    YieldCurveInterpolation,
 )
 
 
@@ -783,3 +789,230 @@ class CrossExposureMatrix:
     col_keys: List[str]
     cells: List[CrossExposureCell]
     unit: str = "WEIGHT_PERCENT"
+
+
+
+# ---------------------------------------------------------------------------
+# Stage 118: Options and Fixed-Income Risk Foundations Domain Models
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class OptionContractRiskInput:
+    """Canonical inputs for single option contract pricing and Greek sensitivities."""
+    instrument_id: str
+    underlying_symbol: str
+    option_type: OptionType
+    exercise_style: ExerciseStyle
+    strike_price: float
+    time_to_expiry_years: float
+    underlying_price: float
+    implied_volatility: float
+    risk_free_rate: float
+    dividend_yield: float = 0.0
+    contract_multiplier: float = 100.0
+    settlement_type: OptionSettlementType = OptionSettlementType.PHYSICAL
+    expiration_date: Optional[datetime] = None
+    model_id: OptionsPricingModelId = OptionsPricingModelId.EUROPEAN_BLACK_SCHOLES_MERTON
+    currency: str = "USD"
+
+
+@dataclass
+class OptionGreeksResult:
+    """Per-contract analytical Greeks and theoretical valuation."""
+    theoretical_price: float
+    delta: float
+    gamma: float
+    vega: float                        # Vega per 1.0 unit (100% vol change)
+    vega_per_vol_point: float          # Vega per 1.0 vol point (0.01 * vega)
+    theta: float                       # Theta per calendar year
+    theta_per_day: float               # Theta per calendar day (theta / 365)
+    rho: float                         # Rho per 1.0 unit rate change
+    rho_per_basis_point: float         # Rho per 1 bp (0.0001 * rho)
+    intrinsic_value: float
+    time_value: float
+    implied_volatility: float
+    d1: float
+    d2: float
+    put_call_parity_diff: Optional[float] = None
+    is_pricing_valid: bool = True
+    pricing_model: OptionsPricingModelId = OptionsPricingModelId.EUROPEAN_BLACK_SCHOLES_MERTON
+
+
+@dataclass
+class OptionPositionRiskResult:
+    """Portfolio position-level risk with quantity and multiplier scaling."""
+    position_id: str
+    instrument_id: str
+    underlying_symbol: str
+    option_type: OptionType
+    exercise_style: ExerciseStyle
+    strike_price: float
+    time_to_expiry_years: float
+    contracts_quantity: float          # Long > 0, Short < 0
+    contract_multiplier: float        # Standard 100 for equity options
+    position_market_value: float
+    underlying_price: float
+    currency: str
+    base_currency: str
+    fx_rate_to_base: float
+    per_contract_greeks: OptionGreeksResult
+    # Position aggregate sensitivities (QM = contracts_quantity * contract_multiplier)
+    position_delta_units: float        # QM * delta
+    position_delta_notional: float     # QM * delta * S (in local currency)
+    position_gamma_units: float        # QM * gamma
+    position_vega_per_vol_point: float # QM * vega_per_vol_point
+    position_theta_per_day: float      # QM * theta_per_day
+    position_rho_per_basis_point: float# QM * rho_per_basis_point
+    # Base currency conversions
+    base_currency_delta_notional: float
+    base_currency_vega_per_vol_point: float
+    base_currency_theta_per_day: float
+    base_currency_rho_per_basis_point: float
+    # Taylor approximation vs full reprice for standard shocks
+    approximate_pnl_shock: Dict[str, float] = field(default_factory=dict)
+    full_reprice_pnl_shock: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
+class PortfolioOptionsRiskSummary:
+    """Aggregated portfolio-level options risk across all derivatives positions."""
+    portfolio_id: str
+    as_of: datetime
+    base_currency: str
+    total_options_market_value: float
+    options_count: int
+    net_delta_notional: float
+    gross_delta_notional: float
+    net_vega_per_vol_point: float
+    gross_vega_per_vol_point: float
+    net_theta_per_day: float
+    net_rho_per_basis_point: float
+    underlying_exposures: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    positions: List[OptionPositionRiskResult] = field(default_factory=list)
+    is_complete: bool = True
+    warnings: List[str] = field(default_factory=list)
+
+
+@dataclass
+class BondCashFlowItem:
+    """Individual projected cash flow payment for a debt security."""
+    period_index: int
+    payment_date: datetime
+    year_fraction: float
+    coupon_amount: float
+    principal_amount: float
+    total_cash_flow: float
+    discount_factor: float = 1.0
+    present_value: float = 0.0
+
+
+@dataclass
+class BondCashFlowSchedule:
+    """Cash flow schedule and accrued interest accounting for a bond."""
+    instrument_id: str
+    face_value: float
+    coupon_rate: float
+    coupon_frequency: CouponFrequency
+    day_count_convention: DayCountConvention
+    settlement_date: datetime
+    maturity_date: datetime
+    cash_flows: List[BondCashFlowItem]
+    accrued_interest: float
+    clean_price: float
+    dirty_price: float
+
+
+@dataclass
+class KeyRateSensitivityItem:
+    """Key-rate duration and DV01 sensitivity at a specific tenor vertex."""
+    tenor_name: str                   # e.g. "6M", "1Y", "2Y", "5Y", "10Y", "30Y"
+    tenor_years: float
+    key_rate_duration: float
+    key_rate_dv01: float
+
+
+@dataclass
+class BondSensitivitiesResult:
+    """Analytic and numerical sensitivities for a fixed-income instrument."""
+    clean_price: float
+    accrued_interest: float
+    dirty_price: float
+    yield_to_maturity: float
+    macaulay_duration: float
+    modified_duration: float
+    convexity: float
+    dv01_per_100_face: float
+    effective_duration: Optional[float] = None
+    effective_convexity: Optional[float] = None
+    key_rate_durations: List[KeyRateSensitivityItem] = field(default_factory=list)
+    pricing_model: BondPricingModelId = BondPricingModelId.DISCOUNTED_CASHFLOW
+
+
+@dataclass
+class BondPositionRiskResult:
+    """Position-level fixed-income risk and duration metrics."""
+    position_id: str
+    instrument_id: str
+    issuer_name: str
+    face_value: float
+    quantity: float
+    currency: str
+    base_currency: str
+    fx_rate_to_base: float
+    market_value: float
+    sensitivities: BondSensitivitiesResult
+    position_dv01: float               # market_value * modified_duration * 0.0001
+    base_currency_dv01: float          # position_dv01 * fx_rate_to_base
+    cash_flow_schedule: Optional[BondCashFlowSchedule] = None
+
+
+@dataclass
+class YieldCurvePoint:
+    """Zero or par rate observation at a specific maturity tenor."""
+    tenor_years: float
+    rate: float
+    label: str
+    discount_factor: float = 1.0
+
+
+@dataclass
+class InterestRateCurveDefinition:
+    """Yield curve term structure for pricing and scenario bumping."""
+    curve_id: str
+    currency: str
+    as_of: datetime
+    interpolation_method: YieldCurveInterpolation
+    points: List[YieldCurvePoint]
+
+
+@dataclass
+class PortfolioFixedIncomeRiskSummary:
+    """Aggregated portfolio-level fixed income analytics and duration profile."""
+    portfolio_id: str
+    as_of: datetime
+    base_currency: str
+    total_fixed_income_market_value: float
+    bonds_count: int
+    portfolio_weighted_modified_duration: float
+    portfolio_weighted_macaulay_duration: float
+    portfolio_weighted_convexity: float
+    portfolio_weighted_yield: float
+    portfolio_total_dv01: float
+    key_rate_dv01_profile: Dict[str, float] = field(default_factory=dict)
+    positions: List[BondPositionRiskResult] = field(default_factory=list)
+    is_complete: bool = True
+    warnings: List[str] = field(default_factory=list)
+
+
+@dataclass
+class PortfolioInstrumentSensitivitiesSummary:
+    """Cross-asset risk synthesis uniting Equity, Options Greeks, and Fixed Income."""
+    portfolio_id: str
+    as_of: datetime
+    base_currency: str
+    total_portfolio_value: float
+    options_summary: Optional[PortfolioOptionsRiskSummary] = None
+    fixed_income_summary: Optional[PortfolioFixedIncomeRiskSummary] = None
+    net_equity_delta_equivalent: float = 0.0
+    net_fixed_income_dv01: float = 0.0

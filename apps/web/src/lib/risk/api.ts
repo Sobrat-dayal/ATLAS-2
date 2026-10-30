@@ -40,6 +40,16 @@ import {
   SectorRiskItemDTO,
   SectorRiskSnapshotDTO,
   SecurityFactorExposureDTO,
+  BondCashFlowScheduleDTO,
+  BondSensitivitiesResultDTO,
+  CalculateFixedIncomeRiskRequestDTO,
+  CalculateOptionsRiskRequestDTO,
+  InterestRateCurveDefinitionDTO,
+  OptionGreeksResultDTO,
+  OptionPositionRiskDTO,
+  PortfolioFixedIncomeRiskSummaryDTO,
+  PortfolioInstrumentSensitivitiesSummaryDTO,
+  PortfolioOptionsRiskSummaryDTO,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
@@ -492,3 +502,134 @@ export async function getPortfolioFactorBenchmark(
 }> {
   return request(`/risk/portfolios/${portfolioId}/factor-benchmark`);
 }
+
+// ---------------------------------------------------------------------------
+// Stage 118: Options and Fixed-Income Risk API Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Retrieves available options pricing models.
+ */
+export async function getOptionsModels(): Promise<any[]> {
+  return request<any[]>('/risk/options/models');
+}
+
+/**
+ * Calculates standalone option Greeks and theoretical price.
+ */
+export async function calculateOptionsRisk(
+  req: CalculateOptionsRiskRequestDTO
+): Promise<OptionGreeksResultDTO> {
+  return request<OptionGreeksResultDTO>('/risk/options/calculate', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/**
+ * Retrieves aggregated options risk and underlying exposures for a portfolio.
+ */
+export async function getPortfolioOptionsRisk(
+  portfolioId: string
+): Promise<PortfolioOptionsRiskSummaryDTO> {
+  return request<PortfolioOptionsRiskSummaryDTO>(`/risk/portfolios/${portfolioId}/options`);
+}
+
+/**
+ * Retrieves position-level options Greeks with contract multiplier scaling.
+ */
+export async function getPortfolioOptionsGreeks(
+  portfolioId: string
+): Promise<OptionPositionRiskDTO[]> {
+  return request<OptionPositionRiskDTO[]>(`/risk/portfolios/${portfolioId}/options/greeks`);
+}
+
+/**
+ * Retrieves options exposures grouped by underlying asset.
+ */
+export async function getPortfolioOptionsUnderlyings(
+  portfolioId: string
+): Promise<Record<string, Record<string, number>>> {
+  return request<Record<string, Record<string, number>>>(
+    `/risk/portfolios/${portfolioId}/options/underlyings`
+  );
+}
+
+/**
+ * Retrieves available fixed income pricing models.
+ */
+export async function getFixedIncomeModels(): Promise<any[]> {
+  return request<any[]>('/risk/fixed-income/models');
+}
+
+/**
+ * Calculates standalone bond yield, duration, convexity, and DV01.
+ */
+export async function calculateFixedIncomeRisk(
+  req: CalculateFixedIncomeRiskRequestDTO
+): Promise<BondSensitivitiesResultDTO> {
+  return request<BondSensitivitiesResultDTO>('/risk/fixed-income/calculate', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/**
+ * Retrieves aggregated portfolio fixed-income duration and total DV01.
+ */
+export async function getPortfolioFixedIncomeRisk(
+  portfolioId: string
+): Promise<PortfolioFixedIncomeRiskSummaryDTO> {
+  return request<PortfolioFixedIncomeRiskSummaryDTO>(`/risk/portfolios/${portfolioId}/fixed-income`);
+}
+
+/**
+ * Retrieves projected bond cash flows for a specific bond instrument.
+ */
+export async function getPortfolioBondCashflows(
+  portfolioId: string,
+  instrumentId: string = 'US_10Y_BENCHMARK'
+): Promise<BondCashFlowScheduleDTO> {
+  return request<BondCashFlowScheduleDTO>(
+    `/risk/portfolios/${portfolioId}/fixed-income/cashflows?instrument_id=${instrumentId}`
+  );
+}
+
+/**
+ * Retrieves portfolio fixed-income DV01 and key-rate tenor distribution.
+ */
+export async function getPortfolioFixedIncomeDV01(
+  portfolioId: string
+): Promise<{
+  portfolio_id: string;
+  total_dv01: number;
+  weighted_modified_duration: number;
+  weighted_yield: number;
+  key_rate_dv01_profile: Record<string, number>;
+}> {
+  return request(`/risk/portfolios/${portfolioId}/fixed-income/dv01`);
+}
+
+/**
+ * Retrieves calibrated benchmark yield curve points and discount factors.
+ */
+export async function getPortfolioFixedIncomeCurves(
+  portfolioId: string,
+  curveId: string = 'US_TREASURY_SOVEREIGN'
+): Promise<InterestRateCurveDefinitionDTO> {
+  return request<InterestRateCurveDefinitionDTO>(
+    `/risk/portfolios/${portfolioId}/fixed-income/curves?curve_id=${curveId}`
+  );
+}
+
+/**
+ * Retrieves cross-asset risk synthesis combining Equity delta, Options Greeks, and Fixed Income DV01.
+ */
+export async function getPortfolioInstrumentSensitivities(
+  portfolioId: string
+): Promise<PortfolioInstrumentSensitivitiesSummaryDTO> {
+  return request<PortfolioInstrumentSensitivitiesSummaryDTO>(
+    `/risk/portfolios/${portfolioId}/instrument-sensitivities`
+  );
+}
+

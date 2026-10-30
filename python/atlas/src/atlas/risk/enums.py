@@ -52,6 +52,17 @@ class RiskMetricCode(str, Enum):
     FX_SENSITIVITY_BETA = "FX_SENSITIVITY_BETA"
     SECTOR_VARIANCE_CONTRIBUTION = "SECTOR_VARIANCE_CONTRIBUTION"
     SECTOR_VOLATILITY_CONTRIBUTION = "SECTOR_VOLATILITY_CONTRIBUTION"
+    OPTION_DELTA = "OPTION_DELTA"
+    OPTION_GAMMA = "OPTION_GAMMA"
+    OPTION_VEGA = "OPTION_VEGA"
+    OPTION_THETA = "OPTION_THETA"
+    OPTION_RHO = "OPTION_RHO"
+    BOND_MACAULAY_DURATION = "BOND_MACAULAY_DURATION"
+    BOND_MODIFIED_DURATION = "BOND_MODIFIED_DURATION"
+    BOND_CONVEXITY = "BOND_CONVEXITY"
+    BOND_DV01 = "BOND_DV01"
+    BOND_KEY_RATE_DURATION = "BOND_KEY_RATE_DURATION"
+    BOND_YTM = "BOND_YTM"
 
 
 class RiskModelType(str, Enum):
@@ -68,6 +79,8 @@ class RiskModelType(str, Enum):
     CONCENTRATION_HERFINDAHL = "CONCENTRATION_HERFINDAHL"
     CURRENCY_DENOMINATION_SENSITIVITY = "CURRENCY_DENOMINATION_SENSITIVITY"
     SECTOR_EULER_DECOMPOSITION = "SECTOR_EULER_DECOMPOSITION"
+    BLACK_SCHOLES_MERTON = "BLACK_SCHOLES_MERTON"
+    BOND_DISCOUNTED_CASHFLOW = "BOND_DISCOUNTED_CASHFLOW"
 
 
 class RiskCalculationStatus(str, Enum):
@@ -227,3 +240,96 @@ class ModelDiagnosticStatus(str, Enum):
     WARNING_COLLINEARITY = "WARNING_COLLINEARITY"
     WARNING_INSUFFICIENT_OBSERVATIONS = "WARNING_INSUFFICIENT_OBSERVATIONS"
     WARNING_NON_PSD_COVARIANCE = "WARNING_NON_PSD_COVARIANCE"
+
+
+
+# ---------------------------------------------------------------------------
+# Stage 118: Options and Fixed-Income Risk Foundations Enums
+# ---------------------------------------------------------------------------
+
+
+class OptionType(str, Enum):
+    """Option contract direction/right."""
+    CALL = "CALL"
+    PUT = "PUT"
+
+
+class ExerciseStyle(str, Enum):
+    """Option exercise rights schedule."""
+    EUROPEAN = "EUROPEAN"
+    AMERICAN = "AMERICAN"
+    BERMUDAN = "BERMUDAN"
+
+
+class OptionSettlementType(str, Enum):
+    """Settlement mechanism for derivatives."""
+    PHYSICAL = "PHYSICAL"
+    CASH = "CASH"
+
+
+class OptionContractStatus(str, Enum):
+    """Operational status of an option contract."""
+    ACTIVE = "ACTIVE"
+    EXPIRED = "EXPIRED"
+    EXERCISED = "EXERCISED"
+    ASSIGNED = "ASSIGNED"
+    SETTLED = "SETTLED"
+    UNSUPPORTED = "UNSUPPORTED"
+
+
+class OptionsPricingModelId(str, Enum):
+    """Methodology used for option pricing and Greeks calculation."""
+    EUROPEAN_BLACK_SCHOLES_MERTON = "EUROPEAN_BLACK_SCHOLES_MERTON"
+    EUROPEAN_BLACK_76 = "EUROPEAN_BLACK_76"
+    VENDOR_SOURCED = "VENDOR_SOURCED"
+    NUMERICAL_BUMP_REPRICE = "NUMERICAL_BUMP_REPRICE"
+
+
+class CouponType(str, Enum):
+    """Fixed-income coupon structure type."""
+    FIXED = "FIXED"
+    ZERO_COUPON = "ZERO_COUPON"
+    FLOATING = "FLOATING"
+    STEP_UP = "STEP_UP"
+
+
+class CouponFrequency(str, Enum):
+    """Annual frequency of coupon payments."""
+    ANNUAL = "ANNUAL"
+    SEMI_ANNUAL = "SEMI_ANNUAL"
+    QUARTERLY = "QUARTERLY"
+    MONTHLY = "MONTHLY"
+
+    @property
+    def periods_per_year(self) -> int:
+        if self == CouponFrequency.ANNUAL:
+            return 1
+        elif self == CouponFrequency.SEMI_ANNUAL:
+            return 2
+        elif self == CouponFrequency.QUARTERLY:
+            return 4
+        elif self == CouponFrequency.MONTHLY:
+            return 12
+        return 1
+
+
+class DayCountConvention(str, Enum):
+    """Day count convention for bond accrual and year-fraction calculation."""
+    ACT_ACT = "ACT_ACT"
+    ACT_365F = "ACT_365F"
+    ACT_360 = "ACT_360"
+    THIRTY_360 = "THIRTY_360"
+
+
+class BondPricingModelId(str, Enum):
+    """Methodology used for bond pricing, yield solving, and duration/convexity."""
+    DISCOUNTED_CASHFLOW = "DISCOUNTED_CASHFLOW"
+    YIELD_DURATION_CONVEXITY = "YIELD_DURATION_CONVEXITY"
+    CURVE_BUMP_REPRICE = "CURVE_BUMP_REPRICE"
+
+
+class YieldCurveInterpolation(str, Enum):
+    """Interpolation method across interest rate curve tenors."""
+    LINEAR = "LINEAR"
+    CUBIC_SPLINE = "CUBIC_SPLINE"
+    FLAT_FORWARD = "FLAT_FORWARD"

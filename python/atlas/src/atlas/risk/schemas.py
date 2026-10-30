@@ -10,19 +10,24 @@ from pydantic import BaseModel, Field
 
 from .enums import (
     AnnualizationPolicy,
+    BondPricingModelId,
     ConcentrationDimension,
+    CouponFrequency,
+    CouponType,
     CurrencyExposureType,
     DataCoverageStatus,
+    DayCountConvention,
     DrawdownEpisodeStatus,
+    ExerciseStyle,
     ExpectedShortfallMethod,
     FactorFamily,
     FactorReturnBasis,
     KupiecTestStatus,
     ModelDiagnosticStatus,
-    DataCoverageStatus,
-    DrawdownEpisodeStatus,
-    ExpectedShortfallMethod,
-    KupiecTestStatus,
+    OptionContractStatus,
+    OptionSettlementType,
+    OptionsPricingModelId,
+    OptionType,
     ReturnBasis,
     RiskCalculationStatus,
     RiskMetricCode,
@@ -34,6 +39,7 @@ from .enums import (
     ScenarioType,
     ShockTargetType,
     VaRModelType,
+    YieldCurveInterpolation,
 )
 
 
@@ -666,3 +672,227 @@ class CrossExposureMatrixDTO(BaseModel):
     col_keys: List[str]
     cells: List[CrossExposureCellDTO]
     unit: str = "WEIGHT_PERCENT"
+
+
+
+# ---------------------------------------------------------------------------
+# Stage 118: Options and Fixed-Income Risk Schemas / DTOs
+# ---------------------------------------------------------------------------
+
+
+class CalculateOptionsRiskRequest(BaseModel):
+    """Standalone option pricing and Greeks calculation request."""
+    instrument_id: Optional[str] = "OPT_CUSTOM"
+    underlying_symbol: str = "SPY"
+    option_type: OptionType = OptionType.CALL
+    exercise_style: ExerciseStyle = ExerciseStyle.EUROPEAN
+    strike_price: float = Field(..., gt=0.0)
+    time_to_expiry_years: float = Field(..., ge=0.0)
+    underlying_price: float = Field(..., gt=0.0)
+    implied_volatility: float = Field(..., gt=0.0)
+    risk_free_rate: float = 0.05
+    dividend_yield: float = 0.0
+    contract_multiplier: float = 100.0
+    contracts_quantity: Optional[float] = 1.0
+    model_id: OptionsPricingModelId = OptionsPricingModelId.EUROPEAN_BLACK_SCHOLES_MERTON
+
+
+class OptionGreeksResultDTO(BaseModel):
+    """Analytical Greeks and theoretical option price."""
+    theoretical_price: float
+    delta: float
+    gamma: float
+    vega: float
+    vega_per_vol_point: float
+    theta: float
+    theta_per_day: float
+    rho: float
+    rho_per_basis_point: float
+    intrinsic_value: float
+    time_value: float
+    implied_volatility: float
+    d1: float
+    d2: float
+    put_call_parity_diff: Optional[float] = None
+    is_pricing_valid: bool = True
+    pricing_model: str
+
+
+class OptionPositionRiskDTO(BaseModel):
+    """Position-level options exposure and scaled Greeks."""
+    position_id: str
+    instrument_id: str
+    underlying_symbol: str
+    option_type: OptionType
+    exercise_style: ExerciseStyle
+    strike_price: float
+    time_to_expiry_years: float
+    contracts_quantity: float
+    contract_multiplier: float
+    position_market_value: float
+    underlying_price: float
+    currency: str
+    base_currency: str
+    fx_rate_to_base: float
+    per_contract_greeks: OptionGreeksResultDTO
+    position_delta_units: float
+    position_delta_notional: float
+    position_gamma_units: float
+    position_vega_per_vol_point: float
+    position_theta_per_day: float
+    position_rho_per_basis_point: float
+    base_currency_delta_notional: float
+    base_currency_vega_per_vol_point: float
+    base_currency_theta_per_day: float
+    base_currency_rho_per_basis_point: float
+    approximate_pnl_shock: Dict[str, float] = Field(default_factory=dict)
+    full_reprice_pnl_shock: Dict[str, float] = Field(default_factory=dict)
+
+
+class PortfolioOptionsRiskSummaryDTO(BaseModel):
+    """Aggregated portfolio-level options risk summary."""
+    portfolio_id: str
+    as_of: str
+    base_currency: str
+    total_options_market_value: float
+    options_count: int
+    net_delta_notional: float
+    gross_delta_notional: float
+    net_vega_per_vol_point: float
+    gross_vega_per_vol_point: float
+    net_theta_per_day: float
+    net_rho_per_basis_point: float
+    underlying_exposures: Dict[str, Dict[str, float]] = Field(default_factory=dict)
+    positions: List[OptionPositionRiskDTO] = Field(default_factory=list)
+    is_complete: bool = True
+    warnings: List[str] = Field(default_factory=list)
+
+
+class BondCashFlowItemDTO(BaseModel):
+    """Projected bond coupon or principal cash flow."""
+    period_index: int
+    payment_date: str
+    year_fraction: float
+    coupon_amount: float
+    principal_amount: float
+    total_cash_flow: float
+    discount_factor: float
+    present_value: float
+
+
+class BondCashFlowScheduleDTO(BaseModel):
+    """Complete cash flow schedule for a bond position."""
+    instrument_id: str
+    face_value: float
+    coupon_rate: float
+    coupon_frequency: CouponFrequency
+    day_count_convention: DayCountConvention
+    settlement_date: str
+    maturity_date: str
+    cash_flows: List[BondCashFlowItemDTO]
+    accrued_interest: float
+    clean_price: float
+    dirty_price: float
+
+
+class KeyRateSensitivityItemDTO(BaseModel):
+    """Key-rate duration sensitivity at a tenor bucket."""
+    tenor_name: str
+    tenor_years: float
+    key_rate_duration: float
+    key_rate_dv01: float
+
+
+class BondSensitivitiesResultDTO(BaseModel):
+    """Bond yield, duration, convexity, and DV01 metrics."""
+    clean_price: float
+    accrued_interest: float
+    dirty_price: float
+    yield_to_maturity: float
+    macaulay_duration: float
+    modified_duration: float
+    convexity: float
+    dv01_per_100_face: float
+    effective_duration: Optional[float] = None
+    effective_convexity: Optional[float] = None
+    key_rate_durations: List[KeyRateSensitivityItemDTO] = Field(default_factory=list)
+    pricing_model: str
+
+
+class BondPositionRiskDTO(BaseModel):
+    """Position-level fixed-income sensitivities and DV01."""
+    position_id: str
+    instrument_id: str
+    issuer_name: str
+    face_value: float
+    quantity: float
+    currency: str
+    base_currency: str
+    fx_rate_to_base: float
+    market_value: float
+    sensitivities: BondSensitivitiesResultDTO
+    position_dv01: float
+    base_currency_dv01: float
+    cash_flow_schedule: Optional[BondCashFlowScheduleDTO] = None
+
+
+class CalculateFixedIncomeRiskRequest(BaseModel):
+    """Standalone fixed-income pricing and duration calculation request."""
+    instrument_id: Optional[str] = "BOND_CUSTOM"
+    face_value: float = Field(default=100.0, gt=0.0)
+    coupon_rate: float = Field(default=0.05, ge=0.0)
+    coupon_frequency: CouponFrequency = CouponFrequency.ANNUAL
+    day_count_convention: DayCountConvention = DayCountConvention.ACT_ACT
+    settlement_date: Optional[str] = None
+    maturity_date: Optional[str] = None
+    maturity_years: Optional[float] = Field(default=2.0, gt=0.0)
+    market_price: Optional[float] = Field(default=100.0, gt=0.0)
+    yield_to_maturity: Optional[float] = None
+    pricing_model: BondPricingModelId = BondPricingModelId.DISCOUNTED_CASHFLOW
+
+
+class YieldCurvePointDTO(BaseModel):
+    """Point on a calibrated yield curve."""
+    tenor_years: float
+    rate: float
+    label: str
+    discount_factor: float = 1.0
+
+
+class InterestRateCurveDefinitionDTO(BaseModel):
+    """Yield curve term structure definition."""
+    curve_id: str
+    currency: str
+    as_of: str
+    interpolation_method: YieldCurveInterpolation
+    points: List[YieldCurvePointDTO]
+
+
+class PortfolioFixedIncomeRiskSummaryDTO(BaseModel):
+    """Aggregated portfolio-level fixed income analytics."""
+    portfolio_id: str
+    as_of: str
+    base_currency: str
+    total_fixed_income_market_value: float
+    bonds_count: int
+    portfolio_weighted_modified_duration: float
+    portfolio_weighted_macaulay_duration: float
+    portfolio_weighted_convexity: float
+    portfolio_weighted_yield: float
+    portfolio_total_dv01: float
+    key_rate_dv01_profile: Dict[str, float] = Field(default_factory=dict)
+    positions: List[BondPositionRiskDTO] = Field(default_factory=list)
+    is_complete: bool = True
+    warnings: List[str] = Field(default_factory=list)
+
+
+class PortfolioInstrumentSensitivitiesSummaryDTO(BaseModel):
+    """Cross-asset risk synthesis across equity, options, and fixed income."""
+    portfolio_id: str
+    as_of: str
+    base_currency: str
+    total_portfolio_value: float
+    options_summary: Optional[PortfolioOptionsRiskSummaryDTO] = None
+    fixed_income_summary: Optional[PortfolioFixedIncomeRiskSummaryDTO] = None
+    net_equity_delta_equivalent: float = 0.0
+    net_fixed_income_dv01: float = 0.0

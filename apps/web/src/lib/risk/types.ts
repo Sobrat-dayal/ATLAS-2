@@ -671,3 +671,231 @@ export interface CrossExposureMatrixDTO {
   cells: CrossExposureCellDTO[];
   unit: string;
 }
+
+// ---------------------------------------------------------------------------
+// Stage 118: Options and Fixed-Income Risk Foundations Types
+// ---------------------------------------------------------------------------
+
+export type OptionType = 'CALL' | 'PUT';
+export type ExerciseStyle = 'EUROPEAN' | 'AMERICAN' | 'BERMUDAN';
+export type OptionSettlementType = 'PHYSICAL' | 'CASH';
+export type OptionsPricingModelId =
+  | 'EUROPEAN_BLACK_SCHOLES_MERTON'
+  | 'EUROPEAN_BLACK_76'
+  | 'VENDOR_SOURCED'
+  | 'NUMERICAL_BUMP_REPRICE';
+
+export type CouponType = 'FIXED' | 'ZERO_COUPON' | 'FLOATING' | 'STEP_UP';
+export type CouponFrequency = 'ANNUAL' | 'SEMI_ANNUAL' | 'QUARTERLY' | 'MONTHLY';
+export type DayCountConvention = 'ACT_ACT' | 'ACT_365F' | 'ACT_360' | 'THIRTY_360';
+export type BondPricingModelId =
+  | 'DISCOUNTED_CASHFLOW'
+  | 'YIELD_DURATION_CONVEXITY'
+  | 'CURVE_BUMP_REPRICE';
+
+export type YieldCurveInterpolation = 'LINEAR' | 'CUBIC_SPLINE' | 'FLAT_FORWARD';
+
+export interface CalculateOptionsRiskRequestDTO {
+  instrument_id?: string;
+  underlying_symbol: string;
+  option_type: OptionType;
+  exercise_style?: ExerciseStyle;
+  strike_price: number;
+  time_to_expiry_years: number;
+  underlying_price: number;
+  implied_volatility: number;
+  risk_free_rate?: number;
+  dividend_yield?: number;
+  contract_multiplier?: number;
+  contracts_quantity?: number;
+  model_id?: OptionsPricingModelId;
+}
+
+export interface OptionGreeksResultDTO {
+  theoretical_price: number;
+  delta: number;
+  gamma: number;
+  vega: number;
+  vega_per_vol_point: number;
+  theta: number;
+  theta_per_day: number;
+  rho: number;
+  rho_per_basis_point: number;
+  intrinsic_value: number;
+  time_value: number;
+  implied_volatility: number;
+  d1: number;
+  d2: number;
+  put_call_parity_diff?: number | null;
+  is_pricing_valid: boolean;
+  pricing_model: string;
+}
+
+export interface OptionPositionRiskDTO {
+  position_id: string;
+  instrument_id: string;
+  underlying_symbol: string;
+  option_type: OptionType;
+  exercise_style: ExerciseStyle;
+  strike_price: number;
+  time_to_expiry_years: number;
+  contracts_quantity: number;
+  contract_multiplier: number;
+  position_market_value: number;
+  underlying_price: number;
+  currency: string;
+  base_currency: string;
+  fx_rate_to_base: number;
+  per_contract_greeks: OptionGreeksResultDTO;
+  position_delta_units: number;
+  position_delta_notional: number;
+  position_gamma_units: number;
+  position_vega_per_vol_point: number;
+  position_theta_per_day: number;
+  position_rho_per_basis_point: number;
+  base_currency_delta_notional: number;
+  base_currency_vega_per_vol_point: number;
+  base_currency_theta_per_day: number;
+  base_currency_rho_per_basis_point: number;
+  approximate_pnl_shock: Record<string, number>;
+  full_reprice_pnl_shock: Record<string, number>;
+}
+
+export interface PortfolioOptionsRiskSummaryDTO {
+  portfolio_id: string;
+  as_of: string;
+  base_currency: string;
+  total_options_market_value: number;
+  options_count: number;
+  net_delta_notional: number;
+  gross_delta_notional: number;
+  net_vega_per_vol_point: number;
+  gross_vega_per_vol_point: number;
+  net_theta_per_day: number;
+  net_rho_per_basis_point: number;
+  underlying_exposures: Record<string, Record<string, number>>;
+  positions: OptionPositionRiskDTO[];
+  is_complete: boolean;
+  warnings: string[];
+}
+
+export interface BondCashFlowItemDTO {
+  period_index: number;
+  payment_date: string;
+  year_fraction: number;
+  coupon_amount: number;
+  principal_amount: number;
+  total_cash_flow: number;
+  discount_factor: number;
+  present_value: number;
+}
+
+export interface BondCashFlowScheduleDTO {
+  instrument_id: string;
+  face_value: number;
+  coupon_rate: number;
+  coupon_frequency: CouponFrequency;
+  day_count_convention: DayCountConvention;
+  settlement_date: string;
+  maturity_date: string;
+  cash_flows: BondCashFlowItemDTO[];
+  accrued_interest: number;
+  clean_price: number;
+  dirty_price: number;
+}
+
+export interface KeyRateSensitivityItemDTO {
+  tenor_name: string;
+  tenor_years: number;
+  key_rate_duration: number;
+  key_rate_dv01: number;
+}
+
+export interface BondSensitivitiesResultDTO {
+  clean_price: number;
+  accrued_interest: number;
+  dirty_price: number;
+  yield_to_maturity: number;
+  macaulay_duration: number;
+  modified_duration: number;
+  convexity: number;
+  dv01_per_100_face: number;
+  effective_duration?: number | null;
+  effective_convexity?: number | null;
+  key_rate_durations: KeyRateSensitivityItemDTO[];
+  pricing_model: string;
+}
+
+export interface BondPositionRiskDTO {
+  position_id: string;
+  instrument_id: string;
+  issuer_name: string;
+  face_value: number;
+  quantity: number;
+  currency: string;
+  base_currency: string;
+  fx_rate_to_base: number;
+  market_value: number;
+  sensitivities: BondSensitivitiesResultDTO;
+  position_dv01: number;
+  base_currency_dv01: number;
+  cash_flow_schedule?: BondCashFlowScheduleDTO | null;
+}
+
+export interface CalculateFixedIncomeRiskRequestDTO {
+  instrument_id?: string;
+  face_value?: number;
+  coupon_rate?: number;
+  coupon_frequency?: CouponFrequency;
+  day_count_convention?: DayCountConvention;
+  settlement_date?: string;
+  maturity_date?: string;
+  maturity_years?: number;
+  market_price?: number;
+  yield_to_maturity?: number;
+  pricing_model?: BondPricingModelId;
+}
+
+export interface YieldCurvePointDTO {
+  tenor_years: number;
+  rate: number;
+  label: string;
+  discount_factor: number;
+}
+
+export interface InterestRateCurveDefinitionDTO {
+  curve_id: string;
+  currency: string;
+  as_of: string;
+  interpolation_method: YieldCurveInterpolation;
+  points: YieldCurvePointDTO[];
+}
+
+export interface PortfolioFixedIncomeRiskSummaryDTO {
+  portfolio_id: string;
+  as_of: string;
+  base_currency: string;
+  total_fixed_income_market_value: number;
+  bonds_count: number;
+  portfolio_weighted_modified_duration: number;
+  portfolio_weighted_macaulay_duration: number;
+  portfolio_weighted_convexity: number;
+  portfolio_weighted_yield: number;
+  portfolio_total_dv01: number;
+  key_rate_dv01_profile: Record<string, number>;
+  positions: BondPositionRiskDTO[];
+  is_complete: boolean;
+  warnings: string[];
+}
+
+export interface PortfolioInstrumentSensitivitiesSummaryDTO {
+  portfolio_id: string;
+  as_of: string;
+  base_currency: string;
+  total_portfolio_value: number;
+  options_summary?: PortfolioOptionsRiskSummaryDTO | null;
+  fixed_income_summary?: PortfolioFixedIncomeRiskSummaryDTO | null;
+  net_equity_delta_equivalent: number;
+  net_fixed_income_dv01: number;
+}
+
