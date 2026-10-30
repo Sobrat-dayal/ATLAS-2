@@ -130,7 +130,8 @@ export type ResearchTabMode =
   | "DISCOVERY"
   | "DOCUMENT_VIEWER"
   | "COMPARE"
-  | "ACTIVITY";
+  | "ACTIVITY"
+  | "AI_RESEARCH";
 export type InvestigationWorkspaceSection =
   | "NOTES"
   | "QUESTIONS"

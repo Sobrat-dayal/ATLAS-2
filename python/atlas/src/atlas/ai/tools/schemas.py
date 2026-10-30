@@ -276,3 +276,48 @@ class SavedListInput(BaseModel):
 # 20. atlas.workspace.list
 class WorkspaceListInput(BaseModel):
     limit: int = Field(10, ge=1, le=50, description="Maximum workspaces")
+
+
+# --- Stage 127 Research & RAG Tools ---
+
+
+# 21. atlas.research.search_documents
+class ResearchSearchDocumentsInput(BaseModel):
+    query: Optional[str] = Field(None, max_length=200, description="Optional text search")
+    symbol: Optional[str] = Field(None, max_length=20, description="Target company ticker")
+    document_type: Optional[str] = Field(
+        None, max_length=50, description="e.g. '10-K', 'CAPEX_PLAN'"
+    )
+    historical_as_of: Optional[str] = Field(None, description="Point-in-time ISO timestamp")
+    limit: int = Field(5, ge=1, le=20, description="Maximum documents")
+
+
+# 22. atlas.research.search_passages
+class ResearchSearchPassagesInput(BaseModel):
+    query: str = Field(..., min_length=2, max_length=1000, description="Research search query")
+    symbols: Optional[List[str]] = Field(None, description="Optional target symbols")
+    historical_as_of: Optional[str] = Field(None, description="Point-in-time ISO timestamp")
+    limit: int = Field(5, ge=1, le=15, description="Maximum passages to retrieve")
+
+
+# 23. atlas.research.get_document_metadata
+class ResearchGetDocumentMetadataInput(BaseModel):
+    document_id: str = Field(..., min_length=1, max_length=64, description="Target document ID")
+
+
+# 24. atlas.research.get_authorized_excerpt
+class ResearchGetAuthorizedExcerptInput(BaseModel):
+    document_id: str = Field(..., min_length=1, max_length=64, description="Target document ID")
+    page_number: Optional[int] = Field(None, ge=1, description="Optional page number")
+
+
+# 25. atlas.research.compare_documents
+class ResearchCompareDocumentsInput(BaseModel):
+    document_id_a: str = Field(..., min_length=1, max_length=64, description="First document ID")
+    document_id_b: str = Field(..., min_length=1, max_length=64, description="Second document ID")
+    aspects: Optional[List[str]] = Field(None, description="Comparison aspects, e.g. ['CAPEX']")
+
+
+# 26. atlas.research.get_citation_source
+class ResearchGetCitationSourceInput(BaseModel):
+    citation_id: str = Field(..., min_length=1, max_length=64, description="Citation ID to resolve")

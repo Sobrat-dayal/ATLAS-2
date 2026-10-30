@@ -114,6 +114,16 @@ export function ResearchHeader({
               Discovery
             </button>
             <button
+              onClick={() => onTabChange("AI_RESEARCH")}
+              className={`rounded-xs px-3 py-1 text-xs font-medium transition-colors ${
+                activeTab === "AI_RESEARCH"
+                  ? "bg-atlas-accent text-white shadow-xs"
+                  : "text-atlas-text-secondary hover:text-atlas-text-primary"
+              }`}
+            >
+              AI Research (RAG)
+            </button>
+            <button
               onClick={() => onTabChange("DOCUMENT_VIEWER")}
               className={`rounded-xs px-3 py-1 text-xs font-medium transition-colors ${
                 activeTab === "DOCUMENT_VIEWER"

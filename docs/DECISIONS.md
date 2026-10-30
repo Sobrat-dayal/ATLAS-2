@@ -10829,3 +10829,66 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1413. **AI Tool Governance Settings**: `AiToolSettings` enables users to configure auto-approval policies and toggle individual tools.
 1414. **Reference Fixtures A–J End-to-End Verification**: Validated all 10 canonical reference fixtures across automated pytest test suites.
 1415. **Zero Regression on Platform Test Suites**: Maintained 100% pass rate across 32 backend pytest tests and 232 frontend vitest tests.
+
+
+## Stage 127 Decisions — Build Institutional-Grade AI Research and Retrieval-Augmented Generation (RAG) Platform
+
+### Roadmap & Scope Boundaries
+1416. **Stage 127 Authority**: Stage 127 owns AI Research, Multi-Source Ingestion, Hybrid Search, Dense Vector Indexing, Evidence Assembly, and Claim Citation Grounding.
+1417. **Tool Gateway Foundation**: Reuses Stage 126 AI Tool Gateway for executing approved research search and comparison tools.
+1418. **Context Engine Foundation**: Reuses Stage 125 AI Context Awareness for token budgeting and focus document priority.
+1419. **Conversational Assistant Foundation**: Reuses Stage 124 AI Assistant V1 for streaming generation, chat session persistence, and cancellation.
+1420. **Stage 128 Financial Action Deferral**: Defers chart mutations, portfolio rebalancing, order staging, and screener execution jobs strictly to Stage 128.
+1421. **Autonomous Agent Research Deferral**: No recurring unsupervised multi-agent swarms or autonomous background research loops.
+1422. **Zero Shell/Python/SQL Arbitrary Execution**: RAG pipelines do not execute arbitrary shell commands, SQL queries, or Python scripts outside sandboxed engines.
+1423. **Twenty Platform Routes Unchanged**: Sidebar navigation and platform top-level routes remain exactly the canonical 20 routes.
+
+### Source Governance & Security
+1424. **Canonical Source Registry**: Institutional catalog (`AtlasResearchSourceRegistry`) maintains regulatory, corporate, research, and private user repositories.
+1425. **Multi-Tenant Source Isolation**: Sources and documents enforce strict tenant-level isolation (`tenant_id`); cross-tenant discovery raises `ResearchSourceAccessDeniedError`.
+1426. **User-Private Vault Security**: Documents marked `USER_PRIVATE` are restricted exclusively to their creator (`owner_user_id`), invisible to all other tenant users (Fixture D).
+1427. **Licensing Tiers**: Sources enforce explicit distribution licensing (`PUBLIC_DOMAIN`, `PROPRIETARY_LICENSED`, `INTERNAL_CONFIDENTIAL`, `USER_PRIVATE`).
+1428. **Third-Party Model Disclosure Governance**: Evidence with `ProviderDisclosurePolicy.PROHIBITED` is blocked from external LLM transmission (`ProviderDisclosureChecker`).
+1429. **Revocation Propagation**: Revoking a document (`is_revoked = True`) immediately purges it from candidate retrieval and blocks citation resolution (Fixture I).
+1430. **Source Reliability Hierarchy**: Distinguishes `PRIMARY_REGULATORY` (SEC/EDGAR), `PRIMARY_OFFICIAL` (IR), `BROKER_CONSENSUS`, and `FINANCIAL_WIRE`.
+1431. **Tamper-Evident Content Hashes**: Documents, revisions, and chunks carry cryptographic SHA-256 content hashes for immutability verification.
+1432. **Tenant-Isolated Caching**: Redis/in-memory caches bind tenant ID prefix (`tenant_id:namespace:hash`) preventing cross-tenant leakage.
+1433. **Audit Event Logging**: Research queries, passage retrieval, and citation inspection are recorded in `ResearchObservability` with user, tenant, and latency metrics.
+
+### Document Ingestion & Chunking
+1434. **Format Validation**: Accepts PDF, text, markdown, CSV, and JSON up to 50MB; rejects binaries, executable payloads, and directory-traversal filenames.
+1435. **Financial Text Normalization**: Preserves financial currencies (`$`, `USD`, `EUR`), negative parentheses `(100)`, basis points, units, and fiscal periods (`FY2024`).
+1436. **Structural Section Extraction**: Parses documents along `Section`, `Item`, and page boundary markers (`[Page X]`).
+1437. **Paragraph-Bounded Chunking**: Structurally chunks text at section and paragraph breaks (target: 512 tokens with 50-token overlap) to avoid cutting numbers or tables.
+1438. **Stable Chunk Identification**: Chunks carry deterministic, stable identifiers (`chk_<doc_id>_<idx>`) tied to document revisions.
+1439. **Point-in-Time Revision Tracking**: Maintains discrete revisions (`ResearchDocumentRevision`) for annual reports, amendments, and restatements.
+1440. **Async Ingestion Job Tracking**: Ingestion pipeline progresses through `PENDING -> PARSING -> EXTRACTED -> CHUNKING -> EMBEDDING -> INDEXED -> COMPLETED`.
+1441. **Hierarchical Large Document Handling**: Documents exceeding context windows are summarized across structural section chunks without false claims of full reading (Fixture J).
+1442. **Untrusted Document Context Fencing**: Retrieved text is tagged with `<atlas_verified_financial_context>` and marked untrusted to prevent prompt injection (Fixture F).
+1443. **Zero Data Fabrication**: System never fabricates document titles, filing dates, quotes, page numbers, or URLs.
+
+### Dense Embeddings & Hybrid Search
+1444. **384-Dimensional Dense Vectors**: Uses normalized 384-dimensional dense vectors (`AtlasDeterministicEmbeddingProvider`, model: `atlas-fin-embed-v1`).
+1445. **L2 Unit Normalization**: Embeddings are normalized to the unit sphere so dot-product equals cosine similarity.
+1446. **Lexical BM25 Search**: Sublinear term frequency scoring with English stopword filtering preventing false positives on common words (`what`, `is`, `in`).
+1447. **Semantic Vector Search**: Cosine similarity retrieval with thresholding (`score > 0.15`) ensuring only semantically aligned passages rank.
+1448. **Reciprocal Rank Fusion (RRF)**: Combines lexical and semantic rankings using standard $RRF(d) = \sum \frac{1}{60 + \text{rank}_m(d)}$.
+1449. **Hard Security & Temporal Filtering**: Evaluates revocation, tenant isolation, user privacy, and historical as-of dates *before* ranking.
+1450. **Historical Point-in-Time Cutoff**: Query historical as-of dates (`historical_as_of`) strictly filter out sources published after the cutoff date, preventing look-ahead bias (Fixture C).
+1451. **Candidate Deduplication**: Deduplicates redundant chunks based on content hash while preserving distinct document revision numbers (e.g. restatements).
+1452. **Regulatory Tier Reranking**: Applies institutional score boosts (1.15x) for audited regulatory filings (10-K, 10-Q).
+1453. **Extensible Embedding Provider Registry**: `EmbeddingProviderRegistry` enables hot-swapping deterministic or transformer embedding providers.
+
+### Financial Accuracy, Evidence & Citations
+1454. **Grounded Mathematical Reasoning**: Computes financial growth rates and differences with explicit periods and stated currencies (Fixture A: 25% revenue growth, 100M to 125M USD).
+1455. **Comparative Variance Analysis**: Analyzes planned CapEx changes across document revisions, identifying exact numerical differences (Fixture B: 30M USD expansion).
+1456. **Conflicting Source Reconciliation**: Reconciles differing figures across documents, explaining distinct accounting definitions (Fixture H: GAAP 35M vs Non-GAAP 52M).
+1457. **Insufficient Evidence Handling**: When evidence is absent, returns `INSUFFICIENT_EVIDENCE` status rather than hallucinating estimates (Fixture G).
+1458. **Bounded Context Assembly**: Context assembler packs evidence units into fenced blocks respecting exact token budgets (`token_budget`).
+1459. **Source Manifest Transparency**: Research answers include `ResearchSourceManifest` summarizing sources evaluated, used, excluded, and conflict notes.
+1460. **Server-Authoritative Citation Validation**: Server parses model citation tokens (`[cite:...]`); fabricated tokens like `[Source 999]` are rejected and stripped (Fixture E).
+1461. **Claim-Level Grounding**: Citations tie assertions to verified evidence units with exact quote spans and page numbers.
+1462. **Re-Authorized Citation Resolution**: Interactive citation resolution checks document revocation and user permissions at click time (`GET /api/v1/ai/research/citations/{id}`).
+1463. **Interactive UI Citation Badges**: `AiResearchCitation` renders clickable badges with verification status (`VERIFIED`, `REJECTED`, `EXPIRED`).
+1464. **Citation & Evidence Viewers**: `AiResearchCitationViewer` and `AiResearchEvidenceInspector` display verified source spans and metadata.
+1465. **Stage 128 Financial Actions Handoff**: Research platform is fully read-only and prepared to pass grounded evidence to Stage 128 financial actions.

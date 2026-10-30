@@ -1,4 +1,4 @@
-"""Tool Adapters Registration for Stage 126: ATLAS AI Tool Gateway.
+"""Tool Adapters Registration for Stage 126 and Stage 127: ATLAS AI Tool Gateway.
 
 Registers all canonical financial tool adapters into the central tool registry.
 """
@@ -26,7 +26,15 @@ from atlas.ai.tools.adapters.portfolio import (
     PortfolioGetSummaryAdapter,
     PortfolioListAdapter,
 )
-from atlas.ai.tools.adapters.research import ResearchListMetadataAdapter
+from atlas.ai.tools.adapters.research import (
+    ResearchCompareDocumentsAdapter,
+    ResearchGetAuthorizedExcerptAdapter,
+    ResearchGetCitationSourceAdapter,
+    ResearchGetDocumentMetadataAdapter,
+    ResearchListMetadataAdapter,
+    ResearchSearchDocumentsAdapter,
+    ResearchSearchPassagesAdapter,
+)
 from atlas.ai.tools.adapters.risk import (
     RiskGetRunSummaryAdapter,
     RiskListRunsAdapter,
@@ -50,6 +58,14 @@ CANONICAL_ADAPTER_MAP: Dict[str, Type[BaseAiToolAdapter]] = {
     "atlas.economics.get_observations": EconomicsGetObservationsAdapter,
     "atlas.news.search_headlines": NewsSearchHeadlinesAdapter,
     "atlas.research.list_metadata": ResearchListMetadataAdapter,
+    # Stage 127 Research & RAG tools
+    "atlas.research.search_documents": ResearchSearchDocumentsAdapter,
+    "atlas.research.search_passages": ResearchSearchPassagesAdapter,
+    "atlas.research.get_document_metadata": ResearchGetDocumentMetadataAdapter,
+    "atlas.research.get_authorized_excerpt": ResearchGetAuthorizedExcerptAdapter,
+    "atlas.research.compare_documents": ResearchCompareDocumentsAdapter,
+    "atlas.research.get_citation_source": ResearchGetCitationSourceAdapter,
+    # Portfolio, Risk, Data, Saved, Workspace
     "atlas.portfolio.list": PortfolioListAdapter,
     "atlas.portfolio.get_summary": PortfolioGetSummaryAdapter,
     "atlas.portfolio.get_performance": PortfolioGetPerformanceAdapter,
@@ -71,4 +87,3 @@ def register_all_adapters(registry: AtlasAiToolRegistry) -> None:
 
 # Automatically bind all adapters into the default registry singleton
 register_all_adapters(AtlasAiToolRegistry.get_instance())
-

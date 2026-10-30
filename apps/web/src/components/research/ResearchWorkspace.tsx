@@ -16,6 +16,7 @@ import { ResearchReportsWorkspace } from "./reports/ResearchReportsWorkspace";
 import { ResearchReviewsWorkspace } from "./reviews/ResearchReviewsWorkspace";
 import { ResearchKnowledgeWorkspace } from "./knowledge/ResearchKnowledgeWorkspace";
 import { ResearchUpdatesWorkspace } from "./updates/ResearchUpdatesWorkspace";
+import { AiResearchPanel } from "@/components/ai/research/AiResearchPanel";
 import { useResearchWorkspace } from "@/hooks/research/useResearchWorkspace";
 
 export function ResearchWorkspace() {
@@ -568,6 +569,8 @@ export function ResearchWorkspace() {
         )}
 
         {activeTab === "SOURCES" && <ResearchSourceLibrary />}
+
+        {activeTab === "AI_RESEARCH" && <AiResearchPanel />}
 
         {activeTab === "ACTIVITY" && (
           <ResearchActivityTimeline
