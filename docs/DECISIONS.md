@@ -10953,3 +10953,66 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1513. **Mandatory Hypothetical Disclaimer**: All scenario outputs carry prominent "Hypothetical Allocation Proposal — Not Executed" badges.
 1514. **Worker-Backed Risk Computation**: Schedules real risk models (Historical VaR, Parametric VaR, Expected Shortfall, Stress Testing) on worker infrastructure.
 1515. **Immutable Risk Run Records**: Completed risk calculations are permanently archived; undo attempts are strictly rejected (`AiActionUndoUnavailableError`).
+
+
+## STAGE 129: MAPS V1 USING POSTGIS + MAPLIBRE
+
+### Scope Boundaries & Roadmap Architecture
+1516. **Stage 129 MapLibre 2D Foundation**: Delivers interactive 2D geospatial intelligence using MapLibre GL JS and PostGIS.
+1517. **Stage 130 3D Globe Reserved Boundary**: CesiumJS globe, 3D terrain, orbital cameras, and 3D Tiles are strictly deferred to Stage 130.
+1518. **Stage 131 deck.gl & H3 Reserved Boundary**: Large-scale GPU hexagonal aggregation and H3 indexing are strictly deferred to Stage 131.
+1519. **Stage 132 Financial Facilities Reserved Boundary**: Corporate facilities, manufacturing sites, and supply chain hubs are strictly deferred to Stage 132.
+1520. **Stage 133 Infrastructure Layers Reserved Boundary**: Ports, airports, pipelines, energy grids, and data centers are strictly deferred to Stage 133.
+1521. **Stage 134 Live Tracking Feeds Reserved Boundary**: Live aircraft, vessels, satellites, and real-time weather are strictly deferred to Stage 134.
+1522. **Canonical 20 Global Platform Routes Unaltered**: Preserves all 20 canonical platform routes; activates `/maps` with institutional map surface.
+
+### Spatial Mathematics, Projections & Database
+1523. **PostGIS Extension Migration Pattern**: Safely activates postgis extension where supported; tables gracefully operate with standardized JSONB spatial models.
+1524. **Canonical Geographic Storage (WGS84 / EPSG:4326)**: Geographic coordinates are canonically stored in WGS84 decimal degrees.
+1525. **Planar Vector Tile Projection (Web Mercator / EPSG:3857)**: Planar tile calculations and rendering adhere strictly to EPSG:3857 Web Mercator.
+1526. **Exact Forward and Inverse Coordinate Transformations**: Pure mathematical transformations between EPSG:4326 and EPSG:3857 without lossy approximations.
+1527. **Critical Unit Rule: Degree / Meter Separation**: Haversine geodesic calculations over earth mean radius (6,371,000 m) strictly enforce that degrees are not meters (Fixture E).
+1528. **Explicit Metric Distance Units**: Proximity endpoints return verified distance metrics in `distance_meters` and `distance_km`.
+1529. **Coordinate Ordering Semantic Enforcement**: Enforces `[longitude, latitude]` order across GeoJSON and API payloads.
+1530. **Reversal Detection for Geographic Coordinates**: Detects reversed inputs where latitude exceeds [-90, 90] bounds and rejects with `MapCoordinatesInvalidError`.
+1531. **Antimeridian Bounding Box Split Optimization**: Viewports crossing the 180° meridian (west > east) are split into dual disjoint sub-envelopes (Fixture D).
+1532. **Web Mercator Latitude Clamping**: Clamps latitude queries between -85.05112878° and +85.05112878° to avoid infinity singularities.
+1533. **Polygon Ring Closure & Vertex Requirements**: Enforces rings have >= 4 coordinates and first coordinate equals last coordinate.
+1534. **Self-Intersecting Bowtie Polygon Rejection**: Detects non-adjacent edge intersections in simple polygons and rejects with `MapDatasetGeometryInvalidError` (Fixture C).
+
+### Vector Tiles & Basemap Licensing
+1535. **Binary MVT 2.1 Protocol Buffer Wire Protocol**: Implements a native, zero-dependency protobuf encoder generating compliant Mapbox Vector Tile binaries.
+1536. **In-Memory and Valkey Tile Caching Architecture**: Vector tiles are cached by layer ID, zoom, and tile coordinates for high-throughput serving.
+1537. **Public vs Private Tile Cache Key Separation**: Private tenant vector tiles are hashed with tenant/user IDs, preventing cache poisoning across tenants (Fixture F).
+1538. **Licensed Basemap Provider Registry**: Configures licensed Carto, OpenFreeMap, and Esri reference services with fallback capabilities.
+1539. **Visible Legal Tile Attribution**: Displays compliant legal attribution ("© OpenStreetMap contributors, © CARTO, © OpenFreeMap") at all times.
+1540. **Rejection of Public Community Tile Server CDN Abuse**: Prevents bulk scraping or abuse of public OpenStreetMap community servers.
+1541. **Institutional Dark Basemap Theme**: Primary dark theme style matches the institutional ATLAS terminal design language.
+1542. **High-Contrast Light Basemap Theme**: Clean high-contrast style for light-theme analytical reporting.
+1543. **Minimalist Geopolitical Basemap Theme**: Clean boundaries and waterways with minimized background visual noise.
+1544. **Reference Satellite Imagery Style**: Esri World Imagery reference tiles with compliant attribution for geographical context.
+
+### Map Engine & Frontend Architecture
+1545. **Client-Only MapLibre Lifecycle Management**: Dynamically loads MapLibre GL JS client-side to prevent Next.js server-side hydration mismatches.
+1546. **WebGL Context Fallback & Error State**: Gracefully detects WebGL unavailability and presents an accessible, informative diagnostic banner.
+1547. **Responsive Map Canvas ResizeObserver**: Listens for panel resize events and triggers `map.resize()` for seamless split pane interaction.
+1548. **Style Switching with Application Layer Restoration**: Re-registers custom financial center and boundary layers seamlessly upon basemap style switches (Fixture G).
+1549. **Geographic Search Engine & Coordinate Navigation**: Resolves country names, financial centers, cities, and raw coordinate pairs ("lat, lon" or "lon, lat").
+1550. **Verified Real Financial Capitals & Monetary Centers Catalog**: Indexes top monetary hubs (New York, London, Tokyo, Frankfurt, Singapore, Zurich, Paris, Sydney, Toronto).
+1551. **Sovereign States & Administrative Boundaries Catalog**: Indexes verified sovereign boundary polygons from Natural Earth 1:110m cultural vectors.
+1552. **Multi-Tenant Spatial Dataset Access Control**: Verifies user/tenant ownership before returning proprietary spatial features or vector tiles (Fixture F).
+1553. **Feature Level Attribute Scoping and Data Leakage Defense**: Filters private database columns before exposing GeoJSON properties to the client.
+1554. **Feature Inspector with Source Provenance and Quality Status**: Displays coordinates, data quality badges (Verified, Approximate), dataset provenance, and properties.
+
+### Integrations & Governance
+1555. **Persistent Map Views Domain Model (`UserMapView`)**: Persists camera center, zoom, bearing, pitch, basemap style, layer visibility, and selection.
+1556. **Optimistic Concurrency Revision Control for Map Views**: Updates require `expected_revision`, rejecting stale concurrent writes with 409 Conflict.
+1557. **Stage 119 Universal Saved Integration (`MAP_VIEW_CONFIG`)**: Registers map view configurations under the Universal Saved target registry.
+1558. **Stage 120 Workspaces Map Panel Adapter (`MapPanelAdapter`)**: Implements dedicated workspace panel adapter rendering independent MapLibre maps.
+1559. **Independent Workspace Map Panel Camera State Invariant**: Multiple map panels in a workspace maintain isolated camera states (Fixture I).
+1560. **Stage 121 Global Workspace Linking Compatibility**: Supports linking via `REGION` and `INSTRUMENT` context dimensions.
+1561. **Stage 125 AI Context Awareness Read-Only Viewport Metadata**: Exposes map bounds, active layers, and selected feature without private location leaks.
+1562. **Location Privacy Policy: Zero Passive Geolocation Probing**: Never automatically queries or logs user device geolocation.
+1563. **Bounded Viewport Query Rate Limiting & Max Limits**: Spatial queries enforce strict limits (max 5,000 features) to prevent memory exhaustion.
+1564. **Audit Logging of Spatial View Saves and Modifications**: Records map audit events with user, tenant, timestamp, and modification details.
+1565. **Stage 130 Handoff Architecture: Seamless 3D Globe Extensibility**: PostGIS schemas, MVT tiles, and datasets are engineered for direct 3D CesiumJS ingestion.

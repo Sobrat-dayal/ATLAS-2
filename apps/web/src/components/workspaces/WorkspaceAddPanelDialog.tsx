@@ -36,6 +36,7 @@ const REGISTERED_PANEL_OPTIONS: PanelOption[] = [
   { typeId: "SCREENER", title: "Stock Screener", category: "Research", description: "Multi-factor equity screener with custom universe filtering.", sourceModule: "screeners" },
   { typeId: "RESEARCH_DOCUMENT", title: "Research Report", category: "Research", description: "Institutional research analysis and thesis document reader.", sourceModule: "research" },
   { typeId: "DATA_TABLE", title: "Data Explorer", category: "Data", description: "Custom financial dataset explorer table.", sourceModule: "data" },
+  { typeId: "MAP_VIEW", title: "2D World Map", category: "Maps", description: "PostGIS & MapLibre institutional financial geography and monetary centers.", sourceModule: "maps" },
 ];
 
 export function WorkspaceAddPanelDialog({
@@ -51,7 +52,7 @@ export function WorkspaceAddPanelDialog({
 
   if (!isOpen) return null;
 
-  const categories = ["ALL", "Markets", "Charts", "Fundamentals", "Macro", "News", "Portfolios", "Risk", "Research", "Data"];
+  const categories = ["ALL", "Markets", "Charts", "Fundamentals", "Macro", "News", "Portfolios", "Risk", "Research", "Data", "Maps"];
 
   const filtered = REGISTERED_PANEL_OPTIONS.filter((p) => {
     const matchesSearch =

@@ -218,6 +218,18 @@ CAPABILITIES_CATALOG: dict[str, PanelContextCapability] = {
         subscribable_dimensions=[],
         accepted_entity_types=[],
     ),
+    "MAP_VIEW": PanelContextCapability(
+        panel_type_id="MAP_VIEW",
+        publishable_dimensions=[
+            ContextDimension.REGION,
+            ContextDimension.INSTRUMENT,
+        ],
+        subscribable_dimensions=[
+            ContextDimension.REGION,
+            ContextDimension.INSTRUMENT,
+        ],
+        accepted_entity_types=["INSTRUMENT"],
+    ),
 }
 
 

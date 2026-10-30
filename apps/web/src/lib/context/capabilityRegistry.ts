@@ -181,6 +181,16 @@ export const PANEL_CAPABILITIES: Record<string, PanelContextCapability> = {
     supports_as_of: false,
     supports_currency: true,
   },
+  MAP_VIEW: {
+    panel_type_id: "MAP_VIEW",
+    publishable_dimensions: ["REGION", "INSTRUMENT"],
+    subscribable_dimensions: ["REGION", "INSTRUMENT"],
+    accepted_entity_types: ["INSTRUMENT"],
+    required_transformations: {},
+    supported_timeframes: [],
+    supports_as_of: false,
+    supports_currency: false,
+  },
 };
 
 export function getPanelCapability(panelTypeId: string): PanelContextCapability | undefined {

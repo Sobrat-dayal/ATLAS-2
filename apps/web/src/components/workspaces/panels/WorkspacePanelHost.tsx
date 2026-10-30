@@ -24,6 +24,7 @@ import { NewsPanelAdapter } from "./adapters/NewsPanelAdapter";
 import { PortfolioPanelAdapter } from "./adapters/PortfolioPanelAdapter";
 import { RiskPanelAdapter } from "./adapters/RiskPanelAdapter";
 import { WatchlistPanelAdapter } from "./adapters/WatchlistPanelAdapter";
+import { MapPanelAdapter } from "./adapters/MapPanelAdapter";
 import { WorkspacePanelErrorBoundary } from "./WorkspacePanelErrorBoundary";
 
 interface WorkspacePanelHostProps {
@@ -137,6 +138,15 @@ export function WorkspacePanelHost({
       case "RISK_ANALYSIS":
         return (
           <RiskPanelAdapter
+            panel={panel}
+            context={context}
+            onUpdateContext={handleUpdateContext}
+            onUpdateConfig={handleUpdateConfig}
+          />
+        );
+      case "MAP_VIEW":
+        return (
+          <MapPanelAdapter
             panel={panel}
             context={context}
             onUpdateContext={handleUpdateContext}
