@@ -79,6 +79,7 @@ export function CommandPalette() {
     setSidebarCollapsed,
     agentDockOpen,
     setAgentDockOpen,
+    toggleBottomPanel,
   } = useShellState();
 
   // Route & permission authorization
@@ -136,6 +137,10 @@ export function CommandPalette() {
         closeCommandPalette();
         setAgentDockOpen(!agentDockOpen);
       },
+      toggleTerminal: () => {
+        closeCommandPalette();
+        toggleBottomPanel("terminal");
+      },
     }),
     [
       closeCommandPalette,
@@ -148,6 +153,7 @@ export function CommandPalette() {
       setSidebarCollapsed,
       agentDockOpen,
       setAgentDockOpen,
+      toggleBottomPanel,
       recordModuleOpened,
       recordEntitySelected,
     ]

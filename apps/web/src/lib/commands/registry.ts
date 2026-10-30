@@ -5,6 +5,7 @@ import {
   XCircle,
   PanelLeft,
   Bot,
+  Terminal,
 } from "lucide-react";
 import { ATLAS_MODULES_LIST } from "../../config/atlas-modules";
 import { SECTION_SETTINGS_REGISTRY } from "../../config/section-settings";
@@ -170,6 +171,19 @@ function createShellCommands(): CommandDefinition[] {
       icon: Bot,
       execute: (_context, helpers) => {
         helpers.toggleAgentDock?.();
+      },
+    },
+    {
+      id: "terminal.toggle",
+      label: "Toggle Integrated Terminal",
+      description: "Open or close the integrated developer terminal console (Stage 122).",
+      category: "shell",
+      keywords: ["terminal", "console", "cli", "python", "sql", "logs", "agents", "mcp"],
+      aliases: ["terminal", "console", "cli"],
+      icon: Terminal,
+      shortcut: "Ctrl+`",
+      execute: (_context, helpers) => {
+        helpers.toggleTerminal?.();
       },
     },
   ];

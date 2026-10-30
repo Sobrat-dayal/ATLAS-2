@@ -73,6 +73,7 @@ export interface CommandExecutionHelpers {
   closePalette: () => void;
   toggleSidebar?: () => void;
   toggleAgentDock?: () => void;
+  toggleTerminal?: () => void;
 }
 
 export interface CommandDefinition {

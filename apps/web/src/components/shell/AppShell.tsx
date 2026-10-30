@@ -11,10 +11,12 @@ import { MarketTickerBar } from "./MarketTickerBar";
 import { SectionSettingsDrawer } from "@/components/settings/SectionSettingsDrawer";
 import { CommandPalette } from "@/components/command-palette";
 import { useCommandPaletteShortcut } from "@/hooks/commands";
+import { useTerminalGlobalShortcut } from "@/hooks/terminal/useTerminalGlobalShortcut";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { moduleFullscreen } = useShellState();
   useCommandPaletteShortcut();
+  useTerminalGlobalShortcut();
 
   if (moduleFullscreen) {
     return (

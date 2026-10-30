@@ -78,10 +78,10 @@ export const PANEL_DEFINITIONS: readonly BottomPanelDefinition[] = Object.freeze
   {
     id: "terminal",
     label: "Terminal",
-    description: "Sandboxed terminal access (Stage 122)",
+    description: "Integrated developer terminal shell (Stage 122)",
     icon: Terminal,
     placement: "trailing",
-    availability: "reserved",
+    availability: "available",
     component: TerminalPanel,
   },
 ]);

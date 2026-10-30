@@ -90,12 +90,14 @@ export function BottomPanelHost() {
         onResetHeight={() => setPanelHeight(DEFAULT_BOTTOM_PANEL_HEIGHT)}
       />
 
-      {/* Panel Header */}
-      <BottomPanelHeader
-        panel={panelDef}
-        onClose={closePanel}
-        onResetHeight={() => setPanelHeight(DEFAULT_BOTTOM_PANEL_HEIGHT)}
-      />
+      {/* Panel Header (Terminal provides its own integrated VS Code-style TerminalHeader) */}
+      {panelDef.id !== "terminal" && (
+        <BottomPanelHeader
+          panel={panelDef}
+          onClose={closePanel}
+          onResetHeight={() => setPanelHeight(DEFAULT_BOTTOM_PANEL_HEIGHT)}
+        />
+      )}
 
       {/* Scrollable Content Region */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-atlas-surface-1 relative">
