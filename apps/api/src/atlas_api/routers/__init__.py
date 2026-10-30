@@ -61,6 +61,7 @@ from .ai import router as ai_router
 from .ai_context import router as ai_context_router
 from .ai_tools import router as ai_tools_router
 from .ai_research import router as ai_research_router
+from .ai_actions import router as ai_actions_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -124,3 +125,4 @@ api_router.include_router(ai_router, prefix="")
 api_router.include_router(ai_context_router, prefix="")
 api_router.include_router(ai_tools_router, prefix="")
 api_router.include_router(ai_research_router, prefix="")
+api_router.include_router(ai_actions_router, prefix="")

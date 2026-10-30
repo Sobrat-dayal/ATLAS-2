@@ -10892,3 +10892,64 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1463. **Interactive UI Citation Badges**: `AiResearchCitation` renders clickable badges with verification status (`VERIFIED`, `REJECTED`, `EXPIRED`).
 1464. **Citation & Evidence Viewers**: `AiResearchCitationViewer` and `AiResearchEvidenceInspector` display verified source spans and metadata.
 1465. **Stage 128 Financial Actions Handoff**: Research platform is fully read-only and prepared to pass grounded evidence to Stage 128 financial actions.
+
+
+## Stage 128: AI Financial Action Engine
+
+### Roadmap & Scope Boundaries
+1466. **Stage 128 Financial Action Engine Ownership**: Stage 128 owns natural-language action translation, preview generation, human approval, and execution for Charts, Screeners, Portfolios, and Risk.
+1467. **Stage 124 Assistant & Overlay Integration**: Directly surfaces action preview cards and confirmation controls in `AtlasAiOverlay` and `/ai`.
+1468. **Stage 125 Context Awareness Engine Reuse**: Context resolver maps focused chart panels, active portfolios, and security universes without duplicate context builders.
+1469. **Stage 126 Secure Tool Gateway Enforcement**: Action tools invoke backend services through the Stage 126 Gateway with zero-trust validation.
+1470. **Stage 127 Grounded Evidence Handoff**: Actions consume verified research outputs without allowing untrusted text to trigger side effects.
+1471. **Stage 129 Maps Separation**: Future geospatial analysis and Maps milestones remain completely untouched.
+1472. **Live Broker Orders Prohibited**: Real trading and order submissions are strictly blocked at the service boundary (`AiActionBrokerExecutionProhibitedError`).
+1473. **Autonomous Agent Swarms Prohibited**: No recurring unsupervised trading or mutation loops.
+1474. **Preservation of 20 Platform Routes**: All 20 canonical sidebar routes remain intact.
+
+### Action Architecture & Domain
+1475. **Singleton Action Registry**: `AtlasActionRegistry` discovers and indexes all supported action types, schemas, and adapters.
+1476. **Deterministic Action Identification**: Every planned action receives a stable identifier (`act_<uuid>`).
+1477. **SemVer Action Versioning**: Actions carry explicit schema versions (`1.0.0`).
+1478. **Action Classification Taxonomy**: Operations are classified as `READ_ONLY`, `SESSION_UI_CHANGE`, `PERSISTENT_CONFIGURATION_CHANGE`, `SAVED_ANALYTICAL_DRAFT`, or `COMPUTATION_JOB`.
+1479. **Multi-Action Plan Graphs**: Multi-step plans maintain explicit prerequisite dependency graphs (`AiFinancialActionPlan`).
+1480. **Intent Interpretation & Parameter Extraction**: Translates natural language into typed parameter dictionaries.
+1481. **Canonical Context Binding**: Automatically resolves active chart IDs, portfolio IDs, and security symbols from session context.
+1482. **Strict Parameter Validation**: Validates all arguments against domain schemas prior to preview generation.
+1483. **Cryptographic Action Previews**: Previews compute before/after diffs, financial impact, and cryptographic preview hashes `sha256(canonical_json(args + diffs))`.
+1484. **Human Approval Binding**: User confirmation binds strictly to `(user_id, tenant_id, action_id, target_resource, resource_revision, normalized_args_hash, preview_hash, expires_at)`.
+1485. **Verified Service Execution**: Only real service responses can finalize an action as completed.
+1486. **Immutable Execution Receipts**: Successful executions generate verifiable receipts (`AiActionExecutionReceipt`) recording revisions before/after.
+1487. **Rollback & Compensation for Reversible Actions**: Supports undoing reversible configuration changes by restoring prior snapshots.
+1488. **Privacy-Preserving Audit Logging**: Action audits record intent, hashes, and diffs without leaking unrestricted raw private financial data.
+
+### Approval, Security & Concurrency
+1489. **Server Authority**: The backend evaluates permissions and safety; model proposals are treated as untrusted input.
+1490. **Approval Substitution Defense**: Attempting to execute an action with a different resource or modified arguments triggers `AiActionApprovalMismatchError` (Fixture E).
+1491. **15-Minute Approval Expiration**: Approvals expire after 15 minutes, requiring renewed confirmation.
+1492. **Single-Use Approval Replay Protection**: Approvals are marked consumed upon execution; duplicate use raises `AiActionReplayDetectedError`.
+1493. **Optimistic Concurrency Revision Locking**: Validates target resource revision before execution; concurrent modifications raise `AiActionResourceConflictError` (Fixture F).
+1494. **Fresh Re-Authorization**: Permissions are re-checked at dispatch time even if previously approved.
+1495. **Idempotency Caching**: Client idempotency keys ensure duplicate network requests return cached receipts without repeated execution (Fixture G).
+1496. **Multi-Tenant & RLS Enforcement**: Database tables enforce tenant and user isolation across all action plans and receipts.
+1497. **External Model Disclosure Guardrails**: Verifies tenant disclosure policies before sending financial parameters to AI providers.
+1498. **Source Entitlement Verification**: Enforces licensing and entitlement boundaries across data sources.
+1499. **Prohibited Trading Detection**: Rejects broker order requests with institutional explanations (Fixture I).
+1500. **Prohibited Ledger Mutation Detection**: Rejects direct cash or accounting ledger mutations (Fixture H).
+1501. **Prompt Injection Defense**: Injected commands in research text are isolated and ignored.
+
+### Domain Adapters: Charts, Screeners, Portfolios, Risk
+1502. **Chart Configuration Adapter**: Coordinates instrument selection, timeframes (`1m` to `1M`), chart types, and comparisons.
+1503. **Supported Indicator Verification**: Validates parameter bounds for SMA, EMA, RSI, MACD, BOLL, VOL, ATR, and VWAP (Fixture A).
+1504. **Normalized Comparison Charts**: Automatically normalizes comparison instruments to common percentage bases.
+1505. **Reversible Chart Snapshots**: Maintains layout snapshots enabling full undo restoration.
+1506. **Screener Natural-Language Adapter**: Translates natural language into typed filter rules (`revenue_growth_yoy`, `net_profit_margin`, `market_cap`).
+1507. **Metric Registry Validation**: Rejects unrecognized financial metrics and unsupported operators.
+1508. **Genuine Screener Query Execution**: Executes queries over real security datasets without fabricated matches (Fixture B).
+1509. **Screener Revision Concurrency**: Detects concurrent updates to saved screeners, preventing accidental overwrites.
+1510. **Portfolio Analytical Simulation Only**: Restricts portfolio actions to analytical comparisons and hypothetical target weights.
+1511. **Portfolio Weight Normalization Constraint**: Enforces target weights sum to 100% (within 0.5% tolerance) and long-only constraints.
+1512. **Mathematical Allocation Deltas**: Computes exact percentage point and notional currency deltas (Fixture C: -10 pp / -$10k Equity, +10 pp / +$10k Bonds).
+1513. **Mandatory Hypothetical Disclaimer**: All scenario outputs carry prominent "Hypothetical Allocation Proposal — Not Executed" badges.
+1514. **Worker-Backed Risk Computation**: Schedules real risk models (Historical VaR, Parametric VaR, Expected Shortfall, Stress Testing) on worker infrastructure.
+1515. **Immutable Risk Run Records**: Completed risk calculations are permanently archived; undo attempts are strictly rejected (`AiActionUndoUnavailableError`).

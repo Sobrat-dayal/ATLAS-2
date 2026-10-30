@@ -9,6 +9,7 @@ import {
   Sparkles,
   Wrench,
   X,
+  Zap,
 } from "lucide-react";
 import { listModels, updateConversation } from "@/lib/ai/api";
 import { AiConversation, ModelCapability } from "@/lib/ai/types";
@@ -19,6 +20,8 @@ interface AtlasAiHeaderProps {
   onNewChat: () => void;
   onRefresh?: () => void;
   onToggleToolSettings?: () => void;
+  onToggleActions?: () => void;
+  isActionsOpen?: boolean;
 }
 
 export function AtlasAiHeader({
@@ -26,6 +29,8 @@ export function AtlasAiHeader({
   onNewChat,
   onRefresh,
   onToggleToolSettings,
+  onToggleActions,
+  isActionsOpen = false,
 }: AtlasAiHeaderProps) {
   const { closeOverlay, isHistoryDrawerOpen, toggleHistoryDrawer } = useAiOverlayStore();
 
@@ -142,6 +147,20 @@ export function AtlasAiHeader({
           </select>
           <ChevronDown className="pointer-events-none absolute right-1.5 top-2 h-3 w-3 text-atlas-text-muted" />
         </div>
+
+        {onToggleActions && (
+          <button
+            onClick={onToggleActions}
+            className={`rounded p-1 transition-colors ${
+              isActionsOpen
+                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                : "text-atlas-text-secondary hover:bg-atlas-surface-hover hover:text-atlas-text-primary"
+            }`}
+            title="Toggle Financial Action Engine (Stage 128)"
+          >
+            <Zap className="h-3.5 w-3.5" />
+          </button>
+        )}
 
         {onToggleToolSettings && (
           <button

@@ -14,9 +14,11 @@ import { AtlasAiRouteContextBanner } from "./AtlasAiRouteContextBanner";
 import { AiContextInspector } from "./context/AiContextInspector";
 import { AiContextChips } from "./context/AiContextChips";
 import { AiToolSettings } from "./tools/AiToolSettings";
+import { AiActionPanel } from "./actions/AiActionPanel";
 
 export function AtlasAiOverlay() {
   const [isToolSettingsOpen, setIsToolSettingsOpen] = useState(false);
+  const [isActionPanelOpen, setIsActionPanelOpen] = useState(false);
   const {
     isOpen,
     overlayWidth,
@@ -121,6 +123,8 @@ export function AtlasAiOverlay() {
         onNewChat={handleNewChat}
         onRefresh={refreshConversation}
         onToggleToolSettings={() => setIsToolSettingsOpen((prev) => !prev)}
+        onToggleActions={() => setIsActionPanelOpen((prev) => !prev)}
+        isActionsOpen={isActionPanelOpen}
       />
 
       {/* Tool Governance Settings Modal/Drawer (Stage 126) */}
@@ -156,21 +160,30 @@ export function AtlasAiOverlay() {
         {/* History Drawer overlay */}
         {isHistoryDrawerOpen && <AtlasAiHistoryDrawer />}
 
-        {/* Error Banner if any */}
-        {error && (
-          <div className="bg-rose-500/10 border-b border-rose-500/30 px-3 py-1.5 text-xs text-rose-400">
-            {error}
+        {/* AI Financial Action Engine Drawer (Stage 128) */}
+        {isActionPanelOpen ? (
+          <div className="flex-1 overflow-y-auto p-3">
+            <AiActionPanel />
           </div>
-        )}
+        ) : (
+          <>
+            {/* Error Banner if any */}
+            {error && (
+              <div className="bg-rose-500/10 border-b border-rose-500/30 px-3 py-1.5 text-xs text-rose-400">
+                {error}
+              </div>
+            )}
 
-        {/* Message list */}
-        <AtlasAiMessageList
-          messages={messages}
-          isGenerating={isGenerating}
-          streamingDelta={streamingDelta}
-          onSelectPrompt={handleSend}
-          onRegenerateMessage={(msgId) => regenerate(msgId)}
-        />
+            {/* Message list */}
+            <AtlasAiMessageList
+              messages={messages}
+              isGenerating={isGenerating}
+              streamingDelta={streamingDelta}
+              onSelectPrompt={handleSend}
+              onRegenerateMessage={(msgId) => regenerate(msgId)}
+            />
+          </>
+        )}
       </div>
 
       {/* Context Chips bar above composer (Stage 125) */}

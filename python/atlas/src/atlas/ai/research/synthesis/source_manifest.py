@@ -51,3 +51,4 @@ def build_source_manifest(
         has_conflicting_sources=has_conflicting_sources,
         conflict_notes=conflict_notes if has_conflicting_sources else None,
     )
+
