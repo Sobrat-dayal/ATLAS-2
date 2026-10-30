@@ -24,3 +24,4 @@ export function formatResearchError(code?: string, fallbackMessage?: string): st
   }
   return fallbackMessage || "An error occurred during AI research retrieval.";
 }
+

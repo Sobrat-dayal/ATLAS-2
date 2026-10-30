@@ -47,3 +47,4 @@ class ResearchCache:
         keys_to_del = [k for k in cls._store.keys() if k.startswith(prefix)]
         for k in keys_to_del:
             del cls._store[k]
+

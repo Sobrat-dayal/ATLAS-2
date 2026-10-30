@@ -202,3 +202,4 @@ export interface IngestDocumentResponse {
   indexing_status: string;
   content_hash: string;
 }
+

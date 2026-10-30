@@ -65,3 +65,4 @@ __all__ = [
     "AtlasResearchSourceRegistry",
     "AtlasAiResearchService",
 ]
+

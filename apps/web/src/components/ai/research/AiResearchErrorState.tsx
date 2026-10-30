@@ -34,3 +34,4 @@ export function AiResearchErrorState({ error, onRetry }: AiResearchErrorStatePro
     </div>
   );
 }
+

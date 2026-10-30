@@ -38,3 +38,4 @@ export function AiResearchCitation({ citation, onClick }: AiResearchCitationProp
     </button>
   );
 }
+

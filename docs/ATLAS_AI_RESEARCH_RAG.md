@@ -141,3 +141,4 @@ Stage 127 registers 6 approved institutional tools in the `AtlasAiToolRegistry`:
 - **Frontend Vitest Suite**: `apps/web/src/lib/ai/research/__tests__/ai_research_stage127_v1.test.ts`
   - 239 passed across 17 test suites (100% pass rate).
 - **TypeScript Next.js Build**: `pnpm --filter web build` completed with 0 errors across all 38 platform routes.
+

@@ -148,3 +148,4 @@ def downgrade() -> None:
     op.drop_table("research_document_revisions")
     op.drop_table("research_documents")
     op.drop_table("research_sources")
+

@@ -104,3 +104,4 @@ export function AiResearchCitationViewer({ citation, onClose }: AiResearchCitati
     </div>
   );
 }
+

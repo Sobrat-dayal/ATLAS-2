@@ -185,3 +185,4 @@ export function AiResearchSearch({ onSearch, isLoading = false }: AiResearchSear
     </div>
   );
 }
+
