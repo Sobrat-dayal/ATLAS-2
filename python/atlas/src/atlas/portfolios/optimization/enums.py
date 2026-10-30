@@ -1,0 +1,95 @@
+"""ATLAS Portfolios V1 — Optimization Enums (Stage 114).
+
+Defines canonical objectives, models, constraint types, and solver statuses
+for institutional portfolio optimization.
+"""
+
+from enum import Enum
+
+
+class OptimizationObjective(str, Enum):
+    """Supported mathematical optimization objectives."""
+
+    MINIMUM_VARIANCE = "MINIMUM_VARIANCE"
+    MEAN_VARIANCE_UTILITY = "MEAN_VARIANCE_UTILITY"
+    TARGET_RETURN_MIN_VARIANCE = "TARGET_RETURN_MIN_VARIANCE"
+    MAXIMUM_EXPECTED_RETURN = "MAXIMUM_EXPECTED_RETURN"
+    EFFICIENT_FRONTIER = "EFFICIENT_FRONTIER"
+    MAXIMUM_SHARPE = "MAXIMUM_SHARPE"
+    BENCHMARK_TRACKING_ERROR = "BENCHMARK_TRACKING_ERROR"
+    RISK_PARITY = "RISK_PARITY"
+
+
+class ExpectedReturnModel(str, Enum):
+    """Estimators for expected asset returns."""
+
+    HISTORICAL_ARITHMETIC_MEAN = "HISTORICAL_ARITHMETIC_MEAN"
+    USER_SPECIFIED = "USER_SPECIFIED"
+    SHRINKAGE_MEAN = "SHRINKAGE_MEAN"
+
+
+class CovarianceModel(str, Enum):
+    """Estimators for asset covariance and dispersion."""
+
+    SAMPLE_COVARIANCE = "SAMPLE_COVARIANCE"
+    LEDOIT_WOLF_SHRINKAGE = "LEDOIT_WOLF_SHRINKAGE"
+    DIAGONAL_VARIANCE = "DIAGONAL_VARIANCE"
+    EXPONENTIALLY_WEIGHTED = "EXPONENTIALLY_WEIGHTED"
+
+
+class ConstraintType(str, Enum):
+    """Supported portfolio construction constraint types."""
+
+    FULLY_INVESTED = "FULLY_INVESTED"
+    LONG_ONLY = "LONG_ONLY"
+    SECURITY_WEIGHT_BOUND = "SECURITY_WEIGHT_BOUND"
+    CASH_WEIGHT_BOUND = "CASH_WEIGHT_BOUND"
+    SECTOR_WEIGHT_BOUND = "SECTOR_WEIGHT_BOUND"
+    ASSET_CLASS_WEIGHT_BOUND = "ASSET_CLASS_WEIGHT_BOUND"
+    COUNTRY_WEIGHT_BOUND = "COUNTRY_WEIGHT_BOUND"
+    CURRENCY_WEIGHT_BOUND = "CURRENCY_WEIGHT_BOUND"
+    ISSUER_WEIGHT_BOUND = "ISSUER_WEIGHT_BOUND"
+    BENCHMARK_ACTIVE_WEIGHT_BOUND = "BENCHMARK_ACTIVE_WEIGHT_BOUND"
+    TURNOVER_LIMIT = "TURNOVER_LIMIT"
+    TRANSACTION_COST_LIMIT = "TRANSACTION_COST_LIMIT"
+    VOLATILITY_LIMIT = "VOLATILITY_LIMIT"
+    EXPECTED_RETURN_TARGET = "EXPECTED_RETURN_TARGET"
+    FROZEN_HOLDING = "FROZEN_HOLDING"
+
+
+class SolverStatus(str, Enum):
+    """Numerical solver termination status."""
+
+    OPTIMAL = "OPTIMAL"
+    OPTIMAL_INACCURATE = "OPTIMAL_INACCURATE"
+    FEASIBLE = "FEASIBLE"
+    INFEASIBLE = "INFEASIBLE"
+    UNBOUNDED = "UNBOUNDED"
+    NUMERICAL_FAILURE = "NUMERICAL_FAILURE"
+    SOLVER_TIMEOUT = "SOLVER_TIMEOUT"
+    RESOURCE_LIMIT_EXCEEDED = "RESOURCE_LIMIT_EXCEEDED"
+
+
+class FeasibilityStatus(str, Enum):
+    """Mathematical feasibility verification status."""
+
+    FEASIBLE = "FEASIBLE"
+    INFEASIBLE_PRECHECK = "INFEASIBLE_PRECHECK"
+    INFEASIBLE_SOLVER = "INFEASIBLE_SOLVER"
+    TOLERANCE_VIOLATION = "TOLERANCE_VIOLATION"
+
+
+class StudyStatus(str, Enum):
+    """Lifecycle status of an optimization study."""
+
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+
+
+class DataCategory(str, Enum):
+    """Strict classification of financial figures."""
+
+    OBSERVED_HISTORICAL = "OBSERVED_HISTORICAL"
+    MODEL_ESTIMATE = "MODEL_ESTIMATE"
+    USER_ASSUMPTION = "USER_ASSUMPTION"
+    HYPOTHETICAL_CANDIDATE = "HYPOTHETICAL_CANDIDATE"

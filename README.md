@@ -1507,6 +1507,50 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
 - **Documentation**: See `docs/PORTFOLIO_PERFORMANCE_ATTRIBUTION_ARCHITECTURE.md` and `docs/DECISIONS.md`.
 
+## Portfolio Optimization & Quantitative Construction Platform (Stage 114)
+- **Convex Portfolio Optimization Engines**:
+  - SciPy `SLSQP` Sequential Least Squares Programming with analytical Jacobians for constrained quadratic optimization.
+  - Mean-Variance Quadratic Utility formulation ($\min \frac{1}{2} w^T \Sigma w - \lambda w^T \mu$) with smooth risk aversion ($\lambda \in [0.1, 20.0]$) transitions.
+  - Analytical Minimum-Variance Portfolio solver reproducing closed-form two-asset solutions within $< 10^{-6}$ precision.
+  - Verified Part XXIX analytical reference fixture: 2 uncorrelated assets with variances $0.04$ and $0.09$ converge to exact $w_A = 69.23077\%$ and $w_B = 30.76923\%$ with portfolio variance $\sigma_p^2 = 0.0276923$.
+  - Maximum Sharpe Ratio tangency portfolio solver.
+  - Target-Return Minimum Variance and Maximum Return linear programming.
+  - Spinu (2013) convex logarithmic barrier Equal Risk Contribution (Risk Parity) solver ($\min \frac{1}{2} y^T \Sigma y - c \sum \ln y_i$) solved via unconstrained `L-BFGS-B` with analytical gradient and post-normalization, achieving $< 10^{-6}$ marginal risk contribution discrepancies.
+  - Tracking Error active weight optimization relative to benchmarks.
+- **Covariance & Expected Return Estimation**:
+  - Ledoit-Wolf (2004) diagonal shrinkage covariance ($\Sigma_{LW} = \delta F + (1 - \delta) S$) guaranteeing positive definiteness and well-conditioned matrices.
+  - Eigenvalue inspection with Positive Semi-Definite (PSD) verification ($\lambda_{\min} \ge 10^{-7}$) and automatic diagonal loading regularization.
+  - Condition number monitoring ($\kappa(\Sigma) = \lambda_{\max}/\lambda_{\min}$).
+  - Historical arithmetic mean, explicit user assumptions, and shrinkage mean expected return models.
+- **Constraint Modeling & Feasibility Engine**:
+  - Linear budget pre-check feasibility engine detecting conflicting bounds before invoking non-linear solvers.
+  - Verified Part LXIV infeasible constraint fixture: 4 assets capped at $20\%$ each totaling $80\% < 100\%$ immediately flagged as infeasible.
+  - 15 typed constraints including security bounds, sector caps, cash floors, turnover limits, and frozen holdings.
+  - Kuhn-Tucker boundary slacks and active/binding constraint evaluator.
+- **Efficient Frontier & Rebalancing Proposals**:
+  - Pareto-optimal efficient frontier curve tracing with dominated-point filtering.
+  - One-way portfolio turnover ($\frac{1}{2} \sum |w_{\text{cand}} - w_{\text{curr}}|$) and self-funding verification ($\sum \Delta V_i = 0$ for fully invested portfolios).
+  - Proportional transaction friction cost modeling ($10$ bps default).
+  - Line-item proposed orders with BUY/SELL/HOLD tags and trade value deltas.
+- **Sensitivity & Parameter Stress Testing**:
+  - Alpha shock perturbations (+100 bps) and risk aversion spectrum testing ($\lambda = 1.0, 4.0$).
+  - Deterministic cryptographic SHA-256 Input Provenance Digest.
+- **REST API Endpoints & Multi-Tenant Security**:
+  - 15 high-performance REST endpoints under `/api/v1/portfolios/{id}/optimization/...` covering studies, runs, candidate, frontier, comparison, diagnostics, universe, constraints validation, and methodologies.
+  - Multi-tenant isolation and ownership checks across all endpoints.
+- **Bloomberg-Style Optimization Workspace (`/portfolios` -> "Optimization & Frontier")**:
+  - Summary KPI cards, interactive SVG Efficient Frontier chart, Current vs Candidate comparative table, Sector & Security Allocation shift chart, Constraint Builder with instant feasibility checker, Slacks Panel, Hypothetical Trade Proposals table with prominent institutional non-execution disclaimer banner, Solver Diagnostics inspector, Sensitivity Scenarios grid, Methodology Inspector, and Study Manager.
+- **Strict Roadmap Boundaries**:
+  - Stage 114 exclusively delivers portfolio optimization, quantitative asset allocation, efficient frontier modeling, and rebalancing proposals.
+  - Strictly deferred: Stages 115–118 (Portfolio Risk / VaR / Stress Testing), Stage 143 (Backtesting), Stage 144 (Paper Trading), Stage 145 (Broker Sandbox), and Stages 146–149 (Autonomous Agents & Auto-Execution). Zero live broker orders.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_portfolio_optimization_v1.py` (12/12 passed in 6.33s).
+  - Full portfolio backend regression suite: 40/40 passed (Stages 110, 111, 112, 113, 114).
+  - Frontend unit tests: `pnpm --filter web test` (139/139 passed in 14.2s).
+  - Frontend typecheck: `tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
+- **Documentation**: See `docs/PORTFOLIO_OPTIMIZATION_ENGINE.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

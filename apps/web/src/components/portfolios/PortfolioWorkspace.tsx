@@ -14,6 +14,7 @@ import { PortfolioOverview } from "./PortfolioOverview";
 import { PortfolioPerformanceWorkspace } from "./performance/PortfolioPerformanceWorkspace";
 import { PortfolioAllocationWorkspace } from "./exposure/PortfolioAllocationWorkspace";
 import { PortfolioAttributionWorkspace } from "./attribution/PortfolioAttributionWorkspace";
+import { PortfolioOptimizationWorkspace } from "./optimization/PortfolioOptimizationWorkspace";
 import { PortfolioPositionInspector } from "./PortfolioPositionInspector";
 import { PortfolioValuationWorkspace } from "./PortfolioValuationWorkspace";
 import { TransactionCorrectionModal } from "./TransactionCorrectionModal";
@@ -214,6 +215,12 @@ export function PortfolioWorkspace() {
 
             {activeTab === "attribution" && (
               <PortfolioAttributionWorkspace
+                portfolioId={activePortfolio.id}
+              />
+            )}
+
+            {activeTab === "optimization" && (
+              <PortfolioOptimizationWorkspace
                 portfolioId={activePortfolio.id}
               />
             )}

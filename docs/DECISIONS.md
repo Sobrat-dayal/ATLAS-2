@@ -10144,3 +10144,50 @@ This document records the major architectural and product decisions established.
 ### Bloomberg-Style Professional Attribution Workspaces
 969. **Bloomberg-Style Performance Attribution Workspace**: Built high-density frontend workspace under the `/portfolios` "Attribution Analytics" tab featuring summary KPI cards, interactive waterfall chart, sector attribution table with expandable sub-industries, security contribution ranking, Carino multi-period table, currency decomposition view, benchmark inspector, methodology formulas, and audit reconciliation panel.
 970. **Strict Roadmap Boundaries & Deferrals**: Stage 113 exclusively delivers portfolio performance attribution, Brinson decomposition, security return contributions, and Carino multi-period linking. Strictly deferred Stage 114 (Portfolio Optimization / Markowitz / Black-Litterman), Stages 115–118 (Risk / VaR / Stress Testing), and Stages 143–149 (Order Execution / Automated Trading). Zero live broker trading.
+
+
+## Stage 114: Portfolio Optimization & Quantitative Construction Platform (Decisions 971–1000)
+
+### Mathematical Formulations & Optimization Solvers
+971. **Convex Optimization Solver Foundation**: Standardized on SciPy `SLSQP` (Sequential Least Squares Programming) with analytical Jacobians for constrained quadratic portfolio optimization and `L-BFGS-B` for unconstrained risk-parity logarithmic barriers.
+972. **Mean-Variance Quadratic Utility Formulation**: Formulated mean-variance utility as minimizing $\frac{1}{2} w^T \Sigma w - \lambda w^T \mu$, with analytical gradient $\nabla f(w) = \Sigma w - \lambda \mu$, providing smooth monotonic transitions across the risk-return spectrum as risk aversion parameter $\lambda$ varies.
+973. **Analytical Minimum-Variance Portfolio**: Formulated minimum-variance optimization as minimizing $w^T \Sigma w$ subject to budget $\sum w_i = 1$ and non-negativity bounds $w_i \ge 0$, reproducing exact closed-form two-asset solutions ($w_1 = \frac{\sigma_2^2 - \sigma_{12}}{\sigma_1^2 + \sigma_2^2 - 2\sigma_{12}}$) within $< 10^{-6}$ precision.
+974. **Part XXIX Analytical Fixture Verification**: Mathematically validated Part XXIX reference fixture of two uncorrelated assets with variances $0.04$ and $0.09$, confirming numerical solver converges to exact analytical weights $w_A = \frac{9}{13} \approx 69.23077\%$ and $w_B = \frac{4}{13} \approx 30.76923\%$ with portfolio variance $\sigma_p^2 = \frac{4.68}{169} \approx 0.0276923$.
+975. **Maximum Sharpe Ratio Tangency Formulation**: Implemented tangency portfolio solver maximizing $\frac{w^T \mu - r_f}{\sqrt{w^T \Sigma w}}$ subject to budget and position constraints, isolating the optimal capital allocation line contact point.
+976. **Target-Return Minimum Variance**: Implemented quadratic constrained formulation minimizing variance subject to an explicit expected return floor constraint $w^T \mu \ge R_{target}$.
+977. **Maximum Return Formulation**: Implemented linear programming solver maximizing expected return $w^T \mu$ subject to risk, sector, and individual security concentration boundaries.
+978. **Spinu Equal Risk Contribution (Risk Parity) Log-Barrier**: Adopted Florin Spinu's (2013) convex logarithmic barrier formulation $\min_{y > 0} \frac{1}{2} y^T \Sigma y - c \sum \ln(y_i)$ solved via `L-BFGS-B` with analytical gradient $\nabla f(y) = \Sigma y - \frac{c}{y}$, followed by normalization $w_i^* = \frac{y_i^*}{\sum y_j^*}$, ensuring unique global convergence and equal marginal risk contributions ($w_i (\Sigma w)_i = w_j (\Sigma w)_j$) within $< 10^{-6}$ discrepancy.
+979. **Benchmark-Aware Tracking Error Optimization**: Engineered benchmark-relative active weight optimization minimizing active variance $(w - w_B)^T \Sigma (w - w_B)$ subject to active sector and stock bounds.
+
+### Covariance & Expected Return Estimation
+980. **Ledoit-Wolf Diagonal Shrinkage Covariance**: Implemented Ledoit-Wolf (2004) shrinkage estimator $\Sigma_{LW} = \delta F + (1 - \delta) S$ toward a constant correlation diagonal target, guaranteeing well-conditioned out-of-sample covariance matrices.
+981. **Positive Semi-Definite (PSD) Verification**: Enforced mandatory eigenvalue inspection verifying $\lambda_{\min}(\Sigma) \ge 10^{-7}$, automatically injecting diagonal loading jitter ($10^{-6} \cdot I$) if numerical singularity or indefiniteness is detected.
+982. **Condition Number Health Monitoring**: Tracked covariance condition numbers $\kappa(\Sigma) = \frac{\lambda_{\max}}{\lambda_{\min}}$ to detect multicollinearity across highly correlated holdings.
+983. **Pluggable Expected Return Models**: Implemented historical arithmetic mean, explicit user assumptions, and shrinkage mean models, annualizing return projections deterministically with 252-day convention.
+
+### Constraint Modeling & Feasibility Validation
+984. **Pre-Check Feasibility Engine**: Engineered `ConstraintEngine.precheck_feasibility` validating budget compatibility before solver invocation, preventing avoidable solver timeouts and cryptic numerical failures.
+985. **Part LXIV Infeasible Constraint Fixture Verification**: Mathematically validated Part LXIV reference fixture where 4 assets capped at $20\%$ each sum to a maximum total weight of $80\% < 100\%$, verifying instant detection and informative conflict reporting.
+986. **Comprehensive Institutional Constraint Taxonomy**: Supported 15 typed constraints including `FULLY_INVESTED`, `LONG_ONLY`, `SECURITY_WEIGHT_BOUND`, `SECTOR_WEIGHT_BOUND`, `CASH_WEIGHT_BOUND`, `TURNOVER_LIMIT`, `VOLATILITY_LIMIT`, and `FROZEN_HOLDING`.
+987. **KKT Slacks & Binding Constraint Evaluator**: Computed post-solve boundary slacks $s_j = \text{bound} - g_j(w^*)$, identifying active/binding constraints exerting non-zero shadow prices on the portfolio objective.
+
+### Efficient Frontier & Rebalancing Proposals
+988. **Pareto-Optimal Efficient Frontier Builder**: Engineered discrete frontier tracing across $M$ target returns with quadratic minimum-variance solving, strict dominated-point filtering ($\sigma_i < \sigma_j$ for $R_i \le R_j$), and Sharpe calculation per point.
+989. **One-Way Portfolio Turnover Engine**: Computed rebalancing turnover as $\frac{1}{2} \sum |w_{i,\text{cand}} - w_{i,\text{curr}}|$, quantifying transaction volume required to rotate into target allocations.
+990. **Self-Funding Verification & Cash Drag Prevention**: Enforced self-funding check where net rebalancing trade value $\sum \Delta V_i$ matches candidate cash weight shift, ensuring zero cash leakage.
+991. **Proportional Transaction Cost Modeling**: Modeled rebalancing frictional costs ($10\text{ bps}$ default rate) applied to absolute trade values $|\Delta V_i|$.
+992. **Line-Item Proposed Orders Generation**: Derived trade recommendations with trade direction (BUY/SELL/HOLD), current vs target weights, value deltas, and estimated fees.
+
+### Parameter Sensitivity & Stress Testing
+993. **Alpha Shock Sensitivity Scenario**: Evaluated portfolio weight stability under $+100\text{ bps}$ uniform expected return shocks, assessing target allocation drift.
+994. **Risk Aversion Spectrum Testing**: Evaluated portfolio solutions across conservative ($\lambda = 4.0$) and aggressive ($\lambda = 1.0$) investor utility settings, tracking asset weight migrations.
+995. **Deterministic Provenance Digesting**: Generated cryptographic SHA-256 digests across expected return vectors, covariance matrices, constraint sets, and baseline NAV, guaranteeing reproducible optimization audits.
+
+### Domain Errors, REST API & Security
+996. **Typed Optimization Domain Exception Hierarchy**: Built 15 typed domain exceptions (`PortfolioOptimizationInfeasibleError`, `PortfolioOptimizationConvergenceError`, `PortfolioOptimizationCovarianceSingularError`, etc.) mapped to HTTP status codes.
+997. **15 Institutional REST Endpoints**: Implemented complete REST router under `/api/v1/portfolios/{id}/optimization/...` covering studies, runs, latest candidate, frontier, comparisons, diagnostics, universe, constraints validation, and methodologies.
+998. **Strict Multi-Tenant Isolation Enforcement**: Enforced ownership verification across all optimization studies, runs, and validation checks, returning HTTP 403/404 for cross-tenant access.
+
+### Bloomberg-Style Professional Optimization Workspaces
+999. **Bloomberg-Style Optimization Workspace**: Built professional frontend workspace under `/portfolios` "Optimization & Frontier" tab featuring Summary KPI cards, Interactive SVG Efficient Frontier chart, Current vs Candidate comparative table, Sector & Security Allocation shift chart, Constraint Builder with instant Feasibility Checker, Feasibility & Slacks Panel, Hypothetical Trade Proposals table with prominent institutional non-execution disclaimer, Solver Diagnostics inspector, Sensitivity Scenarios grid, Methodology Inspector, and Study Manager.
+1000. **Strict Roadmap Boundaries & Deferrals**: Stage 114 exclusively delivers portfolio optimization, quantitative asset allocation, efficient frontier modeling, and rebalancing proposals. Strictly deferred Stages 115–118 (Portfolio Risk / VaR / Stress Testing / Liquidity), Stage 143 (Backtesting), Stage 144 (Paper Trading), Stage 145 (Broker Sandbox), and Stages 146–149 (Autonomous Agents & Auto-Execution). Optimization candidates are analytical decision-support tools and never mutate the Stage 110 accounting ledger or place live market orders.

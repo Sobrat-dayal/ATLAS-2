@@ -13,6 +13,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.0",
     "valkey>=6.1.1",
     "numpy>=2.0.0",
+    "scipy>=1.12.0",
     "ta-lib>=0.8.2",
 ]
 

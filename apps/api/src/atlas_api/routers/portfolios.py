@@ -8,7 +8,7 @@ and ledger reconciliation.
 import logging
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated, Any, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
 from atlas.auth import AuthPrincipal
 from atlas.portfolios import (
@@ -109,6 +109,36 @@ from atlas.portfolios.attribution import (
     PortfolioAttributionService,
     SecurityContributionResponse,
 )
+from atlas.portfolios.optimization import (
+    CandidatePortfolio,
+    CandidatePortfolioResponse,
+    CovarianceEstimate,
+    CovarianceEstimateResponse,
+    CreateOptimizationStudyRequest,
+    CurrentVsCandidateItem,
+    CurrentVsCandidateItemResponse,
+    EfficientFrontierPoint,
+    EfficientFrontierPointResponse,
+    ExecuteOptimizationRequest,
+    ExpectedReturnEstimate,
+    ExpectedReturnEstimateResponse,
+    OptimizationConstraintItem,
+    OptimizationConstraintRequest,
+    OptimizationConstraintResponse,
+    OptimizationObjective,
+    OptimizationRunsListResponse,
+    OptimizationStudiesListResponse,
+    OptimizationStudy,
+    OptimizationStudyResponse,
+    PortfolioOptimizationError,
+    PortfolioOptimizationRun,
+    PortfolioOptimizationRunResponse,
+    PortfolioOptimizationService,
+    SensitivityScenarioResponse,
+    SensitivityScenarioResult,
+    SolverDiagnostics,
+    SolverDiagnosticsResponse,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from atlas_api.auth.dependencies import get_current_user
@@ -122,6 +152,7 @@ _service_instance: Optional[PortfolioService] = None
 _perf_service_instance: Optional[PortfolioPerformanceService] = None
 _exposure_service_instance: Optional[PortfolioExposureService] = None
 _attribution_service_instance: Optional[PortfolioAttributionService] = None
+_optimization_service_instance: Optional[PortfolioOptimizationService] = None
 
 
 def get_portfolio_service(request: Request) -> PortfolioService:
@@ -158,8 +189,17 @@ def get_attribution_service(
     return _attribution_service_instance
 
 
+def get_optimization_service(
+    portfolio_service: Annotated[PortfolioService, Depends(get_portfolio_service)]
+) -> PortfolioOptimizationService:
+    global _optimization_service_instance
+    if _optimization_service_instance is None or _optimization_service_instance.portfolio_service is not portfolio_service:
+        _optimization_service_instance = PortfolioOptimizationService(portfolio_service)
+    return _optimization_service_instance
+
+
 def _handle_error(e: Exception) -> None:
-    if isinstance(e, (PortfolioError, PortfolioPerformanceError, PortfolioExposureError, PortfolioAttributionError)):
+    if isinstance(e, (PortfolioError, PortfolioPerformanceError, PortfolioExposureError, PortfolioAttributionError, PortfolioOptimizationError)):
         code = getattr(e, "code", e.__class__.__name__)
         message = getattr(e, "message", str(e))
         raise HTTPException(
@@ -2128,3 +2168,463 @@ async def list_attribution_benchmarks(
     except Exception as e:
         _handle_error(e)
 
+
+
+
+# ===========================================================================
+# Stage 114: Portfolio Optimization & Quantitative Construction Engine
+# ===========================================================================
+
+
+def _map_constraint_to_response(c: OptimizationConstraintItem) -> OptimizationConstraintResponse:
+    return OptimizationConstraintResponse(
+        constraint_id=c.constraint_id,
+        constraint_type=c.constraint_type,
+        scope=c.scope,
+        target_id=c.target_id,
+        lower_bound=c.lower_bound,
+        upper_bound=c.upper_bound,
+        is_hard=c.is_hard,
+        penalty_weight=c.penalty_weight,
+    )
+
+
+def _map_study_to_response(s: OptimizationStudy) -> OptimizationStudyResponse:
+    return OptimizationStudyResponse(
+        study_id=s.study_id,
+        portfolio_id=s.portfolio_id,
+        name=s.name,
+        description=s.description,
+        status=s.status,
+        default_objective=s.default_objective,
+        universe_symbols=s.universe_symbols,
+        base_currency=s.base_currency,
+        created_at=s.created_at,
+        updated_at=s.updated_at,
+    )
+
+
+def _map_expected_returns_to_response(e: ExpectedReturnEstimate) -> ExpectedReturnEstimateResponse:
+    return ExpectedReturnEstimateResponse(
+        model=e.model,
+        symbols=e.symbols,
+        estimates=e.estimates,
+        annualization_factor=e.annualization_factor,
+    )
+
+
+def _map_covariance_to_response(c: CovarianceEstimate) -> CovarianceEstimateResponse:
+    return CovarianceEstimateResponse(
+        model=c.model,
+        symbols=c.symbols,
+        matrix=c.matrix,
+        is_psd=c.is_psd,
+        condition_number=c.condition_number,
+        regularization_applied=c.regularization_applied,
+    )
+
+
+def _map_diagnostics_to_response(d: SolverDiagnostics) -> SolverDiagnosticsResponse:
+    return SolverDiagnosticsResponse(
+        solver_name=d.solver_name,
+        solver_version=d.solver_version,
+        problem_type=d.problem_type,
+        status=d.status,
+        iterations=d.iterations,
+        objective_value=d.objective_value,
+        solve_time_ms=d.solve_time_ms,
+        max_constraint_violation=d.max_constraint_violation,
+        active_constraints=d.active_constraints,
+        warnings=d.warnings,
+    )
+
+
+def _map_candidate_to_response(c: CandidatePortfolio) -> CandidatePortfolioResponse:
+    return CandidatePortfolioResponse(
+        weights=c.weights,
+        cash_weight=c.cash_weight,
+        estimated_return=c.estimated_return,
+        estimated_variance=c.estimated_variance,
+        estimated_volatility=c.estimated_volatility,
+        estimated_sharpe=c.estimated_sharpe,
+        estimated_turnover=c.estimated_turnover,
+        estimated_cost=c.estimated_cost,
+        feasibility_status=c.feasibility_status,
+        constraint_slacks=c.constraint_slacks,
+    )
+
+
+def _map_frontier_point_to_response(p: EfficientFrontierPoint) -> EfficientFrontierPointResponse:
+    return EfficientFrontierPointResponse(
+        target_return=p.target_return,
+        candidate_weights=p.candidate_weights,
+        estimated_return=p.estimated_return,
+        estimated_volatility=p.estimated_volatility,
+        estimated_sharpe=p.estimated_sharpe,
+        solver_status=p.solver_status,
+        is_dominated=p.is_dominated,
+    )
+
+
+def _map_comparison_to_response(item: CurrentVsCandidateItem) -> CurrentVsCandidateItemResponse:
+    return CurrentVsCandidateItemResponse(
+        symbol=item.symbol,
+        name=item.name,
+        category_id=item.category_id,
+        category_label=item.category_label,
+        current_weight=item.current_weight,
+        candidate_weight=item.candidate_weight,
+        weight_delta=item.weight_delta,
+        current_value=item.current_value,
+        candidate_value=item.candidate_value,
+        trade_value_delta=item.trade_value_delta,
+        trade_direction=item.trade_direction,
+        estimated_cost=item.estimated_cost,
+    )
+
+
+def _map_sensitivity_to_response(s: SensitivityScenarioResult) -> SensitivityScenarioResponse:
+    return SensitivityScenarioResponse(
+        scenario_name=s.scenario_name,
+        parameter_name=s.parameter_name,
+        parameter_value=s.parameter_value,
+        estimated_return=s.estimated_return,
+        estimated_volatility=s.estimated_volatility,
+        estimated_turnover=s.estimated_turnover,
+        candidate_weights=s.candidate_weights,
+    )
+
+
+def _map_optimization_run_to_response(r: PortfolioOptimizationRun) -> PortfolioOptimizationRunResponse:
+    return PortfolioOptimizationRunResponse(
+        run_id=r.run_id,
+        study_id=r.study_id,
+        portfolio_id=r.portfolio_id,
+        objective_type=r.objective_type,
+        base_currency=r.base_currency,
+        universe_symbols=r.universe_symbols,
+        baseline_nav=r.baseline_nav,
+        baseline_weights=r.baseline_weights,
+        expected_returns=_map_expected_returns_to_response(r.expected_returns),
+        covariance=_map_covariance_to_response(r.covariance),
+        constraints=[_map_constraint_to_response(c) for c in r.constraints],
+        candidate=_map_candidate_to_response(r.candidate),
+        frontier_points=[_map_frontier_point_to_response(p) for p in r.frontier_points],
+        comparisons=[_map_comparison_to_response(c) for c in r.comparisons],
+        diagnostics=_map_diagnostics_to_response(r.diagnostics),
+        sensitivity_results=[_map_sensitivity_to_response(s) for s in r.sensitivity_results],
+        input_hash=r.input_hash,
+        created_at=r.created_at,
+        completed_at=r.completed_at,
+    )
+
+
+@router.post("/{portfolio_id}/optimization/studies", response_model=OptimizationStudyResponse, status_code=status.HTTP_201_CREATED)
+async def create_optimization_study(
+    portfolio_id: str,
+    request: CreateOptimizationStudyRequest,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> OptimizationStudyResponse:
+    """Create a persistent portfolio optimization study."""
+    try:
+        study = optimization_service.create_study(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            name=request.name,
+            description=request.description,
+            default_objective=request.default_objective,
+            universe_symbols=request.universe_symbols,
+        )
+        return _map_study_to_response(study)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/studies", response_model=OptimizationStudiesListResponse)
+async def list_optimization_studies(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> OptimizationStudiesListResponse:
+    """List active optimization studies for a portfolio."""
+    try:
+        studies = optimization_service.list_studies(portfolio_id=portfolio_id, user_id=current_user.sub)
+        return OptimizationStudiesListResponse(
+            items=[_map_study_to_response(s) for s in studies],
+            total=len(studies),
+        )
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/studies/{study_id}", response_model=OptimizationStudyResponse)
+async def get_optimization_study(
+    portfolio_id: str,
+    study_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> OptimizationStudyResponse:
+    """Retrieve an optimization study by ID."""
+    try:
+        study = optimization_service.get_study(portfolio_id=portfolio_id, study_id=study_id, user_id=current_user.sub)
+        return _map_study_to_response(study)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.delete("/{portfolio_id}/optimization/studies/{study_id}", response_model=OptimizationStudyResponse)
+async def archive_optimization_study(
+    portfolio_id: str,
+    study_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> OptimizationStudyResponse:
+    """Archive an optimization study."""
+    try:
+        study = optimization_service.archive_study(portfolio_id=portfolio_id, study_id=study_id, user_id=current_user.sub)
+        return _map_study_to_response(study)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.post("/{portfolio_id}/optimization/runs", response_model=PortfolioOptimizationRunResponse, status_code=status.HTTP_201_CREATED)
+async def execute_optimization_run(
+    portfolio_id: str,
+    request: ExecuteOptimizationRequest,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> PortfolioOptimizationRunResponse:
+    """Execute mathematical portfolio optimization and produce candidate allocation."""
+    try:
+        constraints = None
+        if request.constraints:
+            constraints = [
+                OptimizationConstraintItem(
+                    constraint_id=c.constraint_id or f"c-{i+1}",
+                    constraint_type=c.constraint_type,
+                    scope=c.scope,
+                    target_id=c.target_id,
+                    lower_bound=c.lower_bound,
+                    upper_bound=c.upper_bound,
+                    is_hard=c.is_hard,
+                    penalty_weight=c.penalty_weight,
+                )
+                for i, c in enumerate(request.constraints)
+            ]
+
+        run = optimization_service.execute_optimization(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            study_id=request.study_id,
+            objective_type=request.objective_type,
+            universe_symbols=request.universe_symbols,
+            expected_return_model=request.expected_return_model,
+            covariance_model=request.covariance_model,
+            user_return_assumptions=request.user_return_assumptions,
+            constraints=constraints,
+            risk_aversion=request.risk_aversion,
+            risk_free_rate=request.risk_free_rate,
+            target_return=request.target_return,
+            max_turnover=request.max_turnover,
+            proportional_cost_rate=request.proportional_cost_rate,
+            is_long_only=request.is_long_only,
+        )
+        return _map_optimization_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/runs", response_model=OptimizationRunsListResponse)
+async def list_optimization_runs(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+    study_id: Optional[str] = Query(default=None),
+) -> OptimizationRunsListResponse:
+    """List historical optimization runs for a portfolio."""
+    try:
+        runs = optimization_service.list_runs(portfolio_id=portfolio_id, user_id=current_user.sub, study_id=study_id)
+        return OptimizationRunsListResponse(
+            items=[_map_optimization_run_to_response(r) for r in runs],
+            total=len(runs),
+        )
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/runs/latest", response_model=PortfolioOptimizationRunResponse)
+async def get_latest_optimization_run(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> PortfolioOptimizationRunResponse:
+    """Retrieve the latest valid optimization run or compute default."""
+    try:
+        run = optimization_service.get_latest_run(portfolio_id=portfolio_id, user_id=current_user.sub)
+        return _map_optimization_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/runs/{run_id}", response_model=PortfolioOptimizationRunResponse)
+async def get_optimization_run(
+    portfolio_id: str,
+    run_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> PortfolioOptimizationRunResponse:
+    """Retrieve an optimization run by run ID."""
+    try:
+        run = optimization_service.get_run(portfolio_id=portfolio_id, run_id=run_id, user_id=current_user.sub)
+        return _map_optimization_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/runs/{run_id}/candidate", response_model=CandidatePortfolioResponse)
+async def get_optimization_candidate(
+    portfolio_id: str,
+    run_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> CandidatePortfolioResponse:
+    """Retrieve candidate weights and metrics for a specific optimization run."""
+    try:
+        run = optimization_service.get_run(portfolio_id=portfolio_id, run_id=run_id, user_id=current_user.sub)
+        return _map_candidate_to_response(run.candidate)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/runs/{run_id}/frontier", response_model=List[EfficientFrontierPointResponse])
+async def get_optimization_frontier(
+    portfolio_id: str,
+    run_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> List[EfficientFrontierPointResponse]:
+    """Retrieve efficient frontier curve points for an optimization run."""
+    try:
+        run = optimization_service.get_run(portfolio_id=portfolio_id, run_id=run_id, user_id=current_user.sub)
+        return [_map_frontier_point_to_response(p) for p in run.frontier_points]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/runs/{run_id}/comparison", response_model=List[CurrentVsCandidateItemResponse])
+async def get_optimization_comparison(
+    portfolio_id: str,
+    run_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> List[CurrentVsCandidateItemResponse]:
+    """Retrieve current vs candidate allocation comparison and hypothetical trade orders."""
+    try:
+        run = optimization_service.get_run(portfolio_id=portfolio_id, run_id=run_id, user_id=current_user.sub)
+        return [_map_comparison_to_response(c) for c in run.comparisons]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/runs/{run_id}/diagnostics", response_model=SolverDiagnosticsResponse)
+async def get_optimization_diagnostics(
+    portfolio_id: str,
+    run_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> SolverDiagnosticsResponse:
+    """Retrieve numerical solver convergence diagnostics and active constraints."""
+    try:
+        run = optimization_service.get_run(portfolio_id=portfolio_id, run_id=run_id, user_id=current_user.sub)
+        return _map_diagnostics_to_response(run.diagnostics)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/universe", response_model=List[Dict[str, Any]])
+async def get_optimization_universe(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+) -> List[Dict[str, Any]]:
+    """Retrieve eligible investment universe symbols for portfolio construction."""
+    try:
+        return optimization_service.get_eligible_universe(portfolio_id=portfolio_id, user_id=current_user.sub)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.post("/{portfolio_id}/optimization/constraints/validate", response_model=Dict[str, Any])
+async def validate_optimization_constraints(
+    portfolio_id: str,
+    constraints: List[OptimizationConstraintRequest],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    optimization_service: Annotated[PortfolioOptimizationService, Depends(get_optimization_service)],
+    universe_symbols: Optional[List[str]] = Query(default=None),
+) -> Dict[str, Any]:
+    """Pre-check feasibility of constraints against portfolio budget and asset bounds."""
+    try:
+        constraint_items = [
+            OptimizationConstraintItem(
+                constraint_id=c.constraint_id or f"c-{i+1}",
+                constraint_type=c.constraint_type,
+                scope=c.scope,
+                target_id=c.target_id,
+                lower_bound=c.lower_bound,
+                upper_bound=c.upper_bound,
+                is_hard=c.is_hard,
+                penalty_weight=c.penalty_weight,
+            )
+            for i, c in enumerate(constraints)
+        ]
+        return optimization_service.validate_constraints(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            constraints=constraint_items,
+            universe_symbols=universe_symbols,
+        )
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/optimization/methodologies", response_model=Dict[str, Any])
+async def get_optimization_methodologies(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    portfolio_service: Annotated[PortfolioService, Depends(get_portfolio_service)],
+) -> Dict[str, Any]:
+    """List supported mathematical objectives, models, and constraints for portfolio optimization."""
+    try:
+        portfolio_service.get_portfolio(portfolio_id, current_user.sub)
+        return {
+            "objectives": [
+                {"id": "MINIMUM_VARIANCE", "name": "Global Minimum Variance", "description": "Minimizes portfolio variance: min wᵀΣw"},
+                {"id": "MEAN_VARIANCE_UTILITY", "name": "Mean-Variance Utility", "description": "Maximizes risk-adjusted quadratic utility: max wᵀμ - 0.5λωᵀΣw"},
+                {"id": "TARGET_RETURN_MIN_VARIANCE", "name": "Target Return Min Variance", "description": "Minimizes variance subject to wᵀμ ≥ R_target"},
+                {"id": "MAXIMUM_EXPECTED_RETURN", "name": "Maximum Expected Return", "description": "Maximizes expected return subject to constraints"},
+                {"id": "MAXIMUM_SHARPE", "name": "Maximum Sharpe Ratio", "description": "Maximizes Sharpe ratio (wᵀμ - Rf) / sqrt(wᵀΣw)"},
+                {"id": "EFFICIENT_FRONTIER", "name": "Efficient Frontier Generator", "description": "Traces Pareto-optimal frontier between min variance and max return"},
+                {"id": "BENCHMARK_TRACKING_ERROR", "name": "Benchmark Tracking Error Minimization", "description": "Minimizes active risk relative to benchmark"},
+                {"id": "RISK_PARITY", "name": "Equal Risk Contribution (Risk Parity)", "description": "Equalizes marginal risk contributions across assets"},
+            ],
+            "expected_return_models": [
+                {"id": "HISTORICAL_ARITHMETIC_MEAN", "name": "Historical Arithmetic Mean", "description": "Annualized historical arithmetic mean of daily returns"},
+                {"id": "EXPLICIT_USER_ASSUMPTIONS", "name": "Explicit User Assumptions", "description": "User-provided forward-looking expected returns per asset"},
+                {"id": "SHRINKAGE_MEAN", "name": "Grand-Mean Shrinkage", "description": "James-Stein shrinkage towards cross-sectional grand mean"},
+            ],
+            "covariance_models": [
+                {"id": "SAMPLE_COVARIANCE", "name": "Sample Covariance", "description": "Unbiased empirical sample covariance with Bessel correction"},
+                {"id": "LEDOIT_WOLF_SHRINKAGE", "name": "Ledoit-Wolf Diagonal Shrinkage", "description": "Optimal linear shrinkage towards diagonal target matrix"},
+            ],
+            "constraint_types": [
+                {"id": "LONG_ONLY", "name": "Long Only (w_i ≥ 0)"},
+                {"id": "BUDGET_SUM_TO_ONE", "name": "Full Investment (∑w_i = 1)"},
+                {"id": "ASSET_WEIGHT_BOUNDS", "name": "Individual Asset Weight Bounds (l_i ≤ w_i ≤ u_i)"},
+                {"id": "SECTOR_BOUNDS", "name": "Sector / Industry Group Allocation Caps"},
+                {"id": "CASH_FLOOR", "name": "Minimum Cash / Liquidity Reserve Floor"},
+                {"id": "TURNOVER_LIMIT", "name": "Maximum Single-Period Turnover Limit"},
+            ],
+        }
+    except Exception as e:
+        _handle_error(e)
