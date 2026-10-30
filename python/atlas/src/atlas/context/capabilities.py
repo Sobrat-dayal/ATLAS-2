@@ -236,3 +236,4 @@ def is_dimension_compatible(
     if is_outbound:
         return dimension in cap.publishable_dimensions
     return dimension in cap.subscribable_dimensions
+

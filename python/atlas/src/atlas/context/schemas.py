@@ -128,3 +128,4 @@ class PanelCapabilityResponse(BaseModel):
     supported_timeframes: list[str]
     supports_as_of: bool
     supports_currency: bool
+

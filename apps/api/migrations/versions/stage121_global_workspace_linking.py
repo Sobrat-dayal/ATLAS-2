@@ -104,3 +104,4 @@ def downgrade() -> None:
     op.drop_table("global_context_snapshots")
     op.drop_table("global_context_channel_memberships")
     op.drop_table("global_context_channels")
+

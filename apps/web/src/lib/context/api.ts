@@ -195,3 +195,4 @@ export async function dispatchEvent(event: Partial<ContextSelectionEvent>): Prom
     body: JSON.stringify(event),
   });
 }
+

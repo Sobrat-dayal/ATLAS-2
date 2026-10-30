@@ -202,3 +202,4 @@ export function isDimensionPublishable(
   const cap = getPanelCapability(panelTypeId);
   return cap ? cap.publishable_dimensions.includes(dimension) : false;
 }
+

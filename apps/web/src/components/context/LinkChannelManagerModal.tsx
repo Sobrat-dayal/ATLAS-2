@@ -317,3 +317,4 @@ export function LinkChannelManagerModal({ isOpen, onClose }: LinkChannelManagerM
     </div>
   );
 }
+
