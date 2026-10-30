@@ -27,6 +27,19 @@ import {
   VaRBacktestRunDTO,
   VaRModelType,
   VolatilityResponseDTO,
+  CalculateFactorRiskRequest,
+  ConcentrationDimension,
+  ConcentrationSnapshotDTO,
+  CrossExposureMatrixDTO,
+  CurrencyExposureItemDTO,
+  CurrencyRiskSnapshotDTO,
+  FactorModelDiagnosticsDTO,
+  FactorRiskContributionDTO,
+  FactorRiskRunDTO,
+  RiskFactorDefinitionDTO,
+  SectorRiskItemDTO,
+  SectorRiskSnapshotDTO,
+  SecurityFactorExposureDTO,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
@@ -313,4 +326,169 @@ export async function runVaRBacktest(
  */
 export async function getVaRBacktest(backtestId: string): Promise<VaRBacktestRunDTO> {
   return request<VaRBacktestRunDTO>(`/risk/diagnostics/backtest/${backtestId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Stage 117: Factor, Concentration, Currency, and Sector Risk API Endpoints
+// ---------------------------------------------------------------------------
+
+/**
+ * Retrieves the catalog of supported risk factors.
+ */
+export async function getRiskFactors(): Promise<RiskFactorDefinitionDTO[]> {
+  return request<RiskFactorDefinitionDTO[]>('/risk/factors');
+}
+
+/**
+ * Retrieves a single risk factor definition.
+ */
+export async function getRiskFactor(factorId: string): Promise<RiskFactorDefinitionDTO> {
+  return request<RiskFactorDefinitionDTO>(`/risk/factors/${factorId}`);
+}
+
+/**
+ * Executes a multi-factor portfolio risk calculation run.
+ */
+export async function calculateFactorRisk(
+  req: CalculateFactorRiskRequest
+): Promise<FactorRiskRunDTO> {
+  return request<FactorRiskRunDTO>('/risk/factor-models/calculate', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/**
+ * Retrieves the latest factor risk run for a portfolio.
+ */
+export async function getPortfolioFactorRisk(portfolioId: string): Promise<FactorRiskRunDTO> {
+  return request<FactorRiskRunDTO>(`/risk/portfolios/${portfolioId}/factors`);
+}
+
+/**
+ * Retrieves security-level factor exposures.
+ */
+export async function getPortfolioFactorExposures(
+  portfolioId: string
+): Promise<SecurityFactorExposureDTO[]> {
+  return request<SecurityFactorExposureDTO[]>(`/risk/portfolios/${portfolioId}/factors/exposures`);
+}
+
+/**
+ * Retrieves factor risk contributions.
+ */
+export async function getPortfolioFactorContributions(
+  portfolioId: string
+): Promise<FactorRiskContributionDTO[]> {
+  return request<FactorRiskContributionDTO[]>(`/risk/portfolios/${portfolioId}/factors/contributions`);
+}
+
+/**
+ * Retrieves factor model diagnostics.
+ */
+export async function getPortfolioFactorDiagnostics(
+  portfolioId: string
+): Promise<FactorModelDiagnosticsDTO> {
+  return request<FactorModelDiagnosticsDTO>(`/risk/portfolios/${portfolioId}/factors/diagnostics`);
+}
+
+/**
+ * Retrieves portfolio concentration metrics (HHI, effective holdings, Top-N).
+ */
+export async function getPortfolioConcentration(
+  portfolioId: string,
+  dimension: ConcentrationDimension = 'SECURITY'
+): Promise<ConcentrationSnapshotDTO> {
+  return request<ConcentrationSnapshotDTO>(
+    `/risk/portfolios/${portfolioId}/concentration?dimension=${dimension}`
+  );
+}
+
+/**
+ * Retrieves consolidated issuer concentration.
+ */
+export async function getPortfolioIssuerConcentration(
+  portfolioId: string
+): Promise<ConcentrationSnapshotDTO> {
+  return request<ConcentrationSnapshotDTO>(`/risk/portfolios/${portfolioId}/concentration/issuers`);
+}
+
+/**
+ * Retrieves currency denomination exposures, FX volatility, and return decomposition.
+ */
+export async function getPortfolioCurrencyRisk(
+  portfolioId: string,
+  reportingCurrency?: string
+): Promise<CurrencyRiskSnapshotDTO> {
+  const query = reportingCurrency ? `?reporting_currency=${reportingCurrency}` : '';
+  return request<CurrencyRiskSnapshotDTO>(`/risk/portfolios/${portfolioId}/currencies${query}`);
+}
+
+/**
+ * Retrieves currency exposure list.
+ */
+export async function getPortfolioCurrencyExposures(
+  portfolioId: string
+): Promise<CurrencyExposureItemDTO[]> {
+  return request<CurrencyExposureItemDTO[]>(`/risk/portfolios/${portfolioId}/currencies/exposures`);
+}
+
+/**
+ * Retrieves currency sensitivity details.
+ */
+export async function getPortfolioCurrencySensitivity(
+  portfolioId: string
+): Promise<{
+  portfolio_id: string;
+  reporting_currency: string;
+  foreign_currency_weight: number;
+  base_local_interaction: Record<string, number>;
+  sensitivities: Record<string, any>;
+}> {
+  return request(`/risk/portfolios/${portfolioId}/currencies/sensitivity`);
+}
+
+/**
+ * Retrieves sector Euler risk attribution snapshot.
+ */
+export async function getPortfolioSectorRisk(
+  portfolioId: string
+): Promise<SectorRiskSnapshotDTO> {
+  return request<SectorRiskSnapshotDTO>(`/risk/portfolios/${portfolioId}/sectors`);
+}
+
+/**
+ * Retrieves sector Euler contributions list.
+ */
+export async function getPortfolioSectorContributions(
+  portfolioId: string
+): Promise<SectorRiskItemDTO[]> {
+  return request<SectorRiskItemDTO[]>(`/risk/portfolios/${portfolioId}/sectors/contributions`);
+}
+
+/**
+ * Retrieves 2D cross-exposure matrix.
+ */
+export async function getPortfolioCrossExposure(
+  portfolioId: string,
+  rowDimension: string = 'FACTOR',
+  colDimension: string = 'SECTOR'
+): Promise<CrossExposureMatrixDTO> {
+  return request<CrossExposureMatrixDTO>(
+    `/risk/portfolios/${portfolioId}/cross-exposures?row_dimension=${rowDimension}&col_dimension=${colDimension}`
+  );
+}
+
+/**
+ * Retrieves portfolio vs benchmark factor exposures.
+ */
+export async function getPortfolioFactorBenchmark(
+  portfolioId: string
+): Promise<{
+  portfolio_id: string;
+  portfolio_exposures: Record<string, number>;
+  benchmark_exposures: Record<string, number>;
+  active_factor_exposures: Record<string, number>;
+}> {
+  return request(`/risk/portfolios/${portfolioId}/factor-benchmark`);
 }

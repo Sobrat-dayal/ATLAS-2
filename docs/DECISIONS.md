@@ -10278,3 +10278,45 @@ This document records the major architectural and product decisions established.
 1052. **Comparative Stress Matrix**: Rendered comparative table and ranked performance across multiple historical episodes identifying worst-hit portfolio positions.
 1053. **Rolling VaR vs Realized Loss Visualization**: Visualized historical backtest trajectories highlighting exception breach dots and tracking exceedance margins.
 1054. **Strict Scope Discipline**: Stage 116 is strictly confined to VaR, Expected Shortfall, Scenarios, and Model Backtesting. Derivatives Greeks, Yield Curve Scenarios, and Stress Testing Limits are deferred to subsequent stages.
+
+## Stage 117: Build Multi-Factor, Concentration, Currency, and Sector Risk Intelligence
+
+### Architectural Positioning & System Invariants
+1055. **Read-Only Risk Intelligence**: Factor, concentration, currency, and sector risk engines operate strictly as read-only decision-support analytics, never mutating Stage 110 positions, transactions, or cash balances, and never submitting live broker orders or automated rebalancing trades.
+1056. **Comprehensive Stage 117 Domain Exceptions**: Added 19 typed domain exceptions (`RiskFactorNotFoundError`, `RiskFactorRegressionRankDeficientError`, `RiskFactorCollinearityDetectedError`, `RiskFactorCovarianceNotPSDError`, `RiskConcentrationInvalidWeightsError`, `RiskSectorReconciliationFailedError`, `RiskCrossExposureDimensionMismatchError`, etc.) mapped to explicit HTTP status codes.
+
+### Systematic Multi-Factor Risk Decomposition
+1057. **Canonical Factor Registry**: Implemented platform-wide factor definitions for Market Equity Risk (MKT), Size (SMB), Value (HML), Momentum (MOM), Quality (QMJ), and Investment (CMA) with standard excess return and long/short methodologies.
+1058. **Ordinary Least Squares (OLS) Regression Engine**: Estimated security factor loadings with intercept alpha, residual variance s_eps^2 = (1 / df) sum eps^2, R^2, and t-statistics with design matrix rank and condition number diagnostics.
+1059. **Part XIV Reference Fixture Verification**: Validated portfolio factor loading aggregation b = B^T w = [1.04, 0.22] for weights w = [0.6, 0.4] and security loading matrix B = [[1.2, 0.5], [0.8, -0.2]].
+1060. **Part XXII Systematic vs Specific Euler Decomposition**: Reconciled reference fixture with weights w=[0.6, 0.4], b=[1.04, 0.22], F=diag(0.04, 0.01), and d=[0.0225, 0.0100], confirming V_sys = 0.043748, V_spec = 0.009700, V_total = 0.053448, sigma_P ~= 23.11882%, VC_MKT = 0.043264, VC_HML = 0.000484, and exact Euler additivity sum VC_k + V_spec === V_total.
+1061. **Benchmark-Relative Active Factor Exposures**: Evaluated active factor tilts b_A = b_P - b_B relative to benchmark factor profiles.
+
+### Concentration & Diversification Diagnostics
+1062. **Herfindahl-Hirschman Index (HHI)**: Implemented HHI = sum w_i^2 across normalized portfolio capital partitions to quantify capital concentration.
+1063. **Effective Number of Holdings**: Calculated N_eff = 1 / HHI representing the equivalent number of equally-weighted independent securities.
+1064. **Top-N Cumulative Capital Concentration**: Evaluated cumulative sums for Top 1, Top 3, Top 5, and Top 10 holdings.
+1065. **Part XXXI Reference Fixture Verification**: Reconciled fixture with w = [0.5, 0.3, 0.2], verifying HHI = 0.3800, N_eff ~= 2.63158, Top 1 = 50.00%, and Top 2 = 80.00%.
+1066. **Canonical Issuer Consolidation**: Aggregated multi-share classes (e.g. Alphabet GOOG & GOOGL) and ADRs into consolidated issuer entities using the Stage 112 classification registry.
+1067. **Multi-Dimensional Partitioning**: Extended concentration evaluation across Security, Issuer, Sector, Industry, Asset Class, Country, and Currency dimensions.
+
+### Currency Risk & FX Sensitivity
+1068. **Denomination Exposure Breakdown**: Partitioned portfolio market value and foreign cash balances across currency denominations.
+1069. **Realized Annualized FX Volatility**: Evaluated sample standard deviation of discrete exchange rate returns annualized via sqrt(252).
+1070. **Empirical FX Sensitivity Beta**: Computed regression beta beta_FX = Cov(R_P, R_FX) / Var(R_FX) to quantify portfolio currency sensitivity.
+1071. **Part XLIV Discrete FX Multiplicative Compounding**: Replaced naive linear addition with rigorous discrete compounding 1 + R_base = (1 + R_local)(1 + R_FX) ⟹ R_base = R_local + R_FX + R_local * R_FX, reconciling Local +10%, FX -5%, Interaction -0.5%, Base +4.5%.
+
+### Sector and Industry Euler Risk Attribution
+1072. **Sector Euler Variance Contribution**: Decomposed covariance risk across sectors via VC_s = sum_{i in s} w_i (Sigma w)_i and volatility contribution RC_s = VC_s / sigma_P.
+1073. **Part LVII Sector Risk Fixture Verification**: Reconciled fixture with Tech 50%, Fin 50%, Sigma = diag(0.04, 0.09), confirming V_P = 0.0325, VC_Tech = 0.0100, VC_Fin = 0.0225, and exact additivity VC_Tech + VC_Fin === V_P.
+1074. **Industry Hierarchy Drilldown**: Enabled hierarchical drilldown from Sector into Industry and constituent securities.
+1075. **Active Sector Benchmark Tilts**: Evaluated active sector weights w_A,s = w_s - w_B,s relative to standard benchmark sector profiles.
+
+### 2D Cross-Exposure Intelligence
+1076. **Factor by Sector 2D Matrix**: Constructed b_s,k = sum_{i in s} w_i beta_{i,k} with strict row-sum reconciliation sum_s b_s,k === b_k.
+1077. **Currency by Sector 2D Matrix**: Evaluated joint capital allocation across currency denominations and economic sectors.
+
+### REST API, UI Workspaces & Scope Boundaries
+1078. **16 Production REST Endpoints**: Implemented complete REST router under `/api/v1/risk/...` covering factor catalog, factor calculation, exposures, contributions, diagnostics, concentration snapshots, issuer consolidation, currency risks, sector attribution, cross-exposures, and benchmark active factors.
+1079. **Interactive Bloomberg-Style UI Workspaces**: Built `<FactorRiskWorkspace />`, `<ConcentrationWorkspace />`, `<CurrencyRiskWorkspace />`, `<SectorRiskWorkspace />`, and `<CrossExposureWorkspace />` embedded in `/risk`.
+1080. **Strict Roadmap Scope Discipline**: Options Greeks (Delta, Gamma, Vega, Theta, Rho), Fixed-Income Duration, Convexity, DV01, Key Rate Duration, and credit spread duration are strictly deferred to Stage 118.

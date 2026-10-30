@@ -269,3 +269,103 @@ class RiskTailSourceRestrictedError(RiskError):
     code: str = "RISK_TAIL_SOURCE_RESTRICTED"
 
 
+
+
+# ---------------------------------------------------------------------------
+# Stage 117: Factor, Concentration, Currency, and Sector Risk Errors
+# ---------------------------------------------------------------------------
+
+
+class RiskFactorNotFoundError(RiskError):
+    status_code: int = 404
+    code: str = "RISK_FACTOR_NOT_FOUND"
+
+
+class RiskFactorModelUnsupportedError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_FACTOR_MODEL_UNSUPPORTED"
+
+
+class RiskFactorReturnHistoryInsufficientError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_FACTOR_RETURN_HISTORY_INSUFFICIENT"
+
+
+class RiskFactorRegressionRankDeficientError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_FACTOR_REGRESSION_RANK_DEFICIENT"
+
+
+class RiskFactorCollinearityDetectedError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_FACTOR_COLLINEARITY_DETECTED"
+
+
+class RiskFactorCovarianceNotPSDError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_FACTOR_COVARIANCE_NOT_PSD"
+
+
+class RiskFactorResidualCovarianceInvalidError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_FACTOR_RESIDUAL_COVARIANCE_INVALID"
+
+
+class RiskFactorReconciliationFailedError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_FACTOR_RECONCILIATION_FAILED"
+
+
+class RiskConcentrationInvalidWeightsError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_CONCENTRATION_INVALID_WEIGHTS"
+
+
+class RiskConcentrationClassificationIncompleteError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_CONCENTRATION_CLASSIFICATION_INCOMPLETE"
+
+
+class RiskCurrencyFXHistoryMissingError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_CURRENCY_FX_HISTORY_MISSING"
+
+
+class RiskCurrencySensitivityUnavailableError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_CURRENCY_SENSITIVITY_UNAVAILABLE"
+
+
+class RiskSectorClassificationMissingError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_SECTOR_CLASSIFICATION_MISSING"
+
+
+class RiskSectorReturnHistoryMissingError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_SECTOR_RETURN_HISTORY_MISSING"
+
+
+class RiskSectorCovarianceInvalidError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_SECTOR_COVARIANCE_INVALID"
+
+
+class RiskSectorReconciliationFailedError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_SECTOR_RECONCILIATION_FAILED"
+
+
+class RiskCrossExposureDimensionMismatchError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_CROSS_EXPOSURE_DIMENSION_MISMATCH"
+
+
+class RiskStage117SourceRestrictedError(RiskError):
+    status_code: int = 403
+    code: str = "RISK_STAGE117_SOURCE_RESTRICTED"
+
+
+class RiskStage117RunNotFoundError(RiskError):
+    status_code: int = 404
+    code: str = "RISK_STAGE117_RUN_NOT_FOUND"

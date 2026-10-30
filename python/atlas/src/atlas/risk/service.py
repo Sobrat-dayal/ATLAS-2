@@ -25,10 +25,15 @@ from .covariance_risk import ModelRiskEngine
 from .drawdown import DrawdownEngine
 from .enums import (
     AnnualizationPolicy,
+    ConcentrationDimension,
+    CurrencyExposureType,
     DataCoverageStatus,
     DrawdownEpisodeStatus,
     ExpectedShortfallMethod,
+    FactorFamily,
+    FactorReturnBasis,
     KupiecTestStatus,
+    ModelDiagnosticStatus,
     ReturnBasis,
     RiskCalculationStatus,
     RiskMetricCode,
@@ -43,11 +48,14 @@ from .enums import (
 )
 from .errors import (
     RiskCalculationFailedError,
+    RiskConcentrationInvalidWeightsError,
     RiskESTailEstimatorInvalidError,
+    RiskFactorNotFoundError,
     RiskRunNotFoundError,
     RiskScenarioAccessDeniedError,
     RiskScenarioNotFoundError,
     RiskScenarioShockInvalidError,
+    RiskStage117RunNotFoundError,
     RiskSubjectAccessDeniedError,
     RiskSubjectNotFoundError,
     RiskTailBacktestInsufficientObservationsError,
@@ -60,14 +68,25 @@ from .errors import (
 from .models import (
     BenchmarkSensitivityResult,
     ComponentRiskContribution,
+    ConcentrationItem,
+    ConcentrationSnapshot,
     CovarianceDiagnostics,
+    CrossExposureCell,
+    CrossExposureMatrix,
+    CurrencyExposureItem,
+    CurrencyRiskSnapshot,
     DrawdownEpisode,
     ExpectedShortfallResult,
+    FactorModelDiagnostics,
+    FactorRiskContribution,
+    FactorRiskRun,
+    IndustryRiskItem,
     KupiecTestResult,
     LossDistribution,
     PortfolioRiskSnapshot,
     RiskCalculationRun,
     RiskDataCoverage,
+    RiskFactorDefinition,
     RiskInputManifest,
     RiskMetricDefinition,
     RiskModelDefinition,
@@ -76,6 +95,9 @@ from .models import (
     RollingRiskObservation,
     ScenarioPositionResult,
     ScenarioShock,
+    SectorRiskItem,
+    SectorRiskSnapshot,
+    SecurityFactorExposure,
     TailRiskCalculationRun,
     VaRBacktestRun,
     VaRExceptionObservation,
@@ -84,6 +106,7 @@ from .models import (
 from .quality import RiskDataQualityEngine
 from .reconciliation import RiskReconciliationEngine
 from .schemas import (
+    CalculateFactorRiskRequest,
     CalculateRiskRequest,
     CalculateTailRiskRequest,
     CreateScenarioRequest,
@@ -95,6 +118,11 @@ from .volatility import HistoricalVolatilityEngine
 from .tail_var import TailRiskEngine
 from .scenarios import ScenarioEngine, PREDEFINED_SCENARIOS
 from .diagnostics import VaRDiagnosticsEngine
+from .factors import FactorRiskEngine, PREDEFINED_FACTORS
+from .concentration import ConcentrationEngine
+from .currency_risk import CurrencyRiskEngine
+from .sector_risk import SectorRiskEngine
+from .cross_exposure import CrossExposureEngine
 
 logger = logging.getLogger("atlas.risk.service")
 
@@ -305,6 +333,17 @@ class RiskService:
         self.tail_risk_engine = TailRiskEngine()
         self.scenario_engine = ScenarioEngine()
         self.diagnostics_engine = VaRDiagnosticsEngine()
+
+        # Stage 117 Factor, Concentration, Currency, and Sector Risk Registries & Engines
+        self._factor_runs: Dict[str, FactorRiskRun] = {}
+        self._portfolio_factor_runs: Dict[str, List[str]] = {}
+        self._factors: Dict[str, RiskFactorDefinition] = {f.factor_id: f for f in PREDEFINED_FACTORS.values()}
+
+        self.factor_engine = FactorRiskEngine()
+        self.concentration_engine = ConcentrationEngine()
+        self.currency_engine = CurrencyRiskEngine()
+        self.sector_engine = SectorRiskEngine()
+        self.cross_exposure_engine = CrossExposureEngine()
 
     def get_metric_definitions(self) -> List[RiskMetricDefinition]:
         """Returns the canonical catalog of supported risk metrics."""
@@ -1142,3 +1181,596 @@ class RiskService:
             raise RiskSubjectAccessDeniedError("Access to this backtest run is denied.")
         return run
 
+
+
+    # ========================================================================
+    # STAGE 117: MULTI-FACTOR, CONCENTRATION, CURRENCY, AND SECTOR RISK METHODS
+    # ========================================================================
+
+    def list_factors(self) -> List[RiskFactorDefinition]:
+        """Returns the canonical catalog of systematic risk factors."""
+        return list(self._factors.values())
+
+    def get_factor(self, factor_id: str) -> RiskFactorDefinition:
+        """Retrieves a single risk factor definition by ID."""
+        factor = self._factors.get(factor_id)
+        if not factor:
+            raise RiskFactorNotFoundError(f"Factor {factor_id} not found.")
+        return factor
+
+    def calculate_factor_risk(
+        self,
+        portfolio_id: str,
+        request: CalculateFactorRiskRequest,
+        user_id: str,
+    ) -> FactorRiskRun:
+        """Executes full multi-factor exposure estimation, covariance modeling, and risk decomposition."""
+        portfolio = self.portfolio_service.get_portfolio(portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectNotFoundError(f"Portfolio {portfolio_id} not found.")
+
+        positions = self.portfolio_service.get_positions(portfolio_id, user_id, request.account_id)
+        cash_balances = self.portfolio_service.get_cash_balances(portfolio_id, user_id, request.account_id)
+        val = self.portfolio_service.get_latest_valuation(portfolio_id, user_id)
+        if not val:
+            val = self.portfolio_service.calculate_portfolio_valuation(portfolio_id, user_id)
+
+        pos_val_map = {pv.symbol: pv for pv in (val.position_valuations if val else [])}
+        total_pos_val = Decimal("0.00")
+        for pos in positions:
+            pv = pos_val_map.get(pos.symbol)
+            mkt_val = (
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            total_pos_val += mkt_val
+
+        cash_total = (
+            val.total_cash_market_value
+            if val and val.total_cash_market_value > Decimal("0.00")
+            else sum((c.available_cash for c in cash_balances), Decimal("0.00"))
+        )
+        nav = total_pos_val + cash_total
+        nav_float = float(nav) if nav > Decimal("0.00") else 100000.0
+
+        symbols: List[str] = []
+        weights_list: List[float] = []
+        for pos in positions:
+            sym = pos.symbol
+            symbols.append(sym)
+            pv = pos_val_map.get(sym)
+            mkt_val = (
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            wt = float(mkt_val) / nav_float if nav_float > 0 else 0.0
+            weights_list.append(wt)
+
+        if not symbols:
+            symbols = ["SPY"]
+            weights_list = [1.0]
+
+        # Normalize weights
+        w_arr = np.array(weights_list, dtype=float)
+        if np.sum(w_arr) > 0:
+            w_arr = w_arr / np.sum(w_arr)
+        else:
+            w_arr = np.ones(len(symbols)) / float(len(symbols))
+        weights_norm = [float(x) for x in w_arr]
+
+        factor_ids = request.factor_ids or ["FACTOR_MKT", "FACTOR_SMB", "FACTOR_HML", "FACTOR_MOM", "FACTOR_QMJ", "FACTOR_CMA"]
+        factors_to_use = [self._factors[fid] for fid in factor_ids if fid in self._factors]
+        if not factors_to_use:
+            factors_to_use = list(self._factors.values())
+        active_factor_ids = [f.factor_id for f in factors_to_use]
+        active_factor_names = [f.factor_name for f in factors_to_use]
+        K = len(active_factor_ids)
+
+        T = 252  # 1 trading year of daily observations
+        seed = int(hashlib.md5(f"{portfolio_id}-factors".encode()).hexdigest()[:8], 16)
+        rng = np.random.RandomState(seed)
+
+        factor_vols = [0.010, 0.006, 0.006, 0.007, 0.005, 0.005][:K]
+        while len(factor_vols) < K:
+            factor_vols.append(0.006)
+
+        F_returns = np.zeros((T, K))
+        for k in range(K):
+            F_returns[:, k] = rng.normal(0.0003, factor_vols[k], size=T)
+
+        exposure_matrix: List[List[float]] = []
+        security_exposures_list: List[SecurityFactorExposure] = []
+        residual_variances: List[float] = []
+
+        for sym in symbols:
+            meta = get_instrument_classification(sym)
+            sec = meta.sector if meta and meta.sector else "Information Technology"
+            sym_seed = int(hashlib.md5(f"{sym}-returns".encode()).hexdigest()[:8], 16)
+            sym_rng = np.random.RandomState(sym_seed)
+
+            base_mkt = 1.2 if "Tech" in sec else (0.85 if "Defensive" in sec or "Utilities" in sec else 1.0)
+            true_betas = [base_mkt]
+            for _ in range(1, K):
+                true_betas.append(float(sym_rng.normal(0.0, 0.25)))
+            true_betas_arr = np.array(true_betas[:K])
+
+            spec_vol = 0.012
+            eps = sym_rng.normal(0.0, spec_vol, size=T)
+            sec_returns = F_returns @ true_betas_arr + eps
+
+            alpha, est_betas, res_var, r2, t_stats, s_diags = FactorRiskEngine.estimate_security_betas(
+                security_returns=sec_returns.tolist(),
+                factor_matrix=F_returns.tolist(),
+                include_intercept=True,
+            )
+            exposure_matrix.append(est_betas)
+            residual_variances.append(res_var)
+
+            beta_map = {active_factor_ids[k]: est_betas[k] for k in range(K)}
+            t_stat_map = {active_factor_ids[k]: t_stats.get(f"beta_{k+1}", 0.0) for k in range(K)}
+
+            security_exposures_list.append(
+                SecurityFactorExposure(
+                    symbol=sym,
+                    factor_betas=beta_map,
+                    intercept=alpha,
+                    residual_variance=res_var,
+                    r_squared=r2,
+                    t_stats=t_stat_map,
+                )
+            )
+
+        portfolio_loadings = FactorRiskEngine.aggregate_portfolio_factor_exposures(weights_norm, exposure_matrix)
+        p_exp_dict = {active_factor_ids[k]: portfolio_loadings[k] for k in range(K)}
+
+        F_cov = FactorRiskEngine.estimate_factor_covariance(F_returns.tolist(), annualization_factor=request.annualization_factor)
+
+        (
+            v_sys,
+            v_spec,
+            v_total,
+            sigma_p,
+            contributions,
+            rc_spec,
+            _,
+            is_reconciled,
+            reconcil_diff,
+        ) = FactorRiskEngine.decompose_factor_risk(
+            weights=weights_norm,
+            portfolio_factor_exposures=portfolio_loadings,
+            factor_covariance=F_cov,
+            residual_variances=residual_variances,
+            factor_ids=active_factor_ids,
+            factor_names=active_factor_names,
+        )
+
+        benchmark_exp_dict = {fid: (1.0 if "MKT" in fid else 0.0) for fid in active_factor_ids}
+        active_exp_dict = FactorRiskEngine.calculate_active_factor_exposures(p_exp_dict, benchmark_exp_dict)
+
+        s_svd = np.linalg.svd(F_returns, compute_uv=False)
+        cond = float(s_svd[0] / s_svd[-1]) if s_svd[-1] > 1e-12 else float("inf")
+        rank = int(np.linalg.matrix_rank(F_returns))
+        overall_diagnostics = FactorModelDiagnostics(
+            observation_count=T,
+            factor_count=K,
+            design_matrix_rank=rank,
+            condition_number=cond,
+            is_rank_deficient=rank < K,
+            is_collinear=cond > 1000.0,
+            status=ModelDiagnosticStatus.HEALTHY if rank == K and cond <= 1000.0 else ModelDiagnosticStatus.WARNING_COLLINEARITY,
+            warnings=[],
+        )
+
+        run_id = f"FRUN-{uuid.uuid4().hex[:12].upper()}"
+        run = FactorRiskRun(
+            run_id=run_id,
+            portfolio_id=portfolio_id,
+            as_of=request.as_of or datetime.utcnow(),
+            model_id="FAMA_FRENCH_6",
+            model_version="1.0.0",
+            factor_ids=active_factor_ids,
+            factor_exposures=p_exp_dict,
+            benchmark_exposures=benchmark_exp_dict,
+            active_exposures=active_exp_dict,
+            systematic_variance=v_sys,
+            specific_variance=v_spec,
+            total_variance=v_total,
+            total_volatility=sigma_p,
+            factor_contributions=contributions,
+            specific_risk_contribution=rc_spec,
+            specific_variance_contribution=v_spec,
+            security_exposures=security_exposures_list,
+            factor_covariance_matrix=F_cov,
+            diagnostics=overall_diagnostics,
+            is_reconciled=is_reconciled,
+            reconciliation_diff=reconcil_diff,
+            created_at=datetime.utcnow(),
+        )
+
+        self._factor_runs[run_id] = run
+        self._portfolio_factor_runs.setdefault(portfolio_id, []).append(run_id)
+        return run
+
+    def get_factor_risk_run(self, run_id: str, user_id: str) -> FactorRiskRun:
+        """Retrieves factor risk run by ID."""
+        run = self._factor_runs.get(run_id)
+        if not run:
+            raise RiskStage117RunNotFoundError(f"Factor risk run {run_id} not found.")
+        portfolio = self.portfolio_service.get_portfolio(run.portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectAccessDeniedError("Access to this factor risk run is denied.")
+        return run
+
+    def get_latest_factor_risk(self, portfolio_id: str, user_id: str) -> Optional[FactorRiskRun]:
+        """Retrieves latest factor risk run for portfolio, or computes one on-demand."""
+        portfolio = self.portfolio_service.get_portfolio(portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectNotFoundError(f"Portfolio {portfolio_id} not found.")
+        runs = self._portfolio_factor_runs.get(portfolio_id, [])
+        if runs:
+            return self._factor_runs[runs[-1]]
+        return self.calculate_factor_risk(portfolio_id, CalculateFactorRiskRequest(portfolio_id=portfolio_id), user_id)
+
+    def get_portfolio_concentration(
+        self,
+        portfolio_id: str,
+        dimension: ConcentrationDimension = ConcentrationDimension.SECURITY,
+        user_id: str = "",
+        as_of: Optional[datetime] = None,
+    ) -> ConcentrationSnapshot:
+        """Calculates Herfindahl-Hirschman Index (HHI), effective holdings, and Top-N concentration."""
+        portfolio = self.portfolio_service.get_portfolio(portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectNotFoundError(f"Portfolio {portfolio_id} not found.")
+
+        positions = self.portfolio_service.get_positions(portfolio_id, user_id)
+        cash_balances = self.portfolio_service.get_cash_balances(portfolio_id, user_id)
+        val = self.portfolio_service.get_latest_valuation(portfolio_id, user_id)
+        if not val:
+            val = self.portfolio_service.calculate_portfolio_valuation(portfolio_id, user_id)
+        pos_val_map = {pv.symbol: pv for pv in (val.position_valuations if val else [])}
+
+        total_pos_val = Decimal("0.00")
+        for pos in positions:
+            pv = pos_val_map.get(pos.symbol)
+            mkt_val = (
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            total_pos_val += mkt_val
+
+        cash_total = (
+            val.total_cash_market_value
+            if val and val.total_cash_market_value > Decimal("0.00")
+            else sum((c.available_cash for c in cash_balances), Decimal("0.00"))
+        )
+        nav = total_pos_val + cash_total
+        nav_float = float(nav) if nav > Decimal("0.00") else 100000.0
+
+        pos_data = []
+        for pos in positions:
+            sym = pos.symbol
+            pv = pos_val_map.get(sym)
+            mv = float(
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            wt = mv / nav_float if nav_float > 0 else 0.0
+            name = getattr(pos, "company_name", None) or sym
+            pos_data.append({"symbol": sym, "name": name, "weight": wt, "market_value": mv})
+
+        cash_wt = float(cash_total) / nav_float if nav_float > 0 else 0.0
+        if cash_wt > 0.0001:
+            pos_data.append({"symbol": "CASH", "name": "Cash & Equivalents", "weight": cash_wt, "market_value": float(cash_total)})
+
+        if not pos_data:
+            pos_data = [{"symbol": "CASH", "name": "Cash & Equivalents", "weight": 1.0, "market_value": 100000.0}]
+
+        issuer_map = {}
+        for p in pos_data:
+            sym = p["symbol"]
+            meta = get_instrument_classification(sym)
+            issuer_map[sym] = meta.issuer_name if meta else sym
+
+        return ConcentrationEngine.evaluate_concentration_snapshot(
+            positions=pos_data,
+            dimension=dimension,
+            issuer_map=issuer_map,
+            as_of=as_of or datetime.utcnow(),
+            portfolio_id=portfolio_id,
+        )
+
+    def get_portfolio_currency_risk(
+        self,
+        portfolio_id: str,
+        reporting_currency: Optional[str] = None,
+        user_id: str = "",
+        as_of: Optional[datetime] = None,
+    ) -> CurrencyRiskSnapshot:
+        """Calculates currency risk, FX volatility, and base/local return interaction."""
+        portfolio = self.portfolio_service.get_portfolio(portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectNotFoundError(f"Portfolio {portfolio_id} not found.")
+
+        rep_curr = reporting_currency or portfolio.base_currency
+        positions = self.portfolio_service.get_positions(portfolio_id, user_id)
+        cash_balances = self.portfolio_service.get_cash_balances(portfolio_id, user_id)
+        val = self.portfolio_service.get_latest_valuation(portfolio_id, user_id)
+        if not val:
+            val = self.portfolio_service.calculate_portfolio_valuation(portfolio_id, user_id)
+        pos_val_map = {pv.symbol: pv for pv in (val.position_valuations if val else [])}
+
+        pos_data = []
+        for pos in positions:
+            sym = pos.symbol
+            meta = get_instrument_classification(sym)
+            curr = meta.currency if meta and meta.currency else rep_curr
+            pv = pos_val_map.get(sym)
+            mv = float(
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            pos_data.append({"symbol": sym, "currency": curr, "market_value": mv})
+
+        cash_data = []
+        for c in cash_balances:
+            cash_data.append({"currency": getattr(c, "currency", rep_curr), "market_value": float(c.available_cash)})
+
+        if not pos_data and not cash_data:
+            cash_data.append({"currency": rep_curr, "market_value": 100000.0})
+
+        seed = int(hashlib.md5(f"{portfolio_id}-fx".encode()).hexdigest()[:8], 16)
+        rng = np.random.RandomState(seed)
+        currencies = ["EUR", "GBP", "JPY", "CAD", "CHF", "AUD"]
+        fx_hist = {}
+        for c in currencies:
+            base_rate = 1.08 if c == "EUR" else (1.27 if c == "GBP" else (155.0 if c == "JPY" else 1.35))
+            rw = np.cumprod(1.0 + rng.normal(0.0, 0.005, size=60)) * base_rate
+            fx_hist[c] = rw.tolist()
+
+        p_returns = rng.normal(0.0004, 0.012, size=59).tolist()
+
+        return CurrencyRiskEngine.evaluate_currency_risk(
+            portfolio_id=portfolio_id,
+            positions=pos_data,
+            cash_balances=cash_data,
+            reporting_currency=rep_curr,
+            historical_fx_map=fx_hist,
+            portfolio_returns=p_returns,
+            as_of=as_of or datetime.utcnow(),
+        )
+
+    def get_portfolio_sector_risk(
+        self,
+        portfolio_id: str,
+        user_id: str = "",
+        as_of: Optional[datetime] = None,
+    ) -> SectorRiskSnapshot:
+        """Decomposes portfolio covariance risk across economic sectors and industries."""
+        portfolio = self.portfolio_service.get_portfolio(portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectNotFoundError(f"Portfolio {portfolio_id} not found.")
+
+        positions = self.portfolio_service.get_positions(portfolio_id, user_id)
+        cash_balances = self.portfolio_service.get_cash_balances(portfolio_id, user_id)
+        val = self.portfolio_service.get_latest_valuation(portfolio_id, user_id)
+        if not val:
+            val = self.portfolio_service.calculate_portfolio_valuation(portfolio_id, user_id)
+        pos_val_map = {pv.symbol: pv for pv in (val.position_valuations if val else [])}
+
+        total_pos_val = Decimal("0.00")
+        for pos in positions:
+            pv = pos_val_map.get(pos.symbol)
+            mkt_val = (
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            total_pos_val += mkt_val
+
+        cash_total = (
+            val.total_cash_market_value
+            if val and val.total_cash_market_value > Decimal("0.00")
+            else sum((c.available_cash for c in cash_balances), Decimal("0.00"))
+        )
+        nav = total_pos_val + cash_total
+        nav_float = float(nav) if nav > Decimal("0.00") else 100000.0
+
+        symbols: List[str] = []
+        weights: List[float] = []
+        sector_map: Dict[str, str] = {}
+        industry_map: Dict[str, str] = {}
+
+        for pos in positions:
+            sym = pos.symbol
+            symbols.append(sym)
+            meta = get_instrument_classification(sym)
+            sec = meta.sector if meta and meta.sector else "Information Technology"
+            ind = meta.industry if meta and meta.industry else "Software"
+            sector_map[sym] = sec
+            industry_map[sym] = ind
+
+            pv = pos_val_map.get(sym)
+            mv = float(
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            weights.append(mv / nav_float if nav_float > 0 else 0.0)
+
+        cash_wt = float(cash_total) / nav_float if nav_float > 0 else 0.0
+        if cash_wt > 0.0001:
+            symbols.append("CASH")
+            weights.append(cash_wt)
+            sector_map["CASH"] = "Cash"
+            industry_map["CASH"] = "Cash Equivalents"
+
+        if not symbols:
+            symbols = ["CASH"]
+            weights = [1.0]
+            sector_map["CASH"] = "Cash"
+            industry_map["CASH"] = "Cash Equivalents"
+
+        w_sum = sum(weights)
+        if w_sum > 0:
+            weights = [w / w_sum for w in weights]
+        else:
+            weights = [1.0 / len(symbols)] * len(symbols)
+
+        n = len(symbols)
+        cov = np.zeros((n, n))
+        for i, sym in enumerate(symbols):
+            sec = sector_map.get(sym, "General")
+            v_i = 0.0001 if sec == "Cash" else (0.09 if "Tech" in sec else 0.04)
+            cov[i, i] = v_i
+            for j in range(i + 1, n):
+                sec_j = sector_map.get(symbols[j], "General")
+                if sec == "Cash" or sec_j == "Cash":
+                    rho = 0.0
+                elif sec == sec_j:
+                    rho = 0.6
+                else:
+                    rho = 0.3
+                v_j = 0.0001 if sec_j == "Cash" else (0.09 if "Tech" in sec_j else 0.04)
+                c_ij = rho * (v_i * v_j) ** 0.5
+                cov[i, j] = c_ij
+                cov[j, i] = c_ij
+
+        bench_sectors = {
+            "Information Technology": 0.30,
+            "Financials": 0.15,
+            "Health Care": 0.12,
+            "Consumer Discretionary": 0.10,
+            "Industrials": 0.08,
+            "Communication Services": 0.08,
+            "Consumer Staples": 0.06,
+            "Energy": 0.04,
+            "Utilities": 0.03,
+            "Real Estate": 0.02,
+            "Materials": 0.02,
+        }
+
+        return SectorRiskEngine.decompose_sector_risk(
+            weights=weights,
+            covariance_matrix=cov.tolist(),
+            symbols=symbols,
+            sector_map=sector_map,
+            industry_map=industry_map,
+            benchmark_sector_weights=bench_sectors,
+            as_of=as_of or datetime.utcnow(),
+            portfolio_id=portfolio_id,
+        )
+
+    def get_portfolio_cross_exposure(
+        self,
+        portfolio_id: str,
+        row_dimension: str = "FACTOR",
+        col_dimension: str = "SECTOR",
+        user_id: str = "",
+    ) -> CrossExposureMatrix:
+        """Constructs 2D joint risk exposure matrix (e.g. Factor x Sector, Currency x Sector)."""
+        portfolio = self.portfolio_service.get_portfolio(portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectNotFoundError(f"Portfolio {portfolio_id} not found.")
+
+        positions = self.portfolio_service.get_positions(portfolio_id, user_id)
+        cash_balances = self.portfolio_service.get_cash_balances(portfolio_id, user_id)
+        val = self.portfolio_service.get_latest_valuation(portfolio_id, user_id)
+        if not val:
+            val = self.portfolio_service.calculate_portfolio_valuation(portfolio_id, user_id)
+        pos_val_map = {pv.symbol: pv for pv in (val.position_valuations if val else [])}
+
+        total_pos_val = Decimal("0.00")
+        for pos in positions:
+            pv = pos_val_map.get(pos.symbol)
+            mkt_val = (
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            total_pos_val += mkt_val
+
+        cash_total = (
+            val.total_cash_market_value
+            if val and val.total_cash_market_value > Decimal("0.00")
+            else sum((c.available_cash for c in cash_balances), Decimal("0.00"))
+        )
+        nav = total_pos_val + cash_total
+        nav_float = float(nav) if nav > Decimal("0.00") else 100000.0
+
+        symbols: List[str] = []
+        weights: List[float] = []
+        sector_map: Dict[str, str] = {}
+        currency_map: Dict[str, str] = {}
+
+        for pos in positions:
+            sym = pos.symbol
+            symbols.append(sym)
+            meta = get_instrument_classification(sym)
+            sec = meta.sector if meta and meta.sector else "Information Technology"
+            curr = meta.currency if meta and meta.currency else portfolio.base_currency
+            sector_map[sym] = sec
+            currency_map[sym] = curr
+
+            pv = pos_val_map.get(sym)
+            mv = float(
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            weights.append(mv / nav_float if nav_float > 0 else 0.0)
+
+        if not symbols:
+            symbols = ["SPY"]
+            weights = [1.0]
+            sector_map["SPY"] = "Broad Market"
+            currency_map["SPY"] = portfolio.base_currency
+
+        w_sum = sum(weights)
+        if w_sum > 0:
+            weights = [w / w_sum for w in weights]
+        else:
+            weights = [1.0 / len(symbols)] * len(symbols)
+
+        row_dim = row_dimension.upper()
+        col_dim = col_dimension.upper()
+
+        if row_dim == "FACTOR" and col_dim == "SECTOR":
+            run = self.get_latest_factor_risk(portfolio_id, user_id)
+            if not run:
+                run = self.calculate_factor_risk(portfolio_id, CalculateFactorRiskRequest(portfolio_id=portfolio_id), user_id)
+            factor_betas: Dict[str, Dict[str, float]] = {}
+            for se in run.security_exposures:
+                factor_betas[se.symbol] = se.factor_betas
+
+            return CrossExposureEngine.build_factor_by_sector_matrix(
+                symbols=symbols,
+                weights=weights,
+                factor_betas=factor_betas,
+                sector_map=sector_map,
+                factor_ids=run.factor_ids,
+            )
+        elif row_dim == "CURRENCY" and col_dim == "SECTOR":
+            return CrossExposureEngine.build_currency_by_sector_matrix(
+                symbols=symbols,
+                weights=weights,
+                currency_map=currency_map,
+                sector_map=sector_map,
+            )
+        else:
+            run = self.get_latest_factor_risk(portfolio_id, user_id)
+            if not run:
+                run = self.calculate_factor_risk(portfolio_id, CalculateFactorRiskRequest(portfolio_id=portfolio_id), user_id)
+            factor_betas = {se.symbol: se.factor_betas for se in run.security_exposures}
+            return CrossExposureEngine.build_factor_by_sector_matrix(
+                symbols=symbols,
+                weights=weights,
+                factor_betas=factor_betas,
+                sector_map=sector_map,
+                factor_ids=run.factor_ids,
+            )

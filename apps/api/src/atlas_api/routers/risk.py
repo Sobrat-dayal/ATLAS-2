@@ -13,8 +13,13 @@ from atlas.portfolios.errors import PortfolioError
 from atlas.portfolios.service import PortfolioService
 from atlas.risk.enums import (
     AnnualizationPolicy,
+    ConcentrationDimension,
+    CurrencyExposureType,
     ExpectedShortfallMethod,
+    FactorFamily,
+    FactorReturnBasis,
     KupiecTestStatus,
+    ModelDiagnosticStatus,
     RiskCalculationStatus,
     RiskMetricCode,
     RiskMetricStatus,
@@ -30,14 +35,25 @@ from atlas.risk.errors import RiskError
 from atlas.risk.models import (
     BenchmarkSensitivityResult,
     ComponentRiskContribution,
+    ConcentrationItem,
+    ConcentrationSnapshot,
     CovarianceDiagnostics,
+    CrossExposureCell,
+    CrossExposureMatrix,
+    CurrencyExposureItem,
+    CurrencyRiskSnapshot,
     DrawdownEpisode,
     ExpectedShortfallResult,
+    FactorModelDiagnostics,
+    FactorRiskContribution,
+    FactorRiskRun,
+    IndustryRiskItem,
     KupiecTestResult,
     LossDistribution,
     PortfolioRiskSnapshot,
     RiskCalculationRun,
     RiskDataCoverage,
+    RiskFactorDefinition,
     RiskInputManifest,
     RiskMetricDefinition,
     RiskModelDefinition,
@@ -46,6 +62,9 @@ from atlas.risk.models import (
     RollingRiskObservation,
     ScenarioPositionResult,
     ScenarioShock,
+    SectorRiskItem,
+    SectorRiskSnapshot,
+    SecurityFactorExposure,
     TailRiskCalculationRun,
     VaRBacktestRun,
     VaRExceptionObservation,
@@ -53,15 +72,26 @@ from atlas.risk.models import (
 )
 from atlas.risk.schemas import (
     BenchmarkSensitivityDTO,
+    CalculateFactorRiskRequest,
     CalculateRiskRequest,
     CalculateTailRiskRequest,
+    ConcentrationItemDTO,
+    ConcentrationSnapshotDTO,
     ContributionsResponseDTO,
     CovarianceDiagnosticsDTO,
     CreateScenarioRequest,
+    CrossExposureCellDTO,
+    CrossExposureMatrixDTO,
+    CurrencyExposureItemDTO,
+    CurrencyRiskSnapshotDTO,
     DrawdownEpisodeDTO,
     DrawdownsResponseDTO,
     ExecuteScenarioRequest,
     ExpectedShortfallResultDTO,
+    FactorModelDiagnosticsDTO,
+    FactorRiskContributionDTO,
+    FactorRiskRunDTO,
+    IndustryRiskItemDTO,
     KupiecTestResultDTO,
     LossDistributionBinDTO,
     LossDistributionDTO,
@@ -69,6 +99,7 @@ from atlas.risk.schemas import (
     RiskCalculationRunDTO,
     RiskContributionItemDTO,
     RiskDataCoverageDTO,
+    RiskFactorDefinitionDTO,
     RiskInputManifestDTO,
     RiskMetricDefinitionDTO,
     RiskModelDefinitionDTO,
@@ -82,6 +113,9 @@ from atlas.risk.schemas import (
     ScenarioComparisonResponseDTO,
     ScenarioPositionResultDTO,
     ScenarioShockDTO,
+    SectorRiskItemDTO,
+    SectorRiskSnapshotDTO,
+    SecurityFactorExposureDTO,
     TailRiskCalculationRunDTO,
     VaRBacktestRunDTO,
     VaRExceptionObservationDTO,
@@ -1040,3 +1074,508 @@ def get_var_backtest(
     except Exception as e:
         _handle_error(e)
 
+
+
+# ---------------------------------------------------------------------------
+# STAGE 117: DTO MAPPERS
+# ---------------------------------------------------------------------------
+
+def _map_factor_definition_to_dto(f: RiskFactorDefinition) -> RiskFactorDefinitionDTO:
+    return RiskFactorDefinitionDTO(
+        factor_id=f.factor_id,
+        factor_code=f.factor_code,
+        factor_name=f.factor_name,
+        family=f.family,
+        description=f.description,
+        methodology=f.methodology,
+        geographical_scope=f.geographical_scope,
+        currency=f.currency,
+        return_basis=f.return_basis,
+        version=f.version,
+    )
+
+
+def _map_security_factor_exposure_to_dto(s: SecurityFactorExposure) -> SecurityFactorExposureDTO:
+    return SecurityFactorExposureDTO(
+        symbol=s.symbol,
+        factor_betas=s.factor_betas,
+        intercept=s.intercept,
+        residual_variance=s.residual_variance,
+        r_squared=s.r_squared,
+        t_stats=s.t_stats,
+    )
+
+
+def _map_factor_contribution_to_dto(c: FactorRiskContribution) -> FactorRiskContributionDTO:
+    return FactorRiskContributionDTO(
+        factor_id=c.factor_id,
+        factor_name=c.factor_name,
+        portfolio_exposure=c.portfolio_exposure,
+        variance_contribution=c.variance_contribution,
+        volatility_contribution=c.volatility_contribution,
+        percentage_of_variance=c.percentage_of_variance,
+    )
+
+
+def _map_factor_diagnostics_to_dto(d: FactorModelDiagnostics) -> FactorModelDiagnosticsDTO:
+    return FactorModelDiagnosticsDTO(
+        observation_count=d.observation_count,
+        factor_count=d.factor_count,
+        design_matrix_rank=d.design_matrix_rank,
+        condition_number=d.condition_number,
+        is_rank_deficient=d.is_rank_deficient,
+        is_collinear=d.is_collinear,
+        status=d.status,
+        warnings=d.warnings,
+    )
+
+
+def _map_factor_run_to_dto(run: FactorRiskRun) -> FactorRiskRunDTO:
+    return FactorRiskRunDTO(
+        run_id=run.run_id,
+        portfolio_id=run.portfolio_id,
+        as_of=run.as_of.isoformat() if hasattr(run.as_of, "isoformat") else str(run.as_of),
+        model_id="FAMA_FRENCH_6",
+        model_version="1.0.0",
+        factor_ids=run.factor_ids,
+        factor_exposures=run.portfolio_exposures,
+        benchmark_exposures={fid: (1.0 if "MKT" in fid else 0.0) for fid in run.factor_ids},
+        active_exposures=run.active_factor_exposures,
+        systematic_variance=run.systematic_variance,
+        specific_variance=run.specific_variance,
+        total_variance=run.total_variance,
+        total_volatility=run.portfolio_volatility,
+        factor_contributions=[_map_factor_contribution_to_dto(c) for c in run.factor_contributions],
+        specific_risk_contribution=run.specific_risk_contribution,
+        specific_variance_contribution=run.specific_variance,
+        security_exposures=[_map_security_factor_exposure_to_dto(se) for se in run.security_exposures],
+        factor_covariance_matrix=run.factor_covariance_matrix,
+        diagnostics=_map_factor_diagnostics_to_dto(run.diagnostics),
+        is_reconciled=run.is_reconciled,
+        reconciliation_diff=run.reconciliation_diff,
+        created_at=run.created_at.isoformat() if hasattr(run.created_at, "isoformat") else str(run.created_at),
+    )
+
+
+def _map_concentration_snapshot_to_dto(c: ConcentrationSnapshot) -> ConcentrationSnapshotDTO:
+    return ConcentrationSnapshotDTO(
+        portfolio_id=c.portfolio_id,
+        as_of=c.as_of.isoformat() if hasattr(c.as_of, "isoformat") else str(c.as_of),
+        dimension=c.dimension,
+        hhi=c.hhi,
+        effective_number_of_holdings=c.effective_number_of_holdings,
+        top_1_weight=c.top_1_weight,
+        top_3_weight=c.top_3_weight,
+        top_5_weight=c.top_5_weight,
+        top_10_weight=c.top_10_weight,
+        items=[
+            ConcentrationItemDTO(
+                identifier=it.identifier,
+                name=it.name,
+                dimension=it.dimension,
+                weight=it.weight,
+                market_value=it.market_value,
+                rank=it.rank,
+                securities_count=it.securities_count,
+                security_symbols=it.security_symbols,
+            )
+            for it in c.items
+        ],
+        total_positions_count=c.total_positions_count,
+        total_issuers_count=c.total_issuers_count,
+        coverage_ratio=c.coverage_ratio,
+    )
+
+
+def _map_currency_snapshot_to_dto(c: CurrencyRiskSnapshot) -> CurrencyRiskSnapshotDTO:
+    return CurrencyRiskSnapshotDTO(
+        portfolio_id=c.portfolio_id,
+        as_of=c.as_of.isoformat() if hasattr(c.as_of, "isoformat") else str(c.as_of),
+        reporting_currency=c.reporting_currency,
+        exposures=[
+            CurrencyExposureItemDTO(
+                currency=exp.currency,
+                weight=exp.weight,
+                market_value=exp.market_value,
+                cash_market_value=exp.cash_market_value,
+                exposure_type=exp.exposure_type,
+                historical_fx_volatility=exp.historical_fx_volatility,
+                fx_sensitivity_beta=exp.fx_sensitivity_beta,
+            )
+            for exp in c.exposures
+        ],
+        foreign_currency_weight=c.foreign_currency_weight,
+        foreign_currency_market_value=c.foreign_currency_market_value,
+        base_local_interaction=c.base_local_interaction,
+        cross_currency_correlations=c.cross_currency_correlations,
+    )
+
+
+def _map_sector_snapshot_to_dto(s: SectorRiskSnapshot) -> SectorRiskSnapshotDTO:
+    return SectorRiskSnapshotDTO(
+        portfolio_id=s.portfolio_id,
+        as_of=s.as_of.isoformat() if hasattr(s.as_of, "isoformat") else str(s.as_of),
+        portfolio_variance=s.portfolio_variance,
+        portfolio_volatility=s.portfolio_volatility,
+        sectors=[
+            SectorRiskItemDTO(
+                sector_name=sec.sector_name,
+                weight=sec.weight,
+                standalone_volatility=sec.standalone_volatility,
+                variance_contribution=sec.variance_contribution,
+                volatility_contribution=sec.volatility_contribution,
+                percentage_of_variance=sec.percentage_of_variance,
+                benchmark_weight=sec.benchmark_weight,
+                active_weight=sec.active_weight,
+            )
+            for sec in s.sectors
+        ],
+        industries=[
+            IndustryRiskItemDTO(
+                sector_name=ind.sector_name,
+                industry_name=ind.industry_name,
+                weight=ind.weight,
+                variance_contribution=ind.variance_contribution,
+                volatility_contribution=ind.volatility_contribution,
+            )
+            for ind in s.industries
+        ],
+        sector_correlation_matrix=s.sector_correlation_matrix,
+        is_reconciled=s.is_reconciled,
+        reconciliation_diff=s.reconciliation_diff,
+    )
+
+
+def _map_cross_exposure_matrix_to_dto(m: CrossExposureMatrix) -> CrossExposureMatrixDTO:
+    return CrossExposureMatrixDTO(
+        row_dimension=m.row_dimension,
+        col_dimension=m.col_dimension,
+        row_keys=m.row_keys,
+        col_keys=m.col_keys,
+        cells=[
+            CrossExposureCellDTO(
+                row_key=c.row_key,
+                col_key=c.col_key,
+                value=c.value,
+                unit=c.unit,
+            )
+            for c in m.cells
+        ],
+        unit=m.unit,
+    )
+
+
+# ============================================================================
+# STAGE 117: MULTI-FACTOR, CONCENTRATION, CURRENCY, AND SECTOR RISK ENDPOINTS
+# ============================================================================
+
+@router.get("/factors", response_model=List[RiskFactorDefinitionDTO])
+def list_risk_factors(
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> List[RiskFactorDefinitionDTO]:
+    """Lists canonical economic and style risk factors in the platform registry."""
+    try:
+        factors = service.list_factors()
+        return [_map_factor_definition_to_dto(f) for f in factors]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/factors/{factor_id}", response_model=RiskFactorDefinitionDTO)
+def get_risk_factor(
+    factor_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> RiskFactorDefinitionDTO:
+    """Retrieves definition and methodology for a specific risk factor."""
+    try:
+        factor = service.get_factor(factor_id)
+        return _map_factor_definition_to_dto(factor)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.post("/factor-models/calculate", response_model=FactorRiskRunDTO)
+def calculate_factor_risk(
+    request: CalculateFactorRiskRequest,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> FactorRiskRunDTO:
+    """Executes multi-factor regression, covariance estimation, and Euler risk decomposition."""
+    try:
+        run = service.calculate_factor_risk(
+            portfolio_id=request.portfolio_id,
+            request=request,
+            user_id=current_user.sub,
+        )
+        return _map_factor_run_to_dto(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/factors", response_model=FactorRiskRunDTO)
+def get_portfolio_factors(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> FactorRiskRunDTO:
+    """Retrieves the latest multi-factor risk run and Euler decomposition for a portfolio."""
+    try:
+        run = service.get_latest_factor_risk(portfolio_id=portfolio_id, user_id=current_user.sub)
+        if not run:
+            run = service.calculate_factor_risk(
+                portfolio_id=portfolio_id,
+                request=CalculateFactorRiskRequest(portfolio_id=portfolio_id),
+                user_id=current_user.sub,
+            )
+        return _map_factor_run_to_dto(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/factors/exposures", response_model=List[SecurityFactorExposureDTO])
+def get_portfolio_factor_exposures(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> List[SecurityFactorExposureDTO]:
+    """Retrieves security-level factor loadings, intercepts, and R-squared metrics."""
+    try:
+        run = service.get_latest_factor_risk(portfolio_id=portfolio_id, user_id=current_user.sub)
+        if not run:
+            run = service.calculate_factor_risk(
+                portfolio_id=portfolio_id,
+                request=CalculateFactorRiskRequest(portfolio_id=portfolio_id),
+                user_id=current_user.sub,
+            )
+        return [_map_security_factor_exposure_to_dto(se) for se in run.security_exposures]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/factors/contributions", response_model=List[FactorRiskContributionDTO])
+def get_portfolio_factor_contributions(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> List[FactorRiskContributionDTO]:
+    """Retrieves systematic Euler factor variance and volatility contributions."""
+    try:
+        run = service.get_latest_factor_risk(portfolio_id=portfolio_id, user_id=current_user.sub)
+        if not run:
+            run = service.calculate_factor_risk(
+                portfolio_id=portfolio_id,
+                request=CalculateFactorRiskRequest(portfolio_id=portfolio_id),
+                user_id=current_user.sub,
+            )
+        return [_map_factor_contribution_to_dto(c) for c in run.factor_contributions]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/factors/diagnostics", response_model=FactorModelDiagnosticsDTO)
+def get_portfolio_factor_diagnostics(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> FactorModelDiagnosticsDTO:
+    """Retrieves regression health, rank check, condition number, and collinearity diagnostics."""
+    try:
+        run = service.get_latest_factor_risk(portfolio_id=portfolio_id, user_id=current_user.sub)
+        if not run:
+            run = service.calculate_factor_risk(
+                portfolio_id=portfolio_id,
+                request=CalculateFactorRiskRequest(portfolio_id=portfolio_id),
+                user_id=current_user.sub,
+            )
+        return _map_factor_diagnostics_to_dto(run.diagnostics)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/concentration", response_model=ConcentrationSnapshotDTO)
+def get_portfolio_concentration(
+    portfolio_id: str,
+    dimension: ConcentrationDimension = ConcentrationDimension.SECURITY,
+    service: Annotated[RiskService, Depends(get_risk_service)] = None,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)] = None,
+) -> ConcentrationSnapshotDTO:
+    """Retrieves HHI, Effective Holdings, and Top-N concentration for the selected dimension."""
+    try:
+        snap = service.get_portfolio_concentration(
+            portfolio_id=portfolio_id,
+            dimension=dimension,
+            user_id=current_user.sub,
+        )
+        return _map_concentration_snapshot_to_dto(snap)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/concentration/issuers", response_model=ConcentrationSnapshotDTO)
+def get_portfolio_issuer_concentration(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> ConcentrationSnapshotDTO:
+    """Retrieves consolidated issuer concentration, aggregating share classes and ADRs."""
+    try:
+        snap = service.get_portfolio_concentration(
+            portfolio_id=portfolio_id,
+            dimension=ConcentrationDimension.ISSUER,
+            user_id=current_user.sub,
+        )
+        return _map_concentration_snapshot_to_dto(snap)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/currencies", response_model=CurrencyRiskSnapshotDTO)
+def get_portfolio_currency_risk(
+    portfolio_id: str,
+    reporting_currency: Optional[str] = None,
+    service: Annotated[RiskService, Depends(get_risk_service)] = None,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)] = None,
+) -> CurrencyRiskSnapshotDTO:
+    """Retrieves currency denomination exposures, FX volatilities, and base/local decomposition."""
+    try:
+        snap = service.get_portfolio_currency_risk(
+            portfolio_id=portfolio_id,
+            reporting_currency=reporting_currency,
+            user_id=current_user.sub,
+        )
+        return _map_currency_snapshot_to_dto(snap)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/currencies/exposures", response_model=List[CurrencyExposureItemDTO])
+def get_portfolio_currency_exposures(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> List[CurrencyExposureItemDTO]:
+    """Retrieves granular currency denomination exposure items and FX betas."""
+    try:
+        snap = service.get_portfolio_currency_risk(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+        )
+        dto = _map_currency_snapshot_to_dto(snap)
+        return dto.exposures
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/currencies/sensitivity")
+def get_portfolio_currency_sensitivity(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> Dict[str, Any]:
+    """Retrieves base vs local return interaction and empirical FX sensitivities."""
+    try:
+        snap = service.get_portfolio_currency_risk(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+        )
+        return {
+            "portfolio_id": portfolio_id,
+            "reporting_currency": snap.reporting_currency,
+            "foreign_currency_weight": snap.foreign_currency_weight,
+            "base_local_interaction": snap.base_local_interaction,
+            "sensitivities": {
+                exp.currency: {
+                    "fx_sensitivity_beta": exp.fx_sensitivity_beta,
+                    "historical_fx_volatility": exp.historical_fx_volatility,
+                    "market_value": exp.market_value,
+                    "weight": exp.weight,
+                }
+                for exp in snap.exposures
+                if exp.currency != snap.reporting_currency
+            },
+        }
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/sectors", response_model=SectorRiskSnapshotDTO)
+def get_portfolio_sector_risk(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> SectorRiskSnapshotDTO:
+    """Retrieves sector and industry Euler variance/volatility risk attribution."""
+    try:
+        snap = service.get_portfolio_sector_risk(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+        )
+        return _map_sector_snapshot_to_dto(snap)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/sectors/contributions", response_model=List[SectorRiskItemDTO])
+def get_portfolio_sector_contributions(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> List[SectorRiskItemDTO]:
+    """Retrieves sector Euler variance and volatility contributions."""
+    try:
+        snap = service.get_portfolio_sector_risk(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+        )
+        dto = _map_sector_snapshot_to_dto(snap)
+        return dto.sectors
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/cross-exposures", response_model=CrossExposureMatrixDTO)
+def get_portfolio_cross_exposure(
+    portfolio_id: str,
+    row_dimension: str = "FACTOR",
+    col_dimension: str = "SECTOR",
+    service: Annotated[RiskService, Depends(get_risk_service)] = None,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)] = None,
+) -> CrossExposureMatrixDTO:
+    """Retrieves 2D cross-exposure matrix (e.g. Factor x Sector, Currency x Sector)."""
+    try:
+        matrix = service.get_portfolio_cross_exposure(
+            portfolio_id=portfolio_id,
+            row_dimension=row_dimension,
+            col_dimension=col_dimension,
+            user_id=current_user.sub,
+        )
+        return _map_cross_exposure_matrix_to_dto(matrix)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/portfolios/{portfolio_id}/factor-benchmark")
+def get_portfolio_factor_benchmark(
+    portfolio_id: str,
+    service: Annotated[RiskService, Depends(get_risk_service)],
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> Dict[str, Any]:
+    """Retrieves portfolio vs benchmark active factor exposures."""
+    try:
+        run = service.get_latest_factor_risk(portfolio_id=portfolio_id, user_id=current_user.sub)
+        if not run:
+            run = service.calculate_factor_risk(
+                portfolio_id=portfolio_id,
+                request=CalculateFactorRiskRequest(portfolio_id=portfolio_id),
+                user_id=current_user.sub,
+            )
+        return {
+            "portfolio_id": portfolio_id,
+            "portfolio_exposures": run.portfolio_exposures,
+            "benchmark_exposures": {fid: (1.0 if "MKT" in fid else 0.0) for fid in run.factor_ids},
+            "active_factor_exposures": run.active_factor_exposures,
+        }
+    except Exception as e:
+        _handle_error(e)

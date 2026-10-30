@@ -489,3 +489,185 @@ export interface RunVaRBacktestRequest {
   window_size?: number;
   account_id?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Stage 117: Factor, Concentration, Currency, and Sector Risk Domain Types
+// ---------------------------------------------------------------------------
+
+export type FactorFamily = 'MARKET' | 'STYLE' | 'MACROECONOMIC' | 'STATISTICAL' | 'INDUSTRY';
+export type FactorReturnBasis = 'EXCESS_RETURN' | 'LONG_SHORT' | 'FACTOR_PORTFOLIO';
+export type ConcentrationDimension = 'SECURITY' | 'ISSUER' | 'SECTOR' | 'INDUSTRY' | 'ASSET_CLASS' | 'COUNTRY' | 'CURRENCY';
+export type CurrencyExposureType = 'DENOMINATION' | 'ECONOMIC' | 'CASH';
+export type ModelDiagnosticStatus = 'HEALTHY' | 'WARNING_COLLINEARITY' | 'WARNING_RANK_DEFICIENT' | 'CRITICAL';
+
+export interface RiskFactorDefinitionDTO {
+  factor_id: string;
+  factor_code: string;
+  factor_name: string;
+  family: FactorFamily;
+  description: string;
+  methodology: string;
+  geographical_scope: string;
+  currency: string;
+  return_basis: FactorReturnBasis;
+  version: string;
+}
+
+export interface SecurityFactorExposureDTO {
+  symbol: string;
+  factor_betas: Record<string, number>;
+  intercept: number;
+  residual_variance: number;
+  r_squared: number;
+  t_stats: Record<string, number>;
+}
+
+export interface FactorRiskContributionDTO {
+  factor_id: string;
+  factor_name: string;
+  portfolio_exposure: number;
+  variance_contribution: number;
+  volatility_contribution: number;
+  percentage_of_variance: number;
+}
+
+export interface FactorModelDiagnosticsDTO {
+  observation_count: number;
+  factor_count: number;
+  design_matrix_rank: number;
+  condition_number: number;
+  is_rank_deficient: boolean;
+  is_collinear: boolean;
+  status: ModelDiagnosticStatus;
+  warnings: string[];
+}
+
+export interface CalculateFactorRiskRequest {
+  portfolio_id: string;
+  account_id?: string;
+  as_of?: string;
+  model_id?: string;
+  factor_ids?: string[];
+  benchmark_id?: string;
+  annualization_factor?: number;
+}
+
+export interface FactorRiskRunDTO {
+  run_id: string;
+  portfolio_id: string;
+  as_of: string;
+  model_id: string;
+  model_version: string;
+  factor_ids: string[];
+  factor_exposures: Record<string, number>;
+  benchmark_exposures?: Record<string, number>;
+  active_exposures?: Record<string, number>;
+  systematic_variance: number;
+  specific_variance: number;
+  total_variance: number;
+  total_volatility: number;
+  factor_contributions: FactorRiskContributionDTO[];
+  specific_risk_contribution: number;
+  specific_variance_contribution: number;
+  security_exposures: SecurityFactorExposureDTO[];
+  factor_covariance_matrix: number[][];
+  diagnostics: FactorModelDiagnosticsDTO;
+  is_reconciled: boolean;
+  reconciliation_diff: number;
+  created_at: string;
+}
+
+export interface ConcentrationItemDTO {
+  identifier: string;
+  name: string;
+  dimension: ConcentrationDimension;
+  weight: number;
+  market_value: number;
+  rank: number;
+  securities_count: number;
+  security_symbols: string[];
+}
+
+export interface ConcentrationSnapshotDTO {
+  portfolio_id: string;
+  as_of: string;
+  dimension: ConcentrationDimension;
+  hhi: number;
+  effective_number_of_holdings: number;
+  top_1_weight: number;
+  top_3_weight: number;
+  top_5_weight: number;
+  top_10_weight: number;
+  items: ConcentrationItemDTO[];
+  total_positions_count: number;
+  total_issuers_count: number;
+  coverage_ratio: number;
+}
+
+export interface CurrencyExposureItemDTO {
+  currency: string;
+  weight: number;
+  market_value: number;
+  cash_market_value: number;
+  exposure_type: CurrencyExposureType;
+  historical_fx_volatility?: number | null;
+  fx_sensitivity_beta?: number | null;
+}
+
+export interface CurrencyRiskSnapshotDTO {
+  portfolio_id: string;
+  as_of: string;
+  reporting_currency: string;
+  exposures: CurrencyExposureItemDTO[];
+  foreign_currency_weight: number;
+  foreign_currency_market_value: number;
+  base_local_interaction: Record<string, number>;
+  cross_currency_correlations?: Record<string, Record<string, number>> | null;
+}
+
+export interface SectorRiskItemDTO {
+  sector_name: string;
+  weight: number;
+  standalone_volatility?: number | null;
+  variance_contribution: number;
+  volatility_contribution: number;
+  percentage_of_variance: number;
+  benchmark_weight?: number | null;
+  active_weight?: number | null;
+}
+
+export interface IndustryRiskItemDTO {
+  sector_name: string;
+  industry_name: string;
+  weight: number;
+  variance_contribution: number;
+  volatility_contribution: number;
+}
+
+export interface SectorRiskSnapshotDTO {
+  portfolio_id: string;
+  as_of: string;
+  portfolio_variance: number;
+  portfolio_volatility: number;
+  sectors: SectorRiskItemDTO[];
+  industries: IndustryRiskItemDTO[];
+  sector_correlation_matrix?: Record<string, Record<string, number>> | null;
+  is_reconciled: boolean;
+  reconciliation_diff: number;
+}
+
+export interface CrossExposureCellDTO {
+  row_key: string;
+  col_key: string;
+  value: number;
+  unit: string;
+}
+
+export interface CrossExposureMatrixDTO {
+  row_dimension: string;
+  col_dimension: string;
+  row_keys: string[];
+  col_keys: string[];
+  cells: CrossExposureCellDTO[];
+  unit: string;
+}

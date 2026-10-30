@@ -8,6 +8,7 @@
 import {
   DataCoverageStatus,
   DrawdownEpisodeStatus,
+  ModelDiagnosticStatus,
   RiskCalculationStatus,
   RiskMetricStatus,
   RiskModelType,
@@ -398,5 +399,106 @@ export function getVaRModelLabel(model: VaRModelType): string {
       return 'Monte Carlo Gaussian Simulation';
     default:
       return model;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Stage 117: Factor, Concentration, Currency, and Sector Risk Formatters
+// ---------------------------------------------------------------------------
+
+/**
+ * Formats a factor loading beta (e.g. 1.042 -> "1.04", -0.22 -> "-0.22").
+ */
+export function formatFactorLoading(
+  val: number | null | undefined,
+  decimals: number = 2
+): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  const sign = val > 0 ? '+' : '';
+  return `${sign}${val.toFixed(decimals)}`;
+}
+
+/**
+ * Formats Herfindahl-Hirschman Index (e.g. 0.3800 -> "0.3800").
+ */
+export function formatHHI(val: number | null | undefined, decimals: number = 4): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return val.toFixed(decimals);
+}
+
+/**
+ * Formats effective number of holdings (e.g. 2.63158 -> "2.6").
+ */
+export function formatEffectiveHoldings(
+  val: number | null | undefined,
+  decimals: number = 1
+): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return val.toFixed(decimals);
+}
+
+/**
+ * Interprets concentration level based on standard antitrust / institutional thresholds.
+ */
+export function getConcentrationClassification(hhi: number): {
+  label: string;
+  badgeClass: string;
+  description: string;
+} {
+  if (hhi < 0.15) {
+    return {
+      label: 'Diversified',
+      badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+      description: 'HHI < 0.15: Well diversified across holdings.',
+    };
+  }
+  if (hhi <= 0.25) {
+    return {
+      label: 'Moderate',
+      badgeClass: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+      description: '0.15 <= HHI <= 0.25: Moderate concentration.',
+    };
+  }
+  return {
+    label: 'High Concentration',
+    badgeClass: 'bg-rose-500/10 text-rose-400 border-rose-500/30',
+    description: 'HHI > 0.25: Significant capital concentration in top holdings.',
+  };
+}
+
+/**
+ * Returns badge styling for regression diagnostics.
+ */
+export function getModelDiagnosticStatusBadge(status: ModelDiagnosticStatus): StatusBadgeConfig {
+  switch (status) {
+    case 'HEALTHY':
+      return {
+        label: 'Healthy',
+        bgClass: 'bg-emerald-500/10',
+        textClass: 'text-emerald-400',
+        borderClass: 'border-emerald-500/30',
+      };
+    case 'WARNING_COLLINEARITY':
+      return {
+        label: 'Collinear',
+        bgClass: 'bg-amber-500/10',
+        textClass: 'text-amber-400',
+        borderClass: 'border-amber-500/30',
+      };
+    case 'WARNING_RANK_DEFICIENT':
+      return {
+        label: 'Rank Deficient',
+        bgClass: 'bg-rose-500/10',
+        textClass: 'text-rose-400',
+        borderClass: 'border-rose-500/30',
+      };
+    case 'CRITICAL':
+    default:
+      return {
+        label: 'Critical',
+        bgClass: 'bg-rose-500/10',
+        textClass: 'text-rose-400',
+        borderClass: 'border-rose-500/30',
+      };
   }
 }

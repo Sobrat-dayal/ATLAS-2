@@ -10,6 +10,15 @@ from pydantic import BaseModel, Field
 
 from .enums import (
     AnnualizationPolicy,
+    ConcentrationDimension,
+    CurrencyExposureType,
+    DataCoverageStatus,
+    DrawdownEpisodeStatus,
+    ExpectedShortfallMethod,
+    FactorFamily,
+    FactorReturnBasis,
+    KupiecTestStatus,
+    ModelDiagnosticStatus,
     DataCoverageStatus,
     DrawdownEpisodeStatus,
     ExpectedShortfallMethod,
@@ -465,3 +474,195 @@ class VaRBacktestRunDTO(BaseModel):
     created_at: str
 
 
+
+
+# ---------------------------------------------------------------------------
+# Stage 117: Factor, Concentration, Currency, and Sector Risk Schemas
+# ---------------------------------------------------------------------------
+
+
+class RiskFactorDefinitionDTO(BaseModel):
+    """Specification of an economic risk factor."""
+    factor_id: str
+    factor_code: str
+    factor_name: str
+    family: FactorFamily
+    description: str
+    methodology: str
+    geographical_scope: str = "GLOBAL"
+    currency: str = "USD"
+    return_basis: FactorReturnBasis = FactorReturnBasis.EXCESS_RETURN
+    version: str = "1.0.0"
+
+
+class SecurityFactorExposureDTO(BaseModel):
+    """Estimated systematic factor loadings for a single security."""
+    symbol: str
+    factor_betas: Dict[str, float]
+    intercept: float = 0.0
+    residual_variance: float = 0.0
+    r_squared: float = 0.0
+    t_stats: Dict[str, float] = Field(default_factory=dict)
+
+
+class FactorRiskContributionDTO(BaseModel):
+    """Analytical risk contribution of a single factor to portfolio variance and volatility."""
+    factor_id: str
+    factor_name: str
+    portfolio_exposure: float
+    variance_contribution: float
+    volatility_contribution: float
+    percentage_of_variance: float
+
+
+class FactorModelDiagnosticsDTO(BaseModel):
+    """Regression health and collinearity diagnostics."""
+    observation_count: int
+    factor_count: int
+    design_matrix_rank: int
+    condition_number: float
+    is_rank_deficient: bool
+    is_collinear: bool
+    status: ModelDiagnosticStatus = ModelDiagnosticStatus.HEALTHY
+    warnings: List[str] = Field(default_factory=list)
+
+
+class CalculateFactorRiskRequest(BaseModel):
+    """Request payload to calculate portfolio multi-factor risk decomposition."""
+    portfolio_id: str
+    account_id: Optional[str] = None
+    as_of: Optional[datetime] = None
+    model_id: str = "FAMA_FRENCH_6"
+    factor_ids: Optional[List[str]] = None
+    benchmark_id: Optional[str] = None
+    annualization_factor: float = Field(default=252.0, ge=1.0)
+
+
+class FactorRiskRunDTO(BaseModel):
+    """Full execution output of portfolio multi-factor risk decomposition."""
+    run_id: str
+    portfolio_id: str
+    as_of: str
+    model_id: str
+    model_version: str
+    factor_ids: List[str]
+    factor_exposures: Dict[str, float]
+    benchmark_exposures: Optional[Dict[str, float]] = None
+    active_exposures: Optional[Dict[str, float]] = None
+    systematic_variance: float
+    specific_variance: float
+    total_variance: float
+    total_volatility: float
+    factor_contributions: List[FactorRiskContributionDTO]
+    specific_risk_contribution: float
+    specific_variance_contribution: float
+    security_exposures: List[SecurityFactorExposureDTO]
+    factor_covariance_matrix: List[List[float]]
+    diagnostics: FactorModelDiagnosticsDTO
+    is_reconciled: bool
+    reconciliation_diff: float
+    created_at: str
+
+
+class ConcentrationItemDTO(BaseModel):
+    """Single item bucket in a concentration partition."""
+    identifier: str
+    name: str
+    dimension: ConcentrationDimension
+    weight: float
+    market_value: float
+    rank: int
+    securities_count: int = 1
+    security_symbols: List[str] = Field(default_factory=list)
+
+
+class ConcentrationSnapshotDTO(BaseModel):
+    """Herfindahl-Hirschman index, effective holdings, and Top-N concentration."""
+    portfolio_id: str
+    as_of: str
+    dimension: ConcentrationDimension
+    hhi: float
+    effective_number_of_holdings: float
+    top_1_weight: float
+    top_3_weight: float
+    top_5_weight: float
+    top_10_weight: float
+    items: List[ConcentrationItemDTO]
+    total_positions_count: int
+    total_issuers_count: int
+    coverage_ratio: float = 1.0
+
+
+class CurrencyExposureItemDTO(BaseModel):
+    """Currency denomination exposure and estimated economic sensitivity."""
+    currency: str
+    weight: float
+    market_value: float
+    cash_market_value: float
+    exposure_type: CurrencyExposureType
+    historical_fx_volatility: Optional[float] = None
+    fx_sensitivity_beta: Optional[float] = None
+
+
+class CurrencyRiskSnapshotDTO(BaseModel):
+    """Portfolio currency risk, FX volatility, and base/local decomposition."""
+    portfolio_id: str
+    as_of: str
+    reporting_currency: str
+    exposures: List[CurrencyExposureItemDTO]
+    foreign_currency_weight: float
+    foreign_currency_market_value: float
+    base_local_interaction: Dict[str, float] = Field(default_factory=dict)
+    cross_currency_correlations: Optional[Dict[str, Dict[str, float]]] = None
+
+
+class SectorRiskItemDTO(BaseModel):
+    """Sector Euler risk contribution and standalone volatility."""
+    sector_name: str
+    weight: float
+    standalone_volatility: Optional[float] = None
+    variance_contribution: float
+    volatility_contribution: float
+    percentage_of_variance: float
+    benchmark_weight: Optional[float] = None
+    active_weight: Optional[float] = None
+
+
+class IndustryRiskItemDTO(BaseModel):
+    """Industry drilldown Euler risk contribution."""
+    sector_name: str
+    industry_name: str
+    weight: float
+    variance_contribution: float
+    volatility_contribution: float
+
+
+class SectorRiskSnapshotDTO(BaseModel):
+    """Portfolio sector and industry Euler risk attribution."""
+    portfolio_id: str
+    as_of: str
+    portfolio_variance: float
+    portfolio_volatility: float
+    sectors: List[SectorRiskItemDTO]
+    industries: List[IndustryRiskItemDTO]
+    sector_correlation_matrix: Optional[Dict[str, Dict[str, float]]] = None
+    is_reconciled: bool = True
+    reconciliation_diff: float = 0.0
+
+
+class CrossExposureCellDTO(BaseModel):
+    """Cell value in a 2D cross-exposure matrix."""
+    row_key: str
+    col_key: str
+    value: float
+    unit: str = "WEIGHT_PERCENT"
+
+
+class CrossExposureMatrixDTO(BaseModel):
+    """Two-dimensional cross-exposure matrix."""
+    row_dimension: str
+    col_dimension: str
+    row_keys: List[str]
+    col_keys: List[str]
+    cells: List[CrossExposureCellDTO]
+    unit: str = "WEIGHT_PERCENT"

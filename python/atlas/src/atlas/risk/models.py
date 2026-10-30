@@ -10,6 +10,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .enums import (
     AnnualizationPolicy,
+    ConcentrationDimension,
+    CurrencyExposureType,
+    DataCoverageStatus,
+    DrawdownEpisodeStatus,
+    ExpectedShortfallMethod,
+    FactorFamily,
+    FactorReturnBasis,
+    KupiecTestStatus,
+    ModelDiagnosticStatus,
     DataCoverageStatus,
     DrawdownEpisodeStatus,
     ExpectedShortfallMethod,
@@ -302,7 +311,6 @@ class TailRiskCalculationRun:
     warnings: List[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
     input_hash: str = ""
 
     @property
@@ -533,7 +541,6 @@ class VaRBacktestRun:
     kupiec_test: KupiecTestResult
     created_at: datetime = field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
 
     @property
     def start_date(self) -> datetime:
@@ -569,3 +576,210 @@ class PortfolioRiskSnapshot:
     completed_at: Optional[datetime] = None
 
 
+
+
+# ---------------------------------------------------------------------------
+# Stage 117: Factor, Concentration, Currency, and Sector Risk Domain Models
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RiskFactorDefinition:
+    """Canonical factor specification in the factor registry."""
+    factor_id: str
+    factor_code: str
+    factor_name: str
+    family: FactorFamily
+    description: str
+    methodology: str
+    geographical_scope: str = "GLOBAL"
+    currency: str = "USD"
+    return_basis: FactorReturnBasis = FactorReturnBasis.EXCESS_RETURN
+    version: str = "1.0.0"
+
+
+@dataclass
+class SecurityFactorExposure:
+    """Estimated systematic factor loadings and regression diagnostics for an instrument."""
+    symbol: str
+    factor_betas: Dict[str, float]
+    intercept: float = 0.0
+    residual_variance: float = 0.0
+    r_squared: float = 0.0
+    t_stats: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
+class FactorRiskContribution:
+    """Analytical risk contribution of a single factor to portfolio variance and volatility."""
+    factor_id: str
+    factor_name: str
+    portfolio_exposure: float
+    variance_contribution: float
+    volatility_contribution: float
+    percentage_of_variance: float
+
+
+@dataclass
+class FactorModelDiagnostics:
+    """Regression health and collinearity diagnostics."""
+    observation_count: int
+    factor_count: int
+    design_matrix_rank: int
+    condition_number: float
+    is_rank_deficient: bool
+    is_collinear: bool
+    status: ModelDiagnosticStatus = ModelDiagnosticStatus.HEALTHY
+    warnings: List[str] = field(default_factory=list)
+
+
+@dataclass
+class FactorRiskRun:
+    """Executed multi-factor portfolio risk decomposition."""
+    run_id: str
+    portfolio_id: str
+    as_of: datetime
+    model_id: str
+    model_version: str
+    factor_ids: List[str]
+    factor_exposures: Dict[str, float]
+    benchmark_exposures: Optional[Dict[str, float]]
+    active_exposures: Optional[Dict[str, float]]
+    systematic_variance: float
+    specific_variance: float
+    total_variance: float
+    total_volatility: float
+    factor_contributions: List[FactorRiskContribution]
+    specific_risk_contribution: float
+    specific_variance_contribution: float
+    security_exposures: List[SecurityFactorExposure]
+    factor_covariance_matrix: List[List[float]]
+    diagnostics: FactorModelDiagnostics
+    is_reconciled: bool
+    reconciliation_diff: float
+    created_at: datetime = field(default_factory=datetime.utcnow)
+
+    @property
+    def portfolio_exposures(self) -> Dict[str, float]:
+        return self.factor_exposures
+
+    @property
+    def portfolio_volatility(self) -> float:
+        return self.total_volatility
+
+    @property
+    def active_factor_exposures(self) -> Optional[Dict[str, float]]:
+        return self.active_exposures
+
+
+@dataclass
+class ConcentrationItem:
+    """Individual bucket entry in a concentration partition."""
+    identifier: str
+    name: str
+    dimension: ConcentrationDimension
+    weight: float
+    market_value: float
+    rank: int
+    securities_count: int = 1
+    security_symbols: List[str] = field(default_factory=list)
+
+
+@dataclass
+class ConcentrationSnapshot:
+    """Herfindahl-Hirschman index, effective holdings count, and Top-N concentration."""
+    portfolio_id: str
+    as_of: datetime
+    dimension: ConcentrationDimension
+    hhi: float
+    effective_number_of_holdings: float
+    top_1_weight: float
+    top_3_weight: float
+    top_5_weight: float
+    top_10_weight: float
+    items: List[ConcentrationItem]
+    total_positions_count: int
+    total_issuers_count: int
+    coverage_ratio: float = 1.0
+
+
+@dataclass
+class CurrencyExposureItem:
+    """Direct denomination and estimated economic sensitivity for a single currency."""
+    currency: str
+    weight: float
+    market_value: float
+    cash_market_value: float
+    exposure_type: CurrencyExposureType
+    historical_fx_volatility: Optional[float] = None
+    fx_sensitivity_beta: Optional[float] = None
+
+
+@dataclass
+class CurrencyRiskSnapshot:
+    """Consolidated portfolio currency risk, FX volatility, and base/local decomposition."""
+    portfolio_id: str
+    as_of: datetime
+    reporting_currency: str
+    exposures: List[CurrencyExposureItem]
+    foreign_currency_weight: float
+    foreign_currency_market_value: float
+    base_local_interaction: Dict[str, float] = field(default_factory=dict)
+    cross_currency_correlations: Optional[Dict[str, Dict[str, float]]] = None
+
+
+@dataclass
+class SectorRiskItem:
+    """Euler risk contribution and standalone volatility of an individual economic sector."""
+    sector_name: str
+    weight: float
+    standalone_volatility: Optional[float]
+    variance_contribution: float
+    volatility_contribution: float
+    percentage_of_variance: float
+    benchmark_weight: Optional[float] = None
+    active_weight: Optional[float] = None
+
+
+@dataclass
+class IndustryRiskItem:
+    """Drilldown hierarchical risk contribution for an industry within a sector."""
+    sector_name: str
+    industry_name: str
+    weight: float
+    variance_contribution: float
+    volatility_contribution: float
+
+
+@dataclass
+class SectorRiskSnapshot:
+    """Complete portfolio sector and industry Euler risk attribution."""
+    portfolio_id: str
+    as_of: datetime
+    portfolio_variance: float
+    portfolio_volatility: float
+    sectors: List[SectorRiskItem]
+    industries: List[IndustryRiskItem]
+    sector_correlation_matrix: Optional[Dict[str, Dict[str, float]]] = None
+    is_reconciled: bool = True
+    reconciliation_diff: float = 0.0
+
+
+@dataclass
+class CrossExposureCell:
+    """Value at the intersection of two exposure dimensions."""
+    row_key: str
+    col_key: str
+    value: float
+    unit: str = "WEIGHT_PERCENT"
+
+
+@dataclass
+class CrossExposureMatrix:
+    """Two-dimensional cross-exposure distribution (e.g. Factor x Sector, Currency x Sector)."""
+    row_dimension: str
+    col_dimension: str
+    row_keys: List[str]
+    col_keys: List[str]
+    cells: List[CrossExposureCell]
+    unit: str = "WEIGHT_PERCENT"

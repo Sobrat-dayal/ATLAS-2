@@ -21,6 +21,12 @@ import {
   getRiskScenarios,
   getTailDistribution,
   runVaRBacktest,
+  calculateFactorRisk,
+  getPortfolioFactorRisk,
+  getPortfolioConcentration,
+  getPortfolioCurrencyRisk,
+  getPortfolioSectorRisk,
+  getPortfolioCrossExposure,
 } from "@/lib/risk/api";
 import {
   AnnualizationPolicy,
@@ -42,17 +48,30 @@ import {
   VaRBacktestRunDTO,
   VaRModelType,
   VolatilityResponseDTO,
+  CalculateFactorRiskRequest,
+  ConcentrationDimension,
+  ConcentrationSnapshotDTO,
+  CrossExposureMatrixDTO,
+  CurrencyRiskSnapshotDTO,
+  FactorRiskRunDTO,
+  SectorRiskSnapshotDTO,
+  SecurityFactorExposureDTO,
 } from "@/lib/risk/types";
 
 export type RiskTab =
   | "overview"
+  | "factors"
+  | "concentration"
+  | "currency"
+  | "sectors"
+  | "cross_exposure"
+  | "tail_risk"
+  | "scenarios"
+  | "diagnostics"
   | "volatility"
   | "drawdowns"
   | "benchmark"
   | "contributions"
-  | "tail_risk"
-  | "scenarios"
-  | "diagnostics"
   | "models"
   | "data_quality"
   | "runs";
@@ -103,6 +122,21 @@ export interface UseRiskTerminalReturn {
   backtestWindowSize: number;
   runningBacktest: boolean;
 
+  // Stage 117 State
+  factorRun: FactorRiskRunDTO | null;
+  calculatingFactors: boolean;
+  concentrationSnapshot: ConcentrationSnapshotDTO | null;
+  selectedConcentrationDimension: ConcentrationDimension;
+  currencySnapshot: CurrencyRiskSnapshotDTO | null;
+  sectorSnapshot: SectorRiskSnapshotDTO | null;
+  crossExposureMatrix: CrossExposureMatrixDTO | null;
+  selectedCrossRowDim: string;
+  selectedCrossColDim: string;
+  loadingConcentration: boolean;
+  loadingCurrency: boolean;
+  loadingSector: boolean;
+  loadingCross: boolean;
+
   // Setters & Actions
   setSelectedPortfolioId: (id: string) => void;
   setSelectedAccountId: (id: string) => void;
@@ -133,6 +167,15 @@ export interface UseRiskTerminalReturn {
     overrideConf?: number,
     overrideWindow?: number
   ) => Promise<void>;
+  // Stage 117 Actions
+  calculateFactorsAction: (modelId?: string, factorIds?: string[]) => Promise<void>;
+  loadConcentrationAction: (dim?: ConcentrationDimension) => Promise<void>;
+  loadCurrencyRiskAction: (reportingCurrency?: string) => Promise<void>;
+  loadSectorRiskAction: () => Promise<void>;
+  loadCrossExposureAction: (rowDim?: string, colDim?: string) => Promise<void>;
+  setSelectedConcentrationDimension: (dim: ConcentrationDimension) => void;
+  setSelectedCrossRowDim: (dim: string) => void;
+  setSelectedCrossColDim: (dim: string) => void;
   refresh: () => Promise<void>;
 }
 
@@ -185,6 +228,21 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
   const [backtestConfidence, setBacktestConfidence] = useState<number>(0.95);
   const [backtestWindowSize, setBacktestWindowSize] = useState<number>(250);
   const [runningBacktest, setRunningBacktest] = useState<boolean>(false);
+
+  // Stage 117 State
+  const [factorRun, setFactorRun] = useState<FactorRiskRunDTO | null>(null);
+  const [calculatingFactors, setCalculatingFactors] = useState<boolean>(false);
+  const [concentrationSnapshot, setConcentrationSnapshot] = useState<ConcentrationSnapshotDTO | null>(null);
+  const [selectedConcentrationDimension, setSelectedConcentrationDimension] = useState<ConcentrationDimension>("SECURITY");
+  const [currencySnapshot, setCurrencySnapshot] = useState<CurrencyRiskSnapshotDTO | null>(null);
+  const [sectorSnapshot, setSectorSnapshot] = useState<SectorRiskSnapshotDTO | null>(null);
+  const [crossExposureMatrix, setCrossExposureMatrix] = useState<CrossExposureMatrixDTO | null>(null);
+  const [selectedCrossRowDim, setSelectedCrossRowDim] = useState<string>("FACTOR");
+  const [selectedCrossColDim, setSelectedCrossColDim] = useState<string>("SECTOR");
+  const [loadingConcentration, setLoadingConcentration] = useState<boolean>(false);
+  const [loadingCurrency, setLoadingCurrency] = useState<boolean>(false);
+  const [loadingSector, setLoadingSector] = useState<boolean>(false);
+  const [loadingCross, setLoadingCross] = useState<boolean>(false);
 
   // Load portfolios list and catalogs on mount
   useEffect(() => {
@@ -246,7 +304,7 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     try {
       const accountParam = selectedAccountId === "ALL" ? undefined : selectedAccountId;
 
-      const [summaryRes, volRes, ddRes, benchRes, contribRes, runsRes, tailRes] =
+      const [summaryRes, volRes, ddRes, benchRes, contribRes, runsRes, tailRes, factorRes, concRes, currRes, secRes, crossRes] =
         await Promise.all([
           getPortfolioRiskSummary(selectedPortfolioId, accountParam).catch(() => null),
           getPortfolioVolatility(selectedPortfolioId, {
@@ -266,6 +324,11 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
             confidence: selectedConfidence,
             horizon: selectedHorizon,
           }).catch(() => null),
+          getPortfolioFactorRisk(selectedPortfolioId).catch(() => null),
+          getPortfolioConcentration(selectedPortfolioId, selectedConcentrationDimension).catch(() => null),
+          getPortfolioCurrencyRisk(selectedPortfolioId).catch(() => null),
+          getPortfolioSectorRisk(selectedPortfolioId).catch(() => null),
+          getPortfolioCrossExposure(selectedPortfolioId, selectedCrossRowDim, selectedCrossColDim).catch(() => null),
         ]);
 
       setSummary(summaryRes);
@@ -290,6 +353,12 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
             .catch(() => {});
         }
       }
+
+      if (factorRes) setFactorRun(factorRes);
+      if (concRes) setConcentrationSnapshot(concRes);
+      if (currRes) setCurrencySnapshot(currRes);
+      if (secRes) setSectorSnapshot(secRes);
+      if (crossRes) setCrossExposureMatrix(crossRes);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -304,6 +373,9 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     selectedTailModel,
     selectedConfidence,
     selectedHorizon,
+    selectedConcentrationDimension,
+    selectedCrossRowDim,
+    selectedCrossColDim,
   ]);
 
   useEffect(() => {
@@ -488,6 +560,106 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     [selectedPortfolioId, selectedAccountId, backtestModel, backtestConfidence, backtestWindowSize]
   );
 
+  // Stage 117: Calculate multi-factor risk
+  const calculateFactorsAction = useCallback(
+    async (modelId?: string, factorIds?: string[]) => {
+      if (!selectedPortfolioId) return;
+      setCalculatingFactors(true);
+      setError(null);
+      try {
+        const accountParam = selectedAccountId === "ALL" ? undefined : selectedAccountId;
+        const res = await calculateFactorRisk({
+          portfolio_id: selectedPortfolioId,
+          account_id: accountParam,
+          model_id: modelId || "FAMA_FRENCH_6",
+          factor_ids: factorIds,
+        });
+        setFactorRun(res);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+      } finally {
+        setCalculatingFactors(false);
+      }
+    },
+    [selectedPortfolioId, selectedAccountId]
+  );
+
+  const loadConcentrationAction = useCallback(
+    async (dim?: ConcentrationDimension) => {
+      if (!selectedPortfolioId) return;
+      const targetDim = dim || selectedConcentrationDimension;
+      setLoadingConcentration(true);
+      setError(null);
+      try {
+        const res = await getPortfolioConcentration(selectedPortfolioId, targetDim);
+        setConcentrationSnapshot(res);
+        if (dim) setSelectedConcentrationDimension(dim);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+      } finally {
+        setLoadingConcentration(false);
+      }
+    },
+    [selectedPortfolioId, selectedConcentrationDimension]
+  );
+
+  const loadCurrencyRiskAction = useCallback(
+    async (reportingCurrency?: string) => {
+      if (!selectedPortfolioId) return;
+      setLoadingCurrency(true);
+      setError(null);
+      try {
+        const res = await getPortfolioCurrencyRisk(selectedPortfolioId, reportingCurrency);
+        setCurrencySnapshot(res);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+      } finally {
+        setLoadingCurrency(false);
+      }
+    },
+    [selectedPortfolioId]
+  );
+
+  const loadSectorRiskAction = useCallback(async () => {
+    if (!selectedPortfolioId) return;
+    setLoadingSector(true);
+    setError(null);
+    try {
+      const res = await getPortfolioSectorRisk(selectedPortfolioId);
+      setSectorSnapshot(res);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+    } finally {
+      setLoadingSector(false);
+    }
+  }, [selectedPortfolioId]);
+
+  const loadCrossExposureAction = useCallback(
+    async (rowDim?: string, colDim?: string) => {
+      if (!selectedPortfolioId) return;
+      const r = rowDim || selectedCrossRowDim;
+      const c = colDim || selectedCrossColDim;
+      setLoadingCross(true);
+      setError(null);
+      try {
+        const res = await getPortfolioCrossExposure(selectedPortfolioId, r, c);
+        setCrossExposureMatrix(res);
+        if (rowDim) setSelectedCrossRowDim(rowDim);
+        if (colDim) setSelectedCrossColDim(colDim);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+      } finally {
+        setLoadingCross(false);
+      }
+    },
+    [selectedPortfolioId, selectedCrossRowDim, selectedCrossColDim]
+  );
+
   return {
     portfolios,
     selectedPortfolioId,
@@ -534,6 +706,21 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     backtestWindowSize,
     runningBacktest,
 
+    // Stage 117 State
+    factorRun,
+    calculatingFactors,
+    concentrationSnapshot,
+    selectedConcentrationDimension,
+    currencySnapshot,
+    sectorSnapshot,
+    crossExposureMatrix,
+    selectedCrossRowDim,
+    selectedCrossColDim,
+    loadingConcentration,
+    loadingCurrency,
+    loadingSector,
+    loadingCross,
+
     // Setters & Actions
     setSelectedPortfolioId,
     setSelectedAccountId,
@@ -556,6 +743,16 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     createScenarioAction,
     compareScenariosAction,
     runBacktestAction,
+
+    // Stage 117 Actions
+    calculateFactorsAction,
+    loadConcentrationAction,
+    loadCurrencyRiskAction,
+    loadSectorRiskAction,
+    loadCrossExposureAction,
+    setSelectedConcentrationDimension,
+    setSelectedCrossRowDim,
+    setSelectedCrossColDim,
     refresh: loadRiskData,
   };
 }

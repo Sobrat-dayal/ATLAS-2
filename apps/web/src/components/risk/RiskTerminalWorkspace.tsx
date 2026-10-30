@@ -19,6 +19,8 @@ import {
   ShieldCheck,
   Sliders,
   Zap,
+  Globe,
+  Grid,
 } from "lucide-react";
 import { BenchmarkSensitivityPanel } from "./BenchmarkSensitivityPanel";
 import { CovarianceDiagnosticsPanel } from "./CovarianceDiagnosticsPanel";
@@ -41,6 +43,13 @@ import { ScenarioBuilderModal } from "./scenarios/ScenarioBuilderModal";
 import { ScenarioResultsWorkspace } from "./scenarios/ScenarioResultsWorkspace";
 import { VaRExceptionBacktestPanel } from "./diagnostics/VaRExceptionBacktestPanel";
 
+// Stage 117 Components
+import { FactorRiskWorkspace } from "./factors/FactorRiskWorkspace";
+import { ConcentrationWorkspace } from "./concentration/ConcentrationWorkspace";
+import { CurrencyRiskWorkspace } from "./currency/CurrencyRiskWorkspace";
+import { SectorRiskWorkspace } from "./sectors/SectorRiskWorkspace";
+import { CrossExposureWorkspace } from "./cross/CrossExposureWorkspace";
+
 interface RiskTerminalWorkspaceProps {
   initialPortfolioId?: string;
 }
@@ -51,13 +60,18 @@ export function RiskTerminalWorkspace({ initialPortfolioId }: RiskTerminalWorksp
 
   const tabs: { id: RiskTab; label: string; icon: React.ReactNode }[] = [
     { id: "overview", label: "Overview", icon: <BarChart3 className="h-3.5 w-3.5" /> },
+    { id: "factors", label: "Multi-Factor", icon: <Cpu className="h-3.5 w-3.5 text-sky-400" /> },
+    { id: "concentration", label: "Concentration & HHI", icon: <Scale className="h-3.5 w-3.5 text-purple-400" /> },
+    { id: "currency", label: "Currency & FX", icon: <Globe className="h-3.5 w-3.5 text-emerald-400" /> },
+    { id: "sectors", label: "Sector Attribution", icon: <PieChart className="h-3.5 w-3.5 text-amber-400" /> },
+    { id: "cross_exposure", label: "Cross-Exposure", icon: <Grid className="h-3.5 w-3.5 text-indigo-400" /> },
     { id: "tail_risk", label: "VaR & Expected Shortfall", icon: <ShieldAlert className="h-3.5 w-3.5 text-rose-400" /> },
     { id: "scenarios", label: "Scenario Stress Testing", icon: <Zap className="h-3.5 w-3.5 text-amber-400" /> },
     { id: "diagnostics", label: "VaR Backtest & Kupiec", icon: <Scale className="h-3.5 w-3.5 text-emerald-400" /> },
     { id: "volatility", label: "Rolling Volatility", icon: <Activity className="h-3.5 w-3.5" /> },
     { id: "drawdowns", label: "Drawdown Analytics", icon: <Flame className="h-3.5 w-3.5" /> },
     { id: "benchmark", label: "Benchmark Sensitivity", icon: <Compass className="h-3.5 w-3.5" /> },
-    { id: "contributions", label: "Euler Contributions", icon: <PieChart className="h-3.5 w-3.5" /> },
+    { id: "contributions", label: "Euler Contributions", icon: <Layers className="h-3.5 w-3.5" /> },
     { id: "models", label: "Covariance & Diagnostics", icon: <Cpu className="h-3.5 w-3.5" /> },
     { id: "data_quality", label: "Data Quality & Coverage", icon: <Database className="h-3.5 w-3.5" /> },
     { id: "runs", label: "Audit Runs", icon: <History className="h-3.5 w-3.5" /> },
@@ -236,6 +250,57 @@ export function RiskTerminalWorkspace({ initialPortfolioId }: RiskTerminalWorksp
                   comparison={terminal.scenarioComparison}
                 />
               </div>
+            )}
+
+            {/* Stage 117 Tab: Multi-Factor Risk */}
+            {terminal.activeTab === "factors" && (
+              <FactorRiskWorkspace
+                factorRun={terminal.factorRun}
+                securityExposures={terminal.factorRun?.security_exposures}
+                calculating={terminal.calculatingFactors}
+                onRecalculate={() => terminal.calculateFactorsAction()}
+              />
+            )}
+
+            {/* Stage 117 Tab: Concentration & HHI */}
+            {terminal.activeTab === "concentration" && (
+              <ConcentrationWorkspace
+                snapshot={terminal.concentrationSnapshot}
+                selectedDimension={terminal.selectedConcentrationDimension}
+                onSelectDimension={terminal.loadConcentrationAction}
+                loading={terminal.loadingConcentration}
+                onRefresh={() => terminal.loadConcentrationAction()}
+              />
+            )}
+
+            {/* Stage 117 Tab: Currency & FX Risk */}
+            {terminal.activeTab === "currency" && (
+              <CurrencyRiskWorkspace
+                snapshot={terminal.currencySnapshot}
+                loading={terminal.loadingCurrency}
+                onRefresh={() => terminal.loadCurrencyRiskAction()}
+              />
+            )}
+
+            {/* Stage 117 Tab: Sector & Industry Attribution */}
+            {terminal.activeTab === "sectors" && (
+              <SectorRiskWorkspace
+                snapshot={terminal.sectorSnapshot}
+                loading={terminal.loadingSector}
+                onRefresh={terminal.loadSectorRiskAction}
+              />
+            )}
+
+            {/* Stage 117 Tab: 2D Cross-Exposure */}
+            {terminal.activeTab === "cross_exposure" && (
+              <CrossExposureWorkspace
+                matrix={terminal.crossExposureMatrix}
+                selectedRowDim={terminal.selectedCrossRowDim}
+                selectedColDim={terminal.selectedCrossColDim}
+                onSelectDimensions={terminal.loadCrossExposureAction}
+                loading={terminal.loadingCross}
+                onRefresh={() => terminal.loadCrossExposureAction()}
+              />
             )}
 
             {/* Stage 116 Tab: VaR Backtest & Kupiec */}
