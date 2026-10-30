@@ -195,6 +195,7 @@ export function PortfolioHeader({
                 { id: "allocation", label: "Allocation & Exposures" },
                 { id: "attribution", label: "Attribution Analytics" },
                 { id: "optimization", label: "Optimization & Frontier" },
+                { id: "risk", label: "Risk Management" },
                 { id: "holdings", label: "Holdings & Lots" },
                 { id: "transactions", label: "Transaction Journal" },
                 { id: "cash", label: "Cash Workspace" },

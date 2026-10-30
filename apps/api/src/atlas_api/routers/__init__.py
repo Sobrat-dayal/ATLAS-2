@@ -49,6 +49,7 @@ from .realtime import router as realtime_router
 from .relationships import router as relationships_router
 from .research import router as research_router
 from .resolution import router as resolution_router
+from .risk import router as risk_router
 from .screeners import router as screeners_router
 from .search import router as search_router
 from .watchlists import router as watchlists_router
@@ -106,3 +107,4 @@ api_router.include_router(activity_router, prefix="")
 api_router.include_router(tasks_router, prefix="")
 api_router.include_router(approvals_router, prefix="")
 api_router.include_router(portfolios_router, prefix="")
+api_router.include_router(risk_router, prefix="")

@@ -1551,6 +1551,52 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
 - **Documentation**: See `docs/PORTFOLIO_OPTIMIZATION_ENGINE.md` and `docs/DECISIONS.md`.
 
+## Portfolio Risk Foundation & Core Market-Risk Analytics (Stage 115)
+- **Universal Risk Architecture & Registries**:
+  - Polymorphic `RiskSubject` supporting `PORTFOLIO`, `ACCOUNT`, `BENCHMARK`, and individual `SECURITY`.
+  - Strict read-only decision support boundary: never mutates Stage 110 transactions, positions, or cash balances, and never executes live orders.
+  - 24 typed domain exceptions (`RiskInsufficientObservationsError`, `RiskBenchmarkVarianceZeroError`, `RiskCovarianceNotPositiveSemiDefiniteError`, etc.).
+  - Central metadata registries for 16 risk metrics and 7 risk model engines with mathematical formulas and limitation caveats.
+- **Volatility & Annualization Standards**:
+  - Bessel-corrected sample variance $s^2 = \frac{1}{T-1} \sum (R_t - \bar{R})^2$ avoiding sample bias.
+  - Annualized volatility $\sigma_{annual} = s \sqrt{K}$ with standard period constants ($K = 252$ for daily, $K = 52$ for weekly, $K = 12$ for monthly).
+  - Validated Part XV reference fixture: 4 alternating returns $[\pm 1\%]$ yields $s \approx 1.1547\%$ and annualized volatility $\sigma \approx 18.3303\%$.
+  - No-hindsight rolling volatility engine over arbitrary windows (20D, 60D, 120D, 252D).
+- **Drawdown & High Watermark Analytics**:
+  - Derived from Stage 111 cash-flow-neutral wealth index $W_t$, isolating pure market losses from capital movements.
+  - Running peak detection $P_t = \max_{0 \le \tau \le t} W_\tau$, continuous drawdown series $D_t = W_t/P_t - 1$, Max Drawdown (MDD), and Current Drawdown (CDD).
+  - Validated Part XXI reference fixture: wealth index $[100, 120, 90, 99, 130]$ produces peak $120$, trough $90$, MDD $-25.0\%$, and empirical recovery at observation index 4 ($130 > 120$).
+  - Drawdown episode extraction with time to trough, recovery horizons, and status (`RECOVERED` vs `ONGOING`).
+- **Benchmark Sensitivity & Systematic Risk**:
+  - Timestamp-aligned covariance $\text{Cov}(P, B)$, Pearson correlation $\rho$, and historical beta $\beta = \frac{\text{Cov}(P, B)}{Var(B)}$.
+  - Validated Part XXVIII reference fixture: $R_P = 2 R_B \implies \beta = 2.0, \rho = 1.0$.
+  - Detection and explicit warning on zero benchmark variance (`RiskBenchmarkVarianceZeroError`).
+  - Annualized active tracking error $TE = \sqrt{252} \cdot s_{P - B}$.
+- **Covariance Diagnostics & Euler Risk Decomposition**:
+  - Parametric portfolio volatility $\sigma_P = \sqrt{w^T \Sigma w}$ with Ledoit-Wolf diagonal shrinkage and eigenvalue inspection ($\lambda_{\min} \ge 10^{-7}$).
+  - Condition number monitoring $\kappa(\Sigma)$ and diversification ratio $DR = \frac{\sum w_i \sigma_i}{\sigma_P} \ge 1.0$.
+  - Euler risk decomposition: Variance Contribution ($VC_i = w_i(\Sigma w)_i$), Marginal Volatility ($MRC_i = \frac{(\Sigma w)_i}{\sigma_P}$), Component Volatility ($CRC_i = w_i MRC_i$), and Percentage Contribution ($PCR_i = \frac{CRC_i}{\sigma_P}$).
+  - Validated Part XXXV & XL reference fixture: 2 uncorrelated assets with $\Sigma = \text{diag}(0.04, 0.09)$ and weights $w=[0.5, 0.5]$ produce $\sigma_P^2 = 0.0325$, $\sigma_P \approx 18.0278\%$, $PCR = [30.7692\%, 69.2308\%]$, strictly reconciling $\sum CRC_i \equiv \sigma_P$ and $\sum PCR_i \equiv 100\%$.
+  - Preserved signed negative risk contributions for hedges and inverse positions.
+- **Multi-Currency & Data Quality Governance**:
+  - Geometric compounding $1 + R_{base} = (1 + R_{local})(1 + R_{FX})$ and cash volatility.
+  - Observation coverage ratio, missing date interval audit, staleness detection, and cryptographic input audit manifests.
+- **REST API Endpoints & Multi-Tenant Security**:
+  - 13 production REST endpoints under `/api/v1/risk/...` covering metrics, models, calculations, input sources, portfolio summaries, historical volatility, drawdowns, benchmark sensitivity, contributions, data quality, and audit runs.
+  - Multi-tenant isolation and ownership checks across all endpoints.
+- **Bloomberg-Style Risk Terminal (`/risk` & `/portfolios` -> "Risk Management")**:
+  - Master multi-pane workspace with Summary KPI cards, interactive SVG rolling volatility chart, underwater drawdown valley fill with peak/trough markers, episode breakdown table, benchmark sensitivity panel, covariance diagnostics with correlation heatmap matrix, Euler risk contribution table with reconciliation footer, model inspector, data quality audit panel, and run history.
+- **Strict Roadmap Scope Boundaries**:
+  - Stage 115 focuses strictly on market-risk foundations (volatility, drawdowns, benchmark sensitivity, covariance, Euler contributions).
+  - Strictly deferred: Value at Risk (VaR) and Expected Shortfall to Stage 116, Stress Testing to Stage 117, Risk Limits and Escalations to Stage 118, and Autonomous Execution to Stages 143–149.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_risk_foundation_v1.py` (12/12 passed).
+  - Full portfolio regression suite: 52/52 passed (Stages 110, 111, 112, 113, 114, 115).
+  - Frontend unit tests: `pnpm --filter web test` (148/148 passed).
+  - Frontend typecheck: `pnpm --filter web exec tsc --noEmit` (0 errors).
+  - Production build: `pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
+- **Documentation**: See `docs/PORTFOLIO_RISK_FOUNDATION.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

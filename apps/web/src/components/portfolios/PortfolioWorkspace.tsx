@@ -15,6 +15,7 @@ import { PortfolioPerformanceWorkspace } from "./performance/PortfolioPerformanc
 import { PortfolioAllocationWorkspace } from "./exposure/PortfolioAllocationWorkspace";
 import { PortfolioAttributionWorkspace } from "./attribution/PortfolioAttributionWorkspace";
 import { PortfolioOptimizationWorkspace } from "./optimization/PortfolioOptimizationWorkspace";
+import { RiskTerminalWorkspace } from "@/components/risk/RiskTerminalWorkspace";
 import { PortfolioPositionInspector } from "./PortfolioPositionInspector";
 import { PortfolioValuationWorkspace } from "./PortfolioValuationWorkspace";
 import { TransactionCorrectionModal } from "./TransactionCorrectionModal";
@@ -222,6 +223,12 @@ export function PortfolioWorkspace() {
             {activeTab === "optimization" && (
               <PortfolioOptimizationWorkspace
                 portfolioId={activePortfolio.id}
+              />
+            )}
+
+            {activeTab === "risk" && (
+              <RiskTerminalWorkspace
+                initialPortfolioId={activePortfolio.id}
               />
             )}
 

@@ -10191,3 +10191,49 @@ This document records the major architectural and product decisions established.
 ### Bloomberg-Style Professional Optimization Workspaces
 999. **Bloomberg-Style Optimization Workspace**: Built professional frontend workspace under `/portfolios` "Optimization & Frontier" tab featuring Summary KPI cards, Interactive SVG Efficient Frontier chart, Current vs Candidate comparative table, Sector & Security Allocation shift chart, Constraint Builder with instant Feasibility Checker, Feasibility & Slacks Panel, Hypothetical Trade Proposals table with prominent institutional non-execution disclaimer, Solver Diagnostics inspector, Sensitivity Scenarios grid, Methodology Inspector, and Study Manager.
 1000. **Strict Roadmap Boundaries & Deferrals**: Stage 114 exclusively delivers portfolio optimization, quantitative asset allocation, efficient frontier modeling, and rebalancing proposals. Strictly deferred Stages 115–118 (Portfolio Risk / VaR / Stress Testing / Liquidity), Stage 143 (Backtesting), Stage 144 (Paper Trading), Stage 145 (Broker Sandbox), and Stages 146–149 (Autonomous Agents & Auto-Execution). Optimization candidates are analytical decision-support tools and never mutate the Stage 110 accounting ledger or place live market orders.
+
+
+## Stage 115: Portfolio Risk Foundation and Core Market-Risk Analytics
+
+### Canonical Risk Architecture & Subject Hierarchy
+1001. **Universal Risk Subject Hierarchy**: Established standard `RiskSubject` model polymorphic across `PORTFOLIO`, `ACCOUNT`, `BENCHMARK`, and individual `SECURITY`, enabling unified risk calculation pipelines across single and aggregated holdings.
+1002. **Decoupled Read-Only Decision Support**: Enforced strict architectural boundary ensuring risk engines operate purely as read-only analytical decision support, never mutating Stage 110 accounting transactions, positions, or cash balances, and never executing live orders.
+1003. **Typed Risk Domain Exception Hierarchy**: Built 24 typed domain exceptions inheriting from `RiskError` (`RiskInsufficientObservationsError`, `RiskBenchmarkVarianceZeroError`, `RiskCovarianceNotPositiveSemiDefiniteError`, `RiskDataCoverageDegradedError`, etc.) mapped to HTTP status codes.
+1004. **Central Metric & Model Registries**: Established formal metadata registries for 16 risk metrics and 7 risk model engines with mathematical formulations, annualization factors, allowed metrics, and explicit limitations.
+
+### Volatility & Annualization Standards
+1005. **Bessel-Corrected Sample Variance**: Enforced sample variance $s^2 = \frac{1}{T-1} \sum (R_t - \bar{R})^2$ using degrees of freedom $N-1$ (Bessel correction), strictly avoiding downward-biased population variance $N$ for finite sample series.
+1006. **Square-Root-of-Time Annualization Convention**: Annualized volatility as $\sigma_{annual} = s \sqrt{K}$ with standard period constants ($K = 252$ for daily, $K = 52$ for weekly, $K = 12$ for monthly), with explicit methodology disclosure of i.i.d. assumptions.
+1007. **Part XV Mathematical Reference Verification**: Validated reference fixture with 4 alternating returns $[+1\%, -1\%, +1\%, -1\%]$, yielding sample mean $0.0$, variance $\frac{0.0004}{3}$, period volatility $\approx 1.1547\%$, and annualized volatility ($K=252$) $\sigma_{annual} \approx 18.3303\%$.
+1008. **No-Hindsight Rolling Volatility Engine**: Enforced rolling window calculations computed strictly on past observations with rolling window sizes (20D, 60D, 120D, 252D) and completeness checks.
+
+### Drawdown & High Watermark Analytics
+1009. **Cash-Flow-Neutral Wealth Index Foundation**: Reused Stage 111 cash-flow-adjusted wealth index $W_t$ to ensure capital additions and withdrawals do not artificially trigger or erase drawdowns.
+1010. **Running Peak High Watermark Tracking**: Derived running peak $P_t = \max_{0 \le \tau \le t} W_\tau$ and continuous drawdown series $D_t = \frac{W_t}{P_t} - 1.0$.
+1011. **Part XXI Drawdown Reference Verification**: Validated reference fixture with wealth index $[100, 120, 90, 99, 130]$, producing peak 120, trough 90, maximum drawdown $-25.0\%$, and empirical recovery at observation index 4 ($130 > 120$).
+1012. **Drawdown Episode Extraction**: Engineered episode segmenter extracting discrete episodes with peak date/level, trough date/level, maximum drawdown, time to trough, recovery date, recovery duration, and recovery status (`RECOVERED` vs `ONGOING`).
+
+### Benchmark Sensitivity & Systematic Risk
+1013. **Timestamp-Aligned Covariance & Correlation**: Synchronized portfolio and benchmark return time series on exact matching observation dates, eliminating mismatched holiday and weekend artifacts.
+1014. **Part XXVIII Benchmark Reference Verification**: Validated reference fixture with portfolio returns $R_P = 2 R_B$, confirming beta $\beta = \frac{Cov(P, B)}{Var(B)} = 2.0$ and Pearson correlation $\rho = 1.0$ within $< 10^{-6}$ precision.
+1015. **Zero Benchmark Variance Exception Handling**: Detected degenerate constant or zero-variance benchmarks, raising `RiskBenchmarkVarianceZeroError` and gracefully surfacing `ZERO_VARIANCE` metric status.
+1016. **Active Tracking Error Measurement**: Calculated annualized tracking error $TE = \sqrt{252} \cdot s_{P - B}$ quantifying active dispersion relative to the benchmark.
+
+### Covariance Diagnostics & Euler Risk Decomposition
+1017. **Positive Semi-Definite (PSD) Validation**: Enforced mandatory eigenvalue inspection verifying minimum eigenvalue $\lambda_{\min}(\Sigma) \ge 10^{-7}$, automatically injecting Ledoit-Wolf diagonal loading jitter if ill-conditioned.
+1018. **Condition Number Health Monitoring**: Evaluated matrix condition number $\kappa(\Sigma) = \frac{\lambda_{\max}}{\lambda_{\min}}$ to alert on collinearity across portfolio constituents.
+1019. **Euler Volatility Decomposition**: Implemented Euler's homogeneous theorem decomposing portfolio volatility $\sigma_P = \sqrt{w^T \Sigma w}$ into Marginal Contributions $MRC_i = \frac{(\Sigma w)_i}{\sigma_P}$ and Component Contributions $CRC_i = w_i \cdot MRC_i$.
+1020. **Part XXXV & XL Euler Additivity Verification**: Validated reference fixture of 2 uncorrelated assets with $\Sigma = \text{diag}(0.04, 0.09)$ and weights $w=[0.5, 0.5]$, verifying portfolio variance $\sigma_P^2 = 0.0325$, volatility $\sigma_P \approx 18.0278\%$, percentage contributions $PCR = [30.7692\%, 69.2308\%]$, and strict Euler additivity $\sum CRC_i \equiv \sigma_P$ and $\sum PCR_i \equiv 1.0$.
+1021. **Negative Risk Contribution Preservation**: Preserved signed negative contributions for short positions, inverse funds, and negatively correlated hedging assets, reflecting genuine risk-reducing properties.
+
+### Multi-Currency & Data Quality Governance
+1022. **Geometric Multi-Currency Return Compounding**: Compounded local and FX returns geometrically via $1 + R_{base} = (1 + R_{local})(1 + R_{FX})$, avoiding first-order linear approximation errors.
+1023. **Observation Coverage & Gap Auditing**: Tracked required vs available vs matched observations, generating data coverage health badges (`FULL`, `ACCEPTABLE`, `DEGRADED`, `CRITICAL_GAPS`) and reporting missing intervals.
+1024. **Reproducible Calculation Manifests**: Bound every risk calculation to an immutable `RiskInputManifest` containing valuation IDs, performance run IDs, benchmark IDs, parameters, and an audit hash.
+
+### REST API & Frontend Risk Terminal
+1025. **13 Production REST Endpoints**: Implemented complete REST router under `/api/v1/risk/...` covering metrics, models, calculations, input sources, portfolio summaries, historical volatility, drawdowns, benchmark sensitivity, contributions, data quality, and audit runs.
+1026. **Strict Multi-Tenant Isolation**: Enforced ownership verification across all risk calculations and historical portfolio runs, returning HTTP 403/404 for unauthorized access.
+1027. **Dedicated Route `/risk` & Integrated Portfolios Tab**: Rendered the institutional `<RiskTerminalWorkspace />` on the canonical global route `/risk` while also embedding it in `/portfolios` under the "Risk Management" tab.
+1028. **Interactive SVG Visualizations**: Engineered high-density interactive charts for rolling volatility with window selection, underwater drawdown valley fills with peak/trough markers, and correlation heatmap matrix with hover inspection.
+1029. **Strict Roadmap Scope Boundaries**: Stage 115 focuses strictly on market-risk foundations (volatility, drawdowns, benchmark sensitivity, covariance, Euler contributions). Strictly deferred Value at Risk (VaR) and Expected Shortfall to Stage 116, Stress Testing to Stage 117, Risk Limits and Escalations to Stage 118, and Autonomous Execution to Stages 143–149.
