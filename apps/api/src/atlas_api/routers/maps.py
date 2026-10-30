@@ -47,8 +47,10 @@ from atlas.maps.views.service import map_view_service
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from ..auth.dependencies import get_current_user
+from .maps_globe import globe_router
 
 router = APIRouter(prefix="/maps", tags=["maps"])
+router.include_router(globe_router)
 
 
 @router.get("/config", response_model=MapConfigResponse)

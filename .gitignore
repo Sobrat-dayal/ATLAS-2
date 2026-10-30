@@ -18,6 +18,7 @@ node_modules/
 dist/
 build/
 coverage/
+apps/web/public/cesium/
 
 # OS/Editors
 .DS_Store

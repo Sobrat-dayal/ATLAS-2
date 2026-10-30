@@ -13,11 +13,15 @@ import {
 } from "lucide-react";
 import { AtlasMapSearch } from "./AtlasMapSearch";
 import { AtlasMapStyleSwitcher } from "./AtlasMapStyleSwitcher";
+import { GlobeModeSwitcher } from "./globe/GlobeModeSwitcher";
 import { GeographicSearchResult, MapBasemapStyle } from "@/lib/maps/types";
+import { RendererMode } from "@/lib/maps/globe/types";
 
 interface AtlasMapToolbarProps {
   currentStyleId: string;
   onStyleSelect: (style: MapBasemapStyle) => void;
+  rendererMode?: RendererMode;
+  onModeChange?: (mode: RendererMode) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   searchResults: GeographicSearchResult[];
@@ -42,6 +46,8 @@ interface AtlasMapToolbarProps {
 export function AtlasMapToolbar({
   currentStyleId,
   onStyleSelect,
+  rendererMode = "2D",
+  onModeChange,
   searchQuery,
   onSearchChange,
   searchResults,
@@ -64,8 +70,12 @@ export function AtlasMapToolbar({
 }: AtlasMapToolbarProps) {
   return (
     <div className="h-10 px-3 bg-atlas-surface-1 border-b border-atlas-border-default flex items-center justify-between gap-2 font-mono text-xs z-20 shrink-0">
-      {/* Left section: Panel toggles & Search */}
+      {/* Left section: Panel toggles & Search & Mode Switcher */}
       <div className="flex items-center gap-2">
+        {onModeChange && (
+          <GlobeModeSwitcher mode={rendererMode} onModeChange={onModeChange} />
+        )}
+
         <button
           type="button"
           onClick={onToggleLayerPanel}

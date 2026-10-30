@@ -110,6 +110,29 @@ class UserMapViewModel(Base):
     selected_feature_id = Column(String(128), nullable=True)
     revision = Column(Integer, nullable=False, default=1)
     map_schema_version = Column(String(32), nullable=False, default="1.0.0")
+    renderer_mode = Column(String(32), nullable=False, default="2D")
+    cesium_camera = Column(JSONB, nullable=True)
+    imagery_provider_id = Column(String(128), nullable=True)
+    terrain_provider_id = Column(String(128), nullable=True)
+    quality_profile = Column(String(64), nullable=True, default="balanced")
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.datetime.utcnow)
+
+
+class GlobeTilesetSourceModel(Base):
+    __tablename__ = "globe_tileset_sources"
+
+    tileset_id = Column(String(128), primary_key=True)
+    dataset_id = Column(String(128), nullable=False, index=True)
+    source_type = Column(String(64), nullable=False, default="OGC_3D_TILES")
+    source_reference = Column(String(512), nullable=False)
+    bounding_volume = Column(JSONB, nullable=False, default=dict)
+    attribution = Column(Text, nullable=False, default="")
+    licensing_policy = Column(String(64), nullable=False, default="open_source_compliant")
+    tenant_id = Column(String(128), nullable=True, index=True)
+    is_available = Column(Boolean, nullable=False, default=True)
+    data_quality = Column(String(64), nullable=False, default="verified")
+    description = Column(Text, nullable=False, default="")
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.datetime.utcnow)
 

@@ -18,6 +18,12 @@ import {
   UserMapView,
 } from "@/lib/maps/types";
 import { saveMapView } from "@/lib/maps/api";
+import { AtlasGlobe } from "./globe/AtlasGlobe";
+import {
+  maplibreToCesiumCamera,
+  cesiumToMaplibreCamera,
+} from "@/lib/maps/globe/cameraInteroperability";
+import { RendererMode, AtlasGlobeCamera } from "@/lib/maps/globe/types";
 
 interface AtlasMapProps {
   initialView?: UserMapView;
@@ -44,6 +50,53 @@ export function AtlasMap({
   // Camera state
   const [camera, setCamera] = useState<MapCameraState>(
     initialView?.camera ?? (DEFAULT_CAMERA as MapCameraState)
+  );
+
+  // 2D / 3D Renderer Mode
+  const [rendererMode, setRendererMode] = useState<RendererMode>(
+    ((initialView as any)?.renderer_mode as RendererMode) || "2D"
+  );
+
+  // 3D Globe camera state
+  const [globeCamera, setGlobeCamera] = useState<AtlasGlobeCamera>(() =>
+    maplibreToCesiumCamera(
+      camera.longitude,
+      camera.latitude,
+      camera.zoom,
+      camera.bearing,
+      camera.pitch
+    )
+  );
+
+  // Interoperable Mode Switching
+  const handleModeChange = useCallback(
+    (newMode: RendererMode) => {
+      if (newMode === rendererMode) return;
+      if (newMode === "3D") {
+        const c3d = maplibreToCesiumCamera(
+          camera.longitude,
+          camera.latitude,
+          camera.zoom,
+          camera.bearing,
+          camera.pitch
+        );
+        setGlobeCamera(c3d);
+        setRendererMode("3D");
+      } else {
+        const c2d = cesiumToMaplibreCamera(globeCamera);
+        setCamera({
+          longitude: c2d.center[0],
+          latitude: c2d.center[1],
+          zoom: c2d.zoom,
+          bearing: c2d.bearing,
+          pitch: c2d.pitch,
+          projection: "mercator",
+          revision: camera.revision ?? 1,
+        });
+        setRendererMode("2D");
+      }
+    },
+    [camera, globeCamera, rendererMode]
   );
 
   // Panels visibility
@@ -158,12 +211,27 @@ export function AtlasMap({
     }
   };
 
+  if (rendererMode === "3D") {
+    return (
+      <AtlasGlobe
+        initialCamera={globeCamera}
+        onModeChange={handleModeChange}
+        onCameraChange={setGlobeCamera}
+        selectedFeatureId={selectedFeatureId}
+        onSelectFeature={(id) => (id ? selectFeature(id) : clearSelection())}
+        className={className}
+      />
+    );
+  }
+
   return (
     <div className={`flex flex-col h-full w-full bg-atlas-surface-0 overflow-hidden ${className}`}>
       {/* Top Toolbar */}
       <AtlasMapToolbar
         currentStyleId={currentStyle.style_id}
         onStyleSelect={setCurrentStyle}
+        rendererMode={rendererMode}
+        onModeChange={handleModeChange}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchResults={searchResults}

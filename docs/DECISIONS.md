@@ -11016,3 +11016,72 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1563. **Bounded Viewport Query Rate Limiting & Max Limits**: Spatial queries enforce strict limits (max 5,000 features) to prevent memory exhaustion.
 1564. **Audit Logging of Spatial View Saves and Modifications**: Records map audit events with user, tenant, timestamp, and modification details.
 1565. **Stage 130 Handoff Architecture: Seamless 3D Globe Extensibility**: PostGIS schemas, MVT tiles, and datasets are engineered for direct 3D CesiumJS ingestion.
+
+
+## Stage 130: 3D God's Eye View Using CesiumJS
+
+### 3D Geospatial Engine & Coordinate Architecture
+1566. **CesiumJS as Institutional 3D Globe Engine**: Establishes CesiumJS as the dedicated WebGL 3D virtual globe engine for ATLAS, coexisting with Stage 129 MapLibre GL JS for 2D.
+1567. **WGS84 Reference Ellipsoid Foundation**: Standardizes on WGS84 (semi-major axis $a = 6,378,137.0\text{ m}$, flattening $f = 1 / 298.257223563$) for all 3D geodetic calculations.
+1568. **ECEF Cartesian Coordinate System**: Models 3D space in Earth-Centered, Earth-Fixed (ECEF) Cartesian coordinates $(X, Y, Z)$ measured in meters from Earth's center of mass.
+1569. **Bowring's Closed-Form Transformation Algorithm**: Uses Bowring's vector-closed algorithm for Cartesian ECEF to Geodetic conversions, guaranteeing millimeter precision without iteration loops.
+1570. **Mathematical Modulo Longitude Normalization**: Implements robust anti-meridian wrapping preserving the canonical $[-180^\circ, +180^\circ]$ domain using double modulo arithmetic: `((((v + 180) % 360) + 360) % 360) - 180`.
+1571. **Strict Geodetic Coordinate Validation**: Enforces hard domain bounds $[-90^\circ, +90^\circ]$ for latitude and finite non-negative values for distance/altitude before 3D computation.
+1572. **Zero Fabricated CSS Globes**: Strictly rejects CSS spherical pseudo-transforms or rotating 2D canvas hacks in favor of genuine WebGL rendering on a WGS84 ellipsoid.
+
+### 2D / 3D Interoperability & Camera Mathematics
+1573. **Seamless 2D MapLibre to 3D Cesium Camera Translation**: Derives Cesium camera height above the ellipsoid from MapLibre zoom level: $h = (C \cdot \cos(\text{lat})) / 2^{\text{zoom}}$, where $C = 40,075,016.686\text{ m}$.
+1574. **3D Cesium to 2D MapLibre Reverse Translation**: Inverts altitude to zoom level: $\text{zoom} = \log_2((C \cdot \cos(\text{lat})) / h)$, clamped to valid zoom levels $[0, 22]$.
+1575. **Web Mercator Latitude Clamping for Interoperability**: Enforces Web Mercator limit ($\pm 85.051129^\circ$) during 2D $\leftrightarrow$ 3D camera conversion to avoid Mercator singularity infinities.
+1576. **Pitch and Heading Preservation**: Maps MapLibre bearing directly to Cesium heading ($0^\circ = \text{North}$) and translates pitch ($0^\circ = \text{Nadir}$) seamlessly.
+1577. **Dual-Mode Controller State Architecture**: Manages `rendererMode: '2D' | '3D'` at the container level without unmounting shared layer datasets, filters, or active feature selections.
+1578. **Non-Disorienting Mode Transitions**: Preserves geographic focus coordinates across mode switching so users never lose context when toggling between 2D and 3D views.
+
+### Imagery & Terrain Provider Management
+1579. **Ellipsoid Fallback Guarantee**: Uses standard WGS84 Ellipsoid Terrain Provider when external high-resolution elevation sources are unconfigured, avoiding mock height maps.
+1580. **Honest Elevation Policy**: Rejects synthetic terrain displacement meshes; elevations are rendered true-to-source or flat ellipsoid with explicit diagnostic status.
+1581. **Compliant Imagery Registry**: Serves verified global basemap imagery (Natural Earth II offline, CARTO Dark Matter, CARTO Positron, OpenStreetMap, Sentinel-2 Cloudless).
+1582. **Commercial Provider Policy Enforcement**: Rejects unauthenticated or unlicensed commercial imagery/terrain providers with explicit `GlobeImageryProviderRestrictedError` and `GlobeTerrainProviderRestrictedError`.
+1583. **Visible Legal Imagery and Terrain Attribution**: Renders continuous, unobstructed attribution pills for imagery and terrain data sources in the 3D globe viewport.
+1584. **Quality Profile Presets**: Provides Low, Balanced, and High graphics quality profiles controlling screen-space error, maximum screen space error (SSE), and pixel ratios.
+
+### OGC 3D Tiles & 3D Spatial Datasets
+1585. **OGC 3D Tiles Specification Compliance**: Adheres to OGC 3D Tiles standard specifications for hierarchical spatial bounding volumes and point clouds.
+1586. **Multi-Tenant 3D Tileset Access Control**: Enforces tenant-isolated permissions on proprietary 3D tilesets; cross-tenant tileset access is strictly blocked (`GlobeTilesetAccessDeniedError`).
+1587. **3D Feature Selection & Screen-Space Ray Picking**: Projects viewport cursor clicks to ellipsoid surface intersections using Cesium `scene.globe.pick`, enabling precise 3D entity inspection.
+1588. **Shared Spatial Feature Rendering**: Renders Stage 129 PostGIS point features as 3D Billboards and PointPrimitives with screen-space depth attenuation.
+1589. **Dataset Scope Boundary Invariant**: Defers deck.gl and H3 hexagons to Stage 131, company facilities to Stage 132, infrastructure networks to Stage 133, and live tracks to Stage 134.
+
+### Client-Side Engine & Asset Pipeline
+1590. **Next.js Pre-bundled Asset Pipeline**: Pre-copies CesiumJS runtime assets (`Workers/`, `ThirdParty/`, `Assets/`, `Widgets/`) to `apps/web/public/cesium/` via build and dev scripts.
+1591. **Zero-CDN Production Self-Hosting**: Directs Cesium web workers and shaders to local relative path `window.CESIUM_BASE_URL = '/cesium'`, eliminating external CDN availability dependencies.
+1592. **Client-Only Dynamic Module Loading**: Loads Cesium canvas via client-only Next.js components (`'use client'`) to prevent server-side rendering Node.js DOM exceptions.
+1593. **WebGL Context Failure Recovery**: Detects WebGL 1/2 context creation failures and presents institutional diagnostic banners with recommendations and 2D mode fallback.
+1594. **Canvas Lifecycle and Resource Disposal**: Implements strict `destroy()` lifecycles in React `useEffect` cleanups, terminating Cesium render loops, input handlers, and WebGL contexts.
+1595. **Split-Pane ResizeObserver Integration**: Subscribes Cesium canvas to layout resizing and triggers `scene.requestRender()` to prevent canvas distortion during pane adjustments.
+
+### Persistent Globe Views & Optimistic Locking
+1596. **Extended Map View Schema for 3D**: Augments `UserMapView` with `renderer_mode`, `cesium_camera` (ECEF Cartesian position and orientation), `imagery_provider_id`, and `terrain_provider_id`.
+1597. **Optimistic Concurrency Revision Locking**: Validates `expected_revision` during 3D globe view updates, rejecting stale concurrent writes with 409 Conflict.
+1598. **Multi-Tenant Globe View Isolation**: Restricts globe view queries and updates strictly to the owning user and tenant organization.
+1599. **Saved Globe View Restore Fidelity**: Restores exact 3D camera orientation (ECEF coordinates, heading, pitch, roll) and active imagery layers from saved state.
+1600. **Audit Logging of Globe View Modifications**: Captures user ID, tenant ID, timestamp, camera position, and revision changes on every 3D view save and update.
+
+### Platform Integrations (Stages 119–125)
+1601. **Universal Saved Integration (`GLOBE_VIEW_CONFIG`)**: Registers 3D globe view configurations under the Stage 119 Universal Saved target registry.
+1602. **Stage 120 Workspaces MapPanelAdapter Multi-Panel 3D Support**: Adapts workspace panels to instantiate independent 3D Cesium or 2D MapLibre views per panel.
+1603. **Independent Workspace Panel Camera State**: Guarantees that tilting, panning, or switching modes in one workspace panel never impacts neighboring panels.
+1604. **Stage 121 Global Workspace Linking Compatibility**: Broadcasts and listens for `REGION` and `INSTRUMENT` context changes to reposition the 3D globe camera to matching coordinates.
+1605. **Stage 125 AI Context Awareness Read-Only 3D Viewport**: Exposes 3D camera focal point, elevation, bounds, and active feature metadata to the AI context provider.
+1606. **Zero-Geolocation Privacy Guarantee**: Strictly preserves user privacy by refusing automatic browser geolocation probing or telemetry tracking in 3D mode.
+
+### Performance, Security & Verification Standards
+1607. **Maximum Frame Rate Capping & On-Demand Rendering**: Uses request-render-mode when idle to conserve client GPU resources on laptops and battery-powered workstations.
+1608. **Screen-Space Error (SSE) Dynamic Throttling**: Automatically adjusts maximumScreenSpaceError based on device pixel ratio to maintain 60 FPS interactions.
+1609. **PostGIS Feature Query Rate Limiting**: Caps feature ingestion to 5,000 spatial records per bounded query to protect server memory and network bandwidth.
+1610. **Data Sanitization and XSS Prevention**: Sanitizes all GeoJSON feature properties before rendering in 3D feature inspection panels or billboards.
+1611. **Comprehensive Reference Fixtures Verification**: Validates all 10 Stage 130 reference fixtures (Fixtures A through J) covering coordinates, altitude, providers, and concurrency.
+1612. **Backend Regression Testing Integrity**: Verifies zero regression across all Stage 129 PostGIS 2D test suites alongside 100% pass on Stage 130 3D test suites.
+1613. **Frontend Unit Test Suite Coverage**: Maintains 260+ passing unit tests across maps, coordinates, camera translations, and workspace panel adapters.
+1614. **Production Build Gate Execution**: Verifies clean zero-warning Next.js production builds across all platform routes including `/maps`.
+1615. **Stage 131 Handoff Architecture**: Lays the foundation for GPU-accelerated deck.gl layers, H3 hexagonal spatial indexes, and large-scale analytical spatial point clouds.
