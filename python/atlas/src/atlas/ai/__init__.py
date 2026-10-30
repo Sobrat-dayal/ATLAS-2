@@ -1,3 +1,63 @@
-"""
-ATLAS AI Domain
-"""
+"""ATLAS AI Domain package (Stage 124)."""
+
+from atlas.ai.domain import (
+    AiConversation,
+    AiGenerationRun,
+    AiMessage,
+    AiUserPreferences,
+    GenerationStatus,
+    MessageRole,
+    MessageStatus,
+    ModelCapability,
+    RouteContext,
+    StreamEvent,
+    StreamEventType,
+)
+from atlas.ai.errors import (
+    AiAccessDeniedError,
+    AiConversationEmptyError,
+    AiConversationNotFoundError,
+    AiError,
+    AiGenerationCancelledError,
+    AiGenerationInProgressError,
+    AiGenerationRunNotFoundError,
+    AiGenerationTimeoutError,
+    AiMessageNotFoundError,
+    AiMessageTooLargeError,
+    AiModelNotAuthorizedError,
+    AiModelNotFoundError,
+    AiProviderError,
+    AiRateLimitExceededError,
+)
+from atlas.ai.repository import AiRepository
+from atlas.ai.service import AiAssistantService
+
+__all__ = [
+    "AiAssistantService",
+    "AiRepository",
+    "AiConversation",
+    "AiMessage",
+    "AiGenerationRun",
+    "AiUserPreferences",
+    "ModelCapability",
+    "RouteContext",
+    "StreamEvent",
+    "StreamEventType",
+    "MessageRole",
+    "MessageStatus",
+    "GenerationStatus",
+    "AiError",
+    "AiConversationNotFoundError",
+    "AiMessageNotFoundError",
+    "AiMessageTooLargeError",
+    "AiConversationEmptyError",
+    "AiGenerationRunNotFoundError",
+    "AiGenerationInProgressError",
+    "AiGenerationTimeoutError",
+    "AiGenerationCancelledError",
+    "AiModelNotFoundError",
+    "AiModelNotAuthorizedError",
+    "AiProviderError",
+    "AiRateLimitExceededError",
+    "AiAccessDeniedError",
+]

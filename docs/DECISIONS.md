@@ -10639,3 +10639,66 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1278. **Institutional SQL Grid**: Upgraded SqlConsole features SqlResultGrid with sorting, formatted numbers, row counts, and CSV/JSON export.
 1279. **Structured CLI Terminal**: Upgraded AtlasCliConsole renders command suggestions, arrow-key history, status badges, and structured tables.
 1280. **Verification & Acceptance**: 100% test pass rate across 33 backend pytest tests (Stage 122 & 123), 217 frontend unit tests, 0 lint warnings, and clean Next.js production build.
+
+
+---
+
+## Stage 124 — AI ASSISTANT V1 and Universal ATLAS AI Overlay
+
+### Core Architecture & AppShell Integration
+1281. **Universal AI Trigger in TopBar**: Positioned in the upper-right of the ATLAS AppShell header across all 20 canonical routes, featuring a Bot icon, live state indicator, and keyboard shortcut badge (`Ctrl+Alt+A`).
+1282. **Sliding Docked AI Overlay**: Resizable side-panel overlay (`AtlasAiOverlay.tsx`) with draggable left edge handle supporting user width customization between 340px and 750px.
+1283. **Preservation of Underlying Workspaces**: Opening, closing, resizing, and conversing with the overlay does not unmount, reload, or navigate away from the active financial workspace.
+1284. **Zustand State Management**: Global `useAiOverlayStore` coordinates overlay visibility, active conversation ID, panel width, history drawer toggle, and docking configuration.
+1285. **Global Shortcut Binding**: `Ctrl+Alt+A` / `Cmd+Alt+A` toggles the overlay from anywhere across the operating system without hijacking browser defaults.
+1286. **Shared Backend Infrastructure**: The global overlay and the dedicated `/ai` full-screen route share the exact same backend conversation sessions, messages, models, and streaming pipelines.
+
+### Data Model & Persistence
+1287. **PostgreSQL / Supabase Schema**: Dedicated persistence layer featuring `ai_conversations`, `ai_messages`, `ai_generation_runs`, `ai_assistant_user_preferences`, and `ai_conversation_audit_events`.
+1288. **Alembic Migration**: Migration `stage124_ai_assistant_v1.py` created with `down_revision = "stage123_terminal_execution"`.
+1289. **Tenant & User Isolation**: All conversations, messages, generation runs, and preferences are strictly filtered by authenticated user `owner_user_id` and `tenant_id`.
+1290. **Message Truncation Guardrail**: User prompt input is strictly validated and capped at 16,000 characters; oversized inputs raise `AI_MESSAGE_TOO_LARGE`.
+1291. **Cascade Message Deletion**: Foreign key constraints cascade message deletions upon conversation deletion.
+1292. **Conversation Search & Ordering**: Conversations support title search, pinned status prioritization, and sorting by last message timestamp.
+
+### Provider-Agnostic Model Layer
+1293. **Model Capabilities Catalog**: Canonical models `atlas-intelligence-v1` (Default), `atlas-reasoning-v1`, and `atlas-speed-v1` configured with parameter windows and streaming flags.
+1294. **Deterministic Mock Provider**: `MockAiProvider` delivers high-fidelity, deterministic streaming responses for testing and local environments without API keys.
+1295. **OpenAI-Compatible HTTP Streaming**: `OpenAiCompatibleProvider` connects to standard inference endpoints (OpenAI, Groq, NVIDIA NIM) using `httpx.AsyncClient`.
+1296. **Zero Credential Exposure**: Provider API keys reside exclusively in server-side environment variables and are never transmitted to client code or serialized in responses.
+1297. **Provider Factory Resolution**: `get_ai_provider(...)` automatically resolves configured credentials or safely falls back to `MockAiProvider`.
+
+### Financial Intelligence & Capability Honesty
+1298. **Institutional Financial Persona**: Formally defined persona in `system_instructions.py` providing mathematical precision, calm analytical tone, and structured markdown.
+1299. **Mathematical Concept Rigor**: Built-in accurate formulations for Duration vs Convexity, Sharpe/Sortino ratios, Black-Scholes-Merton model, VaR, and CVaR.
+1300. **Step-by-Step Numerical Reasoning**: Step-by-step arithmetic verification for user-supplied portfolio and risk calculation inputs.
+1301. **Strict Live Price Boundary**: Refusal to hallucinate real-time streaming tick quotes; clearly directs users to `/markets` or `/charts`.
+1302. **Strict Trade Execution Boundary**: Refusal to execute unilateral broker trades or modify portfolios directly from chat; directs users to `/trading` or `/portfolios`.
+1303. **Strict Terminal Execution Boundary**: Refusal to run code directly from conversational text without passing through the Stage 123 sandboxed terminal interface.
+
+### Context Budgeting & Minimal Route Descriptors
+1304. **Allowlisted Route Descriptors**: Minimal `RouteContext` mapping pathname to canonical module name and institutional description across all 20 canonical top-level routes.
+1305. **Stage 124 Context-Light Boundary**: Deep DOM inspection, full workspace state extraction, and arbitrary panel scraping are strictly deferred to Stage 125.
+1306. **Prompt Budgeting & Windowing**: `PromptBuilder` windows recent turns to 20 messages and 32,000 characters, preserving system prompt and active route context.
+
+### Streaming Transport & Cancellation
+1307. **Server-Sent Events (SSE)**: `GET /api/v1/ai/generations/{generation_id}/stream` delivers typed events: `run_started`, `delta`, `run_completed`, `run_cancelled`, and `error`.
+1308. **Instant Generation Cancellation**: `POST /api/v1/ai/generations/{generation_id}/cancel` triggers cancellation tokens, halts provider streaming, and marks run status as `CANCELLED`.
+1309. **Client-Side Text Streaming**: `streamAiGeneration` utility decodes SSE streams and updates React state in real-time with smooth typing cursor effects.
+1310. **Response Regeneration**: `POST /api/v1/ai/conversations/{id}/regenerate` re-runs generation from the target turn or the latest user prompt.
+
+### Frontend UI & User Experience
+1311. **Markdown & Code Rendering**: Custom lightweight markdown parser rendering headings, fenced code blocks with Copy buttons, tables, and KaTeX math blocks.
+1312. **Auto-Growing Composer**: Textarea dynamically expands up to 160px with `Enter` to send and `Shift+Enter` for newlines.
+1313. **History Drawer**: In-overlay slide drawer for searching, pinning, unpinning, and deleting past conversations.
+1314. **Editable Titles**: Users can rename conversation titles inline with immediate backend synchronization.
+1315. **Context Banner**: Active module descriptor pill displayed at the top of the overlay informing users of their active platform location.
+1316. **Copy to Clipboard**: Quick copy button for full assistant responses and individual code blocks.
+1317. **Empty State Financial Prompts**: One-click quick-start prompt cards covering Duration/Convexity, Sharpe math, and Risk navigation.
+
+### Dedicated Full-Screen Route (`/ai`)
+1318. **Tri-Pane Institutional Canvas**: `apps/web/src/app/(atlas)/ai/page.tsx` upgraded with `AtlasSplit` (History, Main Chat, Intelligence Inspector).
+1319. **Intelligence Inspector**: Displays active model engine parameters, session token telemetry, and Stage 124 governance notices.
+
+### Verification & Quality Gates
+1320. **Stage 124 Quality Signoff**: 100% test pass rate across 13 backend pytest tests, 223 frontend unit tests, 0 lint warnings, and clean Next.js production build of all 38 routes.

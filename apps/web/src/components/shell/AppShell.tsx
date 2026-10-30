@@ -12,11 +12,14 @@ import { SectionSettingsDrawer } from "@/components/settings/SectionSettingsDraw
 import { CommandPalette } from "@/components/command-palette";
 import { useCommandPaletteShortcut } from "@/hooks/commands";
 import { useTerminalGlobalShortcut } from "@/hooks/terminal/useTerminalGlobalShortcut";
+import { useAiOverlayShortcut } from "@/hooks/ai/useAiOverlay";
+import { AtlasAiOverlay } from "@/components/ai";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { moduleFullscreen } = useShellState();
   useCommandPaletteShortcut();
   useTerminalGlobalShortcut();
+  useAiOverlayShortcut();
 
   if (moduleFullscreen) {
     return (
@@ -26,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </MainWorkspace>
         <CommandPalette />
+        <AtlasAiOverlay />
       </div>
     );
   }
@@ -57,6 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Overlays */}
       <SectionSettingsDrawer />
       <CommandPalette />
+      <AtlasAiOverlay />
     </div>
   );
 }

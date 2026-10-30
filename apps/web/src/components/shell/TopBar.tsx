@@ -9,6 +9,7 @@ import { BackgroundQuickControl } from "./BackgroundQuickControl";
 import { SelectedEntityControl } from "./SelectedEntityControl";
 import { GlobalTimeRangeControl } from "./GlobalTimeRangeControl";
 import { NotificationCenter, NotificationTrigger } from "@/components/notifications";
+import { AtlasAiTrigger } from "@/components/ai";
 
 export function TopBar() {
   const [utcTime, setUtcTime] = useState("");
@@ -43,11 +44,8 @@ export function TopBar() {
       <div className="flex items-center space-x-3">
         {utcTime && <span className="text-xs text-atlas-text-secondary font-mono tracking-wider mr-2 hidden lg:block">{utcTime}</span>}
         
-        {/* ATLAS AI Hook */}
-        <button className="flex items-center gap-1.5 rounded-sm bg-atlas-surface-selected px-2 py-1 text-xs font-medium text-atlas-accent hover:bg-atlas-surface-hover transition-colors">
-          <Bot className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">ATLAS AI</span>
-        </button>
+        {/* ATLAS AI Trigger */}
+        <AtlasAiTrigger />
 
         {/* Persistent Notification Center */}
         <div className="relative">
