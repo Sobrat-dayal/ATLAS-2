@@ -37,3 +37,4 @@ export function formatGlobeErrorMessage(errorCode: string, defaultMessage?: stri
       return defaultMessage || "An unexpected geospatial error occurred.";
   }
 }
+

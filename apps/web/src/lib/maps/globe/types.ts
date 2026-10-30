@@ -109,3 +109,4 @@ export interface GlobeRuntimeConfig {
   max_active_viewers: number;
   default_camera: AtlasGlobeCamera;
 }
+

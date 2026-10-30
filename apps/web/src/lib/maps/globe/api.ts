@@ -235,3 +235,4 @@ export async function deleteGlobeView(viewId: string): Promise<boolean> {
   if (!res.ok) throw new Error(`Failed to delete view ${viewId}`);
   return true;
 }
+

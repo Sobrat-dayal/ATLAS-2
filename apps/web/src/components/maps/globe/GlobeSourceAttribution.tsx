@@ -25,3 +25,4 @@ export function GlobeSourceAttribution({ attributionText }: GlobeSourceAttributi
     </div>
   );
 }
+

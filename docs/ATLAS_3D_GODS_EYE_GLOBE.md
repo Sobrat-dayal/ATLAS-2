@@ -130,3 +130,4 @@ The platform allows seamless switching between 2D MapLibre and 3D Cesium without
 | **Fixture H** | Saved Globe View & Revision Locking | **PASSED**: Saved view restored with exact camera fidelity; stale revision raises 409 Conflict. |
 | **Fixture I** | Independent Workspace Panels | **PASSED**: Panel A (London) and Panel B (Tokyo) maintain independent cameras without crosstalk. |
 | **Fixture J** | Error Taxonomy & Recovery | **PASSED**: Typed domain exceptions mapped to HTTP status codes (400, 403, 404, 409). |
+
