@@ -7,6 +7,7 @@ import {
   Minus,
   Plus,
   Sparkles,
+  Wrench,
   X,
 } from "lucide-react";
 import { listModels, updateConversation } from "@/lib/ai/api";
@@ -17,12 +18,14 @@ interface AtlasAiHeaderProps {
   conversation: AiConversation | null;
   onNewChat: () => void;
   onRefresh?: () => void;
+  onToggleToolSettings?: () => void;
 }
 
 export function AtlasAiHeader({
   conversation,
   onNewChat,
   onRefresh,
+  onToggleToolSettings,
 }: AtlasAiHeaderProps) {
   const { closeOverlay, isHistoryDrawerOpen, toggleHistoryDrawer } = useAiOverlayStore();
 
@@ -139,6 +142,16 @@ export function AtlasAiHeader({
           </select>
           <ChevronDown className="pointer-events-none absolute right-1.5 top-2 h-3 w-3 text-atlas-text-muted" />
         </div>
+
+        {onToggleToolSettings && (
+          <button
+            onClick={onToggleToolSettings}
+            className="rounded p-1 text-atlas-text-secondary hover:bg-atlas-surface-hover hover:text-atlas-text-primary transition-colors"
+            title="Configure AI Tools & Permissions (Stage 126)"
+          >
+            <Wrench className="h-3.5 w-3.5" />
+          </button>
+        )}
 
         <button
           onClick={closeOverlay}

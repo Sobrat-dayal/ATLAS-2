@@ -10766,3 +10766,66 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 ### Frontend Architecture & User Experience
 1364. **Context Inspector & Active Chips**: Implemented `AiContextInspector`, `AiContextChips`, `AiContextModeSelector`, and `AiContextQualityBadge` in `apps/web/src/components/ai/context/`.
 1365. **Global "Ask AI About This" Handoff**: `askAiAboutThis(...)` dispatches custom events across the application shell to open the AI overlay, pin the target financial entity, and prepare the analytical turn.
+
+
+## Stage 126: Institutional-Grade ATLAS AI Tool Gateway
+
+### Canonical Roadmap & Security Boundaries
+1366. **Stage 126 Tool Gateway Ownership**: Stage 126 establishes the central, permission-aware AI Tool Gateway connecting the Stage 124 AI Assistant V1 and Stage 125 Context Awareness Engine to real, authorized, read-only ATLAS financial foundations.
+1367. **Stage 125 Context Awareness Reused**: Leverages Stage 125 route contexts, canonical entity resolvers, and context adapters without duplication.
+1368. **Stage 124 AI Assistant Reused**: Extends Stage 124 multi-turn chat, SSE streaming, and persistent conversation models without regression.
+1369. **Stage 127 AI Research & RAG Deferred**: Broad vector document indexing, semantic embedding pipelines, and citation graphs are strictly deferred to Stage 127.
+1370. **Stage 128 Financial AI Actions Deferred**: AI-driven mutations (chart mutations, portfolio rebalancing, order placement, screener execution jobs) are strictly deferred to Stage 128.
+1371. **Strict Prohibition of Arbitrary Terminal Execution**: Tools cannot invoke `execute_python`, `execute_sql`, or `execute_shell`. Interactive terminal operations remain sandboxed in Stage 123.
+1372. **Strict Prohibition of Broker Trading Execution**: Zero broker connectivity or live trading execution from AI tools.
+1373. **Strict Prohibition of Autonomous Background Agents**: Standing background agents and multi-agent coordination are strictly isolated to Stage 146.
+1374. **Preserving Twenty Global Routes**: All twenty canonical ATLAS sidebar navigation routes remain completely untouched.
+
+### Universal Tool Registry
+1375. **Canonical Tool ID Namespacing**: Enforced stable hierarchical naming format `atlas.<module>.<action>` (e.g. `atlas.instrument.search`).
+1376. **Tool ID Regex Policy**: Validated via strict regex `^atlas\.[a-z0-9_]+\.[a-z0-9_]+$` to prevent collisions or malformed identifiers.
+1377. **SemVer Tool Versioning**: Every registered tool specifies a semantic version (default `1.0.0`) for reproducible invocation histories.
+1378. **Strict Typed Parameter Schemas**: Input schemas defined via Pydantic models and converted to OpenAI JSON function declarations.
+1379. **Standard Return Envelope Contract**: Standardized `AtlasAiToolResult` envelope binding tool ID, success flag, payload, manifest, execution time, and SHA-256 content hash.
+1380. **Central Handler Registration**: `AtlasAiToolRegistry` singleton maps definitions to verified `BaseAiToolAdapter` implementation classes.
+1381. **Tool Lifecycle State Machine**: Registered tools transition through `REGISTERED`, `ENABLED`, `DISABLED`, `DEPRECATED`, and `UNAVAILABLE`.
+1382. **Administrative Deprecation**: Deprecated tools emit deprecation warnings while maintaining backward compatibility until retired.
+1383. **Tool Capability Classes**: Classified into `DISCOVERY`, `DATA_READ`, `ANALYTICAL_READ`, `STATUS_READ`, `COMPUTATIONAL`, `USER_STATE_MUTATION`, `FINANCIAL_MUTATION`, `EXTERNAL_SIDE_EFFECT`, and `PRIVILEGED_OPERATION`.
+1384. **Action Risk Categorization**: Read-only tools require no approval by default; sensitive scopes require user confirmation.
+1385. **Context-Aware Tool Discovery**: `ToolDiscoveryService` filters available tools by user permissions and ranks them dynamically by route affinity.
+1386. **Model Capability Filtering**: Only tool definitions supported by the target LLM provider/model are emitted to the function-calling interface.
+1387. **Rejection of Dynamic Code Loading**: Adapters must be statically compiled and registered within the codebase; runtime script loading is forbidden.
+
+### Execution & Security
+1388. **Normalization of Model Proposals**: Tool arguments proposed by untrusted model outputs are normalized and strictly validated before execution.
+1389. **Typed Argument Schema Validation**: Missing required fields or schema violations raise `AiToolArgumentInvalidError` (`AI_TOOL_ARGUMENT_INVALID`).
+1390. **Server-Authoritative Zero-Trust Gateways**: The model cannot assert its own permissions or bypass server authorization checks.
+1391. **Fine-Grained Capability Scopes**: Access requires specific scopes (e.g. `tools:instrument:read`, `tools:portfolio:read`, `tools:risk:read`).
+1392. **Anti-IDOR Resource Authorization**: Resource parameters (`portfolio_id`, `run_id`, `screener_id`) enforce strict owner-bound ACL checks.
+1393. **Third-Party Provider Disclosure Policies**: Data marked `ProviderDisclosurePolicy.PROHIBITED` is blocked from external model transmission.
+1394. **Cryptographic Approval Hash Binding**: Approval tokens bind a deterministic SHA-256 hash of normalized arguments (`normalized_arguments_hash`).
+1395. **Approval TTL & Replay Protection**: Approvals expire after 5 minutes and enforce single-use consumption (`consumed_at`).
+1396. **Tool Sequence Limit Enforcement**: Generation runs are capped at a maximum of 4 tool invocations to prevent infinite loops (`AiToolSequenceLimitExceededError`).
+1397. **Bounded Execution Timeouts**: Per-tool execution timeout is strictly capped at 10 seconds (`AiToolTimeoutError`).
+
+### Financial Tools & Integrity
+1398. **Canonical Instrument Search**: `atlas.instrument.search` matches canonical instruments without guessing listing identities.
+1399. **Direct Market Quote Verification**: `atlas.market.quote` returns verified quotes or explicit `quote_available: false` (no fabricated live prices).
+1400. **Point-in-Time Corporate Financials**: `atlas.company.financials` returns verified 10-K line items with explicit currencies and units.
+1401. **Private Portfolio RLS & Redaction**: `atlas.portfolio.get_summary` redacts granular holdings by default unless explicitly consented.
+1402. **GIPS-Compliant Performance Metrics**: `atlas.portfolio.get_performance` returns verified returns, benchmark comparison, alpha, beta, and tracking error.
+1403. **Immutable Risk Run Inspection**: `atlas.risk.get_run_summary` retrieves original historical VaR/CVaR metrics from the vault without recomputing.
+1404. **Official Macroeconomic Series**: `atlas.economics.get_observations` fetches chronological economic indicators from FRED and BLS.
+1405. **Indirect Prompt-Injection Fencing**: `atlas.news.search_headlines` sanitizes and encloses wire copy in `<atlas_verified_financial_context>` tags.
+1406. **Read-Only Screener Definition**: `atlas.screener.get_definition` inspects screening criteria without triggering expensive search jobs or mutations.
+1407. **Universal Saved & Workspace Bridges**: `atlas.saved.list` and `atlas.workspace.list` integrate Stage 119 and Stage 120 metadata.
+
+### Model Integration, User Interface & Verification
+1408. **Structured Function Calling Protocol**: Bridges OpenAI-compatible function declarations into the streaming generation loop.
+1409. **Continuation Turns for Grounded Synthesis**: Verified tool results are injected back into model prompt turns as `role: "tool"` for final synthesis.
+1410. **Real-Time Tool Activity Chips**: `AiToolCallCard` displays running status, execution latency, and completion state within chat turns.
+1411. **Grounded Tool Result Inspector**: `AiToolResultInspector` displays verified JSON payloads, source manifests, timestamps, and content hashes.
+1412. **Human-in-the-Loop Approval Modal**: `AiToolApprovalDialog` presents proposed parameters and confirmation controls for sensitive actions.
+1413. **AI Tool Governance Settings**: `AiToolSettings` enables users to configure auto-approval policies and toggle individual tools.
+1414. **Reference Fixtures A–J End-to-End Verification**: Validated all 10 canonical reference fixtures across automated pytest test suites.
+1415. **Zero Regression on Platform Test Suites**: Maintained 100% pass rate across 32 backend pytest tests and 232 frontend vitest tests.

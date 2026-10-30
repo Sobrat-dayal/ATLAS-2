@@ -40,6 +40,11 @@ class StreamEventType(str, Enum):
 
     RUN_STARTED = "run_started"
     DELTA = "delta"
+    TOOL_PROPOSED = "tool_proposed"
+    TOOL_STARTED = "tool_started"
+    TOOL_COMPLETED = "tool_completed"
+    TOOL_FAILED = "tool_failed"
+    APPROVAL_REQUIRED = "approval_required"
     RUN_COMPLETED = "run_completed"
     RUN_CANCELLED = "run_cancelled"
     ERROR = "error"

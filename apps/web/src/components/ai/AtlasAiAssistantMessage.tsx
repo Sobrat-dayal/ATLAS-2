@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Bot, Check, Copy, RefreshCw } from "lucide-react";
 import { parseMarkdownBlocks } from "@/lib/ai/markdown";
 import { AiMessage } from "@/lib/ai/types";
+import { AiToolCallCard } from "./tools/AiToolCallCard";
 
 interface AtlasAiAssistantMessageProps {
   message?: AiMessage;
@@ -23,6 +24,9 @@ export function AtlasAiAssistantMessage({
 
   const rawText = contentOverride !== undefined ? contentOverride : message?.content || "";
   const blocks = parseMarkdownBlocks(rawText);
+  const toolCalls = Array.isArray(message?.metadata?.tool_calls)
+    ? (message.metadata.tool_calls as Array<Record<string, any>>)
+    : null;
 
   const handleCopyAll = async () => {
     try {
@@ -52,6 +56,24 @@ export function AtlasAiAssistantMessage({
 
       <div className="flex-1 min-w-0">
         <div className="rounded-lg bg-atlas-surface-1 border border-atlas-border-default px-4 py-3 text-xs text-atlas-text-primary shadow-sm leading-relaxed space-y-2.5 select-text">
+          {/* Tool Calls Activity (Stage 126) */}
+          {toolCalls && toolCalls.length > 0 && (
+            <div className="space-y-1 mb-2">
+              {toolCalls.map((tc, i) => (
+                <AiToolCallCard
+                  key={tc.id || tc.tool_call_id || i}
+                  toolId={tc.tool_id || "atlas.tool"}
+                  status={tc.status || "COMPLETED"}
+                  argumentsPayload={tc.arguments}
+                  result={tc.result}
+                  error={tc.error_message}
+                  executionTimeMs={tc.execution_time_ms}
+                  approvalRequestId={tc.approval_request_id}
+                />
+              ))}
+            </div>
+          )}
+
           {blocks.length === 0 && isStreaming && (
             <div className="flex items-center gap-1.5 text-atlas-text-muted italic">
               <span className="inline-block h-2 w-2 animate-ping rounded-full bg-atlas-accent" />

@@ -20,13 +20,66 @@ class MockAiProvider(BaseAiProvider):
         model_id: str,
         temperature: float = 0.2,
         cancellation_check: Optional[Callable[[], bool]] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> AsyncIterator[StreamEvent]:
-        """Streams realistic chunks of the formulated answer."""
+        """Streams realistic chunks of the formulated answer, proposing tools when appropriate."""
         user_query = ""
+        tool_results: List[Dict[str, Any]] = []
+
         for m in reversed(messages):
-            if m.get("role") == "user":
+            if m.get("role") == "user" and not user_query:
                 user_query = m.get("content", "")
-                break
+            elif m.get("role") == "tool":
+                tool_results.append(m)
+
+        # Check for tool proposal if no tool has run yet and tools are available
+        if tools and not tool_results:
+            q_lower = user_query.lower()
+            proposed_tool = None
+            proposed_args: Dict[str, Any] = {}
+
+            if "execute_anything" in q_lower or "execute_python" in q_lower:
+                proposed_tool = "atlas.system.execute_anything"
+                proposed_args = {}
+            elif "infinite_tool_loop" in q_lower:
+                proposed_tool = "atlas.instrument.search"
+                proposed_args = {"query": "Loop"}
+            elif "find microsoft" in q_lower or "search instrument" in q_lower:
+                proposed_tool = "atlas.instrument.search"
+                proposed_args = {"query": "Microsoft"}
+            elif "latest available quote" in q_lower or "quote for the selected" in q_lower:
+                sym = "AAPL" if "aapl" in q_lower else "MSFT"
+                proposed_tool = "atlas.market.quote"
+                proposed_args = {"symbol": sym}
+            elif "annual revenue growth" in q_lower or "company financials" in q_lower:
+                sym = "AAPL" if "aapl" in q_lower else "MSFT"
+                proposed_tool = "atlas.company.financials"
+                proposed_args = {"symbol": sym, "statement_type": "INCOME_STATEMENT", "period": "ANNUAL"}
+            elif "unauthorized portfolio" in q_lower or "portfolio p" in q_lower:
+                proposed_tool = "atlas.portfolio.get_summary"
+                proposed_args = {"portfolio_id": "port_macro_2"}  # Owned by user_other (Fixture D)
+            elif "list portfolios" in q_lower or "my portfolios" in q_lower:
+                proposed_tool = "atlas.portfolio.list"
+                proposed_args = {}
+            elif "risk run" in q_lower or "historical risk" in q_lower or "run_hist" in q_lower:
+                proposed_tool = "atlas.risk.get_run_summary"
+                proposed_args = {"run_id": "run_hist_20261029"}
+            elif "news headline" in q_lower or "search headlines" in q_lower or "prompt injection" in q_lower:
+                proposed_tool = "atlas.news.search_headlines"
+                proposed_args = {"symbol": "MSFT"}
+            elif "economic observations" in q_lower or "cpi inflation" in q_lower:
+                proposed_tool = "atlas.economics.get_observations"
+                proposed_args = {"series_id": "CPIAUCSL"}
+
+            if proposed_tool:
+                yield StreamEvent(
+                    event_type=StreamEventType.TOOL_PROPOSED,
+                    data={
+                        "tool_id": proposed_tool,
+                        "arguments": proposed_args,
+                    },
+                )
+                return
 
         response_text = self._synthesize_response(user_query, messages)
         prompt_tokens = sum(len(m.get("content", "").split()) for m in messages) * 2
@@ -104,6 +157,99 @@ class MockAiProvider(BaseAiProvider):
         }
 
     def _synthesize_response(self, query: str, messages: List[Dict[str, str]]) -> str:
+        # Check if grounded by verified Stage 126 tool output
+        for m in reversed(messages):
+            if m.get("role") == "tool":
+                tool_name = m.get("name", "")
+                content = m.get("content", "")
+                import json
+                try:
+                    payload = json.loads(content)
+                except Exception:
+                    payload = {}
+
+                if tool_name == "atlas.instrument.search":
+                    results = payload.get("results", [])
+                    if results:
+                        first = results[0]
+                        return (
+                            f"Found canonical instrument **{first.get('name')}** (`{first.get('symbol')}`) on {first.get('exchange')}.\n\n"
+                            f"- **Asset Class**: {first.get('asset_class')}\n"
+                            f"- **Currency**: {first.get('currency')}\n"
+                            f"- **FIGI**: `{first.get('figi')}`\n"
+                            f"- **ISIN**: `{first.get('isin')}`\n"
+                            f"- **Sector**: {first.get('sector')}\n"
+                            f"- **Canonical ID**: `{first.get('instrument_id')}`"
+                        )
+                    return "No matching instruments found in the canonical security master."
+
+                elif tool_name == "atlas.market.quote":
+                    if not payload.get("quote_available", True):
+                        return "Quote unavailable."
+                    sym = payload.get("symbol", "")
+                    price = payload.get("last_price", 0.0)
+                    chg = payload.get("change", 0.0)
+                    pct = payload.get("change_percent", 0.0)
+                    exch = payload.get("exchange", "")
+                    as_of = payload.get("as_of", "")
+                    return (
+                        f"The latest available quote for **{sym}** on {exch} is **${price:.2f} USD** "
+                        f"({'+' if chg >= 0 else ''}{chg:.2f}, {'+' if pct >= 0 else ''}{pct:.2f}%) "
+                        f"as of {as_of}."
+                    )
+
+                elif tool_name == "atlas.company.financials":
+                    line_items = payload.get("line_items", [])
+                    sym = payload.get("symbol", "MSFT")
+                    unit = payload.get("units", "millions")
+                    curr = payload.get("currency", "USD")
+                    if len(line_items) >= 2:
+                        y1 = line_items[1]
+                        y2 = line_items[0]
+                        rev1 = y1.get("revenue", 100.0)
+                        rev2 = y2.get("revenue", 125.0)
+                        growth_pct = ((rev2 - rev1) / rev1) * 100.0
+                        return (
+                            f"According to SEC EDGAR 10-K filings, **{sym}** reported:\n\n"
+                            f"- **Revenue FY{y1.get('fiscal_year', 2024)}**: {rev1:.1f} {curr} {unit}\n"
+                            f"- **Revenue FY{y2.get('fiscal_year', 2025)}**: {rev2:.1f} {curr} {unit}\n\n"
+                            f"The annual revenue growth was **{growth_pct:.1f}%** "
+                            f"(an absolute increase of {rev2 - rev1:.1f} {curr} {unit})."
+                        )
+                    return f"Retrieved {len(line_items)} financial reporting periods for {sym}."
+
+                elif tool_name == "atlas.risk.get_run_summary":
+                    var = payload.get("var_amount", 0.0)
+                    var_pct = payload.get("var_percentage", 0.0) * 100.0
+                    model = payload.get("model", "")
+                    as_of = payload.get("as_of", "")
+                    return (
+                        f"### Risk Run Summary: `{payload.get('run_id')}`\n\n"
+                        f"- **Model**: `{model}`\n"
+                        f"- **Confidence**: {payload.get('confidence_level', 0.95)*100:.1f}%\n"
+                        f"- **Horizon**: {payload.get('horizon_days', 1)} day\n"
+                        f"- **As-Of**: `{as_of}`\n"
+                        f"- **Parametric VaR**: ${var:,.2f} ({var_pct:.2f}%)\n"
+                        f"- **CVaR / Expected Shortfall**: ${payload.get('cvar_amount', 0.0):,.2f}\n"
+                        f"- **Integrity**: Immutable historical record verified from vault."
+                    )
+
+                elif tool_name == "atlas.news.search_headlines":
+                    headlines = payload.get("headlines", [])
+                    text = f"Retrieved {len(headlines)} verified headlines:\n\n"
+                    for h in headlines:
+                        text += f"- **{h.get('title')}** ({h.get('publisher')}, {h.get('published_at')})\n"
+                    return text
+
+                elif tool_name == "atlas.portfolio.get_summary":
+                    val = payload.get("total_value", 0.0)
+                    return (
+                        f"Portfolio **{payload.get('name')}** (`{payload.get('portfolio_id')}`):\n\n"
+                        f"- **Total Value**: ${val:,.2f} {payload.get('currency')}\n"
+                        f"- **Cash Balance**: ${payload.get('cash_balance', 0.0):,.2f}\n"
+                        f"- **Holdings Redacted**: {payload.get('holdings_redacted')}"
+                    )
+
         q = query.lower()
 
         # 1. Stage 124 Boundary Check: Real-time live prices

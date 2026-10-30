@@ -16,6 +16,7 @@ class BaseAiProvider(ABC):
         model_id: str,
         temperature: float = 0.2,
         cancellation_check: Optional[Any] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream chunks from the model provider via Server-Sent Event objects."""
         pass

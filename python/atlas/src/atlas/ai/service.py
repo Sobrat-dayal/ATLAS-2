@@ -272,9 +272,23 @@ class AiAssistantService:
             assistant_message_id=assistant_msg.message_id,
         )
 
+        # Discover relevant authorized tools for this turn (Stage 126 Tool Gateway)
+        from atlas.ai.tools.discovery import ToolDiscoveryService
+        from atlas.ai.tools.dispatcher import AiToolDispatcher
+
+        tool_disc = ToolDiscoveryService.get_instance()
+        route_path = active_route.get("route") if active_route else None
+        available_tools = tool_disc.discover_tools(
+            user_id=owner_user_id,
+            active_route=route_path,
+            model_id=gen_run.model_id,
+        )
+        tools_declarations = tool_disc.format_tools_for_model(available_tools)
+
         provider = get_ai_provider(conv.provider)
         start_time = time.monotonic()
         accumulated_chunks: List[str] = []
+        tool_call_count = 0
 
         try:
             async for event in provider.generate_stream(
@@ -282,8 +296,98 @@ class AiAssistantService:
                 model_id=gen_run.model_id,
                 temperature=0.2,
                 cancellation_check=lambda: self.repository.is_cancelled(generation_id),
+                tools=tools_declarations,
             ):
-                if event.event_type == StreamEventType.DELTA:
+                if event.event_type == StreamEventType.TOOL_PROPOSED:
+                    tool_id = event.data.get("tool_id", "")
+                    tool_args = event.data.get("arguments", {})
+                    tool_call_count += 1
+                    yield event
+
+                    # Emit TOOL_STARTED
+                    yield StreamEvent(
+                        event_type=StreamEventType.TOOL_STARTED,
+                        data={"tool_id": tool_id, "arguments": tool_args},
+                    )
+
+                    # Execute via dispatcher
+                    dispatcher = AiToolDispatcher.get_instance()
+                    try:
+                        tool_res = await dispatcher.dispatch(
+                            tool_id=tool_id,
+                            arguments=tool_args,
+                            user_id=owner_user_id,
+                            generation_run_id=generation_id,
+                            conversation_id=conv.conversation_id,
+                            tenant_id=conv.tenant_id,
+                            active_route=route_path,
+                            provider_id=conv.provider,
+                            generation_tool_call_count=tool_call_count - 1,
+                        )
+                        yield StreamEvent(
+                            event_type=StreamEventType.TOOL_COMPLETED,
+                            data={
+                                "tool_call_id": tool_res.tool_call_id,
+                                "tool_id": tool_id,
+                                "result": tool_res.data,
+                                "execution_time_ms": tool_res.execution_time_ms,
+                                "content_hash": tool_res.content_hash,
+                            },
+                        )
+
+                        # Append tool output and stream continuation turn
+                        import json
+                        prompt_turns.append({
+                            "role": "tool",
+                            "name": tool_id,
+                            "content": json.dumps(tool_res.data, default=str),
+                        })
+
+                        async for cont_event in provider.generate_stream(
+                            messages=prompt_turns,
+                            model_id=gen_run.model_id,
+                            temperature=0.2,
+                            cancellation_check=lambda: self.repository.is_cancelled(generation_id),
+                            tools=tools_declarations,
+                        ):
+                            if cont_event.event_type == StreamEventType.DELTA:
+                                delta_text = cont_event.data.get("delta", "")
+                                accumulated_chunks.append(delta_text)
+                                yield cont_event
+                            elif cont_event.event_type == StreamEventType.RUN_CANCELLED:
+                                yield cont_event
+                                return
+
+                    except Exception as tool_exc:
+                        err_code = getattr(tool_exc, "code", "AI_TOOL_FAILED")
+                        err_msg = getattr(tool_exc, "message", str(tool_exc))
+                        yield StreamEvent(
+                            event_type=StreamEventType.TOOL_FAILED,
+                            data={
+                                "tool_id": tool_id,
+                                "error_code": err_code,
+                                "error_message": err_msg,
+                            },
+                        )
+                        if err_code == "AI_TOOL_APPROVAL_REQUIRED":
+                            aprv_id = getattr(tool_exc, "approval_request_id", "")
+                            yield StreamEvent(
+                                event_type=StreamEventType.APPROVAL_REQUIRED,
+                                data={
+                                    "tool_id": tool_id,
+                                    "approval_request_id": aprv_id,
+                                    "message": err_msg,
+                                },
+                            )
+                        # Yield error message chunk to user
+                        fallback_msg = f"\n\n*(Tool execution notice: {err_msg})*"
+                        accumulated_chunks.append(fallback_msg)
+                        yield StreamEvent(
+                            event_type=StreamEventType.DELTA,
+                            data={"delta": fallback_msg},
+                        )
+
+                elif event.event_type == StreamEventType.DELTA:
                     delta_text = event.data.get("delta", "")
                     accumulated_chunks.append(delta_text)
                     yield event

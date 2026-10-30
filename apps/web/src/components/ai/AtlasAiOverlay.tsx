@@ -13,8 +13,10 @@ import { AtlasAiMessageList } from "./AtlasAiMessageList";
 import { AtlasAiRouteContextBanner } from "./AtlasAiRouteContextBanner";
 import { AiContextInspector } from "./context/AiContextInspector";
 import { AiContextChips } from "./context/AiContextChips";
+import { AiToolSettings } from "./tools/AiToolSettings";
 
 export function AtlasAiOverlay() {
+  const [isToolSettingsOpen, setIsToolSettingsOpen] = useState(false);
   const {
     isOpen,
     overlayWidth,
@@ -118,7 +120,15 @@ export function AtlasAiOverlay() {
         conversation={conversation}
         onNewChat={handleNewChat}
         onRefresh={refreshConversation}
+        onToggleToolSettings={() => setIsToolSettingsOpen((prev) => !prev)}
       />
+
+      {/* Tool Governance Settings Modal/Drawer (Stage 126) */}
+      {isToolSettingsOpen && (
+        <div className="border-b border-atlas-border-default bg-zinc-900/95 z-30 shadow-lg">
+          <AiToolSettings onClose={() => setIsToolSettingsOpen(false)} />
+        </div>
+      )}
 
       {/* Route Context Awareness Banner */}
       <AtlasAiRouteContextBanner />
