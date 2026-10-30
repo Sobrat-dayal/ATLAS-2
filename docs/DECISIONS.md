@@ -10237,3 +10237,44 @@ This document records the major architectural and product decisions established.
 1027. **Dedicated Route `/risk` & Integrated Portfolios Tab**: Rendered the institutional `<RiskTerminalWorkspace />` on the canonical global route `/risk` while also embedding it in `/portfolios` under the "Risk Management" tab.
 1028. **Interactive SVG Visualizations**: Engineered high-density interactive charts for rolling volatility with window selection, underwater drawdown valley fills with peak/trough markers, and correlation heatmap matrix with hover inspection.
 1029. **Strict Roadmap Scope Boundaries**: Stage 115 focuses strictly on market-risk foundations (volatility, drawdowns, benchmark sensitivity, covariance, Euler contributions). Strictly deferred Value at Risk (VaR) and Expected Shortfall to Stage 116, Stress Testing to Stage 117, Risk Limits and Escalations to Stage 118, and Autonomous Execution to Stages 143–149.
+
+## Stage 116: Build Value at Risk, Expected Shortfall, and Financial Scenario Testing
+
+### Architectural Positioning & Invariant Standards
+1030. **Decoupled Read-Only Decision Support**: Tail risk and scenario engines operate purely as read-only analytical decision support, never mutating Stage 110 accounting transactions, positions, or cash balances, and never executing live broker orders.
+1031. **Comprehensive Tail Exception Hierarchy**: Added 26 typed domain exceptions (`RiskVaRModelUnsupportedError`, `RiskVaRConfidenceInvalidError`, `RiskVaRHorizonInvalidError`, `RiskScenarioNotFoundError`, `RiskTailRunNotFoundError`, etc.) mapped to appropriate HTTP status codes.
+1032. **Three Institutional Tail Risk Models**: Built Historical Simulation (non-parametric), Parametric Delta-Normal (Gaussian analytical), and Monte Carlo Simulation (Gaussian factor paths) with uniform `VaRResult` and `ExpectedShortfallResult` interfaces.
+
+### Historical Simulation & Fractional Tail Integration
+1033. **Continuous Empirical Quantile Step Integration**: Implemented exact fractional boundary weighting for empirical Expected Shortfall: ES_alpha = [1 / (1 - alpha)] * integral_{alpha}^1 Q(u) du, accurately scaling the marginal boundary observation k = ceil(alpha * N).
+1034. **Part XVI Reference Fixture Verification**: Reconciled historical simulation fixture with 5 daily losses [-2.0%, -1.0%, +0.5%, +1.0%, +3.0%] at alpha = 0.80, verifying VaR = 1.0% (k=4) and ES = 3.0% (k=5).
+
+### Parametric Normal & Closed-Form Gaussian ES
+1035. **Closed-Form Gaussian Expected Shortfall**: Derived exact analytical Expected Shortfall under normality: ES_alpha = -mu_h + sigma_h * [phi(z_alpha) / (1 - alpha)], avoiding crude numerical approximations.
+1036. **Part XX Reference Fixture Verification**: Reconciled parametric fixture with mu = 0.0, sigma = 0.02 at alpha = 0.95, verifying VaR = 3.2897% and closed-form ES = 4.1254% with leptokurtosis ratio ~1.254x.
+1037. **Zero Volatility Degeneracy Protection**: Gracefully handled zero-volatility or single-observation portfolios without division-by-zero crashes.
+
+### Monte Carlo Simulation & Covariance Factorization
+1038. **Regularized Covariance Cholesky Decomposition**: Enforced PSD verification on constituent covariance matrix Sigma, applying eigenvalue floor clipping (min_eigenvalue >= 1e-8) before Cholesky factorization Sigma = A A^T.
+1039. **Reproducible PRNG Seeding**: Integrated deterministic seed parameterization via numpy's `default_rng(seed)` ensuring identical, auditable Monte Carlo trajectories.
+
+### Multi-Currency Compounding & Scenario Stress Testing
+1040. **Multiplicative Multi-Currency Compounding**: Replaced naive linear addition with rigorous geometric compounding R_compound = (1 + s_price)(1 + s_fx) - 1, eliminating first-order approximation errors during severe currency devaluations.
+1041. **Part XXXIV Reference Fixture Verification**: Reconciled fixture with -10% asset shock and -5% FX shock, confirming exact compound return of -14.50% (vs naive -15.00%).
+1042. **Scenario Collision Precedence Hierarchy**: Enforced strict priority resolution: Security > Industry > Sector > Asset Class > Currency > Portfolio-Wide, allowing specific security stress targets to override broad macroeconomic shocks.
+1043. **Exact Position-to-Portfolio Reconciliation**: Enforced mathematical equality: Sum(Delta V_i) === Delta V_P across all position revaluations, raising reconciliation warnings if numerical error exceeds 1e-4.
+1044. **Part XLIII Reference Fixture Verification**: Reconciled scenario revaluation fixture with Asset A ($60k at -10% -> $54k, P&L = -$6k) and Asset B ($40k at +5% -> $42k, P&L = +$2k), confirming Shocked NAV = $96k, Portfolio P&L = -$4k, and exact reconciliation diff 0.0000.
+1045. **Predefined Historical Episode Catalogue**: Packaged institutional scenario presets for COVID-19 (Feb-Mar 2020), Global Financial Crisis (Sep-Nov 2008), 2022 Tech Rate Hike De-rating, and 2011 US Sovereign Downgrade.
+
+### Model Validation & Kupiec Backtesting
+1046. **Kupiec POF Likelihood Ratio Test**: Implemented Kupiec Proportion of Failures test evaluating LR_UC = -2 ln [((1 - p_0)^(N-x) * p_0^x) / ((1 - p_hat)^(N-x) * p_hat^x)] ~ Chi^2(1) with 95% critical value 3.841459.
+1047. **Three-Way Coverage Decision Engine**: Categorized backtest results into ACCEPT_UNCONDITIONAL_COVERAGE, REJECT_TOO_MANY_EXCEPTIONS (underestimates risk), and REJECT_TOO_FEW_EXCEPTIONS (overestimates risk), with sample size warnings for N < 30.
+1048. **Point-in-Time Rolling Forecast Backtester**: Designed rolling backtester tracking historical 1-step-ahead VaR projections vs realized returns and recording breach margins.
+
+### User Interface & Bloomberg-Style Risk Terminal
+1049. **Interactive Tail Risk Sub-Tabs**: Embedded dedicated sub-tabs under `/risk` for "VaR & Expected Shortfall", "Scenario Stress Testing", and "VaR Backtest & Kupiec".
+1050. **SVG Loss Distribution Histogram**: Visualized empirical and simulated loss histograms with 25 bins, VaR threshold marker, shaded tail loss region, quantile chips, and hover tooltips.
+1051. **Interactive Scenario Builder Modal**: Created dialog enabling multi-shock scenario design across securities, sectors, FX, and portfolio-wide targets with magnitude validation.
+1052. **Comparative Stress Matrix**: Rendered comparative table and ranked performance across multiple historical episodes identifying worst-hit portfolio positions.
+1053. **Rolling VaR vs Realized Loss Visualization**: Visualized historical backtest trajectories highlighting exception breach dots and tracking exceedance margins.
+1054. **Strict Scope Discipline**: Stage 116 is strictly confined to VaR, Expected Shortfall, Scenarios, and Model Backtesting. Derivatives Greeks, Yield Curve Scenarios, and Stress Testing Limits are deferred to subsequent stages.

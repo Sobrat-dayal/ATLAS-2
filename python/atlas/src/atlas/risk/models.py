@@ -12,6 +12,8 @@ from .enums import (
     AnnualizationPolicy,
     DataCoverageStatus,
     DrawdownEpisodeStatus,
+    ExpectedShortfallMethod,
+    KupiecTestStatus,
     ReturnBasis,
     RiskCalculationStatus,
     RiskMetricCode,
@@ -19,6 +21,10 @@ from .enums import (
     RiskModelType,
     RiskReturnFrequency,
     RiskSubjectType,
+    ScenarioShockType,
+    ScenarioType,
+    ShockTargetType,
+    VaRModelType,
 )
 
 
@@ -199,6 +205,349 @@ class RiskCalculationRun:
     completed_at: Optional[datetime] = None
 
 
+# ---------------------------------------------------------------------------
+# Stage 116: VaR, Expected Shortfall, Scenarios, and Model Validation Models
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class VaRResult:
+    """Estimated Value at Risk quantile."""
+    model_type: VaRModelType
+    confidence_level: float
+    horizon_days: int
+    var_fraction: float
+    var_monetary: float
+    status: RiskMetricStatus = RiskMetricStatus.AVAILABLE
+    warning: Optional[str] = None
+    effective_tail_sample_size: int = 1
+    total_sample_size: int = 1
+    method_notes: Optional[str] = None
+
+    @property
+    def var_return(self) -> float:
+        return self.var_fraction
+
+    @property
+    def var_amount(self) -> float:
+        return self.var_monetary
+
+
+@dataclass
+class ExpectedShortfallResult:
+    """Estimated Expected Shortfall (tail conditional expectation)."""
+    method: ExpectedShortfallMethod
+    confidence_level: float
+    horizon_days: int
+    es_fraction: float
+    es_monetary: float
+    effective_tail_count: float
+    tail_probability: float
+    status: RiskMetricStatus = RiskMetricStatus.AVAILABLE
+    warning: Optional[str] = None
+    var_return: float = 0.0
+    effective_tail_sample_size: int = 1
+    total_sample_size: int = 1
+    tail_weighting_scheme: str = "EXACT_FRACTIONAL_INTEGRATION"
+
+    @property
+    def es_return(self) -> float:
+        return self.es_fraction
+
+    @property
+    def es_amount(self) -> float:
+        return self.es_monetary
+
+
+@dataclass
+class LossDistribution:
+    """Empirical or simulated loss distribution histogram and quantiles."""
+    bins: List[float]
+    counts: List[int]
+    sample_count: int
+    min_loss: float
+    max_loss: float
+    mean_loss: float
+    quantiles: Dict[str, float]
+    tail_losses: List[float] = field(default_factory=list)
+
+    @property
+    def total_observations(self) -> int:
+        return self.sample_count
+
+
+@dataclass
+class TailRiskCalculationRun:
+    """Complete versioned run of VaR and Expected Shortfall calculation."""
+    run_id: str
+    portfolio_id: str
+    account_id: Optional[str]
+    calculation_as_of: datetime
+    model_type: VaRModelType
+    confidence_level: float
+    horizon_days: int
+    reporting_currency: str
+    portfolio_nav: float
+    var_result: VaRResult
+    es_result: ExpectedShortfallResult
+    distribution: Optional[LossDistribution] = None
+    model_comparison: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    sample_count: int = 0
+    effective_tail_count: float = 0.0
+    simulation_seed: Optional[int] = None
+    simulation_count: Optional[int] = None
+    data_coverage: Optional[RiskDataCoverage] = None
+    input_manifest: Optional[RiskInputManifest] = None
+    status: RiskCalculationStatus = RiskCalculationStatus.COMPLETED
+    warnings: List[str] = field(default_factory=list)
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    input_hash: str = ""
+
+    @property
+    def var(self) -> VaRResult:
+        return self.var_result
+
+    @property
+    def expected_shortfall(self) -> ExpectedShortfallResult:
+        return self.es_result
+
+    @property
+    def loss_distribution(self) -> Optional[LossDistribution]:
+        return self.distribution
+
+    @property
+    def baseline_nav(self) -> float:
+        return self.portfolio_nav
+
+    @property
+    def as_of(self) -> datetime:
+        return self.calculation_as_of
+
+
+@dataclass
+class ScenarioShock:
+    """Specification of an individual market shock within a scenario."""
+    shock_id: str
+    shock_type: ScenarioShockType
+    target_type: ShockTargetType
+    target_id: str
+    shock_value: float
+    shock_units: str = "PERCENT"
+    application_order: int = 1
+    description: Optional[str] = None
+
+
+@dataclass
+class RiskScenario:
+    """Canonical scenario definition (Historical Replay or Hypothetical Shock)."""
+    scenario_id: str
+    owner_user_id: str
+    organization_id: Optional[str]
+    name: str
+    description: str
+    scenario_type: ScenarioType
+    historical_episode_id: Optional[str]
+    shocks: List[ScenarioShock]
+    reporting_currency: str = "USD"
+    version: int = 1
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    @property
+    def is_system_predefined(self) -> bool:
+        return self.owner_user_id == "SYSTEM"
+
+    @property
+    def user_id(self) -> Optional[str]:
+        return self.owner_user_id
+
+
+@dataclass
+class ScenarioPositionResult:
+    """Position-level P&L and revaluation under a scenario."""
+    instrument_id: str
+    symbol: str
+    name: str
+    category_label: str
+    currency: str
+    baseline_value: float
+    weight: float
+    shock_applied: float
+    shock_source: str
+    shocked_value: float
+    pnl: float
+    is_supported: bool = True
+    unsupported_reason: Optional[str] = None
+
+    @property
+    def pnl_impact(self) -> float:
+        return self.pnl
+
+    @property
+    def price_shock_pct(self) -> float:
+        return self.shock_applied
+
+    @property
+    def fx_shock_pct(self) -> float:
+        return 0.0
+
+    @property
+    def effective_total_shock_pct(self) -> float:
+        return self.shock_applied
+
+    @property
+    def pre_shock_weight(self) -> float:
+        return self.weight
+
+    @property
+    def pre_shock_value(self) -> float:
+        return self.baseline_value
+
+    @property
+    def post_shock_value(self) -> float:
+        return self.shocked_value
+
+    @property
+    def percentage_pnl_contribution(self) -> float:
+        return 0.0
+
+    @property
+    def applied_rule_description(self) -> str:
+        return self.shock_source
+
+    @property
+    def sector(self) -> str:
+        return self.category_label
+
+
+@dataclass
+class RiskScenarioRun:
+    """Execution run of a risk scenario against a portfolio snapshot."""
+    run_id: str
+    scenario_id: str
+    scenario_name: str
+    scenario_type: ScenarioType
+    portfolio_id: str
+    account_id: Optional[str]
+    calculation_as_of: datetime
+    baseline_nav: float
+    shocked_nav: float
+    portfolio_pnl: float
+    scenario_return: float
+    coverage_ratio: float
+    eligible_value: float
+    unsupported_value: float
+    position_results: List[ScenarioPositionResult]
+    reconciled: bool
+    reconciliation_difference: float
+    warnings: List[str] = field(default_factory=list)
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+
+
+@dataclass
+class VaRExceptionObservation:
+    """Historical point-in-time VaR forecast vs realized next-period loss."""
+    observation_date: datetime
+    forecast_var: float
+    realized_loss: float
+    is_exception: bool
+    exceedance_amount: float
+
+    @property
+    def date(self) -> datetime:
+        return self.observation_date
+
+    @property
+    def var_forecast(self) -> float:
+        return self.forecast_var
+
+    @property
+    def realized_return(self) -> float:
+        return -self.realized_loss
+
+
+@dataclass
+class KupiecTestResult:
+    """Statistical outcome and likelihood ratio of Kupiec coverage test."""
+    total_observations: int
+    exception_count: int
+    confidence_level: float
+    expected_rate: float
+    observed_rate: float
+    likelihood_ratio_stat: float
+    critical_value_95: float
+    p_value: float
+    status: KupiecTestStatus
+    is_sample_adequate: bool
+    warnings: List[str] = field(default_factory=list)
+
+    @property
+    def test_status(self) -> KupiecTestStatus:
+        return self.status
+
+    @property
+    def lr_statistic(self) -> float:
+        return self.likelihood_ratio_stat
+
+    @property
+    def critical_value(self) -> float:
+        return self.critical_value_95
+
+    @property
+    def sample_adequate(self) -> bool:
+        return self.is_sample_adequate
+
+    @property
+    def expected_exceptions(self) -> float:
+        return self.expected_rate * self.total_observations
+
+    @property
+    def observed_failure_rate(self) -> float:
+        return self.observed_rate
+
+    @property
+    def expected_failure_rate(self) -> float:
+        return self.expected_rate
+
+    @property
+    def decision_text(self) -> str:
+        return f"Kupiec POF test: {self.status.value}"
+
+
+@dataclass
+class VaRBacktestRun:
+    """Backtest run evaluating historical VaR exceptions and coverage."""
+    backtest_id: str
+    portfolio_id: str
+    model_type: VaRModelType
+    confidence_level: float
+    horizon_days: int
+    observation_start: datetime
+    observation_end: datetime
+    total_forecasts: int
+    exceptions: List[VaRExceptionObservation]
+    kupiec_test: KupiecTestResult
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+    @property
+    def start_date(self) -> datetime:
+        return self.observation_start
+
+    @property
+    def end_date(self) -> datetime:
+        return self.observation_end
+
+    @property
+    def observations(self) -> List[VaRExceptionObservation]:
+        return self.exceptions
+
+
 @dataclass
 class PortfolioRiskSnapshot:
     """Lightweight immutable summary snapshot of key portfolio risk metrics."""
@@ -217,4 +566,6 @@ class PortfolioRiskSnapshot:
     status: RiskCalculationStatus
     input_hash: str
     created_at: datetime = field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+
 

@@ -1,12 +1,16 @@
 /**
- * ATLAS Financial Risk Foundation — Typed API Client (Stage 115).
+ * ATLAS Financial Risk Foundation — Typed API Client (Stage 115 & 116).
  */
 
 import {
   BenchmarkSensitivityDTO,
   CalculateRiskRequestDTO,
+  CalculateTailRiskRequest,
   ContributionsResponseDTO,
+  CreateScenarioRequest,
   DrawdownsResponseDTO,
+  ExecuteScenarioRequest,
+  LossDistributionDTO,
   PortfolioRiskSummaryDTO,
   RiskCalculationRunDTO,
   RiskDataCoverageDTO,
@@ -14,6 +18,14 @@ import {
   RiskMetricDefinitionDTO,
   RiskModelDefinitionDTO,
   RiskRunsListDTO,
+  RiskScenarioDTO,
+  RiskScenarioRunDTO,
+  RunVaRBacktestRequest,
+  ScenarioComparisonRequest,
+  ScenarioComparisonResponseDTO,
+  TailRiskCalculationRunDTO,
+  VaRBacktestRunDTO,
+  VaRModelType,
   VolatilityResponseDTO,
 } from './types';
 
@@ -170,3 +182,135 @@ export async function getPortfolioRiskRuns(
   return request<RiskRunsListDTO>(`/risk/portfolios/${portfolioId}/runs?limit=${limit}`);
 }
 
+// ---------------------------------------------------------------------------
+// Stage 116: VaR, Expected Shortfall, Scenarios, and Backtesting Endpoints
+// ---------------------------------------------------------------------------
+
+/**
+ * Retrieves catalog of available VaR & Expected Shortfall models.
+ */
+export async function getTailRiskModels(): Promise<{ model_type: string; name: string; description: string }[]> {
+  return request<{ model_type: string; name: string; description: string }[]>('/risk/tail/models');
+}
+
+/**
+ * Executes on-demand VaR and Expected Shortfall calculation.
+ */
+export async function calculateTailRisk(
+  req: CalculateTailRiskRequest
+): Promise<TailRiskCalculationRunDTO> {
+  return request<TailRiskCalculationRunDTO>('/risk/tail/calculate', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/**
+ * Retrieves the latest tail risk calculation for a portfolio.
+ */
+export async function getPortfolioTailRisk(
+  portfolioId: string,
+  options?: {
+    accountId?: string;
+    modelType?: VaRModelType;
+    confidence?: number;
+    horizon?: number;
+  }
+): Promise<TailRiskCalculationRunDTO> {
+  const params = new URLSearchParams();
+  if (options?.accountId) params.append('account_id', options.accountId);
+  if (options?.modelType) params.append('model_type', options.modelType);
+  if (options?.confidence) params.append('confidence_level', options.confidence.toString());
+  if (options?.horizon) params.append('horizon_days', options.horizon.toString());
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  return request<TailRiskCalculationRunDTO>(`/risk/portfolios/${portfolioId}/tail${queryString}`);
+}
+
+/**
+ * Retrieves a tail calculation run by ID.
+ */
+export async function getTailRun(runId: string): Promise<TailRiskCalculationRunDTO> {
+  return request<TailRiskCalculationRunDTO>(`/risk/tail/runs/${runId}`);
+}
+
+/**
+ * Retrieves the loss distribution histogram and quantiles for a tail run.
+ */
+export async function getTailDistribution(runId: string): Promise<LossDistributionDTO> {
+  return request<LossDistributionDTO>(`/risk/tail/runs/${runId}/distribution`);
+}
+
+/**
+ * Lists available risk scenarios (predefined historical episodes and custom).
+ */
+export async function getRiskScenarios(scenarioType?: string): Promise<RiskScenarioDTO[]> {
+  const query = scenarioType ? `?scenario_type=${encodeURIComponent(scenarioType)}` : '';
+  return request<RiskScenarioDTO[]>(`/risk/scenarios${query}`);
+}
+
+/**
+ * Creates a new custom risk scenario.
+ */
+export async function createRiskScenario(req: CreateScenarioRequest): Promise<RiskScenarioDTO> {
+  return request<RiskScenarioDTO>('/risk/scenarios', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/**
+ * Retrieves scenario details by ID.
+ */
+export async function getRiskScenario(scenarioId: string): Promise<RiskScenarioDTO> {
+  return request<RiskScenarioDTO>(`/risk/scenarios/${scenarioId}`);
+}
+
+/**
+ * Executes a scenario shock against a portfolio.
+ */
+export async function executeRiskScenario(
+  req: ExecuteScenarioRequest
+): Promise<RiskScenarioRunDTO> {
+  return request<RiskScenarioRunDTO>('/risk/scenarios/execute', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/**
+ * Retrieves a completed scenario execution run.
+ */
+export async function getScenarioRun(runId: string): Promise<RiskScenarioRunDTO> {
+  return request<RiskScenarioRunDTO>(`/risk/scenarios/runs/${runId}`);
+}
+
+/**
+ * Compares portfolio impact across multiple scenarios.
+ */
+export async function compareRiskScenarios(
+  req: ScenarioComparisonRequest
+): Promise<ScenarioComparisonResponseDTO> {
+  return request<ScenarioComparisonResponseDTO>('/risk/scenarios/compare', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/**
+ * Runs a rolling VaR backtest and Kupiec unconditional coverage test.
+ */
+export async function runVaRBacktest(
+  req: RunVaRBacktestRequest
+): Promise<VaRBacktestRunDTO> {
+  return request<VaRBacktestRunDTO>('/risk/diagnostics/backtest', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/**
+ * Retrieves a saved VaR backtest result.
+ */
+export async function getVaRBacktest(backtestId: string): Promise<VaRBacktestRunDTO> {
+  return request<VaRBacktestRunDTO>(`/risk/diagnostics/backtest/${backtestId}`);
+}

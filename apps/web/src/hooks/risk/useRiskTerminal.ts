@@ -5,26 +5,42 @@ import { portfoliosApi } from "@/lib/portfolios/api";
 import { AccountDTO, PortfolioDTO } from "@/lib/portfolios/types";
 import {
   calculateRisk,
+  calculateTailRisk,
+  compareRiskScenarios,
+  createRiskScenario,
+  executeRiskScenario,
   getPortfolioBenchmarkSensitivity,
   getPortfolioContributions,
   getPortfolioDrawdowns,
   getPortfolioRiskRuns,
   getPortfolioRiskSummary,
+  getPortfolioTailRisk,
   getPortfolioVolatility,
   getRiskMetrics,
   getRiskModels,
+  getRiskScenarios,
+  getTailDistribution,
+  runVaRBacktest,
 } from "@/lib/risk/api";
 import {
   AnnualizationPolicy,
   BenchmarkSensitivityDTO,
   ContributionsResponseDTO,
+  CreateScenarioRequest,
   DrawdownsResponseDTO,
+  LossDistributionDTO,
   PortfolioRiskSummaryDTO,
   RiskCalculationRunDTO,
   RiskDataCoverageDTO,
   RiskMetricDefinitionDTO,
   RiskModelDefinitionDTO,
   RiskReturnFrequency,
+  RiskScenarioDTO,
+  RiskScenarioRunDTO,
+  ScenarioComparisonResponseDTO,
+  TailRiskCalculationRunDTO,
+  VaRBacktestRunDTO,
+  VaRModelType,
   VolatilityResponseDTO,
 } from "@/lib/risk/types";
 
@@ -34,6 +50,9 @@ export type RiskTab =
   | "drawdowns"
   | "benchmark"
   | "contributions"
+  | "tail_risk"
+  | "scenarios"
+  | "diagnostics"
   | "models"
   | "data_quality"
   | "runs";
@@ -63,6 +82,28 @@ export interface UseRiskTerminalReturn {
   loading: boolean;
   calculating: boolean;
   error: string | null;
+
+  // Stage 116 State
+  tailRiskRun: TailRiskCalculationRunDTO | null;
+  tailDistribution: LossDistributionDTO | null;
+  selectedTailModel: VaRModelType;
+  selectedConfidence: number;
+  selectedHorizon: number;
+  calculatingTail: boolean;
+
+  scenarios: RiskScenarioDTO[];
+  activeScenarioRun: RiskScenarioRunDTO | null;
+  scenarioComparison: ScenarioComparisonResponseDTO | null;
+  executingScenario: boolean;
+  comparingScenarios: boolean;
+
+  backtestRun: VaRBacktestRunDTO | null;
+  backtestModel: VaRModelType;
+  backtestConfidence: number;
+  backtestWindowSize: number;
+  runningBacktest: boolean;
+
+  // Setters & Actions
   setSelectedPortfolioId: (id: string) => void;
   setSelectedAccountId: (id: string) => void;
   setSelectedBenchmark: (id: string) => void;
@@ -70,7 +111,28 @@ export interface UseRiskTerminalReturn {
   setSelectedFrequency: (freq: RiskReturnFrequency) => void;
   setRollingWindowSize: (size: number) => void;
   setActiveTab: (tab: RiskTab) => void;
+
+  setSelectedTailModel: (model: VaRModelType) => void;
+  setSelectedConfidence: (conf: number) => void;
+  setSelectedHorizon: (horizon: number) => void;
+  setBacktestModel: (model: VaRModelType) => void;
+  setBacktestConfidence: (conf: number) => void;
+  setBacktestWindowSize: (size: number) => void;
+
   calculate: () => Promise<void>;
+  calculateTailRiskAction: (
+    overrideModel?: VaRModelType,
+    overrideConf?: number,
+    overrideHorizon?: number
+  ) => Promise<void>;
+  executeScenarioAction: (scenarioId: string) => Promise<void>;
+  createScenarioAction: (req: CreateScenarioRequest) => Promise<RiskScenarioDTO>;
+  compareScenariosAction: (scenarioIds?: string[]) => Promise<void>;
+  runBacktestAction: (
+    overrideModel?: VaRModelType,
+    overrideConf?: number,
+    overrideWindow?: number
+  ) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -104,21 +166,43 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
   const [calculating, setCalculating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Stage 116 State
+  const [tailRiskRun, setTailRiskRun] = useState<TailRiskCalculationRunDTO | null>(null);
+  const [tailDistribution, setTailDistribution] = useState<LossDistributionDTO | null>(null);
+  const [selectedTailModel, setSelectedTailModel] = useState<VaRModelType>("HISTORICAL_SIMULATION");
+  const [selectedConfidence, setSelectedConfidence] = useState<number>(0.95);
+  const [selectedHorizon, setSelectedHorizon] = useState<number>(1);
+  const [calculatingTail, setCalculatingTail] = useState<boolean>(false);
+
+  const [scenarios, setScenarios] = useState<RiskScenarioDTO[]>([]);
+  const [activeScenarioRun, setActiveScenarioRun] = useState<RiskScenarioRunDTO | null>(null);
+  const [scenarioComparison, setScenarioComparison] = useState<ScenarioComparisonResponseDTO | null>(null);
+  const [executingScenario, setExecutingScenario] = useState<boolean>(false);
+  const [comparingScenarios, setComparingScenarios] = useState<boolean>(false);
+
+  const [backtestRun, setBacktestRun] = useState<VaRBacktestRunDTO | null>(null);
+  const [backtestModel, setBacktestModel] = useState<VaRModelType>("HISTORICAL_SIMULATION");
+  const [backtestConfidence, setBacktestConfidence] = useState<number>(0.95);
+  const [backtestWindowSize, setBacktestWindowSize] = useState<number>(250);
+  const [runningBacktest, setRunningBacktest] = useState<boolean>(false);
+
   // Load portfolios list and catalogs on mount
   useEffect(() => {
     let mounted = true;
     async function init() {
       try {
-        const [portfoliosRes, metricsRes, modelsRes] = await Promise.all([
+        const [portfoliosRes, metricsRes, modelsRes, scenariosRes] = await Promise.all([
           portfoliosApi.listPortfolios().catch(() => ({ items: [], total: 0 })),
           getRiskMetrics().catch(() => []),
           getRiskModels().catch(() => []),
+          getRiskScenarios().catch(() => []),
         ]);
 
         if (!mounted) return;
         setPortfolios(portfoliosRes.items || []);
         setMetricsCatalog(metricsRes || []);
         setModelsCatalog(modelsRes || []);
+        setScenarios(scenariosRes || []);
 
         if (portfoliosRes.items && portfoliosRes.items.length > 0 && !selectedPortfolioId) {
           setSelectedPortfolioId(portfoliosRes.items[0].id);
@@ -162,14 +246,27 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     try {
       const accountParam = selectedAccountId === "ALL" ? undefined : selectedAccountId;
 
-      const [summaryRes, volRes, ddRes, benchRes, contribRes, runsRes] = await Promise.all([
-        getPortfolioRiskSummary(selectedPortfolioId, accountParam).catch(() => null),
-        getPortfolioVolatility(selectedPortfolioId, { accountId: accountParam, windowSize: rollingWindowSize }).catch(() => null),
-        getPortfolioDrawdowns(selectedPortfolioId, accountParam).catch(() => null),
-        getPortfolioBenchmarkSensitivity(selectedPortfolioId, { accountId: accountParam, benchmarkId: selectedBenchmark }).catch(() => null),
-        getPortfolioContributions(selectedPortfolioId, accountParam).catch(() => null),
-        getPortfolioRiskRuns(selectedPortfolioId, 10).catch(() => ({ items: [], total: 0 })),
-      ]);
+      const [summaryRes, volRes, ddRes, benchRes, contribRes, runsRes, tailRes] =
+        await Promise.all([
+          getPortfolioRiskSummary(selectedPortfolioId, accountParam).catch(() => null),
+          getPortfolioVolatility(selectedPortfolioId, {
+            accountId: accountParam,
+            windowSize: rollingWindowSize,
+          }).catch(() => null),
+          getPortfolioDrawdowns(selectedPortfolioId, accountParam).catch(() => null),
+          getPortfolioBenchmarkSensitivity(selectedPortfolioId, {
+            accountId: accountParam,
+            benchmarkId: selectedBenchmark,
+          }).catch(() => null),
+          getPortfolioContributions(selectedPortfolioId, accountParam).catch(() => null),
+          getPortfolioRiskRuns(selectedPortfolioId, 10).catch(() => ({ items: [], total: 0 })),
+          getPortfolioTailRisk(selectedPortfolioId, {
+            accountId: accountParam,
+            modelType: selectedTailModel,
+            confidence: selectedConfidence,
+            horizon: selectedHorizon,
+          }).catch(() => null),
+        ]);
 
       setSummary(summaryRes);
       setVolatilityData(volRes);
@@ -182,19 +279,38 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
         setRun(runsRes.items[0]);
         setDataQuality(runsRes.items[0].data_coverage || null);
       }
+
+      if (tailRes) {
+        setTailRiskRun(tailRes);
+        if (tailRes.loss_distribution) {
+          setTailDistribution(tailRes.loss_distribution);
+        } else if (tailRes.run_id) {
+          getTailDistribution(tailRes.run_id)
+            .then(setTailDistribution)
+            .catch(() => {});
+        }
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [selectedPortfolioId, selectedAccountId, rollingWindowSize, selectedBenchmark]);
+  }, [
+    selectedPortfolioId,
+    selectedAccountId,
+    rollingWindowSize,
+    selectedBenchmark,
+    selectedTailModel,
+    selectedConfidence,
+    selectedHorizon,
+  ]);
 
   useEffect(() => {
     loadRiskData();
   }, [loadRiskData]);
 
-  // Trigger on-demand calculation
+  // Trigger on-demand foundation calculation
   const calculate = useCallback(async () => {
     if (!selectedPortfolioId) return;
     setCalculating(true);
@@ -232,6 +348,146 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     loadRiskData,
   ]);
 
+  // Stage 116: Trigger on-demand VaR & Expected Shortfall calculation
+  const calculateTailRiskAction = useCallback(
+    async (
+      overrideModel?: VaRModelType,
+      overrideConf?: number,
+      overrideHorizon?: number
+    ) => {
+      if (!selectedPortfolioId) return;
+      setCalculatingTail(true);
+      setError(null);
+      try {
+        const model = overrideModel || selectedTailModel;
+        const conf = overrideConf || selectedConfidence;
+        const horizon = overrideHorizon || selectedHorizon;
+        const accountParam = selectedAccountId === "ALL" ? undefined : selectedAccountId;
+
+        const newTailRun = await calculateTailRisk({
+          portfolio_id: selectedPortfolioId,
+          model_type: model,
+          confidence_level: conf,
+          horizon_days: horizon,
+          account_id: accountParam,
+        });
+
+        setTailRiskRun(newTailRun);
+        if (newTailRun.loss_distribution) {
+          setTailDistribution(newTailRun.loss_distribution);
+        } else if (newTailRun.run_id) {
+          const dist = await getTailDistribution(newTailRun.run_id).catch(() => null);
+          setTailDistribution(dist);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+      } finally {
+        setCalculatingTail(false);
+      }
+    },
+    [selectedPortfolioId, selectedAccountId, selectedTailModel, selectedConfidence, selectedHorizon]
+  );
+
+  // Stage 116: Execute a Scenario Shock
+  const executeScenarioAction = useCallback(
+    async (scenarioId: string) => {
+      if (!selectedPortfolioId) return;
+      setExecutingScenario(true);
+      setError(null);
+      try {
+        const accountParam = selectedAccountId === "ALL" ? undefined : selectedAccountId;
+        const runRes = await executeRiskScenario({
+          scenario_id: scenarioId,
+          portfolio_id: selectedPortfolioId,
+          account_id: accountParam,
+        });
+        setActiveScenarioRun(runRes);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+      } finally {
+        setExecutingScenario(false);
+      }
+    },
+    [selectedPortfolioId, selectedAccountId]
+  );
+
+  // Stage 116: Create a Custom Scenario
+  const createScenarioAction = useCallback(
+    async (req: CreateScenarioRequest): Promise<RiskScenarioDTO> => {
+      try {
+        const newScen = await createRiskScenario(req);
+        const refreshed = await getRiskScenarios().catch(() => []);
+        setScenarios(refreshed);
+        return newScen;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        throw err;
+      }
+    },
+    []
+  );
+
+  // Stage 116: Compare Multiple Scenarios
+  const compareScenariosAction = useCallback(
+    async (scenarioIds?: string[]) => {
+      if (!selectedPortfolioId) return;
+      setComparingScenarios(true);
+      setError(null);
+      try {
+        const accountParam = selectedAccountId === "ALL" ? undefined : selectedAccountId;
+        const compRes = await compareRiskScenarios({
+          portfolio_id: selectedPortfolioId,
+          scenario_ids: scenarioIds,
+          account_id: accountParam,
+        });
+        setScenarioComparison(compRes);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+      } finally {
+        setComparingScenarios(false);
+      }
+    },
+    [selectedPortfolioId, selectedAccountId]
+  );
+
+  // Stage 116: Run VaR Backtest & Kupiec POF Test
+  const runBacktestAction = useCallback(
+    async (
+      overrideModel?: VaRModelType,
+      overrideConf?: number,
+      overrideWindow?: number
+    ) => {
+      if (!selectedPortfolioId) return;
+      setRunningBacktest(true);
+      setError(null);
+      try {
+        const model = overrideModel || backtestModel;
+        const conf = overrideConf || backtestConfidence;
+        const win = overrideWindow || backtestWindowSize;
+        const accountParam = selectedAccountId === "ALL" ? undefined : selectedAccountId;
+
+        const btestRes = await runVaRBacktest({
+          portfolio_id: selectedPortfolioId,
+          model_type: model,
+          confidence_level: conf,
+          window_size: win,
+          account_id: accountParam,
+        });
+        setBacktestRun(btestRes);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+      } finally {
+        setRunningBacktest(false);
+      }
+    },
+    [selectedPortfolioId, selectedAccountId, backtestModel, backtestConfidence, backtestWindowSize]
+  );
+
   return {
     portfolios,
     selectedPortfolioId,
@@ -257,6 +513,28 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     loading,
     calculating,
     error,
+
+    // Stage 116 State
+    tailRiskRun,
+    tailDistribution,
+    selectedTailModel,
+    selectedConfidence,
+    selectedHorizon,
+    calculatingTail,
+
+    scenarios,
+    activeScenarioRun,
+    scenarioComparison,
+    executingScenario,
+    comparingScenarios,
+
+    backtestRun,
+    backtestModel,
+    backtestConfidence,
+    backtestWindowSize,
+    runningBacktest,
+
+    // Setters & Actions
     setSelectedPortfolioId,
     setSelectedAccountId,
     setSelectedBenchmark,
@@ -264,7 +542,20 @@ export function useRiskTerminal(initialPortfolioId?: string): UseRiskTerminalRet
     setSelectedFrequency,
     setRollingWindowSize,
     setActiveTab,
+
+    setSelectedTailModel,
+    setSelectedConfidence,
+    setSelectedHorizon,
+    setBacktestModel,
+    setBacktestConfidence,
+    setBacktestWindowSize,
+
     calculate,
+    calculateTailRiskAction,
+    executeScenarioAction,
+    createScenarioAction,
+    compareScenariosAction,
+    runBacktestAction,
     refresh: loadRiskData,
   };
 }

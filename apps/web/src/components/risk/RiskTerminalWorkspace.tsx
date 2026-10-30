@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { RiskTab, useRiskTerminal } from "@/hooks/risk/useRiskTerminal";
 import {
   Activity,
@@ -14,8 +14,11 @@ import {
   History,
   Layers,
   PieChart,
+  Scale,
+  ShieldAlert,
   ShieldCheck,
   Sliders,
+  Zap,
 } from "lucide-react";
 import { BenchmarkSensitivityPanel } from "./BenchmarkSensitivityPanel";
 import { CovarianceDiagnosticsPanel } from "./CovarianceDiagnosticsPanel";
@@ -29,15 +32,28 @@ import { RiskModelInspector } from "./RiskModelInspector";
 import { RiskOverviewSummary } from "./RiskOverviewSummary";
 import { RiskRunHistory } from "./RiskRunHistory";
 
+// Stage 116 Components
+import { TailRiskSummaryCards } from "./tail/TailRiskSummaryCards";
+import { LossDistributionChart } from "./tail/LossDistributionChart";
+import { TailModelComparisonTable } from "./tail/TailModelComparisonTable";
+import { ScenarioLibraryTable } from "./scenarios/ScenarioLibraryTable";
+import { ScenarioBuilderModal } from "./scenarios/ScenarioBuilderModal";
+import { ScenarioResultsWorkspace } from "./scenarios/ScenarioResultsWorkspace";
+import { VaRExceptionBacktestPanel } from "./diagnostics/VaRExceptionBacktestPanel";
+
 interface RiskTerminalWorkspaceProps {
   initialPortfolioId?: string;
 }
 
 export function RiskTerminalWorkspace({ initialPortfolioId }: RiskTerminalWorkspaceProps) {
   const terminal = useRiskTerminal(initialPortfolioId);
+  const [isScenarioBuilderOpen, setIsScenarioBuilderOpen] = useState(false);
 
   const tabs: { id: RiskTab; label: string; icon: React.ReactNode }[] = [
     { id: "overview", label: "Overview", icon: <BarChart3 className="h-3.5 w-3.5" /> },
+    { id: "tail_risk", label: "VaR & Expected Shortfall", icon: <ShieldAlert className="h-3.5 w-3.5 text-rose-400" /> },
+    { id: "scenarios", label: "Scenario Stress Testing", icon: <Zap className="h-3.5 w-3.5 text-amber-400" /> },
+    { id: "diagnostics", label: "VaR Backtest & Kupiec", icon: <Scale className="h-3.5 w-3.5 text-emerald-400" /> },
     { id: "volatility", label: "Rolling Volatility", icon: <Activity className="h-3.5 w-3.5" /> },
     { id: "drawdowns", label: "Drawdown Analytics", icon: <Flame className="h-3.5 w-3.5" /> },
     { id: "benchmark", label: "Benchmark Sensitivity", icon: <Compass className="h-3.5 w-3.5" /> },
@@ -134,6 +150,26 @@ export function RiskTerminalWorkspace({ initialPortfolioId }: RiskTerminalWorksp
             {/* Tab 1: Overview */}
             {terminal.activeTab === "overview" && (
               <div className="space-y-4">
+                <TailRiskSummaryCards
+                  run={terminal.tailRiskRun}
+                  selectedModel={terminal.selectedTailModel}
+                  selectedConfidence={terminal.selectedConfidence}
+                  selectedHorizon={terminal.selectedHorizon}
+                  calculating={terminal.calculatingTail}
+                  onSelectModel={(m) => {
+                    terminal.setSelectedTailModel(m);
+                    terminal.calculateTailRiskAction(m);
+                  }}
+                  onSelectConfidence={(c) => {
+                    terminal.setSelectedConfidence(c);
+                    terminal.calculateTailRiskAction(undefined, c);
+                  }}
+                  onSelectHorizon={(h) => {
+                    terminal.setSelectedHorizon(h);
+                    terminal.calculateTailRiskAction(undefined, undefined, h);
+                  }}
+                  onRecalculate={() => terminal.calculateTailRiskAction()}
+                />
                 <HistoricalVolatilityChart
                   volatilityData={terminal.volatilityData}
                   rollingWindowSize={terminal.rollingWindowSize}
@@ -141,6 +177,81 @@ export function RiskTerminalWorkspace({ initialPortfolioId }: RiskTerminalWorksp
                 />
                 <DrawdownChart drawdownData={terminal.drawdownData} />
                 <RiskContributionTable contributionsData={terminal.contributionsData} />
+              </div>
+            )}
+
+            {/* Stage 116 Tab: VaR & Expected Shortfall */}
+            {terminal.activeTab === "tail_risk" && (
+              <div className="space-y-4">
+                <TailRiskSummaryCards
+                  run={terminal.tailRiskRun}
+                  selectedModel={terminal.selectedTailModel}
+                  selectedConfidence={terminal.selectedConfidence}
+                  selectedHorizon={terminal.selectedHorizon}
+                  calculating={terminal.calculatingTail}
+                  onSelectModel={(m) => {
+                    terminal.setSelectedTailModel(m);
+                    terminal.calculateTailRiskAction(m);
+                  }}
+                  onSelectConfidence={(c) => {
+                    terminal.setSelectedConfidence(c);
+                    terminal.calculateTailRiskAction(undefined, c);
+                  }}
+                  onSelectHorizon={(h) => {
+                    terminal.setSelectedHorizon(h);
+                    terminal.calculateTailRiskAction(undefined, undefined, h);
+                  }}
+                  onRecalculate={() => terminal.calculateTailRiskAction()}
+                />
+
+                <LossDistributionChart
+                  distribution={terminal.tailDistribution}
+                  run={terminal.tailRiskRun}
+                />
+
+                <TailModelComparisonTable
+                  activeModel={terminal.selectedTailModel}
+                  onSelectModel={(m) => {
+                    terminal.setSelectedTailModel(m);
+                    terminal.calculateTailRiskAction(m);
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Stage 116 Tab: Scenario Stress Testing */}
+            {terminal.activeTab === "scenarios" && (
+              <div className="space-y-4">
+                <ScenarioLibraryTable
+                  scenarios={terminal.scenarios}
+                  executing={terminal.executingScenario}
+                  onExecuteScenario={terminal.executeScenarioAction}
+                  onOpenCreateModal={() => setIsScenarioBuilderOpen(true)}
+                  onCompareScenarios={() => terminal.compareScenariosAction()}
+                  comparing={terminal.comparingScenarios}
+                />
+
+                <ScenarioResultsWorkspace
+                  run={terminal.activeScenarioRun}
+                  comparison={terminal.scenarioComparison}
+                />
+              </div>
+            )}
+
+            {/* Stage 116 Tab: VaR Backtest & Kupiec */}
+            {terminal.activeTab === "diagnostics" && (
+              <div className="space-y-4">
+                <VaRExceptionBacktestPanel
+                  backtest={terminal.backtestRun}
+                  running={terminal.runningBacktest}
+                  selectedModel={terminal.backtestModel}
+                  selectedConfidence={terminal.backtestConfidence}
+                  selectedWindowSize={terminal.backtestWindowSize}
+                  onSelectModel={terminal.setBacktestModel}
+                  onSelectConfidence={terminal.setBacktestConfidence}
+                  onSelectWindowSize={terminal.setBacktestWindowSize}
+                  onRunBacktest={() => terminal.runBacktestAction()}
+                />
               </div>
             )}
 
@@ -187,7 +298,11 @@ export function RiskTerminalWorkspace({ initialPortfolioId }: RiskTerminalWorksp
             {terminal.activeTab === "models" && (
               <div className="space-y-4">
                 <CovarianceDiagnosticsPanel
-                  diagnostics={terminal.contributionsData?.covariance_diagnostics || terminal.run?.covariance_diagnostics || null}
+                  diagnostics={
+                    terminal.contributionsData?.covariance_diagnostics ||
+                    terminal.run?.covariance_diagnostics ||
+                    null
+                  }
                 />
                 <RiskModelInspector
                   modelsCatalog={terminal.modelsCatalog}
@@ -209,13 +324,22 @@ export function RiskTerminalWorkspace({ initialPortfolioId }: RiskTerminalWorksp
             {/* Tab 8: Audit Runs */}
             {terminal.activeTab === "runs" && (
               <div className="space-y-4">
-                <RiskRunHistory runsList={terminal.runsList} selectedRunId={terminal.run?.risk_run_id} />
+                <RiskRunHistory
+                  runsList={terminal.runsList}
+                  selectedRunId={terminal.run?.risk_run_id}
+                />
               </div>
             )}
           </>
         )}
       </div>
+
+      {/* Scenario Builder Modal */}
+      <ScenarioBuilderModal
+        isOpen={isScenarioBuilderOpen}
+        onClose={() => setIsScenarioBuilderOpen(false)}
+        onCreateScenario={terminal.createScenarioAction}
+      />
     </div>
   );
 }
-

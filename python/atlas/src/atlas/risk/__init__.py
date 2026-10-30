@@ -7,11 +7,14 @@ and covariance-based Euler risk decomposition.
 
 from .benchmark import BenchmarkSensitivityEngine
 from .covariance_risk import ModelRiskEngine
+from .diagnostics import VaRDiagnosticsEngine
 from .drawdown import DrawdownEngine
 from .enums import (
     AnnualizationPolicy,
     DataCoverageStatus,
     DrawdownEpisodeStatus,
+    ExpectedShortfallMethod,
+    KupiecTestStatus,
     ReturnBasis,
     RiskCalculationStatus,
     RiskMetricCode,
@@ -19,6 +22,10 @@ from .enums import (
     RiskModelType,
     RiskReturnFrequency,
     RiskSubjectType,
+    ScenarioShockType,
+    ScenarioType,
+    ShockTargetType,
+    VaRModelType,
 )
 from .errors import (
     RiskBenchmarkNotFoundError,
@@ -33,6 +40,7 @@ from .errors import (
     RiskCovarianceNumericalFailureError,
     RiskDrawdownIndexInvalidError,
     RiskError,
+    RiskESTailEstimatorInvalidError,
     RiskInsufficientObservationsError,
     RiskModelNotFoundError,
     RiskModelUnsupportedError,
@@ -41,15 +49,27 @@ from .errors import (
     RiskReconciliationFailedError,
     RiskReturnSeriesMissingError,
     RiskRunNotFoundError,
+    RiskScenarioAccessDeniedError,
+    RiskScenarioNotFoundError,
+    RiskScenarioShockInvalidError,
     RiskSourceRestrictedError,
     RiskSubjectAccessDeniedError,
     RiskSubjectNotFoundError,
+    RiskTailBacktestInsufficientObservationsError,
+    RiskTailRunNotFoundError,
+    RiskVaRConfidenceInvalidError,
+    RiskVaRHorizonInvalidError,
+    RiskVaRInsufficientHistoryError,
+    RiskVaRModelUnsupportedError,
 )
 from .models import (
     BenchmarkSensitivityResult,
     ComponentRiskContribution,
     CovarianceDiagnostics,
     DrawdownEpisode,
+    ExpectedShortfallResult,
+    KupiecTestResult,
+    LossDistribution,
     PortfolioRiskSnapshot,
     RiskCalculationRun,
     RiskDataCoverage,
@@ -57,13 +77,23 @@ from .models import (
     RiskMetricDefinition,
     RiskModelDefinition,
     RiskReturnSeries,
+    RiskScenario,
+    RiskScenarioRun,
     RiskSubject,
     RollingRiskObservation,
+    ScenarioPositionResult,
+    ScenarioShock,
+    TailRiskCalculationRun,
+    VaRBacktestRun,
+    VaRExceptionObservation,
+    VaRResult,
 )
 from .multi_currency import MultiCurrencyRiskEngine
 from .quality import RiskDataQualityEngine
 from .reconciliation import RiskReconciliationEngine
+from .scenarios import PREDEFINED_SCENARIOS, ScenarioEngine
 from .service import RiskService
+from .tail_var import TailRiskEngine
 from .volatility import HistoricalVolatilityEngine
 
 __all__ = [
@@ -75,7 +105,11 @@ __all__ = [
     "MultiCurrencyRiskEngine",
     "RiskDataQualityEngine",
     "RiskReconciliationEngine",
+    "TailRiskEngine",
+    "ScenarioEngine",
+    "VaRDiagnosticsEngine",
     "RiskService",
+    "PREDEFINED_SCENARIOS",
     # Enums
     "RiskSubjectType",
     "RiskMetricCode",
@@ -87,6 +121,12 @@ __all__ = [
     "DataCoverageStatus",
     "ReturnBasis",
     "DrawdownEpisodeStatus",
+    "VaRModelType",
+    "ExpectedShortfallMethod",
+    "ScenarioType",
+    "ScenarioShockType",
+    "ShockTargetType",
+    "KupiecTestStatus",
     # Models
     "RiskSubject",
     "RiskMetricDefinition",
@@ -101,6 +141,17 @@ __all__ = [
     "RiskInputManifest",
     "RiskCalculationRun",
     "PortfolioRiskSnapshot",
+    "VaRResult",
+    "ExpectedShortfallResult",
+    "LossDistribution",
+    "TailRiskCalculationRun",
+    "ScenarioShock",
+    "RiskScenario",
+    "ScenarioPositionResult",
+    "RiskScenarioRun",
+    "VaRExceptionObservation",
+    "KupiecTestResult",
+    "VaRBacktestRun",
     # Errors
     "RiskError",
     "RiskSubjectNotFoundError",
@@ -125,4 +176,14 @@ __all__ = [
     "RiskReconciliationFailedError",
     "RiskSourceRestrictedError",
     "RiskCalculationFailedError",
+    "RiskVaRModelUnsupportedError",
+    "RiskVaRConfidenceInvalidError",
+    "RiskVaRHorizonInvalidError",
+    "RiskVaRInsufficientHistoryError",
+    "RiskESTailEstimatorInvalidError",
+    "RiskScenarioNotFoundError",
+    "RiskScenarioAccessDeniedError",
+    "RiskScenarioShockInvalidError",
+    "RiskTailBacktestInsufficientObservationsError",
+    "RiskTailRunNotFoundError",
 ]

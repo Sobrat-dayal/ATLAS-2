@@ -250,3 +250,153 @@ export function getFrequencyLabel(freq: RiskReturnFrequency): string {
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// Stage 116: VaR, Expected Shortfall, Scenarios, and Kupiec Formatting
+// ---------------------------------------------------------------------------
+
+import type {
+  KupiecTestStatus,
+  VaRModelType,
+} from './types';
+
+/**
+ * Formats monetary amounts with thousands separators and currency symbol.
+ */
+export function formatCurrency(
+  val: number | null | undefined,
+  currency: string = 'USD',
+  decimals: number = 0
+): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  const prefix = currency === 'USD' ? '$' : `${currency} `;
+  const absVal = Math.abs(val);
+  const formatted = absVal.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  return val < 0 ? `-${prefix}${formatted}` : `${prefix}${formatted}`;
+}
+
+/**
+ * Formats signed monetary P&L e.g. "+$25,000" or "-$40,000".
+ */
+export function formatPnl(
+  val: number | null | undefined,
+  currency: string = 'USD',
+  decimals: number = 0
+): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  const prefix = currency === 'USD' ? '$' : `${currency} `;
+  const sign = val > 0 ? '+' : val < 0 ? '-' : '';
+  const formatted = Math.abs(val).toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  return `${sign}${prefix}${formatted}`;
+}
+
+/**
+ * Formats a decimal VaR or ES loss fraction into an unsigned percentage string.
+ */
+export function formatVaRReturn(
+  val: number | null | undefined,
+  decimals: number = 2
+): string {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  return `${(Math.abs(val) * 100).toFixed(decimals)}%`;
+}
+
+/**
+ * Returns badge styling for Kupiec POF unconditional coverage tests.
+ */
+export function getKupiecStatusBadge(status: KupiecTestStatus): StatusBadgeConfig {
+  switch (status) {
+    case 'ACCEPT_UNCONDITIONAL_COVERAGE':
+      return {
+        label: 'Accepted (Accurate VaR)',
+        bgClass: 'bg-emerald-500/10',
+        textClass: 'text-emerald-400',
+        borderClass: 'border-emerald-500/30',
+      };
+    case 'REJECT_TOO_MANY_EXCEPTIONS':
+      return {
+        label: 'Rejected (Underestimates Risk)',
+        bgClass: 'bg-rose-500/10',
+        textClass: 'text-rose-400',
+        borderClass: 'border-rose-500/30',
+      };
+    case 'REJECT_TOO_FEW_EXCEPTIONS':
+      return {
+        label: 'Rejected (Overestimates Risk)',
+        bgClass: 'bg-amber-500/10',
+        textClass: 'text-amber-400',
+        borderClass: 'border-amber-500/30',
+      };
+    case 'INSUFFICIENT_OBSERVATIONS':
+      return {
+        label: 'Insufficient Sample (<30)',
+        bgClass: 'bg-slate-500/10',
+        textClass: 'text-slate-400',
+        borderClass: 'border-slate-500/30',
+      };
+    default:
+      return {
+        label: status,
+        bgClass: 'bg-slate-500/10',
+        textClass: 'text-slate-400',
+        borderClass: 'border-slate-500/30',
+      };
+  }
+}
+
+/**
+ * Returns badge styling for scenario shock impact severity.
+ */
+export function getScenarioImpactBadge(returnPct: number): StatusBadgeConfig {
+  if (returnPct <= -0.15) {
+    return {
+      label: 'Severe Impact',
+      bgClass: 'bg-rose-500/15',
+      textClass: 'text-rose-400',
+      borderClass: 'border-rose-500/40',
+    };
+  } else if (returnPct <= -0.05) {
+    return {
+      label: 'Moderate Impact',
+      bgClass: 'bg-amber-500/15',
+      textClass: 'text-amber-400',
+      borderClass: 'border-amber-500/40',
+    };
+  } else if (returnPct < 0) {
+    return {
+      label: 'Mild Impact',
+      bgClass: 'bg-yellow-500/10',
+      textClass: 'text-yellow-400',
+      borderClass: 'border-yellow-500/30',
+    };
+  } else {
+    return {
+      label: 'Positive Impact',
+      bgClass: 'bg-emerald-500/10',
+      textClass: 'text-emerald-400',
+      borderClass: 'border-emerald-500/30',
+    };
+  }
+}
+
+/**
+ * Formats a VaR Model Type into human readable title.
+ */
+export function getVaRModelLabel(model: VaRModelType): string {
+  switch (model) {
+    case 'HISTORICAL_SIMULATION':
+      return 'Historical Simulation (Non-Parametric)';
+    case 'PARAMETRIC_NORMAL':
+      return 'Parametric Delta-Normal (Gaussian)';
+    case 'MONTE_CARLO_GAUSSIAN':
+      return 'Monte Carlo Gaussian Simulation';
+    default:
+      return model;
+  }
+}

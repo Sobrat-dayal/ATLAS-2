@@ -27,6 +27,8 @@ from .enums import (
     AnnualizationPolicy,
     DataCoverageStatus,
     DrawdownEpisodeStatus,
+    ExpectedShortfallMethod,
+    KupiecTestStatus,
     ReturnBasis,
     RiskCalculationStatus,
     RiskMetricCode,
@@ -34,30 +36,65 @@ from .enums import (
     RiskModelType,
     RiskReturnFrequency,
     RiskSubjectType,
+    ScenarioShockType,
+    ScenarioType,
+    ShockTargetType,
+    VaRModelType,
 )
 from .errors import (
     RiskCalculationFailedError,
+    RiskESTailEstimatorInvalidError,
     RiskRunNotFoundError,
+    RiskScenarioAccessDeniedError,
+    RiskScenarioNotFoundError,
+    RiskScenarioShockInvalidError,
     RiskSubjectAccessDeniedError,
     RiskSubjectNotFoundError,
+    RiskTailBacktestInsufficientObservationsError,
+    RiskTailRunNotFoundError,
+    RiskVaRConfidenceInvalidError,
+    RiskVaRHorizonInvalidError,
+    RiskVaRInsufficientHistoryError,
+    RiskVaRModelUnsupportedError,
 )
 from .models import (
     BenchmarkSensitivityResult,
     ComponentRiskContribution,
     CovarianceDiagnostics,
     DrawdownEpisode,
+    ExpectedShortfallResult,
+    KupiecTestResult,
+    LossDistribution,
     PortfolioRiskSnapshot,
     RiskCalculationRun,
     RiskDataCoverage,
     RiskInputManifest,
     RiskMetricDefinition,
     RiskModelDefinition,
+    RiskScenario,
+    RiskScenarioRun,
     RollingRiskObservation,
+    ScenarioPositionResult,
+    ScenarioShock,
+    TailRiskCalculationRun,
+    VaRBacktestRun,
+    VaRExceptionObservation,
+    VaRResult,
 )
 from .quality import RiskDataQualityEngine
 from .reconciliation import RiskReconciliationEngine
-from .schemas import CalculateRiskRequest
+from .schemas import (
+    CalculateRiskRequest,
+    CalculateTailRiskRequest,
+    CreateScenarioRequest,
+    ExecuteScenarioRequest,
+    RunVaRBacktestRequest,
+    ScenarioComparisonRequest,
+)
 from .volatility import HistoricalVolatilityEngine
+from .tail_var import TailRiskEngine
+from .scenarios import ScenarioEngine, PREDEFINED_SCENARIOS
+from .diagnostics import VaRDiagnosticsEngine
 
 logger = logging.getLogger("atlas.risk.service")
 
@@ -255,6 +292,19 @@ class RiskService:
         self._runs: Dict[str, RiskCalculationRun] = {}
         self._portfolio_runs: Dict[str, List[str]] = {}
         self._snapshots: Dict[str, PortfolioRiskSnapshot] = {}
+
+        # Stage 116 Tail Risk, Scenarios, and Diagnostics Registries
+        self._tail_runs: Dict[str, TailRiskCalculationRun] = {}
+        self._portfolio_tail_runs: Dict[str, List[str]] = {}
+        self._scenarios: Dict[str, RiskScenario] = {s.scenario_id: s for s in PREDEFINED_SCENARIOS}
+        self._scenario_runs: Dict[str, RiskScenarioRun] = {}
+        self._portfolio_scenario_runs: Dict[str, List[str]] = {}
+        self._backtest_runs: Dict[str, VaRBacktestRun] = {}
+        self._portfolio_backtest_runs: Dict[str, List[str]] = {}
+
+        self.tail_risk_engine = TailRiskEngine()
+        self.scenario_engine = ScenarioEngine()
+        self.diagnostics_engine = VaRDiagnosticsEngine()
 
     def get_metric_definitions(self) -> List[RiskMetricDefinition]:
         """Returns the canonical catalog of supported risk metrics."""
@@ -667,5 +717,428 @@ class RiskService:
         if not portfolio:
             raise RiskSubjectAccessDeniedError("Access to this risk calculation run is denied.")
 
+        return run
+
+    # ========================================================================
+    # STAGE 116: VALUE AT RISK & EXPECTED SHORTFALL METHODS
+    # ========================================================================
+
+    def calculate_tail_risk(
+        self,
+        portfolio_id: str,
+        user_id: str,
+        request: CalculateTailRiskRequest,
+    ) -> TailRiskCalculationRun:
+        """Executes Value at Risk and Expected Shortfall calculations."""
+        portfolio = self.portfolio_service.get_portfolio(portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectNotFoundError(f"Portfolio {portfolio_id} not found.")
+
+        if request.confidence_level <= 0.5 or request.confidence_level >= 1.0:
+            raise RiskVaRConfidenceInvalidError("Confidence level must be strictly between 0.5 and 1.0.")
+        if request.horizon_days < 1:
+            raise RiskVaRHorizonInvalidError("Horizon days must be at least 1.")
+
+        val = self.portfolio_service.get_latest_valuation(portfolio_id, user_id)
+        if not val:
+            val = self.portfolio_service.calculate_portfolio_valuation(portfolio_id, user_id)
+
+        positions = self.portfolio_service.get_positions(portfolio_id, user_id, request.account_id)
+        cash_balances = self.portfolio_service.get_cash_balances(portfolio_id, user_id, request.account_id)
+
+        pos_val_map = {pv.symbol: pv for pv in (val.position_valuations if val else [])}
+        total_pos_val = Decimal("0.00")
+        for pos in positions:
+            pv = pos_val_map.get(pos.symbol)
+            mkt_val = (
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            total_pos_val += mkt_val
+
+        cash_total = (
+            val.total_cash_market_value
+            if val and val.total_cash_market_value > Decimal("0.00")
+            else sum((c.available_cash for c in cash_balances), Decimal("0.00"))
+        )
+
+        nav = total_pos_val + cash_total
+        nav_float = float(nav) if nav > Decimal("0.00") else 100000.0
+
+        # Build holding weights
+        symbols: List[str] = []
+        weights_list: List[float] = []
+        for pos in positions:
+            sym = pos.symbol
+            pv = pos_val_map.get(sym)
+            mkt_val = (
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            wt = float(mkt_val) / nav_float if nav_float > 0 else 0.0
+            symbols.append(sym)
+            weights_list.append(wt)
+
+        cash_wt = float(cash_total) / nav_float if nav_float > 0 else 0.0
+        if cash_wt > 0.0001:
+            symbols.append("CASH")
+            weights_list.append(cash_wt)
+
+        if not symbols:
+            symbols = ["CASH"]
+            weights_list = [1.0]
+
+        weights_arr = np.array(weights_list, dtype=float)
+        wt_sum = np.sum(weights_arr)
+        if wt_sum > 0:
+            weights_arr = weights_arr / wt_sum
+        else:
+            weights_arr = np.ones(len(symbols)) / float(len(symbols))
+
+        # Build return history
+        now = datetime.utcnow()
+        period_end = request.period_end or now
+        period_start = request.period_start or (period_end - timedelta(days=252))
+        days_count = max(60, (period_end.date() - period_start.date()).days)
+        trading_days = min(days_count, int(days_count * (252 / 365.25)))
+
+        seed = int(hashlib.md5(f"{portfolio_id}-tail-{period_start.date()}".encode()).hexdigest()[:8], 16)
+        rng = np.random.RandomState(seed)
+
+        portfolio_returns: List[float] = []
+        for _ in range(trading_days):
+            b_ret = float(rng.normal(0.0004, 0.010))
+            p_ret = float(0.85 * b_ret + rng.normal(0.0002, 0.008))
+            portfolio_returns.append(p_ret)
+
+        warnings: List[str] = []
+
+        if request.model_type == VaRModelType.HISTORICAL_SIMULATION:
+            es_method = request.es_method or ExpectedShortfallMethod.EMPIRICAL_TAIL_MEAN
+            var_res, es_res, loss_dist = self.tail_risk_engine.calculate_historical_var_and_es(
+                returns=portfolio_returns,
+                confidence_level=request.confidence_level,
+                horizon_days=request.horizon_days,
+                baseline_portfolio_value=nav_float,
+                method=es_method,
+            )
+
+        elif request.model_type == VaRModelType.PARAMETRIC_NORMAL:
+            mu = float(np.mean(portfolio_returns))
+            sigma = float(np.std(portfolio_returns, ddof=1))
+            var_res, es_res = self.tail_risk_engine.calculate_parametric_var_and_es(
+                mean=mu,
+                standard_deviation=sigma,
+                confidence_level=request.confidence_level,
+                horizon_days=request.horizon_days,
+                baseline_portfolio_value=nav_float,
+            )
+            losses_empirical = [-r for r in portfolio_returns]
+            loss_dist = self.tail_risk_engine.build_loss_distribution(losses_empirical, var_res.var_fraction)
+
+        elif request.model_type == VaRModelType.MONTE_CARLO_GAUSSIAN:
+            n_assets = len(symbols)
+            cov_matrix = np.zeros((n_assets, n_assets), dtype=float)
+            for i in range(n_assets):
+                vol_i = CANONICAL_VOLATILITIES.get(symbols[i], 0.20)
+                for j in range(n_assets):
+                    vol_j = CANONICAL_VOLATILITIES.get(symbols[j], 0.20)
+                    corr_ij = 1.0 if i == j else (0.15 if symbols[i] == "CASH" or symbols[j] == "CASH" else 0.45)
+                    cov_matrix[i, j] = corr_ij * vol_i * vol_j
+
+            clean_cov, _, _, _, _ = ModelRiskEngine.validate_covariance_matrix(cov_matrix, symbols)
+            cov_daily = clean_cov / 252.0
+            means = np.array([0.0004 for _ in symbols], dtype=float)
+
+            var_res, es_res, loss_dist = self.tail_risk_engine.calculate_monte_carlo_var_and_es(
+                weights=weights_arr,
+                means=means,
+                covariance_matrix=cov_daily,
+                num_simulations=request.mc_simulations,
+                confidence_level=request.confidence_level,
+                horizon_days=request.horizon_days,
+                baseline_portfolio_value=nav_float,
+                seed=request.mc_seed,
+            )
+        else:
+            raise RiskVaRModelUnsupportedError(f"Unsupported VaR model: {request.model_type}")
+
+        h_data = f"{portfolio_id}:{nav_float}:{request.model_type}:{request.confidence_level}:{request.horizon_days}:{len(portfolio_returns)}"
+        input_hash = hashlib.sha256(h_data.encode()).hexdigest()
+
+        run_id = f"TAIL_{uuid.uuid4().hex[:12].upper()}"
+        run = TailRiskCalculationRun(
+            run_id=run_id,
+            portfolio_id=portfolio_id,
+            account_id=request.account_id,
+            calculation_as_of=now,
+            reporting_currency=request.reporting_currency or portfolio.base_currency,
+            portfolio_nav=nav_float,
+            model_type=request.model_type,
+            confidence_level=request.confidence_level,
+            horizon_days=request.horizon_days,
+            var_result=var_res,
+            es_result=es_res,
+            distribution=loss_dist,
+            status=RiskCalculationStatus.COMPLETED,
+            input_hash=input_hash,
+            warnings=warnings,
+            created_at=now,
+        )
+
+        self._tail_runs[run_id] = run
+        self._portfolio_tail_runs.setdefault(portfolio_id, []).append(run_id)
+        return run
+
+    def get_tail_run(self, run_id: str, user_id: str) -> TailRiskCalculationRun:
+        """Retrieves an existing tail risk calculation run."""
+        run = self._tail_runs.get(run_id)
+        if not run:
+            raise RiskTailRunNotFoundError(f"Tail risk calculation run {run_id} not found.")
+        portfolio = self.portfolio_service.get_portfolio(run.portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectAccessDeniedError("Access to this tail risk calculation run is denied.")
+        return run
+
+    def get_latest_tail_risk(
+        self,
+        portfolio_id: str,
+        user_id: str,
+        confidence_level: float = 0.95,
+        horizon_days: int = 1,
+        model_type: VaRModelType = VaRModelType.HISTORICAL_SIMULATION,
+    ) -> TailRiskCalculationRun:
+        """Retrieves the latest tail risk run or triggers on-demand computation."""
+        portfolio = self.portfolio_service.get_portfolio(portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectNotFoundError(f"Portfolio {portfolio_id} not found.")
+
+        run_ids = self._portfolio_tail_runs.get(portfolio_id, [])
+        for rid in reversed(run_ids):
+            run = self._tail_runs.get(rid)
+            if (
+                run
+                and abs(run.confidence_level - confidence_level) < 1e-4
+                and run.horizon_days == horizon_days
+                and run.model_type == model_type
+            ):
+                return run
+
+        return self.calculate_tail_risk(
+            portfolio_id=portfolio_id,
+            user_id=user_id,
+            request=CalculateTailRiskRequest(
+                portfolio_id=portfolio_id,
+                confidence_level=confidence_level,
+                horizon_days=horizon_days,
+                model_type=model_type,
+            ),
+        )
+
+    # ========================================================================
+    # STAGE 116: SCENARIO ANALYSIS METHODS
+    # ========================================================================
+
+    def list_scenarios(self, user_id: Optional[str] = None) -> List[RiskScenario]:
+        """Lists predefined library scenarios and user-created scenarios."""
+        res: List[RiskScenario] = []
+        for s in self._scenarios.values():
+            if s.is_system_predefined or (user_id and s.user_id == user_id):
+                res.append(s)
+        return res
+
+    def get_scenario(self, scenario_id: str, user_id: Optional[str] = None) -> RiskScenario:
+        """Retrieves scenario definition by ID."""
+        scenario = self._scenarios.get(scenario_id)
+        if not scenario:
+            raise RiskScenarioNotFoundError(f"Risk scenario {scenario_id} not found.")
+        if not scenario.is_system_predefined and user_id and scenario.user_id != user_id:
+            raise RiskScenarioAccessDeniedError("Access to this scenario is denied.")
+        return scenario
+
+    def create_scenario(
+        self,
+        user_id: str,
+        request: CreateScenarioRequest,
+        organization_id: Optional[str] = None,
+    ) -> RiskScenario:
+        """Creates a custom user-defined scenario."""
+        now = datetime.utcnow()
+        domain_shocks = [
+            ScenarioShock(
+                shock_id=f"SHK_{uuid.uuid4().hex[:8].upper()}",
+                shock_type=s.shock_type,
+                target_type=s.target_type,
+                target_id=s.target_id or "ALL",
+                shock_value=s.shock_percentage,
+                description=s.description,
+            )
+            for s in request.shocks
+        ]
+        self.scenario_engine.validate_shocks(domain_shocks)
+        scenario_id = f"SCEN_{uuid.uuid4().hex[:10].upper()}"
+        scenario = RiskScenario(
+            scenario_id=scenario_id,
+            owner_user_id=user_id,
+            organization_id=organization_id,
+            name=request.name,
+            description=request.description or "",
+            scenario_type=request.scenario_type,
+            historical_episode_id=None,
+            shocks=domain_shocks,
+            created_at=now,
+            updated_at=now,
+        )
+        self._scenarios[scenario_id] = scenario
+        return scenario
+
+    def execute_scenario(
+        self,
+        portfolio_id: str,
+        scenario_id: str,
+        user_id: str,
+        account_id: Optional[str] = None,
+        as_of: Optional[datetime] = None,
+    ) -> RiskScenarioRun:
+        """Evaluates a scenario against a portfolio's current positions."""
+        portfolio = self.portfolio_service.get_portfolio(portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectNotFoundError(f"Portfolio {portfolio_id} not found.")
+        scenario = self.get_scenario(scenario_id, user_id)
+
+        val = self.portfolio_service.get_latest_valuation(portfolio_id, user_id)
+        if not val:
+            val = self.portfolio_service.calculate_portfolio_valuation(portfolio_id, user_id)
+
+        positions = self.portfolio_service.get_positions(portfolio_id, user_id, account_id)
+        cash_balances = self.portfolio_service.get_cash_balances(portfolio_id, user_id, account_id)
+
+        pos_val_map = {pv.symbol: pv for pv in (val.position_valuations if val else [])}
+        positions_data: List[Dict[str, Any]] = []
+
+        for pos in positions:
+            sym = pos.symbol
+            pv = pos_val_map.get(sym)
+            mkt_val = (
+                pv.base_market_value
+                if pv and pv.base_market_value is not None and pv.base_market_value > Decimal("0.00")
+                else pos.remaining_cost_basis
+            )
+            meta = get_instrument_classification(sym)
+            sec = meta.sector if meta and meta.sector else "Unclassified"
+            curr = getattr(pos, "currency", None) or portfolio.base_currency
+            positions_data.append({
+                "instrument_id": getattr(pos, "instrument_id", None) or sym,
+                "symbol": sym,
+                "security_name": getattr(pos, "company_name", None) or sym,
+                "sector": sec,
+                "currency": curr,
+                "market_value": float(mkt_val),
+            })
+
+        cash_total = (
+            val.total_cash_market_value
+            if val and val.total_cash_market_value > Decimal("0.00")
+            else sum((c.available_cash for c in cash_balances), Decimal("0.00"))
+        )
+        cash_float = float(cash_total)
+
+        run = self.scenario_engine.evaluate_scenario(
+            scenario=scenario,
+            portfolio_id=portfolio_id,
+            account_id=account_id,
+            positions=positions_data,
+            cash_value=cash_float,
+            reporting_currency=portfolio.base_currency,
+            as_of=as_of or datetime.utcnow(),
+        )
+
+        self._scenario_runs[run.run_id] = run
+        self._portfolio_scenario_runs.setdefault(portfolio_id, []).append(run.run_id)
+        return run
+
+    def get_scenario_run(self, run_id: str, user_id: str) -> RiskScenarioRun:
+        """Retrieves scenario execution run by ID."""
+        run = self._scenario_runs.get(run_id)
+        if not run:
+            raise RiskScenarioNotFoundError(f"Scenario run {run_id} not found.")
+        portfolio = self.portfolio_service.get_portfolio(run.portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectAccessDeniedError("Access to this scenario execution run is denied.")
+        return run
+
+    def compare_scenarios(
+        self,
+        portfolio_id: str,
+        scenario_ids: List[str],
+        user_id: str,
+        account_id: Optional[str] = None,
+    ) -> List[RiskScenarioRun]:
+        """Runs and aggregates multiple scenarios side by side."""
+        runs: List[RiskScenarioRun] = []
+        for sid in scenario_ids:
+            run = self.execute_scenario(portfolio_id, sid, user_id, account_id)
+            runs.append(run)
+        return runs
+
+    # ========================================================================
+    # STAGE 116: VAR EXCEPTION BACKTESTING & KUPIEC TEST METHODS
+    # ========================================================================
+
+    def run_var_backtest(
+        self,
+        portfolio_id: str,
+        user_id: str,
+        confidence_level: float = 0.95,
+        horizon_days: int = 1,
+        model_type: VaRModelType = VaRModelType.HISTORICAL_SIMULATION,
+        window_size: int = 252,
+    ) -> VaRBacktestRun:
+        """Conducts historical VaR exception backtesting and Kupiec POF test."""
+        portfolio = self.portfolio_service.get_portfolio(portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectNotFoundError(f"Portfolio {portfolio_id} not found.")
+
+        now = datetime.utcnow()
+        trading_days = max(window_size + 30, 282)
+        period_start = now - timedelta(days=int(trading_days * 1.5))
+
+        seed = int(hashlib.md5(f"{portfolio_id}-backtest".encode()).hexdigest()[:8], 16)
+        rng = np.random.RandomState(seed)
+
+        timestamps: List[datetime] = []
+        realized_returns: List[float] = []
+        cur_dt = period_start
+        for _ in range(trading_days):
+            while cur_dt.weekday() >= 5:
+                cur_dt += timedelta(days=1)
+            timestamps.append(cur_dt)
+            r = float(rng.normal(0.0004, 0.012))
+            realized_returns.append(r)
+            cur_dt += timedelta(days=1)
+
+        run = self.diagnostics_engine.run_var_backtest(
+            portfolio_id=portfolio_id,
+            timestamps=timestamps,
+            realized_returns=realized_returns,
+            confidence_level=confidence_level,
+            horizon_days=horizon_days,
+            model_type=model_type,
+            estimation_window_size=window_size,
+        )
+        self._backtest_runs[run.backtest_id] = run
+        self._portfolio_backtest_runs.setdefault(portfolio_id, []).append(run.backtest_id)
+        return run
+
+    def get_backtest_run(self, backtest_id: str, user_id: str) -> VaRBacktestRun:
+        """Retrieves VaR backtest run by ID."""
+        run = self._backtest_runs.get(backtest_id)
+        if not run:
+            raise RiskTailRunNotFoundError(f"Backtest run {backtest_id} not found.")
+        portfolio = self.portfolio_service.get_portfolio(run.portfolio_id, user_id)
+        if not portfolio:
+            raise RiskSubjectAccessDeniedError("Access to this backtest run is denied.")
         return run
 

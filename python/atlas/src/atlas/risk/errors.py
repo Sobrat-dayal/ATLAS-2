@@ -133,3 +133,139 @@ class RiskCalculationFailedError(RiskError):
     status_code: int = 500
     code: str = "RISK_CALCULATION_FAILED"
 
+
+# ---------------------------------------------------------------------------
+# Stage 116: VaR, Expected Shortfall, and Scenario Testing Typed Errors
+# ---------------------------------------------------------------------------
+
+
+class RiskVaRModelUnsupportedError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_VAR_MODEL_UNSUPPORTED"
+
+
+class RiskVaRConfidenceInvalidError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_VAR_CONFIDENCE_INVALID"
+
+
+class RiskVaRHorizonInvalidError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_VAR_HORIZON_INVALID"
+
+
+class RiskVaRInsufficientHistoryError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_VAR_INSUFFICIENT_HISTORY"
+
+
+class RiskVaRInsufficientTailSampleError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_VAR_INSUFFICIENT_TAIL_SAMPLE"
+
+
+class RiskVaRReturnSeriesIncompleteError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_VAR_RETURN_SERIES_INCOMPLETE"
+
+
+class RiskVaRPortfolioValuationIncompleteError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_VAR_PORTFOLIO_VALUATION_INCOMPLETE"
+
+
+class RiskVaRCovarianceInvalidError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_VAR_COVARIANCE_INVALID"
+
+
+class RiskVaRDistributionInvalidError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_VAR_DISTRIBUTION_INVALID"
+
+
+class RiskVaRNumericalFailureError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_VAR_NUMERICAL_FAILURE"
+
+
+class RiskESTailEstimatorInvalidError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_ES_TAIL_ESTIMATOR_INVALID"
+
+
+class RiskESInsufficientTailSampleError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_ES_INSUFFICIENT_TAIL_SAMPLE"
+
+
+class RiskMonteCarloModelUnsupportedError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_MONTE_CARLO_MODEL_UNSUPPORTED"
+
+
+class RiskMonteCarloResourceLimitError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_MONTE_CARLO_RESOURCE_LIMIT"
+
+
+class RiskMonteCarloTimeoutError(RiskError):
+    status_code: int = 408
+    code: str = "RISK_MONTE_CARLO_TIMEOUT"
+
+
+class RiskScenarioNotFoundError(RiskError):
+    status_code: int = 404
+    code: str = "RISK_SCENARIO_NOT_FOUND"
+
+
+class RiskScenarioAccessDeniedError(RiskError):
+    status_code: int = 403
+    code: str = "RISK_SCENARIO_ACCESS_DENIED"
+
+
+class RiskScenarioShockInvalidError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_SCENARIO_SHOCK_INVALID"
+
+
+class RiskScenarioShockConflictError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_SCENARIO_SHOCK_CONFLICT"
+
+
+class RiskScenarioUnsupportedInstrumentError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_SCENARIO_UNSUPPORTED_INSTRUMENT"
+
+
+class RiskScenarioHistoricalDataMissingError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_SCENARIO_HISTORICAL_DATA_MISSING"
+
+
+class RiskScenarioRepricingUnavailableError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_SCENARIO_REPRICING_UNAVAILABLE"
+
+
+class RiskScenarioReconciliationFailedError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_SCENARIO_RECONCILIATION_FAILED"
+
+
+class RiskTailBacktestInsufficientObservationsError(RiskError):
+    status_code: int = 400
+    code: str = "RISK_TAIL_BACKTEST_INSUFFICIENT_OBSERVATIONS"
+
+
+class RiskTailRunNotFoundError(RiskError):
+    status_code: int = 404
+    code: str = "RISK_TAIL_RUN_NOT_FOUND"
+
+
+class RiskTailSourceRestrictedError(RiskError):
+    status_code: int = 403
+    code: str = "RISK_TAIL_SOURCE_RESTRICTED"
+
+

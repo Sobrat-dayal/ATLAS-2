@@ -247,3 +247,245 @@ export interface ContributionsResponseDTO {
   covariance_diagnostics?: CovarianceDiagnosticsDTO | null;
   status: RiskMetricStatus;
 }
+
+// ---------------------------------------------------------------------------
+// Stage 116: Value at Risk, Expected Shortfall, Scenarios, and Backtesting
+// ---------------------------------------------------------------------------
+
+export type VaRModelType =
+  | 'HISTORICAL_SIMULATION'
+  | 'PARAMETRIC_NORMAL'
+  | 'MONTE_CARLO_GAUSSIAN';
+
+export type ExpectedShortfallMethod =
+  | 'HISTORICAL_TAIL_INTEGRATION'
+  | 'PARAMETRIC_CLOSED_FORM'
+  | 'MONTE_CARLO_SAMPLE_AVERAGE';
+
+export type ScenarioType =
+  | 'HISTORICAL_EPISODE'
+  | 'HYPOTHETICAL_STRESS'
+  | 'FACTOR_SHOCK'
+  | 'MACRO_REGIME';
+
+export type ScenarioShockType =
+  | 'PRICE_SHOCK'
+  | 'FX_SHOCK'
+  | 'CORRELATION_BREAKDOWN'
+  | 'VOLATILITY_EXPANSION';
+
+export type ShockTargetType =
+  | 'SECURITY'
+  | 'SECTOR'
+  | 'INDUSTRY'
+  | 'GEOGRAPHY'
+  | 'CURRENCY'
+  | 'ASSET_CLASS'
+  | 'PORTFOLIO_WIDE';
+
+export type KupiecTestStatus =
+  | 'ACCEPT_UNCONDITIONAL_COVERAGE'
+  | 'REJECT_TOO_MANY_EXCEPTIONS'
+  | 'REJECT_TOO_FEW_EXCEPTIONS'
+  | 'INSUFFICIENT_OBSERVATIONS';
+
+export interface VaRResultDTO {
+  model_type: VaRModelType;
+  confidence_level: number;
+  horizon_days: number;
+  var_fraction: number;
+  var_monetary: number;
+  var_return?: number;
+  var_amount?: number;
+  status: string;
+  warning?: string | null;
+  effective_tail_sample_size: number;
+  total_sample_size: number;
+  method_notes?: string | null;
+}
+
+export interface ExpectedShortfallResultDTO {
+  method: ExpectedShortfallMethod;
+  confidence_level: number;
+  horizon_days: number;
+  es_fraction: number;
+  es_monetary: number;
+  es_return?: number;
+  es_amount?: number;
+  tail_loss_observations: number;
+  warning?: string | null;
+  method_notes?: string | null;
+}
+
+export interface LossDistributionBinDTO {
+  bin_start: number;
+  bin_end: number;
+  frequency: number;
+  relative_frequency: number;
+}
+
+export interface LossDistributionDTO {
+  bins: LossDistributionBinDTO[];
+  min_loss: number;
+  max_loss: number;
+  mean_loss: number;
+  quantiles: Record<string, number>;
+  tail_losses: number[];
+}
+
+export interface TailRiskCalculationRunDTO {
+  run_id: string;
+  portfolio_id: string;
+  as_of: string;
+  confidence_level: number;
+  horizon_days: number;
+  model_type: VaRModelType;
+  var_result: VaRResultDTO;
+  expected_shortfall: ExpectedShortfallResultDTO;
+  loss_distribution?: LossDistributionDTO | null;
+  created_at: string;
+}
+
+export interface CalculateTailRiskRequest {
+  portfolio_id: string;
+  as_of?: string;
+  confidence_level?: number;
+  horizon_days?: number;
+  model_type?: VaRModelType;
+  simulations?: number;
+  seed?: number;
+  account_id?: string;
+}
+
+export interface ScenarioShockDTO {
+  target_type: ShockTargetType;
+  target_identifier: string;
+  shock_type: ScenarioShockType;
+  magnitude: number;
+  shock_currency?: string | null;
+  notes?: string | null;
+}
+
+export interface RiskScenarioDTO {
+  scenario_id: string;
+  name: string;
+  description: string;
+  scenario_type: ScenarioType;
+  shocks: ScenarioShockDTO[];
+  is_predefined: boolean;
+  is_system_predefined?: boolean;
+  historical_episode?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateScenarioRequest {
+  name: string;
+  description: string;
+  scenario_type?: ScenarioType;
+  shocks: ScenarioShockDTO[];
+  historical_episode?: string | null;
+}
+
+export interface ScenarioPositionResultDTO {
+  symbol: string;
+  name: string;
+  currency: string;
+  weight: number;
+  base_price: number;
+  shocked_price: number;
+  base_value: number;
+  shocked_value: number;
+  pnl: number;
+  return_pct: number;
+  applied_shock_magnitude: number;
+  matched_shock_type: string;
+  fx_shock_magnitude: number;
+}
+
+export interface RiskScenarioRunDTO {
+  run_id: string;
+  scenario_id: string;
+  portfolio_id: string;
+  as_of: string;
+  base_nav: number;
+  shocked_nav: number;
+  portfolio_pnl: number;
+  portfolio_return: number;
+  reconciliation_diff: number;
+  is_reconciled: boolean;
+  positions: ScenarioPositionResultDTO[];
+  created_at: string;
+}
+
+export interface ExecuteScenarioRequest {
+  scenario_id: string;
+  portfolio_id: string;
+  as_of?: string;
+  account_id?: string;
+}
+
+export interface ScenarioComparisonItemDTO {
+  scenario_id: string;
+  scenario_name: string;
+  scenario_type: ScenarioType;
+  portfolio_pnl: number;
+  portfolio_return: number;
+  shocked_nav: number;
+  worst_position_symbol: string;
+  worst_position_pnl: number;
+}
+
+export interface ScenarioComparisonResponseDTO {
+  portfolio_id: string;
+  base_nav: number;
+  scenarios: ScenarioComparisonItemDTO[];
+  comparison_as_of: string;
+}
+
+export interface ScenarioComparisonRequest {
+  portfolio_id: string;
+  scenario_ids?: string[];
+  as_of?: string;
+  account_id?: string;
+}
+
+export interface VaRExceptionObservationDTO {
+  observation_date: string;
+  forecast_var: number;
+  realized_loss: number;
+  is_exception: boolean;
+  exceedance_amount: number;
+}
+
+export interface KupiecTestResultDTO {
+  total_observations: number;
+  exception_count: number;
+  expected_exceptions: number;
+  empirical_failure_rate: number;
+  confidence_level: number;
+  likelihood_ratio_stat: number;
+  p_value: number;
+  status: KupiecTestStatus;
+  is_adequate_sample: boolean;
+  warning?: string | null;
+}
+
+export interface VaRBacktestRunDTO {
+  backtest_id: string;
+  portfolio_id: string;
+  model_type: VaRModelType;
+  confidence_level: number;
+  window_size: number;
+  observations: VaRExceptionObservationDTO[];
+  kupiec_result: KupiecTestResultDTO;
+  created_at: string;
+}
+
+export interface RunVaRBacktestRequest {
+  portfolio_id: string;
+  model_type?: VaRModelType;
+  confidence_level?: number;
+  window_size?: number;
+  account_id?: string;
+}
