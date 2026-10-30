@@ -86,6 +86,7 @@ class AiGenerationRun:
     completion_tokens: int = 0
     total_tokens: int = 0
     duration_ms: Optional[float] = None
+    source_manifest_id: Optional[str] = None
     error_code: Optional[str] = None
     error_message: Optional[str] = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

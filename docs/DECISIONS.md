@@ -10702,3 +10702,67 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 
 ### Verification & Quality Gates
 1320. **Stage 124 Quality Signoff**: 100% test pass rate across 13 backend pytest tests, 223 frontend unit tests, 0 lint warnings, and clean Next.js production build of all 38 routes.
+
+
+## Stage 125: ATLAS AI Context Awareness Engine
+
+### Architectural Foundations & Scope Boundaries
+1321. **Read-Only Context Intelligence**: Stage 125 strictly functions as an authorized, read-only analytical context assembly engine. AI tool invocation, terminal command execution, autonomous external API calls, MCP tool execution, and agent autonomy are strictly deferred to Stage 126.
+1322. **Zero DOM Scraping Invariant**: Context items are never scraped from client HTML elements, CSS trees, or canvas screenshots. All context is resolved deterministically from canonical backend data services, verified state stores, and Stage 121 entity resolvers.
+1323. **Point-in-Time Fact Accuracy**: Every context item immutably binds its `as_of` date, observation timestamp, source reference URL (`atlas://...`), schema version, and reporting currency to eliminate temporal look-ahead bias.
+1324. **Prompt Injection Data Fencing**: All verified context data is injected within `<atlas_verified_financial_context data-purpose="untrusted-read-only-financial-context">` blocks with explicit model directives stating the block contains DATA ONLY and cannot issue system commands or override instructions.
+1325. **Universal 20-Module Platform Coverage**: Full context intelligence support across `/home`, `/markets`, `/charts`, `/watchlists`, `/screeners`, `/companies`, `/economics`, `/news`, `/research`, `/maps`, `/intelligence`, `/options`, `/trading`, `/portfolios`, `/risk`, `/ai`, `/data`, `/saved`, `/workspaces`, and `/agents`.
+
+### Canonical Context Types & Domain Models
+1326. **19 Canonical Context Types**: Full enumeration `ContextType` covering `PAGE_CONTEXT`, `MODULE_CONTEXT`, `INSTRUMENT_CONTEXT`, `COMPANY_CONTEXT`, `CHART_CONTEXT`, `WATCHLIST_CONTEXT`, `SCREENER_CONTEXT`, `ECONOMICS_CONTEXT`, `NEWS_CONTEXT`, `RESEARCH_CONTEXT`, `PORTFOLIO_CONTEXT`, `RISK_CONTEXT`, `OPTIONS_CONTEXT`, `DATA_CONTEXT`, `SAVED_RESOURCE_CONTEXT`, `WORKSPACE_CONTEXT`, `WORKSPACE_PANEL_CONTEXT`, `LINKED_CONTEXT`, and `USER_SUPPLIED_CONTEXT`.
+1327. **AtlasAiContextItem Dataclass**: Normalized context container carrying `context_item_id`, `canonical_target_id`, `source_module`, `source_reference`, `as_of`, `data_quality_status`, `model_disclosure_status`, `content_summary`, `structured_payload`, SHA-256 `content_hash`, `estimated_tokens`, and `relevance_score`.
+1328. **AtlasAiContextEnvelope Dataclass**: Root context envelope binding `context_request_id`, `conversation_id`, `generation_id`, `authenticated_user_scope`, `source_page`, `active_workspace_id`, `focused_panel_id`, `context_mode`, `resolved_context_items`, `excluded_items`, `quality_summary`, and `token_budget`.
+1329. **Deterministic Content Hashing**: Every context item computes an immutable SHA-256 hash of its serialized payload for provenance verification and cache validation.
+1330. **Four Operating Context Modes**: `OFF` (zero workspace/entity sharing), `FOCUSED` (active entity and focused panel only, default), `WORKSPACE` (full multi-panel inventory and link channels), and `CUSTOM` (user-pinned entities and explicit parameters).
+
+### 16 Server-Side Context Adapters
+1331. **PageContextAdapter**: Resolves canonical route descriptors, active module metadata, and top-level institutional layout modes.
+1332. **InstrumentContextAdapter**: Leverages Stage 121 `CanonicalEntityResolver` to resolve tickers to canonical instruments, FIGIs, ISINs, exchanges, countries, and sectors.
+1333. **CompanyContextAdapter**: Resolves point-in-time corporate financial statement facts, reporting periods, fiscal years, currencies, and verified ratios without look-ahead bias.
+1334. **ChartContextAdapter**: Extracts active timeframe, interval, indicator overlays (SMA, RSI, MACD), last close price, realized annualized volatility, and data coverage.
+1335. **WatchlistContextAdapter**: Resolves watchlist securities, active selections, column layouts, and sort order.
+1336. **ScreenerContextAdapter**: Resolves active screening universe, filter criteria rules, sort dimensions, and sample matching results.
+1337. **EconomicsContextAdapter**: Resolves macro time series, reporting countries, observation frequency, units, and vintage publication dates.
+1338. **NewsContextAdapter**: Resolves licensed wire headlines, publisher attribution, timestamp, and licensed content excerpts.
+1339. **ResearchContextAdapter**: Resolves report titles, authors, published dates, access levels, and executive summaries while gating unreleased drafts.
+1340. **PortfolioContextAdapter**: Resolves asset allocation breakdowns, benchmark comparisons, and concentration metrics while enforcing holdings privacy policies.
+1341. **RiskContextAdapter**: Resolves parametric VaR 95%, CVaR 95%, factor exposures, and stress tests bound immutably to historical Risk Run instances.
+1342. **OptionsContextAdapter**: Resolves underlying strikes, expiry dates, implied volatility, and Black-Scholes Greeks (Delta, Gamma, Theta, Vega).
+1343. **DataContextAdapter**: Resolves dataset catalog metadata, schema definitions, row counts, and vendor provenance (e.g. WRDS, CRSP, FactSet).
+1344. **SavedResourceContextAdapter**: Bridges Stage 119 Universal Saved Resources, resolving saved target types, versions, and permissions.
+1345. **WorkspaceContextAdapter**: Bridges Stage 120 Multi-Panel Workspaces, resolving panel inventories, active split trees, and focused panel states.
+1346. **GlobalLinkingContextAdapter**: Bridges Stage 121 Global Workspace Linking, resolving active link channels, synchronized entity dimensions, and channel revisions.
+
+### Ambiguity Detection, Relevance & Token Budgeting
+1347. **Multi-Panel Ambiguity Detection**: Detects deictic queries (e.g., "what's the RSI of this chart?") when multiple instances of the same panel type exist in a workspace without a focused panel, prompting the user for clarification instead of hallucinating.
+1348. **Relevance Scoring Engine**: Deterministic additive scoring model awarding weights for explicit entity matches (+4), focused panel membership (+3), active module alignment (+2), and recent updates (+1), while penalizing stale data (-2).
+1349. **Token Budgeting & Rank-and-Trim**: Knapsack-style budget allocator ranking items by relevance score and trimming candidates exceeding the 8,000 token context window, recording detailed exclusion reasons.
+
+### Privacy, Governance & Provider Disclosure
+1350. **Granular Portfolio Holdings Privacy**: Portfolio holdings and lot-level allocations are redacted by default (`holdings_redacted = True`); granular positions are only disclosed when `allow_portfolio_holdings_context` is explicitly consented to by the user.
+1351. **Research Draft Compliance**: Unpublished research drafts and confidential analyst notes are excluded from AI context unless `allow_research_drafts_context` is explicitly enabled.
+1352. **Vendor Provider Disclosure Policies**: Data items bearing `ProviderDisclosureStatus.PROHIBITED` are strictly filtered out before transmission to external third-party LLM providers.
+1353. **Immutable Source Manifests**: Every generation run records an immutable `AiContextSourceManifest` capturing the exact list of context items, timestamps, hashes, and token allocations used.
+1354. **Append-Only Context Audit Trail**: Context resolution requests, privacy overrides, and mode transitions are recorded in `ai_context_audit_events`.
+
+### Database Schema & Persistence
+1355. **SQLAlchemy Models**: Implemented `AiContextPreferencesModel`, `AiContextSourceManifestModel`, and `AiContextAuditEventModel` in `atlas.ai.context.db_models`.
+1356. **Alembic Migration**: Created migration `stage125_ai_context_awareness.py` with foreign key and generation run linking.
+1357. **Generation Run Correlation**: `ai_generation_runs` extended with `source_manifest_id` column to correlate assistant generations with verified context manifests.
+
+### FastAPI Context Endpoints
+1358. **`GET /api/v1/ai/context/capabilities`**: Discovers all registered module context capabilities, disclosure policies, and sensitivity tiers.
+1359. **`GET /api/v1/ai/context/preferences`**: Retrieves user context mode, sharing consents, pinned items, and exclusion lists.
+1360. **`PUT /api/v1/ai/context/preferences`**: Updates user context modes, sharing toggles, and pinned references.
+1361. **`POST /api/v1/ai/context/preview`**: Performs dry-run context assembly returning a preview envelope for the frontend Context Inspector.
+1362. **`POST /api/v1/ai/context/resolve`**: Explicitly resolves a single typed context item by target identifier and parameters.
+1363. **`GET /api/v1/ai/context/manifests/{generation_id}`**: Retrieves the immutable source manifest for any past AI generation run.
+
+### Frontend Architecture & User Experience
+1364. **Context Inspector & Active Chips**: Implemented `AiContextInspector`, `AiContextChips`, `AiContextModeSelector`, and `AiContextQualityBadge` in `apps/web/src/components/ai/context/`.
+1365. **Global "Ask AI About This" Handoff**: `askAiAboutThis(...)` dispatches custom events across the application shell to open the AI overlay, pin the target financial entity, and prepare the analytical turn.

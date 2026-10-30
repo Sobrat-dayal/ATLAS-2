@@ -8,4 +8,8 @@ export * from "./AtlasAiAssistantMessage";
 export * from "./AtlasAiComposer";
 export * from "./AtlasAiHistoryDrawer";
 export * from "./AtlasAiEmptyState";
+export * from "./context/AiContextInspector";
+export * from "./context/AiContextChips";
+export * from "./context/AiContextModeSelector";
+export * from "./context/AiContextQualityBadge";
 

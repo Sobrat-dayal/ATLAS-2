@@ -381,6 +381,7 @@ class AiRepository:
         completion_tokens: Optional[int] = None,
         total_tokens: Optional[int] = None,
         duration_ms: Optional[float] = None,
+        source_manifest_id: Optional[str] = None,
         error_code: Optional[str] = None,
         error_message: Optional[str] = None,
     ) -> AiGenerationRun:
@@ -407,6 +408,8 @@ class AiRepository:
                 run.total_tokens = total_tokens
             if duration_ms is not None:
                 run.duration_ms = duration_ms
+            if source_manifest_id is not None:
+                run.source_manifest_id = source_manifest_id
             if error_code is not None:
                 run.error_code = error_code
             if error_message is not None:

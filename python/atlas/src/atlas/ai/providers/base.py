@@ -29,4 +29,3 @@ class BaseAiProvider(ABC):
     ) -> Dict[str, Any]:
         """Generate a complete non-streaming response."""
         pass
-

@@ -4,12 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAiConversation } from "@/hooks/ai/useAiConversation";
 import { useAiOverlayStore } from "@/hooks/ai/useAiOverlay";
+import { useAiContext } from "@/hooks/ai/context/useAiContext";
 import { getRouteContext } from "@/lib/ai/routeRegistry";
 import { AtlasAiComposer } from "./AtlasAiComposer";
 import { AtlasAiHeader } from "./AtlasAiHeader";
 import { AtlasAiHistoryDrawer } from "./AtlasAiHistoryDrawer";
 import { AtlasAiMessageList } from "./AtlasAiMessageList";
 import { AtlasAiRouteContextBanner } from "./AtlasAiRouteContextBanner";
+import { AiContextInspector } from "./context/AiContextInspector";
+import { AiContextChips } from "./context/AiContextChips";
 
 export function AtlasAiOverlay() {
   const {
@@ -22,6 +25,20 @@ export function AtlasAiOverlay() {
 
   const pathname = usePathname();
   const routeContext = getRouteContext(pathname);
+
+  const {
+    preferences,
+    previewEnvelope,
+    loadingPreview,
+    isInspectorOpen,
+    setIsInspectorOpen,
+    toggleInspector,
+    setContextMode,
+    pinReference,
+    excludeTargetId,
+    includeTargetId,
+    getContextPayload,
+  } = useAiContext();
 
   const {
     conversation,
@@ -75,7 +92,11 @@ export function AtlasAiOverlay() {
   };
 
   const handleSend = (text: string) => {
-    sendMessage(text, routeContext);
+    const dynamicContext = getContextPayload();
+    sendMessage(text, {
+      ...routeContext,
+      ...dynamicContext,
+    });
   };
 
   if (!isOpen) return null;
@@ -102,6 +123,24 @@ export function AtlasAiOverlay() {
       {/* Route Context Awareness Banner */}
       <AtlasAiRouteContextBanner />
 
+      {/* Collapsible Context Inspector (Stage 125) */}
+      {isInspectorOpen && (
+        <AiContextInspector
+          envelope={previewEnvelope}
+          preferences={preferences}
+          loading={loadingPreview}
+          onModeChange={setContextMode}
+          onToggleWorkspace={() => {}}
+          onToggleHoldings={() => {}}
+          onToggleDrafts={() => {}}
+          onToggleProviderDisclosure={() => {}}
+          onPinItem={pinReference}
+          onExcludeItem={excludeTargetId}
+          onIncludeItem={includeTargetId}
+          onClose={() => setIsInspectorOpen(false)}
+        />
+      )}
+
       {/* Body Area */}
       <div className="relative flex flex-1 flex-col overflow-hidden bg-atlas-bg-0">
         {/* History Drawer overlay */}
@@ -123,6 +162,14 @@ export function AtlasAiOverlay() {
           onRegenerateMessage={(msgId) => regenerate(msgId)}
         />
       </div>
+
+      {/* Context Chips bar above composer (Stage 125) */}
+      <AiContextChips
+        items={previewEnvelope?.resolved_context_items || []}
+        onRemoveItem={excludeTargetId}
+        onToggleInspector={toggleInspector}
+        isInspectorOpen={isInspectorOpen}
+      />
 
       {/* Input Composer */}
       <AtlasAiComposer

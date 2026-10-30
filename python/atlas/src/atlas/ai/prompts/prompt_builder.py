@@ -18,9 +18,10 @@ class PromptBuilder:
         history: List[AiMessage],
         system_override: Optional[str] = None,
         active_route: Optional[Dict[str, Any]] = None,
+        context_block: Optional[str] = None,
         max_messages: int = DEFAULT_MAX_MESSAGES,
     ) -> List[Dict[str, str]]:
-        """Assembles the system message, contextual route indicator, and recent message turns."""
+        """Assembles the system message, contextual route indicator, verified context block, and recent message turns."""
         messages: List[Dict[str, str]] = []
 
         # 1. System Prompt
@@ -28,13 +29,19 @@ class PromptBuilder:
 
         # 2. Minimal Allowlisted Route Descriptor (Stage 124 Context-Light Boundary)
         if active_route:
-            route = active_route.get("route", "")
-            module_name = active_route.get("module_name", "")
+            route = active_route.get("route", "") or active_route.get("current_route", "")
+            module_name = active_route.get("module_name", "") or active_route.get(
+                "active_module", ""
+            )
             summary = active_route.get("summary", "")
             if route or module_name:
                 system_content += (
                     f"\n\n[Active Platform Context: Route '{route}' ({module_name}) - {summary}]"
                 )
+
+        # 3. Verified Financial Context Block (Stage 125 Context Awareness Engine)
+        if context_block:
+            system_content += f"\n\n{context_block}"
 
         messages.append({"role": "system", "content": system_content})
 

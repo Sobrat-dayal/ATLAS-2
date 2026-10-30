@@ -148,4 +148,3 @@ class AiAccessDeniedError(AiError):
             status_code=403,
             details={"resource_type": resource_type, "resource_id": resource_id},
         )
-

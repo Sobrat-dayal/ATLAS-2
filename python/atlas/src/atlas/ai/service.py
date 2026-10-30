@@ -195,12 +195,65 @@ class AiAssistantService:
         user_msg = self.repository.get_message(gen_run.user_message_id, owner_user_id)
         messages_history = self.repository.list_messages(gen_run.conversation_id, owner_user_id)
 
-        # Build prompt message turns
+        # Build prompt message turns with Stage 125 Context Awareness
         active_route = user_msg.route_context if user_msg else None
+        context_block: Optional[str] = None
+
+        if active_route:
+            try:
+                from atlas.ai.context.service import AiContextService
+
+                ctx_service = AiContextService.get_instance()
+
+                route_str = (
+                    active_route.get("route") or active_route.get("current_route") or "/home"
+                )
+                module_str = active_route.get("module_name") or active_route.get("active_module")
+                ws_id = active_route.get("workspace_id")
+                panel_id = active_route.get("focused_panel_id") or active_route.get("panel_id")
+                link_ch = active_route.get("global_link_channel_id") or active_route.get(
+                    "link_channel_id"
+                )
+                mode_str = active_route.get("context_mode")
+                req_refs = active_route.get("requested_references")
+                extra_params = active_route.get("extra_adapter_params")
+
+                envelope = await ctx_service.assemble_context(
+                    user_id=owner_user_id,
+                    tenant_id=conv.tenant_id,
+                    conversation_id=conv.conversation_id,
+                    user_query=user_msg.content,
+                    current_route=route_str,
+                    active_module=module_str,
+                    workspace_id=ws_id,
+                    focused_panel_id=panel_id,
+                    global_link_channel_id=link_ch,
+                    context_mode_override=mode_str,
+                    requested_references=req_refs,
+                    generation_id=generation_id,
+                    model_id=gen_run.model_id,
+                    provider_name=gen_run.provider,
+                    extra_adapter_params=extra_params,
+                )
+
+                # Persist source manifest
+                manifest = ctx_service.persist_source_manifest(envelope, generation_id)
+                self.repository.update_generation_run(
+                    generation_id=generation_id,
+                    owner_user_id=owner_user_id,
+                    source_manifest_id=manifest.manifest_id,
+                )
+
+                # Format verified context block
+                context_block = ctx_service.format_context_for_prompt(envelope)
+            except Exception as ctx_err:
+                logger.warning("AiContextService assembly skipped due to error: %s", ctx_err)
+
         prompt_turns = PromptBuilder.build_prompt_messages(
             history=messages_history,
             system_override=conv.system_prompt_override,
             active_route=active_route,
+            context_block=context_block,
         )
 
         # Create placeholder assistant message
