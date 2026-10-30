@@ -15,8 +15,8 @@ TERMINAL_CAPABILITIES_CATALOG: Dict[TerminalType, TerminalCapability] = {
         supports_draft_persistence=True,
         supports_real_read_data=True,
         supports_arbitrary_execution=False,
-        execution_status_notice="Command execution is not enabled in Stage 122. Sandboxed execution belongs to Stage 123.",
-        stage_122_status="INPUT_COMPOSITION_AND_HELP_READY",
+        execution_status_notice="Approved ATLAS CLI command execution operational (Stage 123).",
+        stage_122_status="SANDBOXED_EXECUTION_ACTIVE",
     ),
     TerminalType.PYTHON: TerminalCapability(
         terminal_type=TerminalType.PYTHON,
@@ -25,10 +25,10 @@ TERMINAL_CAPABILITIES_CATALOG: Dict[TerminalType, TerminalCapability] = {
         icon_name="Code2",
         supports_multiline=True,
         supports_draft_persistence=True,
-        supports_real_read_data=False,
+        supports_real_read_data=True,
         supports_arbitrary_execution=False,
-        execution_status_notice="Python execution is not enabled in Stage 122. Stage 123 provides approved sandboxed runtimes.",
-        stage_122_status="MULTILINE_EDITOR_READY",
+        execution_status_notice="Subprocess-isolated Python sandbox execution operational (Stage 123).",
+        stage_122_status="SANDBOXED_EXECUTION_ACTIVE",
     ),
     TerminalType.SQL: TerminalCapability(
         terminal_type=TerminalType.SQL,
@@ -37,10 +37,10 @@ TERMINAL_CAPABILITIES_CATALOG: Dict[TerminalType, TerminalCapability] = {
         icon_name="Database",
         supports_multiline=True,
         supports_draft_persistence=True,
-        supports_real_read_data=True,  # Schema metadata only
+        supports_real_read_data=True,
         supports_arbitrary_execution=False,
-        execution_status_notice="Direct database SQL execution is not enabled in Stage 122. Stage 123 provides sandboxed query policies.",
-        stage_122_status="MULTILINE_EDITOR_READY",
+        execution_status_notice="Permission-controlled, read-only SQL execution operational (Stage 123).",
+        stage_122_status="SANDBOXED_EXECUTION_ACTIVE",
     ),
     TerminalType.LOGS: TerminalCapability(
         terminal_type=TerminalType.LOGS,

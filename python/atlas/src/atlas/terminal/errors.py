@@ -118,4 +118,3 @@ class TerminalSessionVersionConflictError(TerminalError):
                 "current_version": current_version,
             },
         )
-

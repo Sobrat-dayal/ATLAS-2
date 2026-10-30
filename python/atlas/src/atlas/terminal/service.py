@@ -150,5 +150,26 @@ class TerminalService:
         return McpDiagnosticsService.get_mcp_connections()
 
     def execute_command_attempt(self, *args, **kwargs) -> None:
-        """Explicitly blocks and rejects any execution attempt in Stage 122."""
+        """Explicitly blocks and rejects arbitrary un-sandboxed execution attempts."""
         raise TerminalExecutionUnavailableError()
+
+    def execute_command(
+        self,
+        user_id: str,
+        session_id: str,
+        input_code: str,
+        execution_type: Optional[Any] = None,
+        workspace_id: Optional[str] = None,
+        **kwargs,
+    ) -> Any:
+        """Executes terminal code/command using Stage 123 sandboxed execution engine."""
+        from atlas.terminal.execution.service import TerminalExecutionService
+
+        return TerminalExecutionService.get_instance().submit_execution(
+            user_id=user_id,
+            session_id=session_id,
+            input_code=input_code,
+            execution_type=execution_type,
+            workspace_id=workspace_id,
+            **kwargs,
+        )

@@ -10552,3 +10552,90 @@ This document records the major architectural and product decisions established.
 1198. **9 Frontend Integration Tests**: Validated all reference fixtures A through I in `context_stage121_v1.test.ts` with 100% pass rate.
 1199. **100% Production Build Clean**: Verified Next.js production build across all 38 application routes with 0 TypeScript compilation errors and 0 lint warnings.
 1200. **Strict Future Scope Discipline**: VS Code-style Terminal Shell (`/terminal`, CLI, Python REPL, MCP) remains strictly deferred to Stage 122.
+
+## Stage 122 — Integrated ATLAS Terminal and Developer Console
+
+### Architecture & Placement
+1201. **Universal Bottom Taskbar Placement**: The Integrated ATLAS Terminal Shell is mounted in the global Bottom Taskbar drawer, preserving the 20 canonical top-level routes without introducing a /terminal route.
+1202. **VS Code-Inspired Tabbed Multi-Session Architecture**: Supports independent concurrent sessions across six principal console types (ATLAS_CLI, PYTHON, SQL, LOGS, AGENTS, MCP).
+1203. **Independent Per-Session Draft Isolation**: Every session maintains its own isolated uncommitted draft buffer, scrollback history, and connection state.
+1204. **Bloomberg-Density Status Bar**: Terminal footer displays active session type, connection state, RLS status, cursor coordinates, and execution capability indicators.
+1205. **Global Toggle Shortcut**: Integrated Ctrl+\` / Cmd+\` hotkey and command palette action 	erminal.toggle for immediate console access from any platform view.
+
+### Consoles & Capabilities
+1206. **ATLAS CLI Console**: Command-line interface with registered command syntax help, command history, and auto-completion.
+1207. **Python Scratchpad Console**: Multiline quantitative editor with line numbering, syntax formatting, and draft persistence.
+1208. **SQL Analytics Console**: Relational query editor with read-only target schema indicators and query drafting.
+1209. **Real Operational Logs Console**: Real-time application log stream with severity filtering, service search, and secret redaction.
+1210. **Agents Status Inspector**: Truthful diagnostic view of registered background workers and autonomous agents.
+1211. **MCP Registry Inspector**: Truthful connection and capability inspection of Model Context Protocol configurations.
+
+### Security & Sanitization
+1212. **Secret Redaction**: Real-time regex scrubber strips bearer tokens, JWT signatures, API secret keys, and passwords from log records before transmission.
+1213. **Safe ANSI Parsing**: ANSI color escape sequences are safely parsed into styled React spans without dangerouslySetInnerHTML.
+1214. **OSC Sequence Stripping**: Malicious OSC escape sequences (such as OSC 8 hyperlinks and OSC 52 clipboard hijacking) are stripped prior to rendering.
+1215. **URL Sanitization**: Interactive links validate against safe http/https schemes, rejecting javascript:, data:, and bscript:.
+1216. **Strict Denial of Arbitrary Execution**: In Stage 122, arbitrary execution attempts fail closed with TERMINAL_EXECUTION_UNAVAILABLE (HTTP 501), establishing typed contracts for Stage 123.
+1217. **Bounded Memory & Scrollback**: Terminal scrollback buffers and drafts enforce strict upper bounds (max 2,000 lines, max 64KB per draft).
+1218. **User Preference Persistence**: User font size, family, line height, cursor style, and terminal height persist in 	erminal_user_preferences.
+1219. **Production Database Migration**: Production Alembic migration stage122_terminal_shell.py establishes persistent tables for sessions, preferences, and audit trails.
+1220. **Stage 123 Preparation Contracts**: Formalized ExecutionCapabilityDefinition, ExecutionRequestSchemaContract, and ExecutionOutputStreamingContract.
+
+---
+
+## Stage 123 — Sandboxed Terminal Execution Platform
+
+### Roadmap & Isolation
+1241. **Canonical Roadmap Discipline**: Stage 123 delivers sandboxed execution for Python, read-only SQL, and approved ATLAS CLI commands; Stage 124 AI Assistant milestones remain strictly deferred.
+1242. **Separation of Execution Services**: Untrusted user code never executes inside the FastAPI server, production worker, or browser main thread.
+1243. **Zero Host Shell Execution**: Terminal commands are strictly parsed via application routers; unrestricted OS shells (cmd.exe, powershell.exe, sh, ash) are never invoked.
+1244. **Subprocess-Isolated Python Sandbox**: Python executes in dedicated ephemeral subprocesses with unprivileged credentials and ephemeral directories.
+1245. **Environment Variable Scrubbing**: All sensitive credentials, tokens, database URLs, and cloud keys are purged from the child process environment.
+1246. **Filesystem Isolation & Ephemeral Cleanup**: Executions operate strictly within isolated temporary folders that are recursively removed upon process termination.
+1247. **Path Redaction in Tracebacks**: Absolute host operating-system filesystem paths in Python exception traces are sanitized to /sandbox/main.py.
+
+### Python Runtime
+1248. **Resource Boundaries & Quotas**: Compute profiles enforce 1 core, 512MB RAM, 10s default timeout (max 30s), and 64KB output limits.
+1249. **Deterministic Package Manifest**: Approved runtime pins Python standard libraries and NumPy; unauthorized modules fail closed.
+1250. **Structured Tabular Output**: Tabular results from DataFrames and queries are typed and bound to prevent memory exhaustion in the browser.
+1251. **Graceful Timeout & Cancellation**: Active child processes are terminated immediately upon reaching execution timeout or receiving user cancellation tokens.
+
+### SQL Execution Engine
+1252. **Read-Only SQL Baseline**: SQL execution defaults strictly to read-only analytical statements.
+1253. **Statement Allowlist Defense-in-Depth**: Query parser strictly enforces SELECT and WITH ... SELECT only.
+1254. **Prohibited SQL Keyword Denial**: INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, MERGE, GRANT, COPY, CALL, DO, EXEC, multiple statements, and destructive CTEs are rejected with TERMINAL_SQL_STATEMENT_NOT_ALLOWED.
+1255. **Engine-Level Authorizer**: SQLite in-memory instance enforces action codes SQLITE_SELECT, SQLITE_READ, and SQLITE_FUNCTION (action 31), returning SQLITE_DENY for all non-read actions.
+1256. **Controlled Pricing Test Fixture**: Seeded 	est_prices table with AAA 100, BBB 150, CCC 200 supports verified analytical queries and aggregations (AVG(price) = 150).
+
+### ATLAS CLI Router
+1257. **Approved ATLAS CLI Command Router**: Pure application-level router dispatches approved institutional operations without shell interpolation.
+1258. **Rejection of Unknown Commands**: Any unknown command or shell script string (
+m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
+1259. **Immutable Baseline Commands**: All baseline CLI commands are classified as READ_ONLY or COMPUTATIONAL; mutations are blocked with TERMINAL_CLI_MUTATION_NOT_ALLOWED.
+
+### Lifecycle, Streaming & State Machine
+1260. **Monotonic Execution State Machine**: State transitions follow strict DAG ordering (CREATED -> QUEUED -> RUNNING -> COMPLETED/FAILED/CANCELLED/TIMED_OUT/SECURITY_DENIED).
+1261. **Terminal Status Locking**: Once an execution enters a terminal state, subsequent state transitions are rejected.
+1262. **Monotonic State Revisions**: Every state transition increments state_revision to prevent asynchronous race conditions.
+1263. **User Execution Isolation**: Executions are strictly scoped to the authenticated user ID; cross-user execution access or cancellation raises TERMINAL_EXECUTION_ACCESS_DENIED.
+1264. **Bounded Output Streaming**: Execution output chunks are emitted with monotonic sequence numbers and categorized by stream type (stdout, stderr, 	abular, error).
+1265. **Output Truncation Guardrail**: Output exceeding configured memory quotas is truncated with clear markers rather than causing memory exhaustion.
+1266. **Fast Status Polling**: Dedicated lightweight /api/v1/terminal/executions/{id}/status endpoint enables real-time client polling without transferring large payloads.
+
+### Financial Integrity & Security
+1267. **No Implicit Financial Data Injection**: Global financial context does not silently copy private portfolio or trade records into the Python sandbox without explicit authorization.
+1268. **Preservation of Financial Records**: Execution is strictly analytical; zero trading orders, portfolio mutations, or broker side-effects can occur from terminal execution.
+1269. **Database Connection Safety**: Service-role keys and database administrator credentials are never exposed or passed to execution contexts.
+1270. **Sanitized Error Envelopes**: All execution errors return standardized ATLAS error envelopes with typed codes and redacted stack traces.
+1271. **Append-Only Audit Trail**: All execution submissions, cancellations, and status transitions are recorded in 	erminal_execution_audit_events.
+1272. **Alembic Database Migration**: Production migration stage123_terminal_execution.py creates execution, output, and audit tables chained from Stage 122.
+1273. **Per-User Concurrency Limiting**: Scheduler enforces a maximum of 2 concurrent executions per user, returning TERMINAL_EXECUTION_QUOTA_EXCEEDED on violation.
+
+### APIs & Frontend User Experience
+1274. **REST API Namespace**: All execution endpoints operate under /api/v1/terminal/executions, /python, /sql, and /cli.
+1275. **Pre-flight Query Validation**: Dedicated POST /api/v1/terminal/sql/validate endpoint allows clients to check query validity before submission.
+1276. **Typed Execution Client**: Frontend library src/lib/terminal/executionApi.ts provides typed async interfaces for all execution routes.
+1277. **Interactive Python Console**: Upgraded PythonConsole provides real Run/Stop controls, environment picker, duration tracking, and stdout/stderr split view.
+1278. **Institutional SQL Grid**: Upgraded SqlConsole features SqlResultGrid with sorting, formatted numbers, row counts, and CSV/JSON export.
+1279. **Structured CLI Terminal**: Upgraded AtlasCliConsole renders command suggestions, arrow-key history, status badges, and structured tables.
+1280. **Verification & Acceptance**: 100% test pass rate across 33 backend pytest tests (Stage 122 & 123), 217 frontend unit tests, 0 lint warnings, and clean Next.js production build.

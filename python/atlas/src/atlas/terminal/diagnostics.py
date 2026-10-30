@@ -99,7 +99,9 @@ class LogDiagnosticsService:
         clean_meta = {}
         if metadata:
             for k, v in metadata.items():
-                if any(term in k.lower() for term in ("key", "secret", "password", "token", "auth")):
+                if any(
+                    term in k.lower() for term in ("key", "secret", "password", "token", "auth")
+                ):
                     clean_meta[k] = "[REDACTED_CREDENTIAL]"
                 elif isinstance(v, str):
                     clean_meta[k] = redact_secrets(v)

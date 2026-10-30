@@ -186,4 +186,3 @@ class ExecutionOutputStreamingContract:
     sequence_number: int
     content: str
     timestamp: datetime
-

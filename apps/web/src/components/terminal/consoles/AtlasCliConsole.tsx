@@ -2,9 +2,11 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { TerminalSession, TerminalUserPreferences } from "@/lib/terminal/types";
-import { REGISTERED_CLI_COMMANDS } from "@/lib/terminal/capabilities";
-import { parseAnsiToSpans } from "@/lib/terminal/sanitization";
-import { Copy, Trash2, Search, HelpCircle, ShieldAlert } from "lucide-react";
+import { useExecution } from "@/hooks/terminal/useExecution";
+import { useAtlasCliCommands } from "@/hooks/terminal/useAtlasCliCommands";
+import { AtlasCliResultViewer } from "../cli/AtlasCliResultViewer";
+import type { TerminalExecutionDetail } from "@/lib/terminal/executionTypes";
+import { Copy, Trash2, HelpCircle, Terminal as TermIcon, Loader2 } from "lucide-react";
 
 interface AtlasCliConsoleProps {
   session: TerminalSession;
@@ -12,11 +14,13 @@ interface AtlasCliConsoleProps {
   onUpdateDraft: (newDraft: string) => void;
 }
 
-interface CliOutputLine {
+interface CliHistoryItem {
   id: string;
-  type: "input" | "system" | "error" | "help";
-  text: string;
+  command: string;
   timestamp: string;
+  execution?: TerminalExecutionDetail;
+  systemMessage?: string;
+  isError?: boolean;
 }
 
 export function AtlasCliConsole({
@@ -24,100 +28,131 @@ export function AtlasCliConsole({
   preferences,
   onUpdateDraft,
 }: AtlasCliConsoleProps) {
-  const [output, setOutput] = useState<CliOutputLine[]>([
+  const [historyItems, setHistoryItems] = useState<CliHistoryItem[]>([
     {
-      id: "line_init",
-      type: "system",
-      text: "ATLAS Terminal Shell (v2.4.0) — Stage 122 Active\nType 'help' to inspect documented financial commands and syntax.",
+      id: "init",
+      command: "",
       timestamp: new Date().toLocaleTimeString(),
+      systemMessage:
+        "ATLAS Financial Intelligence and Quantitative Research OS (v2.4.0) — Stage 123 Active\n" +
+        "Sandboxed Execution Operational. Type 'atlas help' to view registered commands.",
     },
   ]);
   const [inputVal, setInputVal] = useState<string>(session.draft_content || "");
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [showSearch, setShowSearch] = useState<boolean>(false);
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIdx, setHistoryIdx] = useState<number>(-1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll on new output
+  const { commands, getSuggestions } = useAtlasCliCommands();
+  const { isExecuting, execute } = useExecution(session.session_id);
+
+  const suggestions = getSuggestions(inputVal);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [output]);
+  }, [historyItems, isExecuting]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       const trimmed = inputVal.trim();
-      if (!trimmed) return;
+      if (!trimmed || isExecuting) return;
 
-      const newHistory = [...history, trimmed];
-      setHistory(newHistory);
-      setHistoryIndex(-1);
+      const newHistory = [...commandHistory, trimmed];
+      setCommandHistory(newHistory);
+      setHistoryIdx(-1);
 
       const time = new Date().toLocaleTimeString();
-      const inputEntry: CliOutputLine = {
-        id: `in_${Date.now()}`,
-        type: "input",
-        text: `atlas> ${trimmed}`,
-        timestamp: time,
-      };
 
-      if (trimmed.toLowerCase() === "clear") {
-        setOutput([]);
+      if (trimmed.toLowerCase() === "clear" || trimmed.toLowerCase() === "atlas clear") {
+        setHistoryItems([]);
         setInputVal("");
         onUpdateDraft("");
         return;
       }
 
-      let responseEntry: CliOutputLine;
-      if (trimmed.toLowerCase() === "help") {
-        const helpSummary = REGISTERED_CLI_COMMANDS.map(
-          (c) => `  ${c.command.padEnd(14)} ${c.summary}`
-        ).join("\n");
-        responseEntry = {
-          id: `help_${Date.now()}`,
-          type: "help",
-          text: `Documented ATLAS Commands:\n${helpSummary}\n\nNote: Command execution belongs to Stage 123.`,
-          timestamp: time,
-        };
-      } else {
-        responseEntry = {
-          id: `notice_${Date.now()}`,
-          type: "error",
-          text: `atlas: Command '${trimmed}' received. Command execution is disabled in Stage 122.\nApproved sandboxed execution for Python, SQL, and ATLAS commands is provided in Stage 123.`,
-          timestamp: time,
-        };
-      }
-
-      setOutput((prev) => [...prev, inputEntry, responseEntry]);
+      // Add placeholder history item
+      const itemId = `cli_${Date.now()}`;
       setInputVal("");
       onUpdateDraft("");
+
+      try {
+        const result = await execute({
+          input_code: trimmed,
+          execution_type: "ATLAS_CLI",
+        });
+
+        setHistoryItems((prev) => [
+          ...prev,
+          {
+            id: itemId,
+            command: trimmed,
+            timestamp: time,
+            execution: result,
+          },
+        ]);
+      } catch (err: any) {
+        setHistoryItems((prev) => [
+          ...prev,
+          {
+            id: itemId,
+            command: trimmed,
+            timestamp: time,
+            isError: true,
+            systemMessage: err?.message || "Execution failed.",
+          },
+        ]);
+      }
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      if (history.length === 0) return;
-      const nextIdx = historyIndex === -1 ? history.length - 1 : Math.max(0, historyIndex - 1);
-      setHistoryIndex(nextIdx);
-      setInputVal(history[nextIdx] || "");
+      if (commandHistory.length === 0) return;
+      const nextIdx = historyIdx === -1 ? commandHistory.length - 1 : Math.max(0, historyIdx - 1);
+      setHistoryIdx(nextIdx);
+      setInputVal(commandHistory[nextIdx]);
+      onUpdateDraft(commandHistory[nextIdx]);
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      if (historyIndex === -1) return;
-      const nextIdx = historyIndex + 1;
-      if (nextIdx >= history.length) {
-        setHistoryIndex(-1);
+      if (historyIdx === -1) return;
+      const nextIdx = historyIdx + 1;
+      if (nextIdx >= commandHistory.length) {
+        setHistoryIdx(-1);
         setInputVal("");
+        onUpdateDraft("");
       } else {
-        setHistoryIndex(nextIdx);
-        setInputVal(history[nextIdx] || "");
+        setHistoryIdx(nextIdx);
+        setInputVal(commandHistory[nextIdx]);
+        onUpdateDraft(commandHistory[nextIdx]);
       }
+    } else if (e.key === "Tab" && suggestions.length > 0) {
+      e.preventDefault();
+      const first = suggestions[0].name;
+      const completed = inputVal.startsWith("atlas ") ? `atlas ${first}` : first;
+      setInputVal(completed);
+      onUpdateDraft(completed);
     }
   };
 
-  const filteredOutput = searchQuery
-    ? output.filter((line) => line.text.toLowerCase().includes(searchQuery.toLowerCase()))
-    : output;
+  const handleClear = () => {
+    setHistoryItems([]);
+    setInputVal("");
+    onUpdateDraft("");
+  };
+
+  const handleCopyAll = () => {
+    const text = historyItems
+      .map((item) => {
+        if (item.systemMessage) return item.systemMessage;
+        let out = `atlas> ${item.command}\n`;
+        if (item.execution?.stdout_summary) out += `${item.execution.stdout_summary}\n`;
+        if (item.execution?.error_message) out += `ERROR: ${item.execution.error_message}\n`;
+        return out;
+      })
+      .join("\n");
+    navigator.clipboard.writeText(text);
+  };
 
   return (
     <div
@@ -129,109 +164,125 @@ export function AtlasCliConsole({
       }}
       onClick={() => inputRef.current?.focus()}
     >
-      {/* Mini-toolbar */}
+      {/* Console Subheader */}
       <div className="flex items-center justify-between px-3 py-1 bg-atlas-surface-1 border-b border-atlas-border-subtle text-[11px] select-none text-atlas-text-muted">
         <div className="flex items-center gap-2">
-          <span className="text-atlas-text-primary font-semibold">ATLAS CLI Console</span>
-          <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1 rounded">Execution: Disabled</span>
+          <TermIcon className="h-3.5 w-3.5 text-blue-400" />
+          <span className="text-atlas-text-primary font-semibold">ATLAS CLI Command Router</span>
+          <span className="text-zinc-500">&bull;</span>
+          <span className="text-zinc-400">Environment: Host Sandbox (Strict Read-Only)</span>
         </div>
+
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowSearch(!showSearch)}
-            title="Search Output"
-            className="p-1 hover:text-atlas-text-primary rounded hover:bg-atlas-surface-hover transition-colors"
+            onClick={handleCopyAll}
+            title="Copy scrollback history"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-atlas-surface-hover hover:text-atlas-text-primary transition-colors text-[10px]"
           >
-            <Search className="h-3 w-3" />
+            <Copy className="h-3 w-3" />
+            <span>Copy</span>
           </button>
           <button
             type="button"
-            onClick={() => setOutput([])}
-            title="Clear Output Buffer"
-            className="p-1 hover:text-atlas-text-primary rounded hover:bg-atlas-surface-hover transition-colors"
+            onClick={handleClear}
+            title="Clear scrollback history"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-atlas-surface-hover hover:text-atlas-text-primary transition-colors text-[10px]"
           >
             <Trash2 className="h-3 w-3" />
+            <span>Clear</span>
           </button>
         </div>
       </div>
 
-      {/* Search Bar */}
-      {showSearch && (
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-atlas-surface-2 border-b border-atlas-border-subtle">
-          <Search className="h-3 w-3 text-atlas-text-muted" />
-          <input
-            type="text"
-            placeholder="Find in output..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent text-xs text-atlas-text-primary outline-none"
-            autoFocus
-          />
-          <button
-            type="button"
-            onClick={() => {
-              setSearchQuery("");
-              setShowSearch(false);
-            }}
-            className="text-[10px] text-atlas-text-muted hover:text-atlas-text-primary"
-          >
-            Esc
-          </button>
+      {/* Scrollback History Area */}
+      <div
+        ref={scrollRef}
+        className="flex-1 p-3 overflow-y-auto custom-scrollbar space-y-3 bg-neutral-950 font-mono text-xs"
+      >
+        {historyItems.map((item) => (
+          <div key={item.id} className="space-y-1">
+            {item.command && (
+              <div className="flex items-center gap-2 text-neutral-400 font-semibold select-none">
+                <span className="text-blue-400">atlas&gt;</span>
+                <span className="text-neutral-100">{item.command}</span>
+                {preferences.timestamp_display && (
+                  <span className="text-[10px] text-neutral-600 font-normal ml-auto">
+                    {item.timestamp}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {item.systemMessage && (
+              <pre
+                className={`p-2 rounded font-mono text-[11px] whitespace-pre-wrap leading-relaxed ${
+                  item.isError
+                    ? "bg-rose-950/40 border border-rose-900/60 text-rose-300"
+                    : "bg-neutral-900/40 text-neutral-400 border border-neutral-900"
+                }`}
+              >
+                {item.systemMessage}
+              </pre>
+            )}
+
+            {item.execution && <AtlasCliResultViewer execution={item.execution} />}
+          </div>
+        ))}
+
+        {isExecuting && (
+          <div className="flex items-center gap-2 text-blue-400 text-xs py-1 animate-pulse">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span>Executing command...</span>
+          </div>
+        )}
+      </div>
+
+      {/* Auto-suggestions Pill Bar */}
+      {suggestions.length > 0 && inputVal.trim() && (
+        <div className="px-3 py-1 bg-neutral-900/90 border-t border-neutral-800 flex items-center gap-2 text-[11px] overflow-x-auto select-none">
+          <span className="text-neutral-500 font-semibold text-[10px] uppercase">Suggest:</span>
+          {suggestions.slice(0, 5).map((s) => (
+            <button
+              key={s.command_id}
+              onClick={() => {
+                const completed = inputVal.startsWith("atlas ") ? `atlas ${s.name}` : s.name;
+                setInputVal(completed);
+                onUpdateDraft(completed);
+                inputRef.current?.focus();
+              }}
+              className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 font-mono transition"
+            >
+              atlas {s.name}
+            </button>
+          ))}
+          <span className="text-neutral-600 text-[10px] ml-auto">Tab to complete</span>
         </div>
       )}
 
-      {/* Output Scrollback */}
-      <div
-        ref={scrollRef}
-        className="flex-1 p-3 overflow-y-auto space-y-1.5 custom-scrollbar text-atlas-text-primary selection:bg-atlas-accent/30"
-      >
-        {filteredOutput.map((line) => {
-          const spans = parseAnsiToSpans(line.text);
-          return (
-            <div key={line.id} className="leading-relaxed">
-              {preferences.timestamp_display && (
-                <span className="text-[10px] text-atlas-text-muted mr-2 select-none opacity-60">
-                  [{line.timestamp}]
-                </span>
-              )}
-              {line.type === "input" && (
-                <span className="text-atlas-accent font-semibold">{line.text}</span>
-              )}
-              {line.type === "help" && (
-                <pre className="text-emerald-400 whitespace-pre-wrap">{line.text}</pre>
-              )}
-              {line.type === "error" && (
-                <div className="text-amber-300 bg-amber-950/20 p-2 rounded border border-amber-800/30 whitespace-pre-wrap flex items-start gap-1.5 my-1">
-                  <ShieldAlert className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-400" />
-                  <span>{line.text}</span>
-                </div>
-              )}
-              {line.type === "system" && (
-                <div className="text-atlas-text-muted whitespace-pre-wrap">{line.text}</div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Input line */}
-        <div className="flex items-center gap-2 pt-1 text-atlas-text-primary">
-          <span className="text-atlas-accent font-bold select-none">atlas&gt;</span>
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputVal}
-            onChange={(e) => {
-              setInputVal(e.target.value);
-              onUpdateDraft(e.target.value);
-            }}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            className="flex-1 bg-transparent border-none outline-none text-atlas-text-primary font-mono placeholder:text-atlas-text-muted/40"
-            placeholder="Type command ('help' for syntax)..."
-          />
-        </div>
+      {/* Command Prompt Line */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-neutral-900 border-t border-neutral-800">
+        <span className="text-blue-400 font-bold select-none text-xs">atlas&gt;</span>
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputVal}
+          onChange={(e) => {
+            setInputVal(e.target.value);
+            onUpdateDraft(e.target.value);
+          }}
+          onKeyDown={handleKeyDown}
+          disabled={isExecuting}
+          placeholder={isExecuting ? "Executing..." : "Enter command (e.g. 'atlas help', 'atlas workspace list', 'atlas version')..."}
+          spellCheck={false}
+          autoFocus
+          className="flex-1 bg-transparent border-none outline-none text-neutral-100 placeholder:text-neutral-600 font-mono text-xs focus:ring-0 disabled:opacity-50"
+          style={{
+            fontFamily: preferences.font_family,
+            fontSize: `${preferences.font_size}px`,
+          }}
+        />
       </div>
     </div>
   );
 }
-

@@ -87,4 +87,3 @@ class TerminalCursorStyle(str, Enum):
     BLOCK = "BLOCK"
     LINE = "LINE"
     UNDERLINE = "UNDERLINE"
-
