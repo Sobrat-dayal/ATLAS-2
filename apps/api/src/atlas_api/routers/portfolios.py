@@ -8,7 +8,7 @@ and ledger reconciliation.
 import logging
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Optional
+from typing import Annotated, List, Optional
 
 from atlas.auth import AuthPrincipal
 from atlas.portfolios import (
@@ -40,6 +40,27 @@ from atlas.portfolios import (
     TransactionType,
     ValuationResponse,
 )
+from atlas.portfolios.performance import (
+    BenchmarkComparisonDTO,
+    BenchmarkDefinitionDTO,
+    BenchmarkListResponse,
+    PerformanceCalculateRequest,
+    PerformanceCashFlowDTO,
+    PerformanceDataQualityDTO,
+    PerformanceMethodology,
+    PerformancePeriodType,
+    PerformanceResponse,
+    PerformanceRun,
+    PerformanceRunListResponse,
+    PerformanceSeriesPointDTO,
+    PerformanceSeriesResponse,
+    PeriodicReturnDTO,
+    PeriodicReturnsResponse,
+    PortfolioPerformanceError,
+    PortfolioPerformanceService,
+    SubperiodReturnDTO,
+    list_canonical_benchmarks,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from atlas_api.auth.dependencies import get_current_user
@@ -48,8 +69,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/portfolios", tags=["Portfolios"])
 
-# Singleton service instance for in-memory persistence across requests
+# Singleton service instances for in-memory persistence across requests
 _service_instance: Optional[PortfolioService] = None
+_perf_service_instance: Optional[PortfolioPerformanceService] = None
 
 
 def get_portfolio_service(request: Request) -> PortfolioService:
@@ -59,8 +81,17 @@ def get_portfolio_service(request: Request) -> PortfolioService:
     return _service_instance
 
 
+def get_performance_service(
+    portfolio_service: Annotated[PortfolioService, Depends(get_portfolio_service)]
+) -> PortfolioPerformanceService:
+    global _perf_service_instance
+    if _perf_service_instance is None or _perf_service_instance.portfolio_service is not portfolio_service:
+        _perf_service_instance = PortfolioPerformanceService(portfolio_service)
+    return _perf_service_instance
+
+
 def _handle_error(e: Exception) -> None:
-    if isinstance(e, PortfolioError):
+    if isinstance(e, (PortfolioError, PortfolioPerformanceError)):
         raise HTTPException(
             status_code=e.status_code,
             detail={"code": e.code, "message": e.message},
@@ -69,6 +100,128 @@ def _handle_error(e: Exception) -> None:
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail={"code": "INTERNAL_SERVER_ERROR", "message": str(e)},
+    )
+
+
+def _convert_run_to_response(run: PerformanceRun) -> PerformanceResponse:
+    subperiods_dto = [
+        SubperiodReturnDTO(
+            subperiod_index=s.subperiod_index,
+            start_time=s.start_time,
+            end_time=s.end_time,
+            start_value=f"{s.start_value:.2f}",
+            end_value_pre_flow=f"{s.end_value_pre_flow:.2f}",
+            net_external_flow=f"{s.net_external_flow:.2f}",
+            end_value_post_flow=f"{s.end_value_post_flow:.2f}",
+            subperiod_return=f"{s.subperiod_return:.4f}",
+            cumulative_twr_linked=f"{s.cumulative_twr_linked:.4f}",
+        )
+        for s in run.subperiods
+    ]
+
+    flows_dto = [
+        PerformanceCashFlowDTO(
+            id=str(f.id),
+            flow_date=f.flow_date,
+            classification=f.classification.value,
+            native_amount=f"{f.native_amount:.2f}",
+            native_currency=f.native_currency,
+            base_amount=f"{f.base_amount:.2f}",
+            base_currency=f.base_currency,
+            fx_rate=f"{f.fx_rate:.4f}",
+            investor_flow_amount=f"{f.investor_flow_amount:.2f}",
+            portfolio_flow_amount=f"{f.portfolio_flow_amount:.2f}",
+            description=f.description,
+        )
+        for f in run.dated_flows
+    ]
+
+    bench_dto = None
+    if run.benchmark_comparison:
+        b = run.benchmark_comparison
+        bench_dto = BenchmarkComparisonDTO(
+            benchmark_id=b.benchmark_id,
+            benchmark_name=b.benchmark_name,
+            return_basis=b.return_basis.value,
+            currency=b.currency,
+            portfolio_return=f"{b.portfolio_return:.4f}",
+            benchmark_return=f"{b.benchmark_return:.4f}",
+            arithmetic_difference=f"{b.arithmetic_difference:.4f}",
+            period_start=b.period_start,
+            period_end=b.period_end,
+            rebased_portfolio_index_end=f"{b.rebased_portfolio_index_end:.2f}",
+            rebased_benchmark_index_end=f"{b.rebased_benchmark_index_end:.2f}",
+            warning=b.warning,
+        )
+
+    dq_dto = PerformanceDataQualityDTO(
+        completeness=run.data_quality.completeness.value,
+        missing_valuations=run.data_quality.missing_valuations,
+        missing_market_prices=run.data_quality.missing_market_prices,
+        missing_fx_rates=run.data_quality.missing_fx_rates,
+        stale_market_prices=run.data_quality.stale_market_prices,
+        warnings=run.data_quality.warnings,
+        source_manifest=run.data_quality.source_manifest,
+    )
+
+    return PerformanceResponse(
+        run_id=str(run.run_id),
+        portfolio_id=str(run.portfolio_id),
+        account_id=str(run.account_id) if run.account_id else None,
+        methodology=run.methodology.value,
+        period_type=run.period_type.value,
+        scope=run.scope.value,
+        period_start=run.period_start,
+        period_end=run.period_end,
+        base_currency=run.base_currency,
+        status=run.status.value,
+        twr_cumulative=f"{run.twr_cumulative:.4f}" if run.twr_cumulative is not None else None,
+        twr_annualized=f"{run.twr_annualized:.4f}" if run.twr_annualized is not None else None,
+        mwr_xirr=f"{run.mwr_xirr:.4f}" if run.mwr_xirr is not None else None,
+        beginning_value=f"{run.beginning_value:.2f}",
+        ending_value=f"{run.ending_value:.2f}",
+        net_external_flows=f"{run.net_external_flows:.2f}",
+        total_contributions=f"{run.total_contributions:.2f}",
+        total_withdrawals=f"{run.total_withdrawals:.2f}",
+        total_dividends=f"{run.total_dividends:.2f}",
+        total_fees=f"{run.total_fees:.2f}",
+        investment_gain=f"{run.investment_gain:.2f}",
+        subperiods=subperiods_dto,
+        dated_flows=flows_dto,
+        benchmark_comparison=bench_dto,
+        data_quality=dq_dto,
+        calculation_version=run.calculation_version,
+        input_hash=run.input_hash,
+        created_at=run.created_at,
+        completed_at=run.completed_at,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Canonical Benchmarks (Static route preceding dynamic /{portfolio_id})
+# ---------------------------------------------------------------------------
+
+
+@router.get("/benchmarks", response_model=BenchmarkListResponse)
+async def list_benchmarks(
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+) -> BenchmarkListResponse:
+    """List canonical market index benchmarks."""
+    benchmarks = list_canonical_benchmarks()
+    return BenchmarkListResponse(
+        benchmarks=[
+            BenchmarkDefinitionDTO(
+                benchmark_id=b.benchmark_id,
+                name=b.name,
+                symbol=b.symbol,
+                benchmark_type=b.benchmark_type,
+                return_basis=b.return_basis.value,
+                currency=b.currency,
+                description=b.description,
+            )
+            for b in benchmarks
+        ],
+        total=len(benchmarks),
     )
 
 
@@ -768,6 +921,237 @@ async def check_reconciliation(
             discrepancies=rec.discrepancies,
             warnings=rec.warnings,
             is_balanced=rec.is_balanced,
+        )
+    except Exception as e:
+        _handle_error(e)
+
+
+# ---------------------------------------------------------------------------
+# Portfolio Performance Analytics (Stage 111)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{portfolio_id}/performance", response_model=PerformanceResponse)
+async def get_performance_summary(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    perf_service: Annotated[PortfolioPerformanceService, Depends(get_performance_service)],
+    period_type: PerformancePeriodType = Query(default=PerformancePeriodType.YEAR_TO_DATE),
+    methodology: PerformanceMethodology = Query(default=PerformanceMethodology.TIME_WEIGHTED_RETURN),
+    reporting_currency: Optional[str] = Query(default=None),
+    account_id: Optional[str] = Query(default=None),
+    benchmark_id: Optional[str] = Query(default="BENCHMARK_SP500"),
+) -> PerformanceResponse:
+    """Retrieve or compute latest eligible portfolio performance summary."""
+    try:
+        run = perf_service.get_performance_summary(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            period_type=period_type,
+            methodology=methodology,
+            reporting_currency=reporting_currency,
+            account_id=account_id,
+            benchmark_id=benchmark_id,
+        )
+        return _convert_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.post("/{portfolio_id}/performance/calculate", response_model=PerformanceResponse)
+async def calculate_performance(
+    portfolio_id: str,
+    request: PerformanceCalculateRequest,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    perf_service: Annotated[PortfolioPerformanceService, Depends(get_performance_service)],
+) -> PerformanceResponse:
+    """Trigger a versioned, reproducible portfolio performance calculation run."""
+    try:
+        request.portfolio_id = portfolio_id
+        run = perf_service.calculate_performance(portfolio_id, current_user.sub, request)
+        return _convert_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/performance/runs", response_model=PerformanceRunListResponse)
+async def list_performance_runs(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    perf_service: Annotated[PortfolioPerformanceService, Depends(get_performance_service)],
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> PerformanceRunListResponse:
+    """List historical performance calculation runs for auditability."""
+    try:
+        runs, total = perf_service.list_performance_runs(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            limit=limit,
+            offset=offset,
+        )
+        return PerformanceRunListResponse(
+            runs=[_convert_run_to_response(r) for r in runs],
+            total=total,
+        )
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/performance/runs/{run_id}", response_model=PerformanceResponse)
+async def get_performance_run(
+    portfolio_id: str,
+    run_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    perf_service: Annotated[PortfolioPerformanceService, Depends(get_performance_service)],
+) -> PerformanceResponse:
+    """Retrieve an immutable performance run by UUID."""
+    try:
+        run = perf_service.get_performance_run(run_id=run_id, user_id=current_user.sub)
+        return _convert_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/performance/series", response_model=PerformanceSeriesResponse)
+async def get_performance_series(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    perf_service: Annotated[PortfolioPerformanceService, Depends(get_performance_service)],
+    period_type: PerformancePeriodType = Query(default=PerformancePeriodType.YEAR_TO_DATE),
+    account_id: Optional[str] = Query(default=None),
+) -> PerformanceSeriesResponse:
+    """Retrieve historical valuation series and indexed TWR growth curve (Index = 100)."""
+    try:
+        perf = perf_service.get_performance_summary(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            period_type=period_type,
+            account_id=account_id,
+        )
+        raw_points = perf_service.get_performance_series(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            period_type=period_type,
+            account_id=account_id,
+        )
+        points = [
+            PerformanceSeriesPointDTO(
+                timestamp=p["timestamp"],  # type: ignore
+                portfolio_value=str(p["portfolio_value"]),
+                indexed_twr=str(p["indexed_twr"]),
+                benchmark_indexed=str(p["benchmark_indexed"]) if p["benchmark_indexed"] else None,
+                cash_flow_amount=str(p["cash_flow_amount"]) if p["cash_flow_amount"] else None,
+                cash_flow_type=str(p["cash_flow_type"]) if p["cash_flow_type"] else None,
+            )
+            for p in raw_points
+        ]
+        return PerformanceSeriesResponse(
+            portfolio_id=portfolio_id,
+            base_currency=perf.base_currency,
+            period_start=perf.period_start,
+            period_end=perf.period_end,
+            points=points,
+        )
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/performance/periodic", response_model=PeriodicReturnsResponse)
+async def get_periodic_returns(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    perf_service: Annotated[PortfolioPerformanceService, Depends(get_performance_service)],
+    account_id: Optional[str] = Query(default=None),
+) -> PeriodicReturnsResponse:
+    """Retrieve calendar monthly and full-year geometrically compounded returns table."""
+    try:
+        portfolio = perf_service.portfolio_service.repository.get_portfolio(portfolio_id, current_user.sub)
+        periodic = perf_service.get_periodic_returns(portfolio_id, current_user.sub, account_id=account_id)
+        return PeriodicReturnsResponse(
+            portfolio_id=portfolio_id,
+            base_currency=portfolio.base_currency,
+            returns=[
+                PeriodicReturnDTO(
+                    period_label=p.period_label,
+                    period_type=p.period_type,
+                    start_date=p.start_date,
+                    end_date=p.end_date,
+                    return_value=f"{p.return_value:.4f}" if p.return_value is not None else None,
+                    beginning_value=f"{p.beginning_value:.2f}",
+                    ending_value=f"{p.ending_value:.2f}",
+                    net_external_flows=f"{p.net_external_flows:.2f}",
+                    investment_gain=f"{p.investment_gain:.2f}",
+                    is_partial=p.is_partial,
+                    completeness=p.completeness.value,
+                )
+                for p in periodic
+            ],
+        )
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/performance/cash-flows", response_model=List[PerformanceCashFlowDTO])
+async def list_cash_flows(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    perf_service: Annotated[PortfolioPerformanceService, Depends(get_performance_service)],
+    period_type: PerformancePeriodType = Query(default=PerformancePeriodType.SINCE_INCEPTION),
+    account_id: Optional[str] = Query(default=None),
+) -> List[PerformanceCashFlowDTO]:
+    """Retrieve list of classified cash flows relative to portfolio/account boundaries."""
+    try:
+        flows = perf_service.list_classified_cash_flows(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            period_type=period_type,
+            account_id=account_id,
+        )
+        return [
+            PerformanceCashFlowDTO(
+                id=str(f.id),
+                flow_date=f.flow_date,
+                classification=f.classification.value,
+                native_amount=f"{f.native_amount:.2f}",
+                native_currency=f.native_currency,
+                base_amount=f"{f.base_amount:.2f}",
+                base_currency=f.base_currency,
+                fx_rate=f"{f.fx_rate:.4f}",
+                investor_flow_amount=f"{f.investor_flow_amount:.2f}",
+                portfolio_flow_amount=f"{f.portfolio_flow_amount:.2f}",
+                description=f.description,
+            )
+            for f in flows
+        ]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/performance/data-quality", response_model=PerformanceDataQualityDTO)
+async def get_performance_data_quality(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    perf_service: Annotated[PortfolioPerformanceService, Depends(get_performance_service)],
+    period_type: PerformancePeriodType = Query(default=PerformancePeriodType.YEAR_TO_DATE),
+    account_id: Optional[str] = Query(default=None),
+) -> PerformanceDataQualityDTO:
+    """Retrieve input coverage, quote freshness diagnostics, and calculation warnings."""
+    try:
+        perf = perf_service.get_performance_summary(
+            portfolio_id=portfolio_id,
+            user_id=current_user.sub,
+            period_type=period_type,
+            account_id=account_id,
+        )
+        return PerformanceDataQualityDTO(
+            completeness=perf.data_quality.completeness.value,
+            missing_valuations=perf.data_quality.missing_valuations,
+            missing_market_prices=perf.data_quality.missing_market_prices,
+            missing_fx_rates=perf.data_quality.missing_fx_rates,
+            stale_market_prices=perf.data_quality.stale_market_prices,
+            warnings=perf.data_quality.warnings,
+            source_manifest=perf.data_quality.source_manifest,
         )
     except Exception as e:
         _handle_error(e)

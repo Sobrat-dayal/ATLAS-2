@@ -9997,3 +9997,52 @@ This document records the major architectural and product decisions established.
 878. **Stage 110 Roadmap Boundary (Portfolios V1)**: Stage 110 exclusively establishes core accounts, transaction ledgers, positions, FIFO tax lots, cash management, valuation, and reconciliation.
 879. **Strict Deferral of Performance Analytics (Stage 111)**: Strictly prohibited conversion of accounting P&L into Time-Weighted Return (TWR), Money-Weighted Return (MWR), IRR, or XIRR (reserved for Stage 111).
 880. **Strict Deferral of Allocation, Attribution, Risk, and Trading**: Strictly deferred Stage 112 (Allocation/Exposure), Stage 113 (Attribution), Stage 114 (Optimization), Stages 115–118 (Risk), Stage 143 (Backtesting), Stage 144 (Paper Trading), Stage 145 (Broker Sandbox), and Stages 146–149 (Autonomous Agents). Zero live broker order execution.
+
+
+## STAGE 111 — INSTITUTIONAL-GRADE PORTFOLIO PERFORMANCE ANALYTICS ENGINE
+
+### Canonical Performance Domain & Exact Subperiod TWR Engine
+881. **Canonical Performance Domain Identity**: Established unified performance analytics module in `atlas.portfolios.performance` managing calculation runs, methodology registries, period type resolvers, and cryptographic execution snapshots.
+882. **Exact Subperiod Time-Weighted Return (TWR) Methodology**: Implemented GIPS/CFA-aligned exact subperiod TWR segmentation ($R_{\text{twr}} = \prod (1 + R_i) - 1$). New subperiods are bounded strictly by external investor cash flows, eliminating external cash-flow distortions from compounding returns.
+883. **Part XIII Exact Reference Fixture Verification**: Mathematically verified the canonical Part XIII reference fixture: Subperiod 1 ($100 \to 110$, $R_1 = 10\%$), $+\$50$ external contribution at $t_1$, Subperiod 2 ($160 \to 176$, $R_2 = 10\%$), yielding exact compound TWR of $(1.10 \times 1.10) - 1 = \mathbf{21.0\%}$, strictly rejecting the naive calculation of $(176 - 100) / 100 = 76.0\%$.
+884. **Modified Dietz Approximate TWR Support**: Provided clear methodological distinction for Modified Dietz approximate TWR ($R_{\text{dietz}} = \frac{V_e - V_b - F}{V_b + \sum F_t \cdot W_t}$) with day-weighting for historical periods lacking interim valuation marks, tagging runs with explicit approximation warnings.
+
+### Money-Weighted Returns (MWR / XIRR) & Bounded Root Solver
+885. **Money-Weighted Return (MWR / XIRR) Formulation**: Implemented annualized internal rate of return ($\sum \frac{C_t}{(1 + r)^{\frac{d_t - d_0}{365}}} = 0$) under standard ACT/365 day-count convention.
+886. **Bounded Newton-Raphson & Bisection Fallback Root Solver**: Engineered robust numerical root solver utilizing analytic first derivatives with search boundaries clamped to $[-0.9999, 50.0]$ and guaranteed bisection fallback to eliminate infinite loops and solver divergence.
+887. **Investor-Perspective Cash Flow Sign Convention**: Standardized investor-perspective dated cash flow schedules where deposits/contributions are negative outflows ($-C_t$), withdrawals are positive inflows ($+C_t$), and terminal marked valuation is positive liquidation equivalent ($+V_e$).
+888. **Descartes Sign Rule Analysis for Non-Unique Roots**: Implemented sign-change analysis on cumulative net flows to detect schedules with multiple mathematical roots, generating explicit diagnostic alerts when multiple IRR solutions exist.
+889. **Part XIX Simple 1-Year Reference Fixture Verification**: Validated exact Part XIX fixture: $-\$1,000$ initial contribution at $t_0$, $+\$1,100$ terminal valuation at $t_0 + 365 \text{ days} \implies \mathbf{10.0\%}$ annualized XIRR.
+
+### Cash Flow Classification & Scope Boundary Isolation
+890. **Deterministic Cash Flow Classification Matrix**: Implemented strict classification rules categorizing transactions into `EXTERNAL_CONTRIBUTION`, `EXTERNAL_WITHDRAWAL`, `INTERNAL_SECURITY_TRADE`, `INTERNAL_INCOME`, `INTERNAL_FEE`, `INTERNAL_TRANSFER`, and `CORPORATE_ACTION_NONCASH`.
+891. **Internal Trade & Reinvestment Isolation**: Strictly excluded buys, sells, dividend receipts, and interest payments from external flow status, ensuring portfolio internal operations do not distort investor-level return metrics.
+892. **Inter-Account Transfer Scope Netting**: Handled cash transfers dynamically based on measurement scope: netted out as $0.00$ internal flow at `PORTFOLIO` scope, while classified as external contributions/withdrawals at `ACCOUNT` scope.
+893. **Treatment of Dividends and Fees**: Retained cash dividends and interest within portfolio equity value (generating organic return), while deducting management and account fees as internal costs reducing net performance.
+
+### Multi-Currency Return Engine & Canonical FX Integration
+894. **Multi-Currency Flow-Date & Valuation-Date FX Conversion**: Converted cash flows at verified spot FX rates on the exact flow date and valuation points at spot FX rates on each valuation timestamp.
+895. **Part XXXIV Multi-Currency Reference Fixture Verification**: Mathematically validated Part XXXIV fixture: native USD investment ($100 \to 110$, $R_{\text{USD}} = 10.0\%$) with historical FX moving from $80.0$ to $90.0$ USD/INR yields starting INR valuation of $8,000$, ending INR valuation of $9,900$, and base INR return of $\frac{9,900 - 8,000}{8,000} = \mathbf{23.75\%}$.
+
+### Periodic Returns & Geometric Annualization
+896. **Periodic Calendar Returns & Compounding Grid**: Engineered calendar monthly and annual returns table with geometric sub-interval compounding ($(1 + R_{\text{yr}}) = \prod (1 + R_{\text{mo}})$).
+897. **Geometric Annualization (CAGR) & Sub-Year Guardrails**: Standardized annualization ($(1 + R)^{\frac{365.25}{D}} - 1$) for durations $\ge 365$ days, strictly suppressing annualization for periods under 1 year to prevent false volatility extrapolation.
+
+### Canonical Benchmarks & Relative Performance Comparison
+898. **Canonical Market Benchmark Registry**: Established built-in benchmarks including S&P 500 (`PRICE_RETURN`), SPDR S&P 500 ETF Trust (`TOTAL_RETURN`), NASDAQ 100 (`PRICE_RETURN`), and MSCI All Country World Index (`TOTAL_RETURN`).
+899. **Arithmetic Relative Return & Rebased Growth Index**: Computed arithmetic excess return ($\Delta R = R_{\text{portfolio}} - R_{\text{benchmark}}$) and rebased both curves to $100.00$ at period start for visual tracking.
+900. **Price Return vs Total Return Compliance Warnings**: Implemented automatic compliance notices alerting users whenever a total-return portfolio is compared against a price-return index benchmark.
+
+### Cryptographic Provenance, Data Quality & Security
+901. **Cryptographic Input Hashing (`sha256`)**: Generated SHA-256 digests over period bounds, transaction counts, ledger revision tags, and calculation parameters to ensure reproducible execution provenance.
+902. **Data Completeness & Stale Mark Diagnostics**: Classified audit states into `COMPLETE`, `COMPLETE_WITH_STALE_MARKS`, `PARTIAL_MISSING_PRICES`, `PARTIAL_MISSING_VALUATION`, and `EMPTY`, explicitly logging counts of missing marks and FX rates.
+903. **Immutable Performance Run Snapshots**: Maintained historical run snapshots with unique run IDs, execution timestamps, and parameter records for regulatory auditability.
+904. **Typed Error Hierarchy**: Defined specific domain exceptions including `PortfolioPerformanceXirrNoSolutionError`, `PortfolioPerformanceXirrInvalidCashFlowsError`, and `PortfolioPerformancePeriodInvalidError`.
+905. **FastAPI Performance Endpoints**: Exposed 9 endpoints under `/api/v1/portfolios` covering `/benchmarks`, `/{portfolio_id}/performance`, `/calculate`, `/runs`, `/series`, `/periodic`, `/cash-flows`, and `/data-quality`.
+906. **Multi-Tenant Isolation & Ownership Verification**: Enforced strict tenant isolation, verifying portfolio ownership before computing or serving performance analytics and returning HTTP 403/404 on cross-tenant access.
+
+### Bloomberg-Style Frontend Workspaces
+907. **Integrated Performance Analytics Workspace**: Built comprehensive workspace at `/portfolios` under the "Performance Analytics" tab with period pills (`1D`, `WTD`, `MTD`, `QTD`, `YTD`, `1M`, `3M`, `1Y`, `3Y`, `5Y`, `INCEPTION`, `CUSTOM`), account filter, methodology toggle, and recalculation triggers.
+908. **Interactive SVG Performance Charts**: Delivered high-precision Time-Weighted Growth of $100 chart with benchmark overlay and cash flow milestone markers, plus historical monetary valuation equity curve.
+909. **Methodology & Formula Audit Inspector**: Designed slide-over inspector detailing exact mathematical equations, day-count conventions, SHA-256 provenance hash, and discrete subperiod audit tables.
+910. **Strict Roadmap Boundaries**: Stage 111 exclusively delivers portfolio performance calculations. Strictly deferred Stage 112 (Allocation/Exposure), Stage 113 (Attribution), Stage 114 (Optimization), Stages 115–118 (Risk/VaR/Sharpe/Sortino), and Stages 143–149 (Backtesting/Paper Trading/Trading Execution). Zero live broker order placement.

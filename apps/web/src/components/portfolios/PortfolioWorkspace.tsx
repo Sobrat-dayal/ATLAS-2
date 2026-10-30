@@ -11,6 +11,7 @@ import { PortfolioCashWorkspace } from "./PortfolioCashWorkspace";
 import { PortfolioHeader } from "./PortfolioHeader";
 import { PortfolioHoldingsTable } from "./PortfolioHoldingsTable";
 import { PortfolioOverview } from "./PortfolioOverview";
+import { PortfolioPerformanceWorkspace } from "./performance/PortfolioPerformanceWorkspace";
 import { PortfolioPositionInspector } from "./PortfolioPositionInspector";
 import { PortfolioValuationWorkspace } from "./PortfolioValuationWorkspace";
 import { TransactionCorrectionModal } from "./TransactionCorrectionModal";
@@ -192,6 +193,14 @@ export function PortfolioWorkspace() {
                   setSelectedPosition(pos);
                   setActiveTab("holdings");
                 }}
+              />
+            )}
+
+            {activeTab === "performance" && (
+              <PortfolioPerformanceWorkspace
+                portfolio={activePortfolio}
+                accounts={accounts}
+                initialAccountId={selectedAccountId}
               />
             )}
 

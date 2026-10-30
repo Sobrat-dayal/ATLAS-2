@@ -1366,6 +1366,54 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
 - **Documentation**: See `docs/PORTFOLIOS_V1_ACCOUNTING_AND_VALUATION.md` and `docs/DECISIONS.md`.
 
+## Build the Institutional-Grade Portfolio Performance Analytics Engine (Stage 111)
+- **Architecture**: CFA/GIPS-aligned portfolio return calculation engine supporting exact subperiod Time-Weighted Returns (TWR), Modified Dietz approximate TWR, Money-Weighted Returns (MWR / XIRR), ACT/365 bounded root solvers, multi-currency conversion, periodic returns matrices, canonical benchmark comparison, and cryptographic auditability at primary route `/portfolios` (Module 14).
+- **Time-Weighted Return (TWR) Engine**:
+  - Exact subperiod segmentation bounded strictly by external investor cash flows ($R_{\text{twr}} = \prod (1 + R_i) - 1$), removing external flow distortions.
+  - Mathematically verified Part XIII Reference Fixture: Subperiod 1 ($100 \to 110$, $R_1 = 10\%$), $+\$50$ external deposit, Subperiod 2 ($160 \to 176$, $R_2 = 10\%$) yielding exact compound TWR of $(1.10 \times 1.10) - 1 = \mathbf{21.0\%}$ (strictly rejecting naive $(176 - 100) / 100 = 76.0\%$).
+  - Modified Dietz approximate TWR with calendar day-weighting for historical periods lacking interim valuation marks.
+- **Money-Weighted Return (MWR / XIRR) & Bounded Root Solver**:
+  - ACT/365 investor-perspective internal rate of return ($\sum \frac{C_t}{(1 + r)^{\frac{d_t - d_0}{365}}} = 0$).
+  - Bounded numerical solver with analytic first derivatives, search interval clamped to $[-0.9999, 50.0]$, and guaranteed bisection fallback.
+  - Descartes sign change detection alerting analysts when non-unique internal rate of return roots exist.
+  - Verified Part XIX 1-year reference fixture: $-\$1,000$ deposit, $+\$1,100$ terminal valuation after 365 days $\implies \mathbf{10.0\%}$ annualized IRR.
+- **Strict Cash Flow Classification & Scope Boundary Isolation**:
+  - Deterministic classification: `EXTERNAL_CONTRIBUTION`, `EXTERNAL_WITHDRAWAL`, `INTERNAL_SECURITY_TRADE`, `INTERNAL_INCOME`, `INTERNAL_FEE`, `INTERNAL_TRANSFER`, `CORPORATE_ACTION_NONCASH`.
+  - Internal buys, sells, dividends, and interest payments never count as external cash flows.
+  - Inter-account transfers net out as $0.00$ internal flow at `PORTFOLIO` scope, while classified as external at `ACCOUNT` scope.
+- **Multi-Currency Return Calculations**:
+  - Cash flows converted at spot FX rates on the exact flow date; valuations converted at spot FX rates on the valuation timestamp.
+  - Verified Part XXXIV fixture: $10.0\%$ native USD return ($100 \to 110$) with historical FX moving from $80.0$ to $90.0$ USD/INR yields $\mathbf{23.75\%}$ base INR return.
+- **Periodic Returns & Geometric Annualization (CAGR)**:
+  - Calendar monthly and annual returns table with geometric sub-interval compounding.
+  - Standardized geometric annualization ($(1 + R)^{\frac{365.25}{D}} - 1$) for periods $\ge 365$ days, strictly suppressing annualization for periods under 1 year.
+- **Canonical Market Benchmarks**:
+  - Integrated S&P 500 (`PRICE_RETURN`), SPDR S&P 500 ETF Trust (`TOTAL_RETURN`), NASDAQ 100 (`PRICE_RETURN`), and MSCI ACWI (`TOTAL_RETURN`).
+  - Arithmetic relative return ($\Delta R = R_{\text{portfolio}} - R_{\text{benchmark}}$) and rebased growth series ($100.00$ start).
+  - Explicit compliance warnings when comparing total-return portfolios against price-return benchmarks.
+- **Cryptographic Provenance & Auditability**:
+  - SHA-256 digest calculated over period bounds, transaction counts, ledger revision tags, and calculation parameters.
+  - Granular data quality tracking of missing prices, missing FX rates, and stale marks.
+  - Immutable historical performance run snapshots.
+- **Professional Bloomberg-Style Frontend Workspaces (`/portfolios`)**:
+  - "Performance Analytics" workspace with Period Pills (`1D` to `INCEPTION` & `CUSTOM`), Account Selector, Methodology Toggle, and Recalculate triggers.
+  - Summary KPI cards: TWR Cumulative, Annualized Return (CAGR), MWR (XIRR), Net Investment Gain, and Balance Reconciliation.
+  - Interactive SVG Time-Weighted Growth of $100 curve with benchmark overlay and cash flow milestone markers.
+  - Historical monetary valuation equity curve with crosshair hover inspection.
+  - Monthly returns matrix (Jan..Dec + Full Year) with variance heat-shading.
+  - Classified cash flow journal with investor vs portfolio perspective badges.
+  - Formula audit and methodology inspector drawer with exact equations and subperiod audit breakdown.
+- **Strict Roadmap Boundaries**:
+  - Stage 111 exclusively delivers portfolio performance calculations.
+  - Strictly deferred: Stage 112 (Allocation/Exposure), Stage 113 (Attribution), Stage 114 (Optimization), Stages 115–118 (Risk/VaR), and Stages 143–149 (Backtesting / Broker Sandbox / Autonomous Execution). Zero live broker orders.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_portfolio_performance_v1.py` (7/7 passed in 4.66s).
+  - Stage 110 regression: `apps/api/tests/test_portfolios_v1.py` (6/6 passed in 5.04s).
+  - Frontend unit tests: `cmd /c pnpm --filter web test` (113/113 passed in `apps/web`).
+  - Frontend typecheck: `cmd /c npx tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `cmd /c pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
+- **Documentation**: See `docs/PORTFOLIO_PERFORMANCE_ENGINE.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets
