@@ -135,3 +135,4 @@ export const GeographicExposurePanel: React.FC<GeographicExposurePanelProps> = (
     </div>
   );
 };
+

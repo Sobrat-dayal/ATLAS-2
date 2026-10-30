@@ -1461,6 +1461,52 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
 - **Documentation**: See `docs/PORTFOLIO_ALLOCATION_AND_EXPOSURE_ANALYTICS.md` and `docs/DECISIONS.md`.
 
+## Portfolio Performance Attribution Architecture (Stage 113)
+- **Brinson Performance Attribution Engine**:
+  - Primary Brinson-Fachler (1985) arithmetic decomposition evaluating active allocation decisions relative to total benchmark return ($A_k = (w_{P,k} - w_{B,k})(R_{B,k} - R_B)$).
+  - Brinson-Hood-Beebower (1986) baseline support ($A_k = (w_{P,k} - w_{B,k}) R_{B,k}$) for legacy institutional custodial compatibility.
+  - Benchmark-weighted selection effect ($S_k = w_{B,k}(R_{P,k} - R_{B,k})$) isolating manager stock-selection skill.
+  - Interaction cross-product term ($I_k = (w_{P,k} - w_{B,k})(R_{P,k} - R_{B,k})$).
+  - Verified Part XVII reference fixture: Active Return $+2.20\%$, Allocation $+0.60\%$, Selection $+1.50\%$, Interaction $+0.10\%$, and Residual $0.00\%$.
+  - Verified Part XVIII BHB reference fixture: Allocation Tech $+1.00\%$ and Fin $-0.40\%$ yielding $+0.60\%$ total allocation.
+- **Point-in-Time Benchmark Snapshots & Off-Benchmark Logic**:
+  - Point-in-time constituent snapshot engine supporting S&P 500, SPY, NASDAQ-100, and MSCI ACWI.
+  - Absent category logic ($w_{P,k} = 0$) isolating pure allocation effect without artificial selection.
+  - Off-benchmark logic ($w_{B,k} = 0$) isolating cash drag and unbenchmarked holdings into interaction/residual terms without distorting benchmark sectors.
+  - Strict guardrail: returns `BENCHMARK_CONSTITUENTS_MISSING` and retains Stage 111 simple benchmark return comparison rather than fabricating constituent weights.
+- **Security-Level Absolute Return Contributions**:
+  - Decomposes total portfolio return into security-level return contributions ($C_j = w_{P,j} \cdot R_{P,j}$).
+  - Exact additivity identity: $\sum C_j \equiv R_P$.
+  - Verified Part XXVII reference fixture: $50\%$ AAPL ($+10\%$) & $50\%$ JPM ($-4\%$) yields $+5\%$ & $-2\%$ contributions, summing to $+3\%$ portfolio return.
+  - Top 5 Contributors and Top 5 Detractors ranking.
+- **Multi-Currency Local/FX Decomposition**:
+  - Three-way international currency decomposition: $R_{base} = R_{local} + R_{FX} + (R_{local} \cdot R_{FX})$.
+  - Verified Part XXXVI reference fixture: Local $+10.00\%$ & FX $+12.50\%$ yields $+1.25\%$ cross-product and exact $+23.75\%$ base return.
+- **Multi-Period Compounding (Carino Logarithmic Linking)**:
+  - Carino (1999) logarithmic linking compounding discrete sub-period arithmetic attributions into cumulative multi-period active returns.
+  - Taylor series limiting case protection as $R_{P,t} \to R_{B,t}$ preventing division-by-zero singularities.
+  - Positive gross return domain validation ($1 + R > 0$).
+  - Exact additivity identity verification: $\sum c_t (A_t + S_t + I_t) \equiv R_P^{comp} - R_B^{comp}$.
+- **Five-Point Audit & Mathematical Reconciliation**:
+  - 5 simultaneous independent checks: Reconstructed Portfolio Return vs Actual, Benchmark vs Actual, Active Return vs Sum of Effects, Security Contributions Sum vs Portfolio Return, and Residual $\le 10^{-4}$ ($1.0$ bps).
+  - Deterministic cryptographic SHA-256 Input Provenance Hash computed across holdings, prices, tax-lots, and benchmark constituents.
+  - Coverage tiers: `FULL_COVERAGE`, `PARTIAL_COVERAGE`, `BENCHMARK_CONSTITUENTS_MISSING`, `UNMAPPED_CATEGORIES`.
+- **REST API Endpoints & Tenant Isolation**:
+  - 14 high-performance REST endpoints under `/api/v1/portfolios/{portfolio_id}/attribution/...`.
+  - Multi-tenant isolation and ownership verification on all endpoints.
+- **Bloomberg-Style Performance Attribution Workspace (`/portfolios`)**:
+  - "Attribution Analytics" tab featuring summary KPI cards, interactive waterfall chart, dense sector attribution table with expandable sub-industries, security contribution panel with Top 5 Contributors/Detractors, Carino multi-period table, currency decomposition view, benchmark inspector, methodology inspector, and audit reconciliation panel.
+- **Strict Roadmap Boundaries**:
+  - Stage 113 exclusively delivers portfolio performance attribution, Brinson decomposition, security return contributions, and Carino multi-period linking.
+  - Strictly deferred: Stage 114 (Portfolio Optimization / Markowitz / Black-Litterman), Stages 115–118 (Risk / VaR / Stress Testing), and Stages 143–149 (Order Execution / Automated Trading). Zero live broker orders.
+- **Testing & Verification**:
+  - Backend tests: `apps/api/tests/test_portfolio_attribution_v1.py` (7/7 passed in 5.76s).
+  - Full portfolio backend regression suite: 28/28 passed (Stages 110, 111, 112, 113).
+  - Frontend unit tests: `pnpm --filter web test` (128/128 passed).
+  - Frontend typecheck: `tsc --noEmit` (0 errors in `apps/web`).
+  - Production build: `pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
+- **Documentation**: See `docs/PORTFOLIO_PERFORMANCE_ATTRIBUTION_ARCHITECTURE.md` and `docs/DECISIONS.md`.
+
 ## The 20 Modules
 1. Home
 2. Markets

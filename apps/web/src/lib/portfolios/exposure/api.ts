@@ -252,3 +252,4 @@ export const portfolioExposureApi = {
     return request<ExposureDataQualityResponse>(`/portfolios/${portfolioId}/exposures/data-quality`);
   },
 };
+

@@ -10095,3 +10095,52 @@ This document records the major architectural and product decisions established.
 ### Bloomberg-Style Professional Frontend Workspaces
 939. **Integrated `/portfolios` Allocation Workspace**: Built professional Bloomberg-style workspace under the "Allocation & Exposures" tab featuring KPI summary cards, interactive sector and asset-class panels, geographic policy switchers, currency exposure views, concentration quantile ladders, ETF look-through inspector, cross-fund overlap matrix, and date-to-date drift tables.
 940. **Strict Roadmap Boundaries & Deferrals**: Stage 112 exclusively delivers portfolio allocation, exposure intelligence, concentration, look-through, and drift analytics. Strictly deferred Stage 113 (Portfolio Attribution / Brinson-Fachler), Stage 114 (Portfolio Optimization / Markowitz / Black-Litterman), Stages 115–118 (Risk / VaR / Stress Testing), and Stages 143–149 (Order Execution / Automated Trading). Zero live broker order execution.
+
+
+## Stage 113: Portfolio Performance Attribution Architecture (Decisions 941–970)
+
+### Attribution Foundations & Mathematical Models
+941. **Brinson-Fachler Arithmetic Decomposition (1985)**: Adopted Brinson-Fachler arithmetic decomposition as the primary institutional attribution engine, subtracting the total benchmark return from sector returns to evaluate active allocation decisions ($A_k = (w_{P,k} - w_{B,k})(R_{B,k} - R_B)$) and penalize overweighting in underperforming sectors.
+942. **Brinson-Hood-Beebower Baseline Support (1986)**: Implemented Brinson-Hood-Beebower ($A_k = (w_{P,k} - w_{B,k}) R_{B,k}$) alongside Brinson-Fachler to ensure historical comparability and reconciliation with legacy institutional custodial systems.
+943. **Selection Effect Formulation**: Formulated selection effect as benchmark-weighted active segment return ($S_k = w_{B,k}(R_{P,k} - R_{B,k})$), measuring manager stock-picking skill isolated from weighting differences.
+944. **Interaction Cross-Product Term**: Isolated the interaction effect ($I_k = (w_{P,k} - w_{B,k})(R_{P,k} - R_{B,k})$) as the non-linear cross-product between allocation decisions and security selection.
+945. **Total Segment Effect Identity**: Guaranteed that the sum of allocation, selection, and interaction effects equals total segment effect ($E_k = A_k + S_k + I_k$), preserving segment-level additivity.
+946. **Part XVII Brinson-Fachler Reference Fixture Verification**: Mathematically validated Part XVII two-sector reference fixture: Portfolio ($60\%$ Tech @ $12.0\%$, $40\%$ Fin @ $5.0\%$, $R_P = 9.20\%$) vs Benchmark ($50\%$ Tech @ $10.0\%$, $50\%$ Fin @ $4.0\%$, $R_B = 7.00\%$) yields exact Active Return $+2.20\%$, Allocation $+0.60\%$, Selection $+1.50\%$, Interaction $+0.10\%$, and Residual $0.00\%$.
+947. **Part XVIII Brinson-Hood-Beebower Reference Fixture Verification**: Mathematically validated Part XVIII BHB reference fixture on the two-sector portfolio, confirming BHB allocation Tech $+1.00\%$ and Fin $-0.40\%$ yielding $+0.60\%$ total allocation.
+
+### Benchmark Constituent Snapshots & Point-in-Time Alignment
+948. **Point-in-Time Benchmark Snapshot Engine**: Engineered `BenchmarkCompositionEngine` fetching historical constituent weights and returns aligned to evaluation dates, supporting S&P 500, SPY ETF, NASDAQ-100, and MSCI ACWI.
+949. **Missing Benchmark Constituent Guardrails**: Enforced strict validation: when benchmark constituent data is unavailable, ATLAS returns `BENCHMARK_CONSTITUENTS_MISSING` and retains simple Stage 111 benchmark comparison rather than synthesizing artificial holdings.
+950. **Absent Category Handling ($w_P = 0$)**: Engineered absent portfolio category logic where benchmark sectors not held by the portfolio ($w_{P,k} = 0$) contribute purely to allocation effect ($A_k = -w_{B,k}(R_{B,k} - R_B)$) with zero selection and interaction.
+951. **Off-Benchmark Categories & Cash Drag**: Engineered off-benchmark category logic ($w_{B,k} = 0$) where cash and unbenchmarked holdings generate zero allocation under Brinson-Fachler and allocate residual excess performance into the interaction term ($w_{P,k}(R_{P,k} - R_B)$), cleanly isolating cash drag without distorting core sectors.
+
+### Security-Level Return Contributions & Rankings
+952. **Absolute Return Contribution Engine**: Engineered `SecurityContributionEngine` decomposing total portfolio return into security-level contributions ($C_j = w_{P,j} \cdot R_{P,j}$), with total sum strictly reconciling to portfolio return ($\sum C_j \equiv R_P$).
+953. **Part XXVII Security Contribution Fixture Verification**: Mathematically validated Part XXVII reference fixture: $50\%$ AAPL ($+10.0\%$) and $50\%$ JPM ($-4.0\%$) yields $+5.00\%$ AAPL contribution, $-2.00\%$ JPM contribution, and $+3.00\%$ total portfolio return.
+954. **Top 5 Contributors & Detractors Spotlight**: Implemented automatic ranking isolating the top 5 alpha-generating holdings and top 5 alpha-detracting holdings for executive PM briefings.
+
+### Multi-Currency Decomposition & International Attribution
+955. **Three-Way Currency Decomposition Engine**: Implemented `CurrencyAttributionEngine` decomposing unhedged foreign holdings into local market return, currency rate movement, and compounding cross-product interaction ($R_{base} = R_{local} + R_{FX} + R_{local} \cdot R_{FX}$).
+956. **Part XXXVI Currency Reference Fixture Verification**: Mathematically validated Part XXXVI reference fixture: Local $+10.00\%$ with FX appreciation $+12.50\%$ generates $+1.25\%$ cross-product and exact $+23.75\%$ base currency return ($1.10 \times 1.125 - 1 = 0.2375$).
+957. **Multi-Currency Cash & Instrument Isolation**: Segmented portfolio weight by quotation and settlement currency, cleanly delineating foreign equity market returns from cash currency balances.
+
+### Multi-Period Compounding (Carino Logarithmic Linking)
+958. **Carino Logarithmic Linking Engine**: Built `MultiPeriodLinkingEngine` executing Carino (1999) logarithmic scaling to compound discrete sub-period arithmetic attributions into multi-period cumulative active returns.
+959. **Limiting Case Domain Protection**: Engineered mathematical limiting case handling when $R_{P,t} \to R_{B,t}$, using Taylor series expansion ($c_t \to \frac{1}{1 + R_{B,t}} \frac{R_P - R_B}{\ln(1 + R_P) - \ln(1 + R_B)}$) to prevent division-by-zero singularities.
+960. **Positive Gross Return Domain Guardrail**: Enforced domain bounds ($1 + R > 0$) preventing undefined logarithmic evaluations under catastrophic portfolio loss scenarios.
+961. **Multi-Period Additivity Identity Verification**: Mathematically validated that sum of scaled period effects ($\sum c_t (A_t + S_t + I_t)$) matches cumulative active return ($R_P^{comp} - R_B^{comp}$) within $10^{-6}$ precision.
+
+### Mathematical Reconciliation & Data Quality Guardrails
+962. **Five-Point Independent Audit Engine**: Implemented `AttributionReconciliationEngine` verifying 5 simultaneous checks: portfolio return reconstruction, benchmark return reconstruction, active return additivity, security contribution consistency, and residual tolerance.
+963. **Strict Residual Tolerance Threshold**: Established strict $1.0\text{ bps}$ ($10^{-4}$) maximum residual tolerance, flagging any run exceeding tolerance as `UNRECONCILED`.
+964. **Cryptographic SHA-256 Provenance Hashing**: Computed deterministic SHA-256 digests across portfolio holdings, prices, tax-lots, and benchmark constituent tables for tamper-evident regulatory compliance.
+965. **Data Completeness & Coverage Tiers**: Classified input quality into `FULL_COVERAGE`, `PARTIAL_COVERAGE`, `BENCHMARK_CONSTITUENTS_MISSING`, and `UNMAPPED_CATEGORIES`, tracking coverage ratios.
+
+### Error Hierarchy, REST API & Tenant Isolation
+966. **Typed Attribution Domain Exception Hierarchy**: Built comprehensive typed exception hierarchy (`PortfolioAttributionBenchmarkNotFoundError`, `PortfolioAttributionReconciliationFailedError`, `PortfolioAttributionAccessDeniedError`, etc.) mapped to HTTP status codes.
+967. **14 High-Performance REST Endpoints**: Implemented complete REST router under `/api/v1/portfolios/{portfolio_id}/attribution/...` covering runs, effects, securities, sectors, industries, currencies, history, linked multi-period, reconciliation, and benchmarks.
+968. **Strict Multi-Tenant Isolation Enforcement**: Enforced ownership verification across all attribution calculations and cached retrieval endpoints, returning HTTP 403/404 for unauthorized cross-tenant requests.
+
+### Bloomberg-Style Professional Attribution Workspaces
+969. **Bloomberg-Style Performance Attribution Workspace**: Built high-density frontend workspace under the `/portfolios` "Attribution Analytics" tab featuring summary KPI cards, interactive waterfall chart, sector attribution table with expandable sub-industries, security contribution ranking, Carino multi-period table, currency decomposition view, benchmark inspector, methodology formulas, and audit reconciliation panel.
+970. **Strict Roadmap Boundaries & Deferrals**: Stage 113 exclusively delivers portfolio performance attribution, Brinson decomposition, security return contributions, and Carino multi-period linking. Strictly deferred Stage 114 (Portfolio Optimization / Markowitz / Black-Litterman), Stages 115–118 (Risk / VaR / Stress Testing), and Stages 143–149 (Order Execution / Automated Trading). Zero live broker trading.

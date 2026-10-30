@@ -464,3 +464,18 @@ class ClassificationRegistry:
         region = COUNTRY_REGION_MAPPING.get(country, metadata.region or "Unknown Region")
         return country, region
 
+    def get_by_symbol_or_id(self, symbol_or_id: str) -> Optional[InstrumentClassificationMetadata]:
+        """Lookup classification metadata by symbol (case-insensitive) or instrument ID."""
+        for inst in self._instruments.values():
+            if inst.symbol.upper() == symbol_or_id.upper() or inst.instrument_id == symbol_or_id:
+                return inst
+        return None
+
+
+CANONICAL_CLASSIFICATION_REGISTRY = ClassificationRegistry()
+
+
+def get_instrument_classification(symbol_or_id: str) -> Optional[InstrumentClassificationMetadata]:
+    """Convenience helper to retrieve classification by symbol or ID from canonical registry."""
+    return CANONICAL_CLASSIFICATION_REGISTRY.get_by_symbol_or_id(symbol_or_id)
+

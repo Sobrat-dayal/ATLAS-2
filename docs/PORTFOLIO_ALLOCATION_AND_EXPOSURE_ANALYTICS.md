@@ -227,3 +227,4 @@ Accessible at `/portfolios` under the **Allocation & Exposures** tab:
 - **Stage 114 Deferral (Portfolio Optimization)**: Mean-variance optimization, Black-Litterman, risk parity, and frontier generation are strictly deferred to Stage 114.
 - **Stages 115–118 Deferral (Risk Analytics)**: Parametric VaR, Historical VaR, Monte Carlo VaR, Stress Testing, and Tail Risk are strictly deferred to Stages 115–118.
 - **Stages 143–149 Deferral (Trading & Execution)**: Zero live broker orders or automated trading signals.
+

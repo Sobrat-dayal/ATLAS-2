@@ -25,7 +25,8 @@ export type PortfolioTab =
   | "valuation"
   | "accounts"
   | "performance"
-  | "allocation";
+  | "allocation"
+  | "attribution";
 
 export function usePortfolios() {
   const [portfolios, setPortfolios] = useState<PortfolioDTO[]>([]);

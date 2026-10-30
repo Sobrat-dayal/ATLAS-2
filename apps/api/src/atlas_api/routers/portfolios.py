@@ -8,7 +8,7 @@ and ledger reconciliation.
 import logging
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated, List, Optional
+from typing import Annotated, Any, List, Optional
 
 from atlas.auth import AuthPrincipal
 from atlas.portfolios import (
@@ -93,6 +93,22 @@ from atlas.portfolios.exposure import (
     SecurityWeightItem,
     SecurityWeightResponse,
 )
+from atlas.portfolios.attribution import (
+    AttributionBenchmarkSummaryResponse,
+    AttributionCategoryResponse,
+    AttributionDataQualityResponse,
+    AttributionReconciliationResponse,
+    AttributionRunsListResponse,
+    CalculateAttributionRequest,
+    CurrencyEffectResponse,
+    HistoricalPeriodResponse,
+    MultiPeriodLinkedResponse,
+    PortfolioAttributionError,
+    PortfolioAttributionRun,
+    PortfolioAttributionRunResponse,
+    PortfolioAttributionService,
+    SecurityContributionResponse,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from atlas_api.auth.dependencies import get_current_user
@@ -105,6 +121,7 @@ router = APIRouter(prefix="/portfolios", tags=["Portfolios"])
 _service_instance: Optional[PortfolioService] = None
 _perf_service_instance: Optional[PortfolioPerformanceService] = None
 _exposure_service_instance: Optional[PortfolioExposureService] = None
+_attribution_service_instance: Optional[PortfolioAttributionService] = None
 
 
 def get_portfolio_service(request: Request) -> PortfolioService:
@@ -132,11 +149,22 @@ def get_exposure_service(
     return _exposure_service_instance
 
 
+def get_attribution_service(
+    portfolio_service: Annotated[PortfolioService, Depends(get_portfolio_service)]
+) -> PortfolioAttributionService:
+    global _attribution_service_instance
+    if _attribution_service_instance is None or _attribution_service_instance.portfolio_service is not portfolio_service:
+        _attribution_service_instance = PortfolioAttributionService(portfolio_service)
+    return _attribution_service_instance
+
+
 def _handle_error(e: Exception) -> None:
-    if isinstance(e, (PortfolioError, PortfolioPerformanceError, PortfolioExposureError)):
+    if isinstance(e, (PortfolioError, PortfolioPerformanceError, PortfolioExposureError, PortfolioAttributionError)):
+        code = getattr(e, "code", e.__class__.__name__)
+        message = getattr(e, "message", str(e))
         raise HTTPException(
             status_code=e.status_code,
-            detail={"code": e.code, "message": e.message},
+            detail={"code": code, "message": message},
         )
     logger.exception("Unexpected error in portfolios router: %s", e)
     raise HTTPException(
@@ -1727,6 +1755,376 @@ async def get_exposure_data_quality(
     try:
         quality = exposure_service.get_data_quality(portfolio_id, current_user.sub)
         return _map_quality_to_response(quality)
+    except Exception as e:
+        _handle_error(e)
+
+
+# ===========================================================================
+# STAGE 113: PORTFOLIO PERFORMANCE ATTRIBUTION ENDPOINTS
+# ===========================================================================
+
+def _map_attribution_category_to_response(c: Any) -> AttributionCategoryResponse:
+    return AttributionCategoryResponse(
+        category_id=c.category_id,
+        category_label=c.category_label,
+        portfolio_weight=c.portfolio_weight,
+        benchmark_weight=c.benchmark_weight,
+        portfolio_return=c.portfolio_return,
+        benchmark_return=c.benchmark_return,
+        allocation_effect=c.allocation_effect,
+        selection_effect=c.selection_effect,
+        interaction_effect=c.interaction_effect,
+        total_effect=c.total_effect,
+        sub_industries=[_map_attribution_category_to_response(s) for s in c.sub_industries] if c.sub_industries else None,
+    )
+
+
+def _map_security_contribution_to_response(s: Any) -> SecurityContributionResponse:
+    return SecurityContributionResponse(
+        instrument_id=s.instrument_id,
+        symbol=s.symbol,
+        name=s.name,
+        weight=s.weight,
+        security_return=s.security_return,
+        contribution=s.contribution,
+        sector=s.sector,
+        industry=s.industry,
+        currency=s.currency,
+        is_sold=s.is_sold,
+    )
+
+
+def _map_currency_effect_to_response(c: Any) -> CurrencyEffectResponse:
+    return CurrencyEffectResponse(
+        currency=c.currency,
+        weight=c.weight,
+        local_return=c.local_return,
+        fx_return=c.fx_return,
+        interaction_return=c.interaction_return,
+        base_currency_return=c.base_currency_return,
+        contribution_to_base=c.contribution_to_base,
+    )
+
+
+def _map_historical_period_to_response(p: Any) -> HistoricalPeriodResponse:
+    return HistoricalPeriodResponse(
+        period_label=p.period_label,
+        period_start=p.period_start,
+        period_end=p.period_end,
+        portfolio_return=p.portfolio_return,
+        benchmark_return=p.benchmark_return,
+        active_return=p.active_return,
+        allocation_effect=p.allocation_effect,
+        selection_effect=p.selection_effect,
+        interaction_effect=p.interaction_effect,
+        total_attributed=p.total_attributed,
+        residual=p.residual,
+        category_effects=p.category_effects,
+    )
+
+
+def _map_multi_period_linked_to_response(m: Any) -> MultiPeriodLinkedResponse:
+    return MultiPeriodLinkedResponse(
+        linking_method=m.linking_method,
+        cumulative_portfolio_return=m.cumulative_portfolio_return,
+        cumulative_benchmark_return=m.cumulative_benchmark_return,
+        cumulative_active_return=m.cumulative_active_return,
+        total_allocation_effect=m.total_allocation_effect,
+        total_selection_effect=m.total_selection_effect,
+        total_interaction_effect=m.total_interaction_effect,
+        total_attributed=m.total_attributed,
+        reconciliation_residual=m.reconciliation_residual,
+        category_results=[_map_attribution_category_to_response(c) for c in m.category_results],
+        periods=[_map_historical_period_to_response(p) for p in m.periods],
+    )
+
+
+def _map_attribution_reconciliation_to_response(r: Any) -> AttributionReconciliationResponse:
+    return AttributionReconciliationResponse(
+        portfolio_return=r.portfolio_return,
+        reconstructed_portfolio_return=r.reconstructed_portfolio_return,
+        portfolio_return_reconciled=r.portfolio_return_reconciled,
+        benchmark_return=r.benchmark_return,
+        reconstructed_benchmark_return=r.reconstructed_benchmark_return,
+        benchmark_return_reconciled=r.benchmark_return_reconciled,
+        active_return=r.active_return,
+        total_attributed=r.total_attributed,
+        attribution_reconciled=r.attribution_reconciled,
+        residual=r.residual,
+        security_contributions_sum=r.security_contributions_sum,
+        security_contributions_reconciled=r.security_contributions_reconciled,
+        status=r.status,
+        tolerance=r.tolerance,
+    )
+
+
+def _map_attribution_data_quality_to_response(q: Any) -> AttributionDataQualityResponse:
+    return AttributionDataQualityResponse(
+        completeness=q.completeness,
+        portfolio_holdings_coverage_ratio=q.portfolio_holdings_coverage_ratio,
+        benchmark_constituent_coverage_ratio=q.benchmark_constituent_coverage_ratio,
+        taxonomy_coverage_ratio=q.taxonomy_coverage_ratio,
+        missing_securities_count=q.missing_securities_count,
+        unmapped_sector_weight=q.unmapped_sector_weight,
+        input_hash=q.input_hash,
+        warnings=q.warnings,
+    )
+
+
+def _map_attribution_run_to_response(run: PortfolioAttributionRun) -> PortfolioAttributionRunResponse:
+    return PortfolioAttributionRunResponse(
+        id=run.id,
+        portfolio_id=run.portfolio_id,
+        account_id=run.account_id,
+        benchmark_id=run.benchmark_id,
+        benchmark_name=run.benchmark_name,
+        period_start=run.period_start,
+        period_end=run.period_end,
+        reporting_currency=run.reporting_currency,
+        attribution_method=run.attribution_method,
+        methodology_version=run.methodology_version,
+        classification_dimension=run.classification_dimension,
+        taxonomy_id=run.taxonomy_id,
+        taxonomy_version=run.taxonomy_version,
+        portfolio_return=run.portfolio_return,
+        benchmark_return=run.benchmark_return,
+        active_return=run.active_return,
+        total_allocation_effect=run.total_allocation_effect,
+        total_selection_effect=run.total_selection_effect,
+        total_interaction_effect=run.total_interaction_effect,
+        total_attributed=run.total_attributed,
+        reconciliation_residual=run.reconciliation_residual,
+        category_results=[_map_attribution_category_to_response(c) for c in run.category_results],
+        security_contributions=[_map_security_contribution_to_response(s) for s in run.security_contributions],
+        top_contributors=[_map_security_contribution_to_response(s) for s in run.top_contributors],
+        top_detractors=[_map_security_contribution_to_response(s) for s in run.top_detractors],
+        currency_effects=[_map_currency_effect_to_response(c) for c in run.currency_effects],
+        reconciliation=_map_attribution_reconciliation_to_response(run.reconciliation),
+        data_quality=_map_attribution_data_quality_to_response(run.data_quality),
+        multi_period=_map_multi_period_linked_to_response(run.multi_period) if run.multi_period else None,
+        created_at=run.created_at,
+        completed_at=run.completed_at,
+    )
+
+
+@router.get("/{portfolio_id}/attribution", response_model=PortfolioAttributionRunResponse)
+async def get_portfolio_attribution(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> PortfolioAttributionRunResponse:
+    """Retrieve the latest valid performance attribution run for a portfolio."""
+    try:
+        run = attribution_service.get_latest_attribution(portfolio_id, current_user.sub)
+        return _map_attribution_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.post("/{portfolio_id}/attribution/calculate", response_model=PortfolioAttributionRunResponse)
+async def calculate_portfolio_attribution(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+    request: Optional[CalculateAttributionRequest] = None,
+) -> PortfolioAttributionRunResponse:
+    """Execute an on-demand performance attribution calculation with specified methodology and parameters."""
+    try:
+        run = attribution_service.calculate_attribution(portfolio_id, current_user.sub, request)
+        return _map_attribution_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/runs", response_model=AttributionRunsListResponse)
+async def list_portfolio_attribution_runs(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> AttributionRunsListResponse:
+    """List historical performance attribution calculation runs."""
+    try:
+        runs = attribution_service.list_attribution_runs(portfolio_id, current_user.sub)
+        return AttributionRunsListResponse(
+            items=[_map_attribution_run_to_response(r) for r in runs],
+            total=len(runs),
+        )
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/runs/{run_id}", response_model=PortfolioAttributionRunResponse)
+async def get_portfolio_attribution_run_by_id(
+    portfolio_id: str,
+    run_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> PortfolioAttributionRunResponse:
+    """Retrieve a specific historical performance attribution run by ID."""
+    try:
+        run = attribution_service.get_attribution_run(portfolio_id, run_id, current_user.sub)
+        return _map_attribution_run_to_response(run)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/effects", response_model=List[AttributionCategoryResponse])
+async def get_attribution_effects(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> List[AttributionCategoryResponse]:
+    """Retrieve category-level allocation, selection, and interaction effects."""
+    try:
+        run = attribution_service.get_latest_attribution(portfolio_id, current_user.sub)
+        return [_map_attribution_category_to_response(c) for c in run.category_results]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/securities", response_model=List[SecurityContributionResponse])
+async def get_attribution_securities(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> List[SecurityContributionResponse]:
+    """Retrieve security-level return contributions and contributor rankings."""
+    try:
+        run = attribution_service.get_latest_attribution(portfolio_id, current_user.sub)
+        return [_map_security_contribution_to_response(s) for s in run.security_contributions]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/sectors", response_model=List[AttributionCategoryResponse])
+async def get_attribution_sectors(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> List[AttributionCategoryResponse]:
+    """Retrieve GICS sector-level performance attribution decomposition."""
+    try:
+        run = attribution_service.get_latest_attribution(portfolio_id, current_user.sub)
+        return [_map_attribution_category_to_response(c) for c in run.category_results]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/industries", response_model=List[AttributionCategoryResponse])
+async def get_attribution_industries(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> List[AttributionCategoryResponse]:
+    """Retrieve industry group-level performance attribution decomposition."""
+    try:
+        run = attribution_service.get_latest_attribution(portfolio_id, current_user.sub)
+        # Return sub-industries if available, else top-level categories
+        industries = []
+        for c in run.category_results:
+            if c.sub_industries:
+                industries.extend(c.sub_industries)
+            else:
+                industries.append(c)
+        return [_map_attribution_category_to_response(i) for i in industries]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/currencies", response_model=List[CurrencyEffectResponse])
+async def get_attribution_currencies(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> List[CurrencyEffectResponse]:
+    """Retrieve currency translation and local/FX interaction decomposition."""
+    try:
+        run = attribution_service.get_latest_attribution(portfolio_id, current_user.sub)
+        return [_map_currency_effect_to_response(c) for c in run.currency_effects]
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/history", response_model=List[HistoricalPeriodResponse])
+async def get_attribution_history(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> List[HistoricalPeriodResponse]:
+    """Retrieve discrete historical period attribution results time series."""
+    try:
+        run = attribution_service.get_latest_attribution(portfolio_id, current_user.sub)
+        if run.multi_period:
+            return [_map_historical_period_to_response(p) for p in run.multi_period.periods]
+        return []
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/linked", response_model=Optional[MultiPeriodLinkedResponse])
+async def get_attribution_linked(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> Optional[MultiPeriodLinkedResponse]:
+    """Retrieve multi-period logarithmic linked attribution results (Carino methodology)."""
+    try:
+        run = attribution_service.get_latest_attribution(portfolio_id, current_user.sub)
+        return _map_multi_period_linked_to_response(run.multi_period) if run.multi_period else None
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/reconciliation", response_model=AttributionReconciliationResponse)
+async def get_attribution_reconciliation(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> AttributionReconciliationResponse:
+    """Retrieve mathematical audit checks, residual verification, and tolerance status."""
+    try:
+        run = attribution_service.get_latest_attribution(portfolio_id, current_user.sub)
+        return _map_attribution_reconciliation_to_response(run.reconciliation)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/data-quality", response_model=AttributionDataQualityResponse)
+async def get_attribution_data_quality(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> AttributionDataQualityResponse:
+    """Retrieve data completeness, taxonomy coverage, and cryptographic input hash."""
+    try:
+        run = attribution_service.get_latest_attribution(portfolio_id, current_user.sub)
+        return _map_attribution_data_quality_to_response(run.data_quality)
+    except Exception as e:
+        _handle_error(e)
+
+
+@router.get("/{portfolio_id}/attribution/benchmarks", response_model=List[AttributionBenchmarkSummaryResponse])
+async def list_attribution_benchmarks(
+    portfolio_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    attribution_service: Annotated[PortfolioAttributionService, Depends(get_attribution_service)],
+) -> List[AttributionBenchmarkSummaryResponse]:
+    """List supported benchmarks for performance attribution and constituent availability."""
+    try:
+        benchmarks = list_canonical_benchmarks()
+        return [
+            AttributionBenchmarkSummaryResponse(
+                benchmark_id=b.benchmark_id,
+                name=b.name,
+                symbol=b.symbol,
+                benchmark_type=b.benchmark_type,
+                return_basis=b.return_basis.value,
+                currency=b.currency,
+                description=b.description,
+                has_constituent_data=True,
+            )
+            for b in benchmarks
+        ]
     except Exception as e:
         _handle_error(e)
 

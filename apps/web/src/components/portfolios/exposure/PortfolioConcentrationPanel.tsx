@@ -248,3 +248,4 @@ export const PortfolioConcentrationPanel: React.FC<PortfolioConcentrationPanelPr
     </div>
   );
 };
+

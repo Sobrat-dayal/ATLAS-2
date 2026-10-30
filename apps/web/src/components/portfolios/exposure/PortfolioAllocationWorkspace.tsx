@@ -280,3 +280,4 @@ export const PortfolioAllocationWorkspace: React.FC<PortfolioAllocationWorkspace
     </div>
   );
 };
+

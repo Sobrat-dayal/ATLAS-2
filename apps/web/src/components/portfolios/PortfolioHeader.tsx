@@ -193,6 +193,7 @@ export function PortfolioHeader({
                 { id: "overview", label: "Overview" },
                 { id: "performance", label: "Performance Analytics" },
                 { id: "allocation", label: "Allocation & Exposures" },
+                { id: "attribution", label: "Attribution Analytics" },
                 { id: "holdings", label: "Holdings & Lots" },
                 { id: "transactions", label: "Transaction Journal" },
                 { id: "cash", label: "Cash Workspace" },

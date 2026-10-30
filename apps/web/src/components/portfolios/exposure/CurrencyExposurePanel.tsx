@@ -97,3 +97,4 @@ export const CurrencyExposurePanel: React.FC<CurrencyExposurePanelProps> = ({
     </div>
   );
 };
+

@@ -136,3 +136,4 @@ export const AllocationSummaryCards: React.FC<AllocationSummaryCardsProps> = ({ 
     </div>
   );
 };
+

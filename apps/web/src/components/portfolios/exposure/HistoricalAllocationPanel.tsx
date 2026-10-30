@@ -174,3 +174,4 @@ export const HistoricalAllocationPanel: React.FC<HistoricalAllocationPanelProps>
     </div>
   );
 };
+

@@ -123,3 +123,4 @@ export const AssetClassAllocationPanel: React.FC<AssetClassAllocationPanelProps>
     </div>
   );
 };
+
