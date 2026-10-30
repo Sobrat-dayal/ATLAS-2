@@ -10389,3 +10389,76 @@ This document records the major architectural and product decisions established.
 1106. **Professional Bloomberg-Style Terminals**: Delivered <OptionsRiskWorkspace /> and <FixedIncomeRiskWorkspace /> featuring real-time Greeks calculation, nonlinear shock comparison, cash flow schedule drilldown, key-rate term structure, and yield curve visualization.
 1107. **Strict Roadmap Scope Discipline**: Global Saved module (/saved), full exchange-grade options order routing, comprehensive QuantLib bindings, paper trading, and autonomous AI trading agents (Stages 141-149) are strictly deferred.
 
+## Stage 119: Universal Saved System and Cross-Module Library
+
+### Canonical Architecture & Boundaries
+1108. **Strict Read-Only Reference Model**: The Saved library strictly stores durable references and view configurations. Saving, modifying metadata for, or deleting a saved reference NEVER mutates underlying financial positions, cash, transactions, research articles, market data, or execution orders.
+1109. **Architectural Isolation**:
+   - Saved is NOT Watchlists (monitoring instruments vs saving cross-module bookmarks).
+   - Saved is NOT Research storage (references only; no document body duplication).
+   - Saved is NOT Portfolio or Risk storage (stores reference IDs & analytical view configurations only; never triggers heavy recalculations automatically).
+   - Stage 120 (Workspaces: multi-panel desktop layouts, floating panes, tab docking, cross-panel synchronization) is strictly deferred.
+1110. **22 Canonical Saved Target Types**: Explicitly registered 22 target types across 14 modules: `INSTRUMENT`, `COMPANY`, `CHART_CONFIG`, `WATCHLIST_REFERENCE`, `SCREENER_CONFIG`, `ECONOMIC_SERIES`, `NEWS_ARTICLE`, `RESEARCH_REPORT`, `RESEARCH_INVESTIGATION`, `RESEARCH_DOCUMENT`, `MAP_LAYER`, `INTELLIGENCE_REPORT`, `OPTIONS_CHAIN_VIEW`, `OPTIONS_STRATEGY`, `TRADING_LAYOUT`, `PORTFOLIO_REFERENCE`, `PORTFOLIO_VIEW_CONFIG`, `PORTFOLIO_ANALYSIS_RUN`, `RISK_RUN`, `RISK_SCENARIO`, `AI_CONVERSATION`, `AI_ARTIFACT`.
+1111. **Internal Deep-Link Enforcement**: All generated URLs are strictly relative paths resolved against whitelisted module routes (e.g. `/markets?symbol={id}`, `/charts?id={id}`, `/risk?run_id={id}`). Absolute URLs, external host redirects, protocol injection (`javascript:`, `data:`), and unvalidated route parameters are completely disallowed.
+1112. **Idempotent Save Semantics**: Saving the same item multiple times returns the existing record rather than creating duplicates or raising unique constraint errors. Deduplication key is composed of `(user_id, target_type, target_id, target_revision_id, view_configuration_id)`.
+
+### Domain Logic, Configurations & Resolvers
+1113. **Thread-Safe Repository Architecture**: Implemented `SavedRepository` using Python's `threading.RLock()` to guarantee memory safety in concurrent execution environments, with optimistic concurrency control via monotonic `row_version` integer counters.
+1114. **Hierarchical Collections Tree**: Multi-level hierarchical folder organization with cycle detection (preventing a collection from becoming its own ancestor) and hard depth-bounding enforced at a maximum of 5 levels.
+1115. **Normalized Tag Taxonomy**: Tags are automatically sanitized, lowercased, whitespace-trimmed, and validated to alphanumeric and hyphen/underscore characters between 1 and 50 characters in length.
+1116. **Safe View Configuration Storage**: View configurations enforce a maximum payload limit of 256 KB, recursive credential scrubbing (`[REDACTED_SECRET]` masking on keys matching `token`, `secret`, `key`, `password`, `auth`), and deterministic SHA-256 payload content hashing.
+1117. **Backward-Compatible Configuration Versioning**: View configuration schema migrations (e.g. `ChartConfig` v1 to v2 migration preserving indicators and layout settings) allow seamless upgrades without breaking existing user bookmarks.
+1118. **Runtime Target Resolution & 10 Availability Statuses**: Standardized `TargetResolver` evaluates whether the underlying resource still exists, whether its schema has updated, whether the user holds active permissions, and maps results to one of 10 explicit statuses: `AVAILABLE`, `AVAILABLE_WITH_WARNINGS`, `TARGET_UPDATED`, `TARGET_SUPERSEDED`, `PERMISSION_REVOKED`, `SOURCE_RESTRICTED`, `TARGET_DELETED`, `TARGET_NOT_FOUND`, `RESOURCE_UNAVAILABLE`, `UNSUPPORTED_CONFIG_VERSION`.
+1119. **Tenant & User Isolation**: Saved items are strictly isolated per `user_id`. Tenant-scoped organization membership is evaluated without ever leaking confidential resource bodies of unauthorized targets.
+1120. **Partial Failure Atomic Bulk Operations**: Bulk actions (`TAG`, `UNTAG`, `ADD_TO_COLLECTION`, `REMOVE_FROM_COLLECTION`, `FAVORITE`, `UNFAVORITE`, `PIN`, `UNPIN`, `DELETE`) execute with granular per-item error tracking, returning `BulkResult` indicating processed, succeeded, and failed item IDs with specific reason strings.
+1121. **Comprehensive Audit Trail**: Every item creation, modification, note update, tag addition, collection membership change, and deletion produces a typed `SavedAuditEvent` with timestamp, actor ID, action type, and JSON metadata.
+
+### Relational Schema & Persistence
+1122. **Seven Dedicated Relational Tables**:
+   - `saved_items`: Core bookmark records with user, target, override titles, notes, pin/favorite flags, row version.
+   - `saved_collections`: Hierarchical folders with parent IDs, color markers, and descriptions.
+   - `saved_collection_memberships`: Many-to-many relationship linking items to collections.
+   - `saved_tags`: System and user-defined tags with usage counters.
+   - `saved_item_tags`: Many-to-many mapping of items to tags.
+   - `saved_view_configurations`: Sanitized JSON configurations with version, schema hash, and type.
+   - `saved_audit_events`: Durable append-only audit trail.
+1123. **Production Alembic Migration**: Added migration `stage119_universal_saved_system.py` chained cleanly off `stage80_watchlist_alerts`, establishing foreign keys, unique composite indexes, and performance indices on user, type, and creation date.
+
+### REST API Architecture
+1124. **19 Production REST Endpoints**: Mounted at `/api/v1/saved` with full authentication and validation:
+   - `GET /api/v1/saved/targets`: Catalog of supported target types and schema definitions.
+   - `POST /api/v1/saved/items`: Idempotent item creation with optional configuration and collections.
+   - `GET /api/v1/saved/items`: Filtered, paginated, sorted search across all saved items.
+   - `GET /api/v1/saved/items/{id}`: Detailed item retrieval with resolution status.
+   - `PATCH /api/v1/saved/items/{id}`: Metadata update (title, note, pin, favorite).
+   - `DELETE /api/v1/saved/items/{id}`: Safe deletion with audit trail.
+   - `POST /api/v1/saved/items/{id}/resolve`: Dynamic runtime target resolution.
+   - `POST /api/v1/saved/bulk`: Bulk batch mutation across multiple items.
+   - `POST /api/v1/saved/collections`: Collection folder creation.
+   - `GET /api/v1/saved/collections`: Hierarchical collection tree retrieval.
+   - `PATCH /api/v1/saved/collections/{id}`: Collection metadata modification.
+   - `DELETE /api/v1/saved/collections/{id}`: Collection deletion (with child item orphan handling).
+   - `POST /api/v1/saved/collections/{id}/items`: Batch add items to collection.
+   - `DELETE /api/v1/saved/collections/{id}/items`: Batch remove items from collection.
+   - `GET /api/v1/saved/tags`: List active tags with usage frequencies.
+   - `POST /api/v1/saved/items/{id}/tags`: Tag addition.
+   - `DELETE /api/v1/saved/items/{id}/tags/{name}`: Tag removal.
+   - `POST /api/v1/saved/configurations`: Safe view configuration storage.
+   - `GET /api/v1/saved/configurations/{id}`: Configuration retrieval.
+
+### Frontend UI & Terminal Experience
+1125. **Dedicated `/saved` Global Route**: Implemented Next.js page at `apps/web/src/app/(atlas)/saved/page.tsx` within the persistent ATLAS shell, preserving all 20 canonical top-level navigation routes.
+1126. **Bloomberg-Style Saved Terminal UI**: Built `<SavedTerminalWorkspace />` featuring dark-mode terminal aesthetics, tabular layouts, monospace numbers, and real-time status badges.
+1127. **Three-Pane Operational Layout**:
+   - Left Sidebar: Hierarchical collections tree, smart filter categories (Favorites, Pinned, Recent), and tag cloud.
+   - Central Stage: Interactive data table and grid view with search, filter tabs, sorting, and floating bulk toolbar.
+   - Right Drawer: Inspector pane providing deep link launching, personal note editing, tag assignment, and collection management.
+1128. **Dual View Presentation**: Seamless switching between high-density Data Table view (ideal for large libraries) and Card Grid view (visual preview with badges and metadata).
+1129. **Floating Multi-Select Toolbar**: Appears dynamically upon item selection, providing batch operations (Add to Collection, Add Tag, Pin, Favorite, Delete) without navigating away.
+1130. **Universal `<SaveToLibraryButton />` Component**: Standardized, reusable cross-module button usable across all 14 supported modules with 1-click quick-save and modal customization.
+1131. **Modal `<SaveToLibraryDialog />` Component**: Comprehensive dialog allowing title overrides, collection selection, tag input, and personal investment thesis notes at save time.
+1132. **In-Place Research Thesis & Personal Notes**: Full Markdown/text note editor allowing up to 5,000 characters of user annotations preserved alongside the resource reference.
+1133. **Truthful Resource Availability Indicators**: Explicit visual badges for missing, deleted, or restricted targets, warning the user rather than crashing or showing broken links.
+1134. **Frontend & Backend Test Rigor**: 16 backend integration tests passing with 100% coverage of domain rules; 6 frontend unit tests validating DTO integrity, badge mappings, and bulk actions; 100% clean Next.js production build and TypeScript typecheck.
+1135. **Strict Scope Discipline**: Workspaces multi-panel desktop layouts, floating panes, cross-panel synchronization, tab docking, and window managers (Stage 120) remain strictly deferred.
+
