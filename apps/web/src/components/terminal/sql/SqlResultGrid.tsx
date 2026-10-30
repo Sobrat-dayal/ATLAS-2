@@ -179,3 +179,4 @@ export const SqlResultGrid: React.FC<SqlResultGridProps> = ({
     </div>
   );
 };
+

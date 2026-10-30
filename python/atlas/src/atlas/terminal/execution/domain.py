@@ -182,3 +182,4 @@ class TerminalExecution:
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
     cancellation_requested_at: Optional[datetime] = None
+

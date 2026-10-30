@@ -110,3 +110,4 @@ def downgrade() -> None:
     op.drop_table("terminal_execution_audit_events")
     op.drop_table("terminal_execution_outputs")
     op.drop_table("terminal_executions")
+

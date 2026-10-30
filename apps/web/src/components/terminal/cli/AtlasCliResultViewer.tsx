@@ -48,3 +48,4 @@ export const AtlasCliResultViewer: React.FC<AtlasCliResultViewerProps> = ({ exec
     </div>
   );
 };
+
