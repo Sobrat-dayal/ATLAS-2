@@ -10462,3 +10462,45 @@ This document records the major architectural and product decisions established.
 1134. **Frontend & Backend Test Rigor**: 16 backend integration tests passing with 100% coverage of domain rules; 6 frontend unit tests validating DTO integrity, badge mappings, and bulk actions; 100% clean Next.js production build and TypeScript typecheck.
 1135. **Strict Scope Discipline**: Workspaces multi-panel desktop layouts, floating panes, cross-panel synchronization, tab docking, and window managers (Stage 120) remain strictly deferred.
 
+
+## Stage 120: Institutional-Grade Multi-Panel Financial Workspaces & Analytical Desktop
+
+### Architecture, Layout Engine & Validation
+1136. **Dedicated `/workspaces` Global Route**: Implemented Next.js route at `apps/web/src/app/(atlas)/workspaces/page.tsx` within the persistent ATLAS shell, preserving all 20 canonical top-level navigation routes without displacement.
+1137. **Deterministic Recursive Layout Model**: Modeled workspace layouts as strict, cycle-free hierarchical trees composed of `SplitNode` (horizontal or vertical partitions), `TabStackNode` (stacked panels sharing a frame), and `PanelNode` (leaf nodes referencing live panel instances).
+1138. **Strict Layout Invariant Validation**: Enforced tree invariants in `LayoutValidator`: maximum tree depth of 8 levels, maximum 24 panel instances per desk, and strict size ratio normalization where child ratios must sum to 1.0 ± 1e-4.
+1139. **Self-Healing Layout Recovery**: Implemented `create_safe_recovery_layout()` which, upon detecting layout tree corruption or schema violations, automatically restructures active panel instances into a safe balanced split without dropping user analytical context.
+1140. **Optimistic Concurrency Control**: Desks maintain monotonic `layout_revision` integer counters. Concurrent save attempts presenting outdated revisions are rejected with HTTP 409 Conflict to prevent multi-device race conditions.
+1141. **Dual Conflict Resolution UI**: Provided users with interactive resolution options on 409 Conflict: reload latest desk state from server, or force-overwrite external updates.
+1142. **Thread-Safe Repository Architecture**: Implemented `WorkspaceRepository` utilizing Python `threading.RLock()` to guarantee memory safety under concurrent multi-tenant execution.
+
+### Cross-Panel Context & Financial Dimensions
+1143. **Color-Coded Cross-Panel Link Groups**: Supported multiple independent link channels (Group A Blue, Group B Green, Group C Amber, Group D Rose) enabling synchronized workflows across disparate panel types.
+1144. **Eight Standard Financial Context Dimensions**: Coordinated cross-panel context along 8 standardized financial dimensions: `INSTRUMENT`, `COMPANY`, `PORTFOLIO`, `BENCHMARK`, `DATE_RANGE`, `AS_OF_DATE`, `TIMEFRAME`, and `REPORTING_CURRENCY`.
+1145. **Event Loop Suppression Engine**: Context synchronization bus tracks monotonic group version numbers and originating caller panel IDs, discarding self-broadcasts and preventing cyclic update loops.
+1146. **Independent Panel Mode**: Panels can detach from global link groups via `independent_mode = true` or `link_group_id = null`, preserving static pinned views (e.g. macro indicators) while linked panels respond to ticker selection.
+
+### Panel Registry & Specialized Adapters
+1147. **Catalog of 14 Canonical Registered Panel Types**: Registered 14 core institutional panel types (`MARKET_OVERVIEW`, `INSTRUMENT_CHART`, `WATCHLIST`, `SCREENER`, `COMPANY_OVERVIEW`, `ECONOMIC_SERIES`, `NEWS_FEED`, `RESEARCH_DOCUMENT`, `RESEARCH_REPORT`, `PORTFOLIO_SUMMARY`, `PORTFOLIO_PERFORMANCE`, `RISK_OVERVIEW`, `RISK_ANALYSIS`, `DATA_TABLE`) with typed metadata and context capabilities.
+1148. **Resilient Panel Error Boundaries**: Implemented `<WorkspacePanelErrorBoundary />` around every individual panel frame, isolating runtime exceptions and enabling isolated panel reload without unmounting the entire desk.
+1149. **Bloomberg-Style Panel Header & Toolbar**: Provided high-density panel frame (`<WorkspacePanelHost />`) with title override editing, link group color badge, maximize/restore toggle, split right, split bottom, and panel close actions.
+1150. **Native `react-resizable-panels` Integration**: Seamlessly integrated `react-resizable-panels` using ATLAS design-system components (`AtlasSplit`, `AtlasPanel`, `AtlasResizeHandle`) for smooth, high-performance resizing.
+
+### Institutional Templates & Saved Library Integration
+1151. **Six Canonical Institutional Desk Templates**: Built-in templates for `BLANK_DESK`, `EQUITY_RESEARCH_DESK`, `MARKET_MONITORING_DESK`, `MACRO_DESK`, `PORTFOLIO_DESK`, and `RISK_DESK`.
+1152. **One-Click Template Instantiation**: Factory instantiation creates custom workspace instances pre-populated with docked panels, layout trees, and default link groups.
+1153. **Stage 119 Saved Library Integration**: Workspace panels reference saved view configurations and saved items without duplicating records, and entire desks can be bookmarked to the universal library.
+1154. **Soft-Deletion & Lifecycle Management**: Workspaces support soft-deletion (`deleted_at`), restoration, and complete deletion auditing.
+1155. **Workspace Duplication**: Deep duplication duplicating layout trees, panel instances, and link groups into an independent workspace copy.
+1156. **Default Workspace Designation**: Users can mark a workspace as `DEFAULT`, which is automatically restored upon entering `/workspaces`.
+1157. **Append-Only Audit Trail**: Layout modifications, panel additions/removals, and link group mutations produce structured `workspace_audit_events`.
+
+### Relational Schema, REST Endpoints & Quality Verification
+1158. **Six Dedicated Relational Tables**: Created `workspaces`, `workspace_panel_instances`, `workspace_link_groups`, `workspace_templates`, `workspace_layout_revisions`, and `workspace_audit_events` with complete foreign key integrity and performance indexes.
+1159. **Production Alembic Migration**: Added `stage120_workspaces_foundation.py` chained cleanly off `stage119_universal_saved_system`.
+1160. **Complete REST API Architecture**: Mounted `/api/v1/workspaces` endpoints for CRUD, duplication, template listing, panel management, link groups, and layout persistence.
+1161. **Full-Featured `WorkspaceHome` Dashboard**: Overview page featuring metric summary cards, category tabs (All, Favorites, Recent, Templates), search, sorting, and card grid.
+1162. **Institutional Bloomberg-Style Terminal Aesthetics**: High-density typography, monospace metrics, clean divider handles, and dark-theme surface layers.
+1163. **Zero Mutation of Accounting or Trading State**: The workspace layer operates strictly as an orchestration container with read-only bindings to underlying financial ledgers.
+1164. **Strict Scope Discipline**: Multi-monitor window pop-outs, WebSockets sync gateways, and mobile responsiveness optimizations (Stage 121) remain strictly deferred.
+1165. **Comprehensive Verification**: 17 backend integration tests passed in 7.71s, 11 frontend unit tests passed in 891ms, 0 TypeScript errors, 100% clean Ruff checks and formatting, and successful Next.js production build across 38 pages.

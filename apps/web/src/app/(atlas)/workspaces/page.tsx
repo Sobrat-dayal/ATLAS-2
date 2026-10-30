@@ -1,72 +1,104 @@
 "use client";
 
-import { ATLAS_MODULES } from "@/config/atlas-modules";
-import { 
-  AtlasSplit, 
-  AtlasPanel, 
-  AtlasResizeHandle, 
-  AtlasInspector,
-  PageHeader,
-  DataTable,
-  Badge
-} from "@/design-system";
+import React, { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { RefreshCw } from "lucide-react";
+import { WorkspaceDesktop } from "@/components/workspaces/WorkspaceDesktop";
+import { WorkspaceHome } from "@/components/workspaces/WorkspaceHome";
+import { useWorkspaces } from "@/hooks/workspaces/useWorkspaces";
+
+function WorkspacesContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialId = searchParams.get("id");
+
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(initialId);
+
+  const {
+    workspaces,
+    allWorkspaces,
+    templates,
+    isLoading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    sortBy,
+    setSortBy,
+    activeTab,
+    setActiveTab,
+    refresh,
+    handleCreate,
+    handleDuplicate,
+    handleDelete,
+    handleToggleFavorite,
+    handleSetDefault,
+  } = useWorkspaces();
+
+  // Sync state if URL search param changes
+  useEffect(() => {
+    const idFromUrl = searchParams.get("id");
+    if (idFromUrl !== activeWorkspaceId) {
+      setActiveWorkspaceId(idFromUrl);
+    }
+  }, [searchParams]);
+
+  const handleOpenWorkspace = (workspaceId: string) => {
+    setActiveWorkspaceId(workspaceId);
+    router.push(`/workspaces?id=${workspaceId}`);
+  };
+
+  const handleBackToGallery = () => {
+    setActiveWorkspaceId(null);
+    router.push("/workspaces");
+    refresh();
+  };
+
+  if (activeWorkspaceId) {
+    return (
+      <WorkspaceDesktop
+        workspaceId={activeWorkspaceId}
+        allWorkspaces={allWorkspaces}
+        onSwitchWorkspace={handleOpenWorkspace}
+        onBackToGallery={handleBackToGallery}
+      />
+    );
+  }
+
+  return (
+    <WorkspaceHome
+      workspaces={workspaces}
+      allWorkspaces={allWorkspaces}
+      templates={templates}
+      isLoading={isLoading}
+      error={error}
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      sortBy={sortBy}
+      setSortBy={setSortBy}
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      onOpenWorkspace={handleOpenWorkspace}
+      onCreateWorkspace={handleCreate}
+      onDuplicateWorkspace={handleDuplicate}
+      onDeleteWorkspace={handleDelete}
+      onToggleFavorite={handleToggleFavorite}
+      onSetDefault={handleSetDefault}
+      onRefresh={refresh}
+    />
+  );
+}
 
 export default function WorkspacesPage() {
   return (
-    <div className="flex h-full flex-col">
-      <div className="px-4 py-3 shrink-0 border-b border-atlas-border-default">
-        <PageHeader 
-          title={ATLAS_MODULES.workspaces.label} 
-          description={ATLAS_MODULES.workspaces.description}
-          className="mb-0 pb-0 border-b-0"
-        />
-      </div>
-
-      <div className="flex-1 overflow-hidden">
-        <AtlasSplit id="layout.workspaces" direction="horizontal" defaultLayout={[65, 35]}>
-          <AtlasPanel id="workspaces.main" minSize={40} defaultSize={65} className="p-4" scrollable>
-            <div className="bg-atlas-surface-1 border border-atlas-border-default rounded-sm h-full flex items-center justify-center text-atlas-text-muted">
-               <p>Workspace Canvas Editor (Future)</p>
-            </div>
-          </AtlasPanel>
-
-          <AtlasResizeHandle />
-
-          <AtlasInspector 
-            id="workspaces.inspector" 
-            title="Widgets & Templates" 
-            minSize={20} 
-            maxSize={40}
-            defaultSize={35}
-          >
-            <div className="p-4 space-y-6">
-              <div>
-                <h4 className="text-xs font-semibold text-atlas-text-primary uppercase tracking-wider mb-3">Saved Layouts</h4>
-                <div className="space-y-2">
-                  <div className="p-3 border border-atlas-border-default rounded-sm hover:border-atlas-accent transition-colors cursor-pointer bg-atlas-surface-hover">
-                    <div className="text-sm font-medium">Morning Research</div>
-                    <div className="text-xs text-atlas-text-muted mt-1">3 Panels • News, Chart, Order Book</div>
-                  </div>
-                  <div className="p-3 border border-atlas-border-default rounded-sm hover:border-atlas-accent transition-colors cursor-pointer bg-atlas-surface-hover">
-                    <div className="text-sm font-medium">Global Macro</div>
-                    <div className="text-xs text-atlas-text-muted mt-1">2 Panels • Map, Event Feed</div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-semibold text-atlas-text-primary uppercase tracking-wider mb-3">Available Widgets</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm text-center">
-                  <div className="p-2 border border-atlas-border-subtle rounded-sm bg-atlas-surface-2">Chart</div>
-                  <div className="p-2 border border-atlas-border-subtle rounded-sm bg-atlas-surface-2">News</div>
-                  <div className="p-2 border border-atlas-border-subtle rounded-sm bg-atlas-surface-2">Positions</div>
-                  <div className="p-2 border border-atlas-border-subtle rounded-sm bg-atlas-surface-2">Terminal</div>
-                </div>
-              </div>
-            </div>
-          </AtlasInspector>
-        </AtlasSplit>
-      </div>
-    </div>
+    <Suspense
+      fallback={
+        <div className="flex flex-col items-center justify-center h-full bg-atlas-surface-0 font-mono text-xs text-atlas-text-muted">
+          <RefreshCw className="w-6 h-6 animate-spin text-blue-500 mb-2" />
+          <span>Loading ATLAS Workspaces Engine...</span>
+        </div>
+      }
+    >
+      <WorkspacesContent />
+    </Suspense>
   );
 }

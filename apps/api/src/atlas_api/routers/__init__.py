@@ -54,6 +54,7 @@ from .saved import router as saved_router
 from .screeners import router as screeners_router
 from .search import router as search_router
 from .watchlists import router as watchlists_router
+from .workspaces import router as workspaces_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -110,3 +111,4 @@ api_router.include_router(approvals_router, prefix="")
 api_router.include_router(portfolios_router, prefix="")
 api_router.include_router(risk_router, prefix="")
 api_router.include_router(saved_router, prefix="")
+api_router.include_router(workspaces_router, prefix="")
