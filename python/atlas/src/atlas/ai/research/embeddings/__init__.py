@@ -15,3 +15,4 @@ __all__ = [
     "DEFAULT_EMBEDDING_DIMENSIONS",
     "DEFAULT_MODEL_VERSION",
 ]
+

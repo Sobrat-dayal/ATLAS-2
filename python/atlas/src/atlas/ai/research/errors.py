@@ -269,3 +269,4 @@ class ResearchQuotaExceededError(ResearchError):
             details={"metric": metric, "limit": limit},
             status_code=429,
         )
+

@@ -36,3 +36,4 @@ class EmbeddingProvider(ABC):
     async def embed_batch(self, texts: List[str]) -> List[List[float]]:
         """Generates normalized float vectors for a batch of texts."""
         ...
+

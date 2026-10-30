@@ -79,3 +79,4 @@ def extract_document_sections(text: str) -> List[ExtractedSection]:
             )
 
     return sections if sections else [ExtractedSection("General", 1, text, 0, len(text))]
+

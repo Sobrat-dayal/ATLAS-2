@@ -29,3 +29,4 @@ def normalize_financial_text(text: str) -> str:
     text = re.sub(r"[ \t]+", " ", text)
 
     return text.strip()
+

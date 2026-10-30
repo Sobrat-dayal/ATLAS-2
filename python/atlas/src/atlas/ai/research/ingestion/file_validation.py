@@ -41,3 +41,4 @@ def validate_document_file(
     # Sanitize filename (prevent directory traversal)
     clean_name = re.sub(r"[^\w\.\-\_]", "_", filename.strip())
     return clean_name, mime_type
+

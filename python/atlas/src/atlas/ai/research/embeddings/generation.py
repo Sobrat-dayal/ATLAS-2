@@ -72,3 +72,4 @@ class AtlasDeterministicEmbeddingProvider(EmbeddingProvider):
             vec[0] = 1.0
 
         return vec
+

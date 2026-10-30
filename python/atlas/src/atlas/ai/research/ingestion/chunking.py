@@ -112,3 +112,4 @@ def chunk_document_text(
                 chunk_idx += 1
 
     return chunks
+
