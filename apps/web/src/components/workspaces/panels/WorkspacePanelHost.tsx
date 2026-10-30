@@ -9,6 +9,8 @@ import {
   Settings2,
   X,
 } from "lucide-react";
+import { PanelLinkControl } from "@/components/context/PanelLinkControl";
+import { ContextCompatibilityStatus } from "@/components/context/ContextCompatibilityStatus";
 import {
   WorkspaceLinkGroup,
   WorkspacePanelInstance,
@@ -162,30 +164,21 @@ export function WorkspacePanelHost({
             {panel.title_override || panel.panel_type_id}
           </span>
 
-          {/* Link Group Badge */}
-          {activeLinkGroup && (
-            <span
-              className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-mono border"
-              style={{
-                borderColor: `${activeLinkGroup.color}40`,
-                backgroundColor: `${activeLinkGroup.color}15`,
-                color: activeLinkGroup.color,
-              }}
-              title={`Linked to ${activeLinkGroup.name}: ${JSON.stringify(activeLinkGroup.context)}`}
-            >
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: activeLinkGroup.color }}
-              />
-              <span>{activeLinkGroup.name}</span>
-            </span>
-          )}
-
-          {panel.independent_mode && (
-            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-atlas-surface-3 text-atlas-text-muted">
-              Independent
-            </span>
-          )}
+          {/* Stage 121 Interactive Panel Link Control */}
+          <PanelLinkControl
+            panelInstanceId={panel.panel_instance_id}
+            panelTypeId={panel.panel_type_id}
+            currentChannelId={panel.link_group_id}
+            isIndependent={panel.independent_mode || !panel.link_group_id}
+            onSelectChannel={(newChId) => {
+              if (onUpdateConfig) {
+                onUpdateConfig({
+                  link_group_id: newChId,
+                  independent_mode: newChId === null,
+                });
+              }
+            }}
+          />
         </div>
 
         {/* Toolbar Buttons */}

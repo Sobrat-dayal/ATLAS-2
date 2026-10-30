@@ -1,0 +1,90 @@
+"""
+ATLAS Stage 121: Global Workspace Linking Enums.
+
+Defines:
+- ContextScope: Scopes for link channels (PANEL_LOCAL, WORKSPACE, USER_APPLICATION, USER_CROSS_TAB).
+- ContextDimension: Financial dimensions coordinated by the context bus.
+- SubscriptionMode: Subscription modes for panels (PUBLISH, SUBSCRIBE, BIDIRECTIONAL, INDEPENDENT).
+- ContextEventType: Canonical context selection and lifecycle event types.
+- LinkingStatus: Runtime health and status of panel subscriptions.
+- TransformationType: Cross-entity relationship transformations.
+"""
+
+from enum import Enum
+
+
+class ContextScope(str, Enum):
+    """Scope of a context link channel."""
+
+    PANEL_LOCAL = "PANEL_LOCAL"
+    WORKSPACE = "WORKSPACE"
+    USER_APPLICATION = "USER_APPLICATION"
+    USER_CROSS_TAB = "USER_CROSS_TAB"
+
+
+class ContextDimension(str, Enum):
+    """Financial dimensions supported by the global context synchronization bus."""
+
+    INSTRUMENT = "INSTRUMENT"
+    COMPANY = "COMPANY"
+    PORTFOLIO = "PORTFOLIO"
+    BENCHMARK = "BENCHMARK"
+    ECONOMIC_SERIES = "ECONOMIC_SERIES"
+    DATE_RANGE = "DATE_RANGE"
+    AS_OF_DATE = "AS_OF_DATE"
+    TIMEFRAME = "TIMEFRAME"
+    REPORTING_CURRENCY = "REPORTING_CURRENCY"
+    REGION = "REGION"
+
+
+class SubscriptionMode(str, Enum):
+    """Modes of participation for a panel in a link channel."""
+
+    PUBLISH = "PUBLISH"
+    SUBSCRIBE = "SUBSCRIBE"
+    BIDIRECTIONAL = "BIDIRECTIONAL"
+    INDEPENDENT = "INDEPENDENT"
+
+
+class ContextEventType(str, Enum):
+    """Canonical event types for context selection, mutation, and restoration."""
+
+    GLOBAL_CONTEXT_INSTRUMENT_SELECTED = "GLOBAL_CONTEXT_INSTRUMENT_SELECTED"
+    GLOBAL_CONTEXT_COMPANY_SELECTED = "GLOBAL_CONTEXT_COMPANY_SELECTED"
+    GLOBAL_CONTEXT_PORTFOLIO_SELECTED = "GLOBAL_CONTEXT_PORTFOLIO_SELECTED"
+    GLOBAL_CONTEXT_BENCHMARK_SELECTED = "GLOBAL_CONTEXT_BENCHMARK_SELECTED"
+    GLOBAL_CONTEXT_ECONOMIC_SERIES_SELECTED = "GLOBAL_CONTEXT_ECONOMIC_SERIES_SELECTED"
+    GLOBAL_CONTEXT_DATE_RANGE_CHANGED = "GLOBAL_CONTEXT_DATE_RANGE_CHANGED"
+    GLOBAL_CONTEXT_AS_OF_CHANGED = "GLOBAL_CONTEXT_AS_OF_CHANGED"
+    GLOBAL_CONTEXT_TIMEFRAME_CHANGED = "GLOBAL_CONTEXT_TIMEFRAME_CHANGED"
+    GLOBAL_CONTEXT_CURRENCY_CHANGED = "GLOBAL_CONTEXT_CURRENCY_CHANGED"
+    GLOBAL_CONTEXT_CHANNEL_CHANGED = "GLOBAL_CONTEXT_CHANNEL_CHANGED"
+    GLOBAL_CONTEXT_SUBSCRIPTION_CHANGED = "GLOBAL_CONTEXT_SUBSCRIPTION_CHANGED"
+    GLOBAL_CONTEXT_RESTORED = "GLOBAL_CONTEXT_RESTORED"
+    GLOBAL_CONTEXT_RESET = "GLOBAL_CONTEXT_RESET"
+
+
+class LinkingStatus(str, Enum):
+    """Runtime status of a linked widget or panel subscription."""
+
+    LINKED = "LINKED"
+    INDEPENDENT = "INDEPENDENT"
+    UPDATING = "UPDATING"
+    UPDATED = "UPDATED"
+    INCOMPATIBLE_CONTEXT = "INCOMPATIBLE_CONTEXT"
+    TARGET_UNAVAILABLE = "TARGET_UNAVAILABLE"
+    ACCESS_DENIED = "ACCESS_DENIED"
+    SOURCE_RESTRICTED = "SOURCE_RESTRICTED"
+    DATA_LOADING = "DATA_LOADING"
+    DATA_STALE = "DATA_STALE"
+    UPDATE_FAILED = "UPDATE_FAILED"
+
+
+class TransformationType(str, Enum):
+    """Supported entity transformations across financial domains."""
+
+    INSTRUMENT_TO_COMPANY = "INSTRUMENT_TO_COMPANY"
+    COMPANY_TO_PRIMARY_LISTING = "COMPANY_TO_PRIMARY_LISTING"
+    OPTION_TO_UNDERLYING = "OPTION_TO_UNDERLYING"
+    PORTFOLIO_TO_BENCHMARK = "PORTFOLIO_TO_BENCHMARK"
+    ECONOMIC_SERIES_TO_REGION = "ECONOMIC_SERIES_TO_REGION"

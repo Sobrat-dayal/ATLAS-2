@@ -10504,3 +10504,51 @@ This document records the major architectural and product decisions established.
 1163. **Zero Mutation of Accounting or Trading State**: The workspace layer operates strictly as an orchestration container with read-only bindings to underlying financial ledgers.
 1164. **Strict Scope Discipline**: Multi-monitor window pop-outs, WebSockets sync gateways, and mobile responsiveness optimizations (Stage 121) remain strictly deferred.
 1165. **Comprehensive Verification**: 17 backend integration tests passed in 7.71s, 11 frontend unit tests passed in 891ms, 0 TypeScript errors, 100% clean Ruff checks and formatting, and successful Next.js production build across 38 pages.
+
+
+## Stage 121: Global Workspace Linking & Cross-Module Context Synchronization
+
+### Context Dimensions, Scopes & Subscription Contracts
+1166. **Ten Standardized Context Dimensions**: Established non-colliding financial dimensions: `INSTRUMENT`, `COMPANY`, `PORTFOLIO`, `BENCHMARK`, `ECONOMIC_SERIES`, `DATE_RANGE`, `AS_OF_DATE`, `TIMEFRAME`, `REPORTING_CURRENCY`, and `REGION`.
+1167. **Four Hierarchical Context Scopes**: Partitioned channel distribution boundaries into `PANEL_LOCAL` (isolated widget state), `WORKSPACE` (active desk scope), `USER_APPLICATION` (cross-module window scope), and `USER_CROSS_TAB` (cross-window scope).
+1168. **Four Deterministic Subscription Modes**: Panels bind to link channels with explicit subscription contracts: `PUBLISH` (outbound selection only), `SUBSCRIBE` (inbound listening only), `BIDIRECTIONAL` (full duplex synchronization), or `INDEPENDENT` (completely isolated from external events).
+1169. **Canonical Panel Capability Registry**: Implemented `CAPABILITIES_CATALOG` specifying publishable dimensions, subscribable dimensions, accepted entity types, and required transformations across all 14 canonical institutional panel types.
+1170. **Deterministic Canonical Entity Resolution**: Enforced strict lookup resolution (`CanonicalEntityResolver`) with zero speculative guessing or synthetic ticker interpolation.
+1171. **Standardized Cross-Entity Transformations**: Implemented validated bi-directional entity mapping: `INSTRUMENT_TO_COMPANY`, `COMPANY_TO_PRIMARY_LISTING`, `PORTFOLIO_TO_BENCHMARK`, `OPTION_TO_UNDERLYING`, and `GENERIC_RESOLVE`.
+
+### Concurrency, Ordering & Loop Prevention
+1172. **Monotonic Revision Sequencing**: All context channels track an integer `revision` sequence number incremented on each state change.
+1173. **Stale Asynchronous Event Rejection**: Panels track their last processed revision number and drop incoming payloads with `revision <= last_applied_revision` to eliminate out-of-order asynchronous races.
+1174. **Causation-Chain Loop Prevention & Echo Suppression**: Suppressed cyclic ping-pong updates by filtering events matching `origin_panel_instance_id` and terminating propagation when an event ID appears in its own causation chain.
+1175. **In-Memory Event Deduplication Ring Buffer**: Client and server event buses maintain LRU deduplication caches to silently discard duplicate dispatches within 10-second replay windows.
+1176. **Cross-Window Multi-Monitor Coordination**: Integrated HTML5 `BroadcastChannel('atlas_global_context_channel')` to synchronize context across detached windows and multi-monitor setups without requiring persistent server WebSockets.
+1177. **Independent Panel Mode**: Explicitly decoupled panels (`channel_id = null` or `independent_mode = true`) preserve static analytical configurations (e.g., macro benchmarks) while adjacent linked panels update.
+1178. **Per-Dimension Local Overrides**: Linked panels can maintain localized overrides for specific dimensions (e.g., a chart panel adhering to a linked instrument while holding an independent `5Y` timeframe).
+
+### Storage, REST API & Security
+1179. **Four Institutional Default Link Channels**: Out-of-the-box support for Group A (Blue), Group B (Green), Group C (Amber), and Group D (Rose) link channels with high-contrast institutional color tokens.
+1180. **Channel Capacity Guardrails**: Enforced maximum limit of 32 active channels per user/workspace scope to prevent memory leakage and subscription sprawl.
+1181. **Thread-Safe Memory Concurrency**: Implemented `ContextRepository` using Python `threading.RLock()` ensuring thread safety across concurrent FastAPI worker threads.
+1182. **Four Dedicated Relational Tables**: Created `global_context_channels`, `global_context_channel_memberships`, `global_context_snapshots`, and `global_context_audit_events` with strict referential integrity and performance indexes.
+1183. **Production Alembic Migration**: Authored `stage121_global_workspace_linking.py` chained cleanly off `stage120_workspaces_foundation`.
+1184. **Ten REST Endpoints**: Implemented complete `/api/v1/context` router supporting channel lifecycle, membership management, event dispatching, and entity resolution.
+1185. **Typed Client-Side API Layer**: Built `src/lib/context/api.ts` with typed error handling and optimistic client-side fallbacks.
+
+### User Interface & Integration
+1186. **Universal React Context Architecture**: Created `<GlobalContextProvider>` and `useGlobalContext()` hook managing multi-channel state and event routing.
+1187. **Specialized Panel Hook (`usePanelContext`)**: Provided high-level hook managing panel channel subscriptions, dimension filtering, and safe context dispatching.
+1188. **Global Context Bar (`<GlobalContextBar />`)**: Mounted Bloomberg-style context toolbar in `WorkspaceHeader` displaying active channel badge, current ticker, base currency, and timeframe.
+1189. **Panel Link Control (`<PanelLinkControl />`)**: Added high-density dropdown toolbar control inside `<WorkspacePanelHost />` enabling instant link group switching.
+1190. **Channel Manager Modal (`<LinkChannelManagerModal />`)**: Implemented full management dialog displaying connected panels, current context snapshots, and channel creation controls.
+1191. **Context Compatibility Status Indicator (`<ContextCompatibilityStatus />`)**: Rendered visual status badges indicating whether a panel is synchronized, transforming, or ignoring channel context.
+1192. **Zero Mutation of Financial Books**: Guaranteed that context synchronization is strictly analytical and never triggers automated orders, executions, or portfolio balance modifications.
+1193. **Preservation of 20 Canonical Routes**: Operates entirely within `/workspaces` and the persistent AppShell chrome without introducing extraneous top-level routes.
+1194. **Stage 119 Universal Saved Library Compatibility**: Linked workspace views and context snapshots integrate cleanly with the universal library.
+1195. **Stage 120 Multi-Panel Workspace Integration**: Preserved the recursive layout tree and panel registry without duplicating layout logic.
+1196. **Truthful Entity Presentation**: Panels display clear unmapped badges when an entity does not support a requested dimension rather than guessing fake values.
+
+### Quality, Verification & Boundaries
+1197. **12 Backend Integration Tests**: Validated full test coverage in `test_context_stage121_v1.py` covering CRUD, memberships, entity transformations, loop suppression, and REST endpoints.
+1198. **9 Frontend Integration Tests**: Validated all reference fixtures A through I in `context_stage121_v1.test.ts` with 100% pass rate.
+1199. **100% Production Build Clean**: Verified Next.js production build across all 38 application routes with 0 TypeScript compilation errors and 0 lint warnings.
+1200. **Strict Future Scope Discipline**: VS Code-style Terminal Shell (`/terminal`, CLI, Python REPL, MCP) remains strictly deferred to Stage 122.

@@ -3,6 +3,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RefreshCw } from "lucide-react";
+import { GlobalContextProvider } from "@/components/context/GlobalContextProvider";
 import { WorkspaceDesktop } from "@/components/workspaces/WorkspaceDesktop";
 import { WorkspaceHome } from "@/components/workspaces/WorkspaceHome";
 import { useWorkspaces } from "@/hooks/workspaces/useWorkspaces";
@@ -55,12 +56,14 @@ function WorkspacesContent() {
 
   if (activeWorkspaceId) {
     return (
-      <WorkspaceDesktop
-        workspaceId={activeWorkspaceId}
-        allWorkspaces={allWorkspaces}
-        onSwitchWorkspace={handleOpenWorkspace}
-        onBackToGallery={handleBackToGallery}
-      />
+      <GlobalContextProvider workspaceId={activeWorkspaceId}>
+        <WorkspaceDesktop
+          workspaceId={activeWorkspaceId}
+          allWorkspaces={allWorkspaces}
+          onSwitchWorkspace={handleOpenWorkspace}
+          onBackToGallery={handleBackToGallery}
+        />
+      </GlobalContextProvider>
     );
   }
 

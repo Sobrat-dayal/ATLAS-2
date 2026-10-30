@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { globalEventBus } from "@/lib/context/eventBus";
 import {
   addPanel,
   createLinkGroup,
@@ -278,6 +279,7 @@ export function useWorkspaceDesktop(workspaceId: string) {
   // Context & Link Groups
   const handleUpdateLinkContext = useCallback(
     async (linkGroupId: string, contextUpdates: Record<string, unknown>) => {
+      let nextVersion = 1;
       setLinkGroups((prev) =>
         prev.map((g) => {
           if (g.link_group_id !== linkGroupId) return g;
@@ -291,13 +293,30 @@ export function useWorkspaceDesktop(workspaceId: string) {
           }
           if (!isDifferent) return g;
 
+          nextVersion = g.version + 1;
           return {
             ...g,
             context: { ...g.context, ...contextUpdates },
-            version: g.version + 1,
+            version: nextVersion,
           };
         })
       );
+
+      // Stage 121: Publish to cross-panel event bus
+      if (contextUpdates.INSTRUMENT) {
+        globalEventBus.publish({
+          event_id: `evt_${Math.random().toString(36).substring(2, 11)}`,
+          channel_id: linkGroupId,
+          scope: "WORKSPACE",
+          dimension: "INSTRUMENT",
+          canonical_target_id: String(contextUpdates.INSTRUMENT),
+          target_type: "INSTRUMENT",
+          payload: contextUpdates,
+          context_revision: nextVersion,
+          emitted_at: new Date().toISOString(),
+          selection_reason: "USER_CLICK",
+        });
+      }
 
       try {
         await updateLinkGroupContext(workspaceId, linkGroupId, contextUpdates);

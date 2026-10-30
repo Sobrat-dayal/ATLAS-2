@@ -14,6 +14,7 @@ import {
   Settings,
 } from "lucide-react";
 import { Button } from "@/design-system";
+import { GlobalContextBar } from "@/components/context/GlobalContextBar";
 import { SaveState, Workspace } from "@/lib/workspaces/types";
 
 interface WorkspaceHeaderProps {
@@ -162,6 +163,11 @@ export function WorkspaceHeader({
 
         {/* Save Status */}
         {renderSaveBadge()}
+      </div>
+
+      {/* Center: Stage 121 Global Context Bar */}
+      <div className="hidden md:flex items-center">
+        <GlobalContextBar />
       </div>
 
       {/* Right Controls */}
