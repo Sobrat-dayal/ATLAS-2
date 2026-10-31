@@ -131,3 +131,4 @@ export function GraphPathInspector({ paths, onClose }: GraphPathInspectorProps) 
     </div>
   );
 }
+

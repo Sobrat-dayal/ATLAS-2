@@ -162,3 +162,4 @@ export interface GraphNeighborhood {
   total_nodes: number;
   total_relationships: number;
 }
+

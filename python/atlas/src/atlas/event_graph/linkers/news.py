@@ -65,3 +65,4 @@ class NewsReportedRelationshipLinker(BaseEventRelationshipLinker):
                 pass
 
         return relationships
+

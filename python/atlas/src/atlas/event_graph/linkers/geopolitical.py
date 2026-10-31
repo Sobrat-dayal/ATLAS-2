@@ -70,3 +70,4 @@ class GeopoliticalRelationshipLinker(BaseEventRelationshipLinker):
                 pass
 
         return relationships
+

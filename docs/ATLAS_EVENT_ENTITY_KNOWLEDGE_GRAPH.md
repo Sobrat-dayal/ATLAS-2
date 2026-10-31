@@ -160,3 +160,4 @@ The engine indexes and resolves 16 canonical node types:
 - **Deep Edge Inspector (`GraphRelationshipInspector`)**: Evidence links, assertion origin, bitemporal validities, spatial proximity metrics, and revocation prompt.
 - **Path Inspector (`GraphPathInspector`)**: Hop-by-hop breakdown with numbered steps, verified predicates, and factual explanations with zero loss claims.
 - **Point-in-Time Time-Travel (`GraphHistoricalControls`)**: Allows analysts to dial any UTC timestamp and evaluate graph state with zero look-ahead bias.
+

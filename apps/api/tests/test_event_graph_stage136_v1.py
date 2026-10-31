@@ -425,3 +425,4 @@ def test_api_as_of_and_review_queue():
     resp_queue = client.get("/api/v1/knowledge-graph/review-queue")
     assert resp_queue.status_code == 200
     assert isinstance(resp_queue.json(), list)
+

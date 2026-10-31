@@ -87,3 +87,4 @@ class InfrastructureRelationshipLinker(BaseEventRelationshipLinker):
                 pass
 
         return relationships
+

@@ -116,3 +116,4 @@ class NaturalEventRelationshipLinker(BaseEventRelationshipLinker):
                             relationships.append(rel_near)
 
         return relationships
+

@@ -143,3 +143,4 @@ export const NODE_TYPE_CONFIGS: Record<GraphNodeType, NodeTypeConfig> = {
     iconName: 'circle',
   },
 };
+

@@ -121,3 +121,4 @@ class TenantAccessDeniedError(GraphDomainError):
         )
         self.tenant_id = tenant_id
         self.target_tenant_id = target_tenant_id
+

@@ -90,3 +90,4 @@ class BaseEventRelationshipLinker(abc.ABC):
             metadata=metadata or {},
             tenant_id=event.tenant_id,
         )
+

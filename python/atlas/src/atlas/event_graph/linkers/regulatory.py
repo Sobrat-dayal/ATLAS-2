@@ -69,3 +69,4 @@ class RegulatoryRelationshipLinker(BaseEventRelationshipLinker):
                 pass
 
         return relationships
+

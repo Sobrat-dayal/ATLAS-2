@@ -110,3 +110,4 @@ class SanctionsRelationshipLinker(BaseEventRelationshipLinker):
                 pass
 
         return relationships
+

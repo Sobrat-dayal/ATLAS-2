@@ -92,3 +92,4 @@ class EconomicReleaseRelationshipLinker(BaseEventRelationshipLinker):
                 pass
 
         return relationships
+

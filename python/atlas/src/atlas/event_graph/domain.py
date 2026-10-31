@@ -180,3 +180,4 @@ class GraphPath(BaseModel):
     hops: List[GraphPathHop]
     total_hops: int
     factual_explanation: str
+

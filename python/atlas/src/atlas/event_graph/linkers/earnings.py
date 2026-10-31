@@ -98,3 +98,4 @@ class EarningsRelationshipLinker(BaseEventRelationshipLinker):
                 pass
 
         return relationships
+
