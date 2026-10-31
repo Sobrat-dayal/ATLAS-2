@@ -69,3 +69,4 @@ class IntelligenceAmbiguousIdentityError(IntelligenceDomainError):
     def __init__(self, query: str, candidates: list):
         super().__init__(f"Ambiguous entity query '{query}' matched multiple canonical entities.", code="INTELLIGENCE_AMBIGUOUS_IDENTITY", details={"query": query, "candidate_count": len(candidates)})
         self.candidates = candidates
+

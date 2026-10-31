@@ -37,3 +37,4 @@ export const CLIENT_INVESTIGATION_PRESETS: Record<string, IntelligenceInvestigat
     linking_channels: ["selected_portfolio_id", "selected_event_id"]
   }
 };
+

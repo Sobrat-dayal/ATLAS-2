@@ -348,3 +348,4 @@ def test_api_intelligence_save_and_get_investigation():
     get_resp = client.get("/api/v1/intelligence/investigations/test_inv_api_1")
     assert get_resp.status_code == 200
     assert get_resp.json()["title"] == "Fed Rate Decision Multi-Panel Review"
+

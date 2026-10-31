@@ -113,3 +113,4 @@ PANEL_REGISTRY: Dict[IntelligencePanelType, IntelligencePanelDefinition] = {
 def list_panel_definitions() -> List[IntelligencePanelDefinition]:
     """Return all registered intelligence panel definitions."""
     return list(PANEL_REGISTRY.values())
+

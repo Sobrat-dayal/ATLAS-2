@@ -160,3 +160,4 @@ class IntelligenceOverviewResponse(BaseModel):
     source_freshness: List[SourceFreshnessRecord] = Field(default_factory=list)
     active_warnings: List[str] = Field(default_factory=list)
     tenant_id: Optional[str] = None
+

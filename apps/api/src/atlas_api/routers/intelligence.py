@@ -215,3 +215,4 @@ def get_investigation(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Investigation '{investigation_id}' not found.")
     except IntelligenceTenantAccessDeniedError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": e.code, "message": str(e)})
+

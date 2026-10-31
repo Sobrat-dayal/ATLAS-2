@@ -142,3 +142,4 @@ export function IntelligenceSourcesView() {
     </div>
   );
 }
+

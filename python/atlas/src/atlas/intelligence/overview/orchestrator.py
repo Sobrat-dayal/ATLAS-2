@@ -208,3 +208,4 @@ class IntelligenceOverviewOrchestrator:
             active_warnings=active_warnings,
             tenant_id=user_tenant_id
         )
+

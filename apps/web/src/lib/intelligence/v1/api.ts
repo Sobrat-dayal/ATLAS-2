@@ -138,3 +138,4 @@ export async function fetchInvestigation(
   }
   return await res.json();
 }
+

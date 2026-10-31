@@ -88,3 +88,4 @@ def get_investigation_preset(preset_id: str) -> IntelligenceInvestigationPreset:
     if preset_id not in CANONICAL_INVESTIGATION_PRESETS:
         raise KeyError(f"Investigation preset '{preset_id}' not found.")
     return CANONICAL_INVESTIGATION_PRESETS[preset_id]
+
