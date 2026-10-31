@@ -254,3 +254,4 @@ export function StrategyPayoffChart({
     </div>
   );
 }
+
