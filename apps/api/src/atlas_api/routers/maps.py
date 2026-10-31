@@ -48,11 +48,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from ..auth.dependencies import get_current_user
 from .maps_analytics import router as analytics_router
+from .maps_corporate import router as corporate_router
 from .maps_globe import globe_router
 
 router = APIRouter(prefix="/maps", tags=["maps"])
 router.include_router(globe_router)
 router.include_router(analytics_router)
+router.include_router(corporate_router)
 
 
 @router.get("/config", response_model=MapConfigResponse)

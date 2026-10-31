@@ -10,6 +10,7 @@ import {
   FolderOpen,
   PanelLeft,
   PanelRight,
+  Building2,
 } from "lucide-react";
 import { AtlasMapSearch } from "./AtlasMapSearch";
 import { AtlasMapStyleSwitcher } from "./AtlasMapStyleSwitcher";
@@ -25,6 +26,8 @@ interface AtlasMapToolbarProps {
   onModeChange?: (mode: RendererMode) => void;
   isAnalyticsOpen?: boolean;
   onToggleAnalytics?: () => void;
+  isCorporateModeOpen?: boolean;
+  onToggleCorporateMode?: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   searchResults: GeographicSearchResult[];
@@ -53,6 +56,8 @@ export function AtlasMapToolbar({
   onModeChange,
   isAnalyticsOpen = false,
   onToggleAnalytics,
+  isCorporateModeOpen = false,
+  onToggleCorporateMode,
   searchQuery,
   onSearchChange,
   searchResults,
@@ -163,6 +168,23 @@ export function AtlasMapToolbar({
             isOpen={isAnalyticsOpen}
             onToggle={onToggleAnalytics}
           />
+        )}
+
+        {/* Corporate Geography (Stage 132) */}
+        {onToggleCorporateMode && (
+          <button
+            type="button"
+            onClick={onToggleCorporateMode}
+            className={`h-7 px-2 flex items-center gap-1.5 rounded border text-[11px] transition-colors ${
+              isCorporateModeOpen
+                ? "bg-sky-600/20 text-sky-400 border-sky-500/40"
+                : "bg-atlas-surface-2 text-atlas-text-secondary border-atlas-border-default hover:text-atlas-text-primary"
+            }`}
+            title="Toggle Corporate Geography Mode"
+          >
+            <Building2 className="w-3.5 h-3.5 text-sky-400" />
+            <span className="hidden sm:inline">Corporate</span>
+          </button>
         )}
 
         <div className="h-4 w-px bg-atlas-border-default mx-0.5" />

@@ -30,6 +30,7 @@ import { GlobeSourceAttribution } from "./GlobeSourceAttribution";
 import { GlobeSaveViewDialog } from "./GlobeSaveViewDialog";
 import { convertH3AggregatesToCesiumEntities } from "@/lib/maps/analytics/cesiumAdapter";
 import { AtlasH3Aggregate, ColorPalette } from "@/lib/maps/analytics/types";
+import { CorporateFacility } from "@/lib/maps/corporate/types";
 
 interface AtlasGlobeProps {
   initialCamera?: AtlasGlobeCamera;
@@ -41,6 +42,8 @@ interface AtlasGlobeProps {
   analyticsPalette?: ColorPalette;
   analyticsExtruded?: boolean;
   onSelectH3Cell?: (agg: AtlasH3Aggregate | null) => void;
+  corporateFacilities?: CorporateFacility[];
+  onSelectCorporateFacility?: (fac: CorporateFacility | null) => void;
   className?: string;
 }
 
@@ -54,6 +57,8 @@ export function AtlasGlobe({
   analyticsPalette,
   analyticsExtruded,
   onSelectH3Cell,
+  corporateFacilities,
+  onSelectCorporateFacility,
   className = "w-full h-full relative",
 }: AtlasGlobeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -118,6 +123,14 @@ export function AtlasGlobe({
     onFeaturePick: (featId, pos) => {
       if (pos) setSurfacePosition(pos);
       if (featId) {
+        if (featId.startsWith("corp-fac-")) {
+          const facId = featId.replace("corp-fac-", "");
+          const match = corporateFacilities?.find((f) => f.facility_id === facId);
+          if (match && onSelectCorporateFacility) {
+            onSelectCorporateFacility(match);
+            return;
+          }
+        }
         if (onSelectFeature) onSelectFeature(featId);
         setSelectedFeatureData({
           feature_id: featId,
@@ -193,6 +206,57 @@ export function AtlasGlobe({
       });
     });
   }, [viewer, cesium, h3Aggregates, analyticsPalette, analyticsExtruded]);
+
+  // Synchronize 3D Corporate Facilities (Stage 132)
+  useEffect(() => {
+    if (!viewer || !cesium) return;
+
+    const toRemove: any[] = [];
+    viewer.entities.values.forEach((e: any) => {
+      if (e.id && String(e.id).startsWith("corp-fac-")) {
+        toRemove.push(e);
+      }
+    });
+    toRemove.forEach((e) => viewer.entities.remove(e));
+
+    if (!corporateFacilities || corporateFacilities.length === 0) return;
+
+    corporateFacilities.forEach((fac) => {
+      if (fac.longitude == null || fac.latitude == null) return;
+
+      const entityColor =
+        fac.facility_type === "CORPORATE_HEADQUARTERS"
+          ? cesium.Color.SKYBLUE
+          : fac.facility_type === "MANUFACTURING_FACILITY"
+          ? cesium.Color.ORANGE
+          : fac.facility_type === "RESEARCH_AND_DEVELOPMENT"
+          ? cesium.Color.LIMEGREEN
+          : cesium.Color.DODGERBLUE;
+
+      viewer.entities.add({
+        id: `corp-fac-${fac.facility_id}`,
+        name: fac.canonical_name,
+        position: cesium.Cartesian3.fromDegrees(fac.longitude, fac.latitude, 10),
+        point: {
+          pixelSize: 10,
+          color: entityColor,
+          outlineColor: cesium.Color.WHITE,
+          outlineWidth: 2,
+        },
+        label: {
+          text: fac.canonical_name,
+          font: "11px sans-serif",
+          fillColor: cesium.Color.WHITE,
+          outlineColor: cesium.Color.BLACK,
+          outlineWidth: 2,
+          style: cesium.LabelStyle.FILL_AND_OUTLINE,
+          verticalOrigin: cesium.VerticalOrigin.BOTTOM,
+          pixelOffset: new cesium.Cartesian2(0, -9),
+          distanceDisplayCondition: new cesium.DistanceDisplayCondition(0, 5000000),
+        },
+      });
+    });
+  }, [viewer, cesium, corporateFacilities]);
 
   // Navigation handlers
   const handleZoomIn = () => {

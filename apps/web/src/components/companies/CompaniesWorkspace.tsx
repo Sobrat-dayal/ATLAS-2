@@ -30,6 +30,7 @@ import { OwnershipWorkspace } from "./ownership/OwnershipWorkspace";
 import { FilingsWorkspace } from "./filings/FilingsWorkspace";
 import { PeersWorkspace } from "./peers/PeersWorkspace";
 import { SupplyChainWorkspace } from "./supply-chain/SupplyChainWorkspace";
+import { CompanyFootprintTab } from "./CompanyFootprintTab";
 import {
   ArrowLeft,
   Building2,
@@ -38,6 +39,7 @@ import {
   FileText,
   Layers,
   Loader2,
+  MapPin,
   Network,
   Percent,
   PieChart,
@@ -192,6 +194,11 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           <span>Supply Chains</span>
                         </TabsTrigger>
 
+                        <TabsTrigger value="facilities" className="gap-1.5 text-xs">
+                          <MapPin className="w-3.5 h-3.5 text-sky-400" />
+                          <span>Geographic Footprint</span>
+                        </TabsTrigger>
+
                         <TabsTrigger value="news" className="gap-1.5 text-xs">
                           <FileText className="w-3.5 h-3.5" />
                           <span>News & Docs ({overview.recent_news.length + overview.documents.length})</span>
@@ -269,6 +276,10 @@ export function CompaniesWorkspace({ initialCompanyId }: CompaniesWorkspaceProps
                           companyName={overview.identity.display_name}
                           ticker={overview.market_summary?.reference_symbol || overview.related_securities?.[0]?.symbol || "AAPL"}
                         />
+                      </TabsContent>
+
+                      <TabsContent value="facilities">
+                        <CompanyFootprintTab companyId={overview.company_entity_id} />
                       </TabsContent>
 
                       <TabsContent value="news">

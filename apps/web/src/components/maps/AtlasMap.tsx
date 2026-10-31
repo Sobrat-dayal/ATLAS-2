@@ -33,6 +33,10 @@ import {
 } from "@/lib/maps/types";
 import { saveMapView } from "@/lib/maps/api";
 import { AtlasGlobe } from "./globe/AtlasGlobe";
+import { useSearchParams } from "next/navigation";
+import { ScatterplotLayer } from "@deck.gl/layers";
+import { CorporateMapMode } from "./corporate/CorporateMapMode";
+import { CorporateFacility } from "@/lib/maps/corporate/types";
 import {
   maplibreToCesiumCamera,
   cesiumToMaplibreCamera,
@@ -121,6 +125,13 @@ export function AtlasMap({
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [isViewsModalOpen, setIsViewsModalOpen] = useState(false);
 
+  // Corporate Geography Mode (Stage 132)
+  const searchParams = useSearchParams();
+  const companyParam = searchParams?.get("company") || null;
+  const [isCorporateModeOpen, setIsCorporateModeOpen] = useState<boolean>(() => Boolean(companyParam));
+  const [selectedCorporateFacility, setSelectedCorporateFacility] = useState<CorporateFacility | null>(null);
+  const [corporateFacilities, setCorporateFacilities] = useState<CorporateFacility[]>([]);
+
   // Spatial Analytics (Stage 131 deck.gl + H3)
   const analytics = useSpatialAnalytics();
   const overlayControllerRef = useRef<AtlasDeckOverlayController | null>(null);
@@ -205,10 +216,53 @@ export function AtlasMap({
       });
     }
 
-    overlayControllerRef.current.setLayers(deckLayer ? [deckLayer] : []);
+    const activeDeckLayers: any[] = [];
+    if (deckLayer) activeDeckLayers.push(deckLayer);
+
+    // Corporate Facilities Layer (Stage 132)
+    if (isCorporateModeOpen && corporateFacilities.length > 0) {
+      const corpPts = corporateFacilities
+        .filter((f) => f.longitude != null && f.latitude != null)
+        .map((f) => ({
+          id: f.facility_id,
+          longitude: f.longitude!,
+          latitude: f.latitude!,
+          facility: f,
+        }));
+
+      const corpDeckLayer = new ScatterplotLayer({
+        id: "deck-corporate-facilities",
+        data: corpPts,
+        getPosition: (d: any) => [d.longitude, d.latitude],
+        getRadius: 180,
+        radiusMinPixels: 6,
+        radiusMaxPixels: 18,
+        getFillColor: (d: any) => {
+          const t = d.facility.facility_type;
+          if (t === "CORPORATE_HEADQUARTERS") return [56, 189, 248, 240];
+          if (t === "MANUFACTURING_FACILITY") return [245, 158, 11, 240];
+          if (t === "RESEARCH_AND_DEVELOPMENT") return [16, 185, 129, 240];
+          return [96, 165, 250, 240];
+        },
+        getLineColor: [255, 255, 255, 255],
+        getLineWidth: 2,
+        stroked: true,
+        pickable: true,
+        onClick: ((info: any) => {
+          if (info?.object?.facility) {
+            setSelectedCorporateFacility(info.object.facility);
+          }
+        }) as any,
+      });
+      activeDeckLayers.push(corpDeckLayer);
+    }
+
+    overlayControllerRef.current.setLayers(activeDeckLayers);
   }, [
     mapControlsRef,
     rendererMode,
+    isCorporateModeOpen,
+    corporateFacilities,
     analytics.isOpen,
     analytics.result,
     analytics.visualizationType,
@@ -327,18 +381,34 @@ export function AtlasMap({
 
   if (rendererMode === "3D") {
     return (
-      <AtlasGlobe
-        initialCamera={globeCamera}
-        onModeChange={handleModeChange}
-        onCameraChange={setGlobeCamera}
-        selectedFeatureId={selectedFeatureId}
-        onSelectFeature={(id) => (id ? selectFeature(id) : clearSelection())}
-        h3Aggregates={analytics.isOpen ? analytics.result?.aggregates : undefined}
-        analyticsPalette={analytics.palette}
-        analyticsExtruded={analytics.isExtruded}
-        onSelectH3Cell={(agg) => analytics.setSelectedCell(agg)}
-        className={className}
-      />
+      <div className={`relative h-full w-full ${className}`}>
+        <AtlasGlobe
+          initialCamera={globeCamera}
+          onModeChange={handleModeChange}
+          onCameraChange={setGlobeCamera}
+          selectedFeatureId={selectedFeatureId}
+          onSelectFeature={(id) => (id ? selectFeature(id) : clearSelection())}
+          h3Aggregates={analytics.isOpen ? analytics.result?.aggregates : undefined}
+          analyticsPalette={analytics.palette}
+          analyticsExtruded={analytics.isExtruded}
+          onSelectH3Cell={(agg) => analytics.setSelectedCell(agg)}
+          corporateFacilities={isCorporateModeOpen ? corporateFacilities : undefined}
+          onSelectCorporateFacility={setSelectedCorporateFacility}
+          className="w-full h-full"
+        />
+        {isCorporateModeOpen && (
+          <div className="absolute top-10 left-0 bottom-0 z-30 pointer-events-none">
+            <div className="pointer-events-auto h-full">
+              <CorporateMapMode
+                initialCompanyId={companyParam}
+                selectedFacility={selectedCorporateFacility}
+                onSelectFacility={setSelectedCorporateFacility}
+                onFacilitiesLoaded={setCorporateFacilities}
+              />
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -352,6 +422,8 @@ export function AtlasMap({
         onModeChange={handleModeChange}
         isAnalyticsOpen={analytics.isOpen}
         onToggleAnalytics={() => analytics.setIsOpen((open) => !open)}
+        isCorporateModeOpen={isCorporateModeOpen}
+        onToggleCorporateMode={() => setIsCorporateModeOpen((prev) => !prev)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchResults={searchResults}
@@ -375,6 +447,25 @@ export function AtlasMap({
 
       {/* Main Workspace: Left Panel, Center Canvas, Right Inspector */}
       <div className="flex-1 flex overflow-hidden relative">
+        {/* Left Corporate Intelligence Drawer (Stage 132) */}
+        {isCorporateModeOpen && (
+          <div className="absolute top-0 left-0 bottom-0 z-30 pointer-events-none">
+            <div className="pointer-events-auto h-full">
+              <CorporateMapMode
+                initialCompanyId={companyParam}
+                selectedFacility={selectedCorporateFacility}
+                onSelectFacility={(fac) => {
+                  setSelectedCorporateFacility(fac);
+                  if (fac && fac.longitude != null && fac.latitude != null && mapControlsRef.current) {
+                    mapControlsRef.current.flyTo(fac.longitude, fac.latitude, 11);
+                  }
+                }}
+                onFacilitiesLoaded={setCorporateFacilities}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Left Layer Panel */}
         {isLayerPanelOpen && (
           <div className="w-64 border-r border-atlas-border-default shrink-0 z-10 transition-all">
