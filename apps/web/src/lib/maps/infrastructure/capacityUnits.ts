@@ -85,3 +85,4 @@ export function areMetricsDimensionallyCompatible(metricA: string, metricB: stri
 
   return metricA === metricB;
 }
+

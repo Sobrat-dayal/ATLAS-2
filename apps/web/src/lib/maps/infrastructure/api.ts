@@ -203,3 +203,4 @@ export async function fetchRegionalSummary(
   if (!res.ok) throw new Error(`Failed to fetch regional summary: ${res.statusText}`);
   return res.json();
 }
+

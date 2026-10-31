@@ -364,3 +364,4 @@ async def get_regional_summary(
         country=req.country,
         actor_tenant_id=actor_tenant_id,
     )
+

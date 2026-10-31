@@ -34,3 +34,4 @@ def get_asset_state_at(
     """Retrieve verified historical operational status as of a specific date (Fixture J)."""
     validate_historical_as_of_date(as_of_date_str)
     return asset.get_status_as_of(as_of_date_str)
+

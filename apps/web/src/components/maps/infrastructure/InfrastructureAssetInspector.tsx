@@ -195,3 +195,4 @@ export const InfrastructureAssetInspector: React.FC<InfrastructureAssetInspector
     </div>
   );
 };
+

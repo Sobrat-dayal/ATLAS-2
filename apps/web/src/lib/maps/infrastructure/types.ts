@@ -270,3 +270,4 @@ export interface CompanyInfrastructureExposure {
   owned_assets: InfrastructureAsset[];
   operated_assets: InfrastructureAsset[];
 }
+

@@ -114,3 +114,4 @@ export const InfrastructureSectorPanel: React.FC<InfrastructureSectorPanelProps>
     </div>
   );
 };
+

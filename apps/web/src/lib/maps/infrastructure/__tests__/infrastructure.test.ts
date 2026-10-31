@@ -95,3 +95,4 @@ describe('Stage 133 — Physical Infrastructure Intelligence Frontend Tests', ()
     assert.ok(METRIC_LABELS['run_of_mine_tonnes_year'].includes('Run-of-Mine'));
   });
 });
+

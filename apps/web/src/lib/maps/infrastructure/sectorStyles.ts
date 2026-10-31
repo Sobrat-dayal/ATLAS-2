@@ -137,3 +137,4 @@ export const PRECISION_STYLES: Record<string, { label: string; badgeClass: strin
     badgeClass: 'bg-orange-500/10 text-orange-400 border-orange-500/30',
   },
 };
+

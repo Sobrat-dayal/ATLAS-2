@@ -76,3 +76,4 @@ def compare_infrastructure_assets(
         "assets": comparison_cards,
         "basis_discrepancies": basis_discrepancies,
     }
+

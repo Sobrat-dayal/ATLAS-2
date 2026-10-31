@@ -74,3 +74,4 @@ def compute_company_infrastructure_exposure(
         "owned_assets": [a.to_dict() for a in owned_assets],
         "operated_assets": [a.to_dict() for a in operated_assets],
     }
+

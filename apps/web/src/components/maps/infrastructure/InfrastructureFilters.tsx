@@ -84,3 +84,4 @@ export const InfrastructureFilters: React.FC<InfrastructureFiltersProps> = ({
     </div>
   );
 };
+

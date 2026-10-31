@@ -456,3 +456,4 @@ def test_fastapi_infrastructure_endpoints():
     )
     assert resp.status_code == 200
     assert resp.json()["total_assets"] > 0
+

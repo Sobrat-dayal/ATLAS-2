@@ -207,3 +207,4 @@ export const InfrastructureNetworkInspector: React.FC<InfrastructureNetworkInspe
     </div>
   );
 };
+

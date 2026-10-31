@@ -45,3 +45,4 @@ export const InfrastructureNetworkLegend: React.FC = () => {
     </div>
   );
 };
+

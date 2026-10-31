@@ -146,3 +146,4 @@ export const InfrastructureAssetComparison: React.FC<InfrastructureAssetComparis
     </div>
   );
 };
+

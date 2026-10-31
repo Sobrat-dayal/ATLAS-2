@@ -93,3 +93,4 @@ def aggregate_infrastructure_to_h3(
         )
 
     return sorted(results, key=lambda c: c["facility_count"], reverse=True)
+

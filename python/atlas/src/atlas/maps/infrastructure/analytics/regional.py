@@ -65,3 +65,4 @@ def compute_regional_infrastructure_summary(
             "source_record_counts": source_manifest,
         },
     }
+

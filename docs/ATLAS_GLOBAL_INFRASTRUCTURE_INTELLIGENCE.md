@@ -141,3 +141,4 @@ All endpoints are mounted under `/api/v1/maps/infrastructure`:
 - **Network Explorer (`InfrastructureNetworkInspector`):** Graph query interface for bounded path finding and reachability exploration.
 - **Regional Summary (`InfrastructureRegionalSummary`):** Modal displaying distinct facility vs unit counts and sector distributions.
 - **Asset Comparison (`InfrastructureAssetComparison`):** Multi-column comparison card highlighting capacity reporting basis differences.
+
