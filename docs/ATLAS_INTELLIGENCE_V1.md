@@ -149,3 +149,4 @@ The API router is mounted at `/api/v1/intelligence`:
 - `GET /api/v1/intelligence/investigations`: List saved investigations for the authenticated tenant.
 - `POST /api/v1/intelligence/investigations`: Save a point-in-time investigation snapshot.
 - `GET /api/v1/intelligence/investigations/{investigation_id}`: Retrieve a saved investigation by ID.
+

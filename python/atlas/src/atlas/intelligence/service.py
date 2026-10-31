@@ -201,3 +201,4 @@ class AtlasIntelligenceService:
             }
 
         raise IntelligenceEntityNotFoundError(entity_id=entity_id, node_type=node_type.value if node_type else None)
+

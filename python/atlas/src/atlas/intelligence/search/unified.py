@@ -189,3 +189,4 @@ def execute_unified_search(
             )
 
     return hits[:limit]
+

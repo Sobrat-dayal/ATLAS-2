@@ -107,3 +107,4 @@ class SourceFreshnessRegistry:
     def restore_source(self, source_id: str):
         """Restore provider back to READY status."""
         self.set_source_status(source_id, SectionStatus.READY, "Provider connection restored.")
+
