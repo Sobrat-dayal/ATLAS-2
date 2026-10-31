@@ -3,6 +3,7 @@
 import React from "react";
 import {
   Activity,
+  Cpu,
   Layers,
   LineChart,
   PieChart,
@@ -17,6 +18,7 @@ export type OptionsViewMode =
   | "VOLATILITY"
   | "ACTIVITY"
   | "STRATEGIES"
+  | "QUANT_LAB"
   | "POSITIONS";
 
 interface OptionsNavigationProps {
@@ -50,6 +52,11 @@ export function OptionsNavigation({
       label: "Strategy Builder",
       icon: <Sliders className="w-4 h-4" />,
       badge: legCount > 0 ? legCount : undefined,
+    },
+    {
+      id: "QUANT_LAB",
+      label: "Quant Strategy Lab",
+      icon: <Cpu className="w-4 h-4 text-indigo-400" />,
     },
     { id: "POSITIONS", label: "Positions", icon: <PieChart className="w-4 h-4" /> },
   ];

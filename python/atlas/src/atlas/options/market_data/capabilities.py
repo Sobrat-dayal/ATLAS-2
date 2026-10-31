@@ -90,3 +90,9 @@ class OptionsEntitlementRegistry:
         self._revoked_sources.discard(source_id)
         self._granted_sources.add(source_id)
 
+    def check_entitlement(self, source_id: str) -> None:
+        """Check if source is entitled, raising QuantEntitlementRequiredError if not."""
+        if not self.is_entitled(source_id):
+            from atlas.options.quant.errors import QuantEntitlementRequiredError
+            raise QuantEntitlementRequiredError(source_id)
+

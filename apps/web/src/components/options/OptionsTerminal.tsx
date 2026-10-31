@@ -35,6 +35,7 @@ import { OptionsActivityView } from "./OptionsActivityView";
 import { OptionsPositionsView } from "./OptionsPositionsView";
 import { OptionContractInspector } from "./OptionContractInspector";
 import { OptionAdjustmentInspector } from "./OptionAdjustmentInspector";
+import { OptionsStrategyWorkbench } from "./quant/OptionsStrategyWorkbench";
 import {
   Activity,
   AlertTriangle,
@@ -431,6 +432,14 @@ export function OptionsTerminal() {
             analysisResult={analysisResult}
             onAnalyze={handleAnalyzeStrategy}
             isAnalyzing={isAnalyzing}
+          />
+        )}
+
+        {/* QUANT STRATEGY LAB VIEW (Stage 142 QuantLib) */}
+        {currentView === "QUANT_LAB" && (
+          <OptionsStrategyWorkbench
+            initialSymbol={selectedSymbol}
+            initialSpot={selectedItem?.spot_price || 500.0}
           />
         )}
 
