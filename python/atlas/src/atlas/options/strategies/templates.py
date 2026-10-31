@@ -40,3 +40,4 @@ CANONICAL_TEMPLATES: List[StrategyTemplateDefinition] = [
     StrategyTemplateDefinition(template_id="COLLAR", name="Collar", description="Capital preservation strategy combining long stock, long put, and short call.", directional_bias="NEUTRAL", max_risk_profile="DEFINED", typical_legs_count=2),
     StrategyTemplateDefinition(template_id="CUSTOM_MULTI_LEG", name="Custom Multi-Leg", description="User-configured multi-leg options strategy configuration.", directional_bias="NEUTRAL", max_risk_profile="DEFINED", typical_legs_count=1),
 ]
+

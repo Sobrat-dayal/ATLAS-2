@@ -71,3 +71,4 @@ def validate_strategy_legs(
                 "cannot accurately represent calendar or diagonal spreads without time-dependent mark-to-market pricing (reserved for Stage 142)."
             ),
         )
+
