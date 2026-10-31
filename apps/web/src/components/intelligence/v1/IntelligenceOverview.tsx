@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   RefreshCw,
   ExternalLink,
-  DollarSign
+  DollarSign,
+  Eye
 } from "lucide-react";
 
 interface IntelligenceOverviewProps {
@@ -61,6 +62,13 @@ export function IntelligenceOverview({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => onNavigateToView("GODS_EYE")}
+            className="px-3 py-1 rounded bg-amber-950/80 border border-amber-600 hover:bg-amber-900 text-amber-300 font-bold flex items-center gap-1.5 transition-colors text-xs"
+          >
+            <Eye className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>God&apos;s Eye Situational Room</span>
+          </button>
           <button
             onClick={() => onNavigateToView("SCORING")}
             className="px-3 py-1 rounded bg-emerald-950/80 border border-emerald-800 hover:bg-emerald-900 text-emerald-300 font-semibold flex items-center gap-1.5 transition-colors text-xs"

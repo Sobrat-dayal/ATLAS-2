@@ -4,6 +4,7 @@
 
 export type IntelligenceViewType =
   | "OVERVIEW"
+  | "GODS_EYE"
   | "EVENTS"
   | "SCORING"
   | "ENTITIES"

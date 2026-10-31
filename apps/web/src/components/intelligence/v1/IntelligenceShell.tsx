@@ -12,6 +12,7 @@ import { IntelligenceSourcesView } from "./IntelligenceSourcesView";
 import { IntelligenceInvestigationWorkspace } from "./IntelligenceInvestigationWorkspace";
 import { IntelligenceSearchModal } from "./IntelligenceSearchModal";
 import { IntelligenceScoringView } from "@/components/intelligence/scoring";
+import { GodsEyeCommandCenter } from "@/components/intelligence/gods-eye";
 
 // Stage 135-137 Subsystem Integrations
 import { UniversalEventExplorer } from "@/components/events/UniversalEventExplorer";
@@ -52,7 +53,10 @@ export function IntelligenceShell() {
 
   const handleNavigateToView = (view: string, entityOrEventId?: string) => {
     const upper = view.toUpperCase();
-    if (upper.includes("SCORE") || upper.includes("PRIOR")) {
+    if (upper.includes("GOD") || upper.includes("EYE")) {
+      setActiveView("GODS_EYE");
+      if (entityOrEventId) setSelectedEntityId(entityOrEventId);
+    } else if (upper.includes("SCORE") || upper.includes("PRIOR")) {
       setActiveView("SCORING");
       if (entityOrEventId) setSelectedEventId(entityOrEventId);
     } else if (upper.includes("EVENT")) {
@@ -114,6 +118,12 @@ export function IntelligenceShell() {
             onNavigateToView={handleNavigateToView}
             asOfDate={asOfDate}
           />
+        )}
+
+        {activeView === "GODS_EYE" && (
+          <div className="h-full overflow-hidden">
+            <GodsEyeCommandCenter />
+          </div>
         )}
 
         {activeView === "EVENTS" && (

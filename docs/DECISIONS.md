@@ -11579,4 +11579,56 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 2014. **Model Registry & Benchmark Viewer (`IntelligenceModelDetails`)**: Model registry cards, active versions, and benchmark evaluation metrics.
 2015. **Stage 139 Quality Gate & Boundary Enforcement**: All 24 backend tests passed (including all 19 canonical fixtures A to S), all 102 regression tests passed across Stages 135–138 (126 total backend tests), all 309 web unit tests passed, and Next.js production build succeeded cleanly. Prohibit implementing Stage 140 (God's Eye Financial Intelligence).
 
+## Stage 140: God's Eye Financial Intelligence
+2016. **God's Eye Financial Intelligence Engine Architecture (`AtlasGodsEyeService`)**: Master institutional cross-domain situational awareness engine unifying 2D/3D Earth, Universal Events, Knowledge Graph, Exposure Engine, and Scoring.
+2017. **Definition of 8 Canonical Investigation Lenses (`GodsEyeLensType`)**: Standardized lenses across Global Events, Monetary Policy, Corporate Intelligence, Geopolitical, Commodity Infrastructure, Physical World, Portfolio Holdings, and Historical Research.
+2018. **Global Events Situational Awareness Lens (`GLOBAL_EVENTS`)**: Comprehensive multi-domain situational monitoring across macro, corporate, and physical hazard dimensions.
+2019. **Monetary Policy & Central Banks Lens (`MONETARY_POLICY`)**: Official central bank rate decisions, statements, and observational yield curve contexts.
+2020. **Corporate Intelligence & Filings Lens (`CORPORATE_INTELLIGENCE`)**: Audited SEC 10-K/10-Q disclosures, earnings releases, and operational facility networks.
+2021. **Geopolitical & Sanctions Intelligence Lens (`GEOPOLITICAL`)**: Official sanctions designations (OFAC), tariffs, export controls, and strategic trade corridors.
+2022. **Commodity & Physical Infrastructure Lens (`COMMODITY_INFRASTRUCTURE`)**: Global maritime container ports, strategic chokepoints, pipelines, refineries, and electric grids.
+2023. **Physical World & Natural Hazards Lens (`PHYSICAL_WORLD`)**: Real-time USGS seismic feeds, NOAA hurricane tracking, severe convective weather, and satellite thermal anomalies.
+2024. **Portfolio Holdings Look-Through Lens (`PORTFOLIO_INTELLIGENCE`)**: Private tenant-authorized multi-asset portfolio exposure, direct holding vulnerabilities, and supply chain dependencies.
+2025. **Historical Point-in-Time Reconstruction Lens (`HISTORICAL_RESEARCH`)**: Zero look-ahead bitemporal world reconstruction, vintage analysis, and disclosure comparison.
+2026. **Non-Omniscience Semantic Boundary Disclaimer**: "God's Eye" is a branded product name for situational awareness; it aggregates licensed feeds and possesses no covert or omniscient surveillance capabilities.
+2027. **Correlation vs. Causation Separation (`CausalInferenceDisclaimer`)**: Explicit disclaimer that co-occurrence or temporal proximity between an event and asset price movement does not imply causal transmission.
+2028. **Spatial Proximity vs. Physical Damage Separation (`DamageAssessmentDisclaimer`)**: Explicit invariant that spatial proximity to a hazard does not imply operational shutdown or physical asset damage.
+2029. **Damage Status Defaulting to UNKNOWN (`GodsEyeDamageAssessmentStatus.UNKNOWN`)**: Damage status strictly defaults to UNKNOWN until certified on-site structural reports are officially confirmed.
+2030. **Quantitative Exposure vs. Projected Loss Separation (`ExposureLossDisclaimer`)**: Structural revenue concentrations and portfolio weights represent sensitivities, not default risks or projected dollar loss.
+2031. **Review Priority vs. Return Prediction Separation (`PriorityPredictionDisclaimer`)**: Intelligence priority scores reflect operational review triage, not stock return forecasts or trade signals.
+2032. **Total Prohibition on Automated Order Execution or Trading**: God's Eye performs no automated order routing, broker execution, or autonomous portfolio mutation.
+2033. **Multi-Tenant Private Portfolio Boundary Enforcement (`GodsEyeTenantAccessDeniedError`)**: Strict tenant and user ownership verification; unauthorized users cannot inspect private portfolios or exposures.
+2034. **Bitemporal Point-in-Time Integrity & Look-Ahead Bias Exclusion (`GodsEyeLookAheadViolationError`)**: As-of queries strictly filter records known or effective after the historical timestamp; future dates are rejected.
+2035. **Three-Way Timestamp Distinction: Occurrence, Publication, Ingestion (Fixture T)**: Strict preservation and distinction of `occurred_at`, `source_published_at`, and `first_ingested_at`.
+2036. **High-Degree Graph Traversal Depth Bounding (`max_graph_depth <= 3`)**: Traversal depth is hard-capped at 3 hops to maintain low-latency query performance and platform stability.
+2037. **Fanout Bounding and Entity Limit Clamping (`max_entities <= 100`)**: Graph neighbor fanout and entity results are clamped to prevent memory exhaustion on high-degree nodes.
+2038. **Graph Traversal Depth Violation Rejection (`GodsEyeTraversalLimitExceededError`)**: Explicit typed exception raised when requested depth exceeds 3 hops.
+2039. **Dynamic Source License Revocation Invalidation (`revoke_source`)**: Revoked data sources are immediately excluded from derived outputs and downstream caches.
+2040. **Partial Provider Outage Resilience (`GodsEyeSectionStatus.DEGRADED`)**: Failure of an individual provider marks the affected section DEGRADED while allowing unaffected intelligence subsystems to succeed.
+2041. **Multi-Clock Event Deduplication Integration with Stage 135**: Seamless query delegation to Universal Event Model and bitemporal event revisions.
+2042. **Canonical Entity Resolution Integration with Stage 136 Knowledge Graph**: Exact canonical entity matching preventing false linkages to similarly named benign entities.
+2043. **Point-in-Time Revenue Exposure Integration with Stage 137 Exposure Engine**: Look-through revenue exposure and supply chain tier-1 concentration calculations.
+2044. **Explainable Multi-Factor Scoring Integration with Stage 139 Scoring Engine**: Priority scoring integration providing exact point contributions per factor.
+2045. **Observational Market Tick/Yield Snapshot Capture (`MarketContextSnapshot`)**: Captures benchmark price/yield changes across the event window with observational labeling.
+2046. **Precise Great-Circle Distance Computation for Spatial Hazards (`_haversine_km`)**: Exact distance calculation in kilometers between seismic epicenters and industrial facilities.
+2047. **Geographic Precision Invariant: No Fabricated Street Coordinates for Country Events**: Country-level events maintain jurisdiction bounding polygons without fabricating pinpoint street addresses.
+2048. **Incomplete Global Coverage Declaration and Zero-Risk Prohibition**: Accurate disclosure of unmonitored jurisdictions (e.g. KP, IR); unmonitored data is never represented as zero risk.
+2049. **Historical Vintage Topographical Comparison (`compare_historical_vintages`)**: Reconstructs corporate group structures (e.g., subsidiary in 2021 vs independent in 2024) across historical vintages.
+2050. **Read-Only AI Investigation Tool Specification (`atlas.gods_eye.investigate`)**: Institutional tool returning verified evidence trails, map features, and explicit disclosures of unknowns.
+2051. **Cross-Domain Query Plan Generation (`CrossDomainQueryPlan`)**: Formal query planning orchestrating bounded multi-subsystem execution.
+2052. **REST Endpoint `GET /api/v1/intelligence/gods-eye/capabilities`**: Exposes supported lenses, view modes, safety guarantees, and disclaimers.
+2053. **REST Endpoint `GET /api/v1/intelligence/gods-eye/lenses`**: Returns list of all 8 canonical investigation lenses with metadata.
+2054. **REST Endpoint `GET /api/v1/intelligence/gods-eye/lens/{lens_id}`**: Retrieves single lens configuration and layer defaults.
+2055. **REST Endpoint `POST /api/v1/intelligence/gods-eye/investigate`**: Primary endpoint executing unified cross-domain situational queries.
+2056. **REST Endpoint `GET /api/v1/intelligence/gods-eye/entity/{entity_id}`**: Retrieves entity situational awareness under specified lens and as-of date.
+2057. **REST Endpoint `POST /api/v1/intelligence/gods-eye/historical-reconstruction`**: Reconstructs world state as-of a specific historical timestamp.
+2058. **REST Endpoint `POST /api/v1/intelligence/gods-eye/compare-vintages`**: Side-by-side corporate topology and disclosure comparison.
+2059. **REST Endpoint `POST /api/v1/intelligence/gods-eye/ai-tool/investigate`**: Dedicated backend for the `atlas.gods_eye.investigate` tool.
+2060. **God's Eye Situation Room Client Toolbar (`GodsEyeToolbar`)**: Cockpit toolbar supporting 8 lens tabs, 2D/3D mode toggling, historical time travel, and quick filtering.
+2061. **Interactive 2D MapLibre & 3D Cesium Geographic Viewport (`GodsEyeGlobalMap`)**: Situational spatial viewport rendering facilities, ports, pipelines, and hazard epicenters.
+2062. **WebGL & Canvas Lifecycle Cleanup on Unmount and Mode Transition**: Prevents memory leaks and GPU context loss during rapid 2D/3D switching.
+2063. **Prioritized Event Stream Component (`GodsEyeEventFeed`)**: Real-time event stream ranked by Stage 139 priority scores with factor contribution badges.
+2064. **Deep Multi-Domain Situational Inspector (`GodsEyeInspector`)**: Deep inspection panel coordinating spatial feature properties, market context, revenue exposure, graph topology, and evidence sources.
+2065. **Stage 140 Master Command Center Integration & Roadmap Boundary Enforcement**: All 29 backend tests passed, all 126 regression tests passed (155 total backend tests), all 313 web tests passed, Next.js production build clean. Complete Stage 140 and stop without implementing Stage 141 prematurely.
+
 
