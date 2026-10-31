@@ -167,3 +167,4 @@ class BoundedGraphTraversalEngine:
             "total_nodes": len(visited_nodes),
             "total_relationships": len(collected_relationships),
         }
+

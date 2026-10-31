@@ -189,3 +189,4 @@ def validate_predicate_allowed(
             )
 
     return predicate
+

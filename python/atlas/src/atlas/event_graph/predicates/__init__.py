@@ -11,3 +11,4 @@ __all__ = [
     "PROHIBITED_PREDICATES",
     "validate_predicate_allowed",
 ]
+

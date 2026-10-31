@@ -28,3 +28,4 @@ class HistoricalAsOfEvaluator:
             if filter_relationship(rel, as_of=as_of_time, tenant_id=tenant_id):
                 valid_edges.append(rel)
         return valid_edges
+

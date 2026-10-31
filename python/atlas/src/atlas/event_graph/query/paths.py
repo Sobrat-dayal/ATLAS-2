@@ -32,3 +32,4 @@ def format_path_explanation(path: GraphPath) -> str:
         "no economic exposure, operational downtime, or financial loss is claimed or implied."
     )
     return "\n".join(lines)
+

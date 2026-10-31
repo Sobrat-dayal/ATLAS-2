@@ -156,3 +156,4 @@ class NeighborQueryEngine:
             if rel and filter_relationship(rel, as_of=as_of, tenant_id=tenant_id):
                 results.append(rel)
         return results
+
