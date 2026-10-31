@@ -131,3 +131,4 @@ class AuthorizedAISAdapter:
         )
 
         return state, obs
+

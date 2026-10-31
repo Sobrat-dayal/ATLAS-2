@@ -343,3 +343,4 @@ async def apply_earthquake_revision(revised_feature: Dict[str, Any]) -> Dict[str
     except Exception as exc:
         logger.exception("Earthquake revision failed: %s", exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+

@@ -291,3 +291,4 @@ class InfrastructureProximityMatch(BaseModel):
         "Spatial proximity does not constitute physical damage, structural failure, "
         "or operational outage. On-site telemetry or official inspection required."
     )
+

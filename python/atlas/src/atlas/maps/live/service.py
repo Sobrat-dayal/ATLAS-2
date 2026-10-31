@@ -270,3 +270,4 @@ class AtlasLiveGeoService:
 
 # Global singleton instance
 atlas_live_geo_service = AtlasLiveGeoService()
+

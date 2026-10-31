@@ -175,3 +175,4 @@ export async function splitTrajectory(
   const data = await res.json();
   return data.segments || [];
 }
+

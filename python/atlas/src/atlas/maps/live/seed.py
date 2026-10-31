@@ -337,3 +337,4 @@ SEED_VESSEL_OBSERVATIONS: List[AtlasGeoObservation] = [
         provenance_note="Measured AIS Transponder Position",
     ),
 ]
+

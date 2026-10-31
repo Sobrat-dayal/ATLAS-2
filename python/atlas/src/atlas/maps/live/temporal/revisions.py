@@ -114,3 +114,4 @@ class EventRevisionManager:
     def clear(self) -> None:
         """Reset state."""
         self._events.clear()
+

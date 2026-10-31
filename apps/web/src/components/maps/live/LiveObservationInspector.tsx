@@ -163,3 +163,4 @@ export function LiveObservationInspector({
     </div>
   );
 }
+

@@ -74,3 +74,4 @@ class WatermarkManager:
     def clear(self) -> None:
         """Reset all watermarks."""
         self._watermarks.clear()
+

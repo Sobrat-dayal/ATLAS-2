@@ -121,3 +121,4 @@ class USGSEarthquakeAdapter:
             except Exception:
                 continue
         return observations
+

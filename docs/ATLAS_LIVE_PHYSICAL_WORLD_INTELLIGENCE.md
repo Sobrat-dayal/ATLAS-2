@@ -131,3 +131,4 @@ The implementation is verified by 15 institutional test fixtures:
 - **FastAPI Endpoints**: 10 integration tests validating all HTTP endpoints.
 
 All **96/96** backend map tests and **290/290** frontend tests pass with 100% success.
+

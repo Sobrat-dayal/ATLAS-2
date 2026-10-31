@@ -149,3 +149,4 @@ class AuthorizedAircraftAdapter:
         )
 
         return state, obs
+

@@ -152,3 +152,4 @@ export function getCategoryLabel(category: LiveObservationCategory): string {
       return category;
   }
 }
+

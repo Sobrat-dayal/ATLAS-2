@@ -97,3 +97,4 @@ def parse_tle_pair(line1: str, line2: str, name: str = "UNKNOWN") -> SatelliteOr
         apogee_km=apogee_km,
         perigee_km=perigee_km,
     )
+

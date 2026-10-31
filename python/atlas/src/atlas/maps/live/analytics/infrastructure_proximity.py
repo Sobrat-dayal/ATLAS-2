@@ -114,3 +114,4 @@ def correlate_infrastructure_proximity(
 
     matches.sort(key=lambda m: m.distance_km)
     return matches
+

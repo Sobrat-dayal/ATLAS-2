@@ -192,3 +192,4 @@ class LiveHotStateStore:
         self._watermarks.clear()
         self._history.clear()
         self._sequence_counter = 1000
+

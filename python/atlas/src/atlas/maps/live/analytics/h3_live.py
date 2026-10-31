@@ -65,3 +65,4 @@ def aggregate_live_observations_to_h3(
 
     aggregates.sort(key=lambda a: a["raw_observation_count"], reverse=True)
     return aggregates
+

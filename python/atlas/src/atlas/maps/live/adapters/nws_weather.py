@@ -180,3 +180,4 @@ class NWSWeatherAdapter:
         )
 
         return weather_obs, obs
+

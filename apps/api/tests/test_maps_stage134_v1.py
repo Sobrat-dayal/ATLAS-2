@@ -498,3 +498,4 @@ def test_fastapi_live_endpoints(client):
     rev_res = res.json()
     assert rev_res["is_new_event"] is False
     assert rev_res["earthquake_event"]["magnitude"] == 5.4
+

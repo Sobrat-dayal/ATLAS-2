@@ -118,3 +118,4 @@ class LiveViewportTooLargeError(LiveDomainError):
         )
         self.area_deg2 = area_deg2
         self.max_area_deg2 = max_area_deg2
+

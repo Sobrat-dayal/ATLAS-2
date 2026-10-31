@@ -161,3 +161,4 @@ def split_trajectory_points(
         )
 
     return segments
+

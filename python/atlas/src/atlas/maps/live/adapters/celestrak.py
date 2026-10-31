@@ -80,3 +80,4 @@ class CelesTrakAdapter:
         )
 
         return sat_state, obs
+
