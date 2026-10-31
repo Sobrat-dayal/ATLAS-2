@@ -83,3 +83,4 @@ describe("ATLAS Options Analytics Formatters & Symbology", () => {
     assert.equal(parseOsiSymbol("INVALID_LENGTH"), null);
   });
 });
+

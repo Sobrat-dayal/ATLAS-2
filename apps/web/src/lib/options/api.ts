@@ -177,3 +177,4 @@ export async function getUnderlyingAdjustments(symbol: string): Promise<any[]> {
   const data = await res.json();
   return data.adjustments;
 }
+
