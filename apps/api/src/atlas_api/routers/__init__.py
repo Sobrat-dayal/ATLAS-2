@@ -64,6 +64,7 @@ from .ai_research import router as ai_research_router
 from .ai_actions import router as ai_actions_router
 from .maps import router as maps_router
 from .events import router as events_router
+from .knowledge_graph import router as knowledge_graph_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -130,3 +131,4 @@ api_router.include_router(ai_research_router, prefix="")
 api_router.include_router(ai_actions_router, prefix="")
 api_router.include_router(maps_router, prefix="")
 api_router.include_router(events_router, prefix="")
+api_router.include_router(knowledge_graph_router, prefix="")

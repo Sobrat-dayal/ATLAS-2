@@ -4,10 +4,11 @@ import React, { useState } from "react";
 import { ATLAS_MODULES } from "@/config/atlas-modules";
 import { PageHeader } from "@/design-system";
 import { UniversalEventExplorer } from "@/components/events/UniversalEventExplorer";
-import { Radio, Activity, Globe } from "lucide-react";
+import { EventEntityGraphExplorer } from "@/components/intelligence/graph/EventEntityGraphExplorer";
+import { Radio, Activity, Globe, Network } from "lucide-react";
 
 export default function IntelligencePage() {
-  const [activeTab, setActiveTab] = useState<"universal_events" | "signals">("universal_events");
+  const [activeTab, setActiveTab] = useState<"knowledge_graph" | "universal_events" | "signals">("knowledge_graph");
 
   return (
     <div className="flex h-full flex-col bg-black text-zinc-100">
@@ -22,6 +23,18 @@ export default function IntelligencePage() {
 
         {/* Intelligence View Switcher */}
         <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded p-0.5 text-xs font-mono">
+          <button
+            onClick={() => setActiveTab("knowledge_graph")}
+            className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
+              activeTab === "knowledge_graph"
+                ? "bg-sky-600 text-white font-semibold"
+                : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <Network className="w-3.5 h-3.5 text-sky-300" />
+            <span>Event-to-Entity Knowledge Graph (Stage 136)</span>
+          </button>
+
           <button
             onClick={() => setActiveTab("universal_events")}
             className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
@@ -49,7 +62,9 @@ export default function IntelligencePage() {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        {activeTab === "universal_events" ? (
+        {activeTab === "knowledge_graph" ? (
+          <EventEntityGraphExplorer />
+        ) : activeTab === "universal_events" ? (
           <UniversalEventExplorer />
         ) : (
           <div className="flex h-full items-center justify-center p-8 text-center text-zinc-500 font-mono text-sm border m-4 border-dashed border-zinc-800 rounded-lg">

@@ -11361,3 +11361,63 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1813. **Comprehensive Event Detail Inspector**: Offer four deep inspection tabs: Summary & Identity, Evidence & Sources, Claims & Conflicts, and Bitemporal Revisions.
 1814. **Interactive Historical As-Of Modal**: Enable analysts to dial any historical UTC timestamp and reconstruct the platform knowledge state with zero look-ahead bias.
 1815. **Full Test Suite & Production Build Gate**: Verify all 22 backend event tests (`test_events_stage135_v1.py`), all 118 total backend tests across Stages 129–135, all 294 web tests (`pnpm test`), and Next.js production build (`pnpm build`).
+
+## Stage 136: Event-to-Entity Knowledge Graph and Relationship Intelligence Engine
+
+### Foundational Architecture & Invariants
+1816. **Knowledge Graph Subsystem**: Establish `python/atlas/src/atlas/event_graph/` and `/api/v1/knowledge-graph` as the institutional relationship intelligence subsystem connecting Universal Events to canonical entities.
+1817. **Core Semantic Mandate**: The engine deterministically answers "What verified entities are related to this event, and what evidence establishes each relationship?" with zero speculative leaps.
+1818. **Strict Financial Exposure Isolation**: Relationships record factual topology only; financial loss modeling, value-at-risk, and economic exposure calculations belong strictly to Stage 137.
+1819. **Prohibited Causal Predicates**: Strictly prohibit speculative predicates (`AFFECTS`, `AFFECTED_BY`, `CAUSED_LOSS`, `DAMAGED`, `EXPOSED_TO`, `IMPACTED`, `DESTROYED`, `BANKRUPTED`), raising `ProhibitedPredicateError` upon use.
+1820. **Relational-Adjacency Graph Storage**: Store adjacency relationships directly within PostgreSQL / Supabase schema without external graph engines (e.g. Neo4j).
+1821. **Canonical Node Model (`CanonicalGraphNodeRef`)**: Index 16 canonical node types across events, companies, issuers, legal entities, securities, sectors, geography, commodities, indicators, central banks, facilities, and infrastructure.
+1822. **Deterministic Entity Identifier Resolution**: Index LEI, CIK, ISIN, Ticker, Facility ID, Asset ID, and ISO-2/3 country codes for sub-millisecond lookup in `CanonicalEntityResolver`.
+1823. **Temporal Identifier Ownership Disambiguation**: Resolve reused tickers (e.g. `META` in 2020 vs 2023) to their valid historical company entity based on query date epoch.
+1824. **Sanctions Exact Legal Entity Match**: Require exact identifier match for official sanctions designations, strictly rejecting fuzzy name matching to prevent false-positive designations of innocent firms.
+1825. **No Security Explosion**: Invariant that corporate earnings and governance events link to the primary issuer and explicitly cited primary securities without fabricating edges for every equity class, OTC quote, or warrant.
+
+### Specialized Family Linkers
+1826. **Corporate Action Role Linker (`CorporateActionRelationshipLinker`)**: Accurately distinguish Acquirer (`CORPORATE_ACTION_PARTICIPANT`), Target (`CORPORATE_ACTION_TARGET`), and Reviewing Regulators (`REGULATED_BY`).
+1827. **Economic Release Linker (`EconomicReleaseRelationshipLinker`)**: Connect macroeconomic releases to indicator series, statistical agencies, and issuing countries.
+1828. **Central Bank Decision Linker (`CentralBankRelationshipLinker`)**: Connect rate decisions to central banks (`DECIDED_BY`), issuing jurisdictions (`HAS_ISSUING_JURISDICTION`), and policy benchmark instruments.
+1829. **Regulatory Enforcement Linker (`RegulatoryRelationshipLinker`)**: Connect SEC/antitrust proceedings to regulators (`REGULATED_BY`) and targeted firms (`OFFICIAL_ACTION_TARGET`).
+1830. **Geopolitical Action Linker (`GeopoliticalRelationshipLinker`)**: Link treaties, trade pacts, and diplomatic events to sovereign states.
+1831. **Spatial Proximity Invariant (`NaturalEventRelationshipLinker`)**: Link earthquakes and storms to infrastructure via `GEOGRAPHICALLY_NEAR` with distance in kilometers, calculation basis, and mandatory disclaimer; strictly prohibit `DAMAGED` edges.
+1832. **Geographic Precision Protection**: Prohibit calculating asset proximity when event coordinates are at coarse country or regional level without exact point coordinates.
+1833. **Commodity Reference Linker**: Link commodity quota agreements to physical commodities without creating spurious edges to unrelated downstream distributors.
+1834. **Physical Infrastructure Event Linker (`InfrastructureRelationshipLinker`)**: Link asset disruptions to physical infrastructure and operating entities.
+1835. **Journalistic Mention Linker (`NewsReportedRelationshipLinker`)**: Classify media reports and rumors under `SOURCE_REPORTED_ASSOCIATION` with `CANDIDATE` verification status.
+
+### Graph Traversal & Point-in-Time Evaluation
+1836. **Event-to-Event Structural Lineage**: Support typed event relations (`REVISES`, `SUPERSEDES`, `CORRECTS`, `RETRACTS`, `FORMAL_FOLLOW_UP_TO`, `IMPLEMENTS`, `OFFICIALLY_RESPONDS_TO`).
+1837. **Foundational Entity-to-Entity Structural Edges**: Register `SUBSIDIARY_OF`, `PARENT_OF`, `ISSUED_BY_COMPANY`, `OPERATED_BY`, `LOCATED_IN`, `PRIMARY_EXCHANGE_IN`, `COMPRISING_SECTOR`.
+1838. **Relationship Origin Tracking**: Attribute assertions to `OFFICIAL_DISCLOSURE`, `REGULATORY_FILING`, `GOVERNMENT_ACTION`, `STATISTICAL_AGENCY`, `CENTRAL_BANK_RELEASE`, `NEWS_REPORT`, or `GEOSPATIAL_CALCULATION`.
+1839. **Institutional Verification Hierarchy**: Classify relationship confidence across `VERIFIED_DIRECT`, `CORROBORATED`, `SOURCE_SUPPORTED`, `CANDIDATE`, `CONFLICTED`, `REJECTED`, `REVOKED`.
+1840. **Multi-Source Evidence Grounding**: Enable 1 logical relationship edge to reference multiple corroborating source documents (`evidence_ids`).
+1841. **Contradicted & Disputed Entity Review Queue**: Route `CONFLICTED` or `CANDIDATE` relationships to an institutional analyst review queue.
+1842. **Revoked Source Invalidation**: Automatically revoke edges and invalidate queries when an underlying source document or license is revoked.
+1843. **Stage 135 Event Retraction Bridge**: Invalidate all dependent knowledge graph relationships non-destructively upon event retraction in Stage 135.
+1844. **Multi-Tenant Relationship Boundaries**: Enforce strict tenant isolation so private proprietary edges belonging to Tenant A are invisible to Tenant B.
+1845. **Bounded Multi-Hop Traversal Engine (`BoundedGraphTraversalEngine`)**: Traverse relationship paths up to an institutional maximum depth of 5 hops.
+1846. **Guaranteed Cycle Detection & Prevention**: Track active traversal path to detect cycles and prevent stack overflows or infinite loops.
+1847. **Factual Multi-Hop Path Explanations**: Generate clear, hop-by-hop factual path narratives with zero causal or financial loss leaps.
+1848. **Point-in-Time Knowledge As-Of Horizon**: Filter graph topology such that `knowledge_available_at <= as_of_time`, eliminating look-ahead bias in quantitative research.
+1849. **Direct 1-Hop Neighbor Query Engine (`NeighborQueryEngine`)**: Provide bidirectional indexing for `event -> entities` and `entity -> events`.
+1850. **Neighborhood Subgraph Extraction**: Extract k-hop local neighborhood subgraphs for focused entity analysis.
+1851. **Non-Destructive Relationship Revisions**: Track edge revisions with `EventEntityRelationshipRevision` audit logs.
+
+### API & UI Delivery
+1852. **REST Endpoint `GET /api/v1/knowledge-graph/capabilities`**: Expose graph boundaries, node types, approved predicates, and prohibitions.
+1853. **REST Endpoint `GET /api/v1/knowledge-graph/node-types`**: Return canonical node types and descriptions.
+1854. **REST Endpoint `GET /api/v1/knowledge-graph/predicates`**: List approved predicates and prohibited list.
+1855. **REST Endpoint `POST /api/v1/knowledge-graph/resolve-entity`**: Deterministically resolve identifiers to canonical nodes with temporal filtering.
+1856. **REST Endpoints `/events/{id}/neighbors` & `/entities/{type}/{id}/events`**: Bidirectional 1-hop lookups.
+1857. **REST Endpoints `/relationships/{id}`, `/evidence`, `/history`**: Deep edge inspection and audit trail.
+1858. **REST Endpoint `POST /api/v1/knowledge-graph/paths`**: Bounded path discovery with cycle prevention.
+1859. **REST Endpoint `POST /api/v1/knowledge-graph/neighborhood`**: Extract k-hop neighborhood subgraphs.
+1860. **REST Endpoint `POST /api/v1/knowledge-graph/as-of`**: Point-in-time graph evaluation with zero look-ahead bias.
+1861. **REST Endpoint `GET /api/v1/knowledge-graph/review-queue`**: Review queue for uncorroborated edges.
+1862. **Interactive SVG/HTML5 Graph Canvas (`GraphCanvas`)**: Responsive canvas with drag, zoom, directed edge arrows, and node badges.
+1863. **Accessible Table Representation (`GraphTableView`)**: Full tabular alternative for screen readers and keyboard navigation.
+1864. **Deep Inspectors (`GraphRelationshipInspector` & `GraphPathInspector`)**: Evidence records, bitemporal dates, proximity metrics, and factual hop explanations.
+1865. **Verification & Quality Gate**: Verify all 28 backend graph tests, all 50 combined event tests, all 298 web tests, and production build clean.
