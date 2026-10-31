@@ -5,10 +5,11 @@ import { ATLAS_MODULES } from "@/config/atlas-modules";
 import { PageHeader } from "@/design-system";
 import { UniversalEventExplorer } from "@/components/events/UniversalEventExplorer";
 import { EventEntityGraphExplorer } from "@/components/intelligence/graph/EventEntityGraphExplorer";
-import { Radio, Activity, Globe, Network } from "lucide-react";
+import { ExposureExplorer } from "@/components/intelligence/exposure/ExposureExplorer";
+import { Radio, Activity, Globe, Network, PieChart } from "lucide-react";
 
 export default function IntelligencePage() {
-  const [activeTab, setActiveTab] = useState<"knowledge_graph" | "universal_events" | "signals">("knowledge_graph");
+  const [activeTab, setActiveTab] = useState<"exposure_engine" | "knowledge_graph" | "universal_events" | "signals">("exposure_engine");
 
   return (
     <div className="flex h-full flex-col bg-black text-zinc-100">
@@ -23,6 +24,18 @@ export default function IntelligencePage() {
 
         {/* Intelligence View Switcher */}
         <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded p-0.5 text-xs font-mono">
+          <button
+            onClick={() => setActiveTab("exposure_engine")}
+            className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
+              activeTab === "exposure_engine"
+                ? "bg-amber-600 text-white font-semibold"
+                : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <PieChart className="w-3.5 h-3.5 text-amber-200" />
+            <span>Exposure Engine (Stage 137)</span>
+          </button>
+
           <button
             onClick={() => setActiveTab("knowledge_graph")}
             className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
@@ -62,7 +75,9 @@ export default function IntelligencePage() {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        {activeTab === "knowledge_graph" ? (
+        {activeTab === "exposure_engine" ? (
+          <ExposureExplorer />
+        ) : activeTab === "knowledge_graph" ? (
           <EventEntityGraphExplorer />
         ) : activeTab === "universal_events" ? (
           <UniversalEventExplorer />

@@ -11421,3 +11421,56 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1863. **Accessible Table Representation (`GraphTableView`)**: Full tabular alternative for screen readers and keyboard navigation.
 1864. **Deep Inspectors (`GraphRelationshipInspector` & `GraphPathInspector`)**: Evidence records, bitemporal dates, proximity metrics, and factual hop explanations.
 1865. **Verification & Quality Gate**: Verify all 28 backend graph tests, all 50 combined event tests, all 298 web tests, and production build clean.
+
+
+## Stage 137: Financial and Economic Exposure Engine
+1866. **Financial and Economic Exposure Architecture (`AtlasExposureEngineService`)**: Institutional master service orchestrating verified exposure calculations across company revenue, portfolio holdings, geographic territories, sectors, commodities, corporate groups, supply chains, infrastructure assets, derivatives, and macroeconomic benchmarks.
+1867. **Core Semantic Invariant ("Exposure Is Not Impact")**: Strictly measure structural connectedness, quantified holdings, and reported revenues; strictly prohibit predicting future price changes, estimating realized losses, or generating buy/sell signals.
+1868. **Decimal Precision Mandate**: All currency amounts, portfolio shares, weights, and ratios must use exact `Decimal` arithmetic to eliminate floating-point rounding errors in institutional risk calculations.
+1869. **Institutional Measure Registry (`MEASURE_REGISTRY`)**: Register canonical exposure measures with explicit mathematical definitions for numerators, denominators, aggregation rules, and missing data policies.
+1870. **Non-Inferability of Revenue from Counts (`FACILITY_COUNT_V1`)**: Operational presence counts must strictly use `COUNT` units; inferring revenue, market share, or profit from facility counts is strictly prohibited (`ProhibitedInferenceError`).
+1871. **Separation of Proximity from Asset Damage (`EARTHQUAKE_PROXIMITY_PRESENCE_V1`)**: Proximity between an event and an asset establishes spatial co-location only; structural damage, operational disruption, and financial loss remain `UNKNOWN` and `UNAVAILABLE` without official loss reports.
+1872. **Elimination of Corporate Group Double-Counting (`calculate_group_consolidated_revenue`)**: Consolidated parent revenue already encompasses consolidated subsidiaries; adding parent consolidated totals and subsidiary revenues is strictly prohibited (`DoubleCountingError`).
+1873. **Minority Ownership & Equity Accounting Invariant**: Non-consolidated and equity-method affiliates (e.g. 40% ownership) must not add pro-rata revenue into parent consolidated totals without explicit regulatory disclosures.
+1874. **Qualitative Supply Chain Disclosures (`SUPPLY_CHAIN_QUALITATIVE_V1`)**: Documented commercial ties without disclosed numerical contracts are recorded as verified qualitative relationships with monetary amounts set to `UNAVAILABLE` (`None`).
+1875. **Fund Look-Through Compounding (`calculate_fund_lookthrough`)**: Bounded recursive traversal through fund constituent holdings by compounding weights along verified holding edges (e.g. 20% in Fund * 30% in Target = 6.0% effective weight).
+1876. **Guaranteed Fund Cycle Detection (`CycleDetectedError`)**: Track active traversal paths during fund look-through to halt immediately upon detecting cross-holdings or circular investments without infinite loops or stack overflows.
+1877. **Signed Long and Short Exposures (`calculate_portfolio_exposures`)**: Distinguish Net Exposure ($\sum \text{signed}$) from Gross Exposure ($\sum |\text{signed}|$) with exact directional signs.
+1878. **Net vs Gross Economic Footprint**: Explicitly report both net directional risk and gross total market footprint across all positions.
+1879. **Point-in-Time FX Conversion Engine (`convert_currency_point_in_time`)**: Point-in-time exchange rate conversions matching historical reporting dates with verified quote directions.
+1880. **Prohibition of Current FX Rate Substitution (`MissingCurrencyRateError`)**: If historical point-in-time FX rates are missing, raise `MissingCurrencyRateError`; substituting current rates or default values is strictly prohibited.
+1881. **Period Compatibility Verification (`verify_period_compatibility`)**: Verify that numerators and denominators represent comparable reporting periods; dividing quarterly metrics by annual totals without explicit annualization flags is rejected (`IncompatiblePeriodError`).
+1882. **First-Order Local Sensitivity Approximations (`calculate_dv01_sensitivity`)**: Local linear approximations based on verified DV01 ($-DV01 \times \Delta y_{\text{bps}}$) must be strictly labeled as first-order scenario estimates.
+1883. **Derivative Delta-Equivalent Dollar Exposures (`calculate_option_delta_equivalent`)**: Compute option delta-equivalent dollar exposure as $\text{Contracts} \times \text{Multiplier} \times \text{Underlying Price} \times \Delta$ without fabricating higher-order Greeks.
+1884. **Commodity Context Mention Invariant (`analyze_commodity_mention`)**: Textual associations with commodities establish qualitative context only; numerical exposure is marked `UNAVAILABLE` without explicit hedging or volumetric disclosures.
+1885. **Unallocated Geographic Residual Preservation (`calculate_coverage_summary`)**: When reported segments explain less than 100% of the relevant denominator (e.g. 85%), record coverage as 85.0% and preserve the 15.0% unallocated residual explicitly.
+1886. **Prohibition of Rescaling Incomplete Disclosures to 100%**: Normalizing or scaling partial disclosures to sum to 100% without regulatory basis is strictly prohibited.
+1887. **Bitemporal Knowledge Horizon & Look-Ahead Bias Prevention (`LookAheadViolationError`)**: Verify that `valid_at` and `known_as_of` timestamps do not access future unreleased data relative to the query epoch.
+1888. **Economic Data Vintage Handling**: Ensure economic indicator sensitivity calculations reflect the exact vintage published prior to the evaluation timestamp.
+1889. **Multi-Tenant Portfolio Privacy (`TenantExposureAccessDeniedError`)**: Enforce strict tenant isolation; proprietary portfolios, positions, and calculation lineage belonging to Tenant A are completely blocked from Tenant B.
+1890. **Automatic Source Entitlement Invalidation (`SourceLicenseRevokedError`)**: When an underlying data provider license or source entitlement is revoked, calculation lineages referencing it are immediately locked.
+1891. **Deterministic Scenario Simulation (`evaluate_position_scenario_shocks`)**: Deterministically calculate hypothetical percentage shifts across user-specified sectors, securities, countries, or interest rate benchmarks.
+1892. **Mandatory Scenario Assumption Notice**: Prominently tag all scenario outputs with: `HYPOTHETICAL SCENARIO RESULT. Computed strictly from user-supplied assumptions. Does not constitute a financial forecast, probability estimate, or realized market outcome.`
+1893. **Historical Corporate Group Reconstruction**: Reflect period-specific corporate group structures; analyses for 2023 must not incorporate subsidiaries acquired in 2024.
+1894. **Bitemporal Filing Restatement Preservation**: Preserve both original and restated filing vintages distinctly without arbitrary averaging or silent replacement.
+1895. **Mathematical Lineage Audit Trail (`ExposureProvenanceRegistry`)**: Record auditable lineage items referencing exact input identifiers, mathematical formulas, source filings, and timestamps.
+1896. **Graph Hop Connectedness Provenance**: Trace factual multi-hop paths connecting Stage 135 events and Stage 136 knowledge graph edges to financial subjects.
+1897. **Immutable Analysis Run Recording (`ExposureAnalysisRun`)**: Store immutable records of analysis runs including calculation versions, status, and coverage summaries.
+1898. **Typed Domain Errors Hierarchy (`ExposureDomainError`)**: Provide structured error codes and detail payloads for all domain failure modes.
+1899. **REST Endpoint `GET /api/v1/intelligence/exposure/capabilities`**: Expose engine metadata, supported domains, registered measures, and compliance guarantees.
+1900. **REST Endpoint `GET /api/v1/intelligence/exposure/measures`**: Return all canonical registered measure definitions.
+1901. **REST Endpoint `POST /api/v1/intelligence/exposure/analyze/company`**: Execute company geographic revenue share and segment exposure calculations.
+1902. **REST Endpoint `POST /api/v1/intelligence/exposure/analyze/portfolio`**: Execute portfolio position valuation, signed net/gross exposures, and sector/country weights.
+1903. **REST Endpoint `POST /api/v1/intelligence/exposure/analyze/event`**: Execute event-driven exposure graph traversals.
+1904. **REST Endpoint `POST /api/v1/intelligence/exposure/scenarios/run`**: Execute deterministic scenario shock calculations.
+1905. **REST Endpoint `GET /api/v1/intelligence/exposure/runs/{id}`**: Retrieve analysis runs enforcing tenant isolation checks.
+1906. **REST Endpoint `GET /api/v1/intelligence/exposure/runs/{id}/coverage`**: Retrieve coverage ratios and unallocated residual breakdown.
+1907. **REST Endpoint `GET /api/v1/intelligence/exposure/lineage/{exposure_id}`**: Retrieve mathematical lineage with source license verification.
+1908. **REST Endpoint `GET /api/v1/intelligence/exposure/fixtures/{id}`**: Expose pre-seeded reference test fixtures for verification.
+1909. **Master UI Component (`ExposureExplorer`)**: Unified interactive explorer featuring Subject Selector, Domain filter tabs, and sub-view switchers.
+1910. **KPI Metrics Banner (`ExposureSummary`)**: High-level banner displaying Measured Coverage, Unallocated Residual, Economic Footprint (Net & Gross), and Active Verified Links.
+1911. **Institutional Exposure Grid (`ExposureTable`)**: Tabular view detailing Target Entities, Exposure Domain & Type, Amounts, Shares/Weights, Denominators, and Evidence Badges.
+1912. **Deep Mathematical Lineage Drawer (`ExposureInspector`)**: Inspection side-drawer detailing Numerators, Denominators, Formulas, Timestamps, Source Manifests, and the mandatory Scope Boundary Disclaimer.
+1913. **Interactive Scenario Workbench (`ExposureScenarioWorkbench`)**: Deterministic shock workbench with customizable target dimensions, shock percentages, real-time conditional P&L calculations, and mandatory assumption notices.
+1914. **Population Coverage & Residual View (`ExposureCoverageView`)**: Multi-segment visual bar comparing Covered Population vs Unallocated Residuals, detailing covered and uncovered dimensions.
+1915. **Stage 137 Quality Gate & Boundary Enforcement**: All 29 backend tests passing (including all 24 canonical fixtures A to X), all 50 Stage 135/136 tests passing, all 303 web tests passing, and Next.js production build passing cleanly. Explicitly stop and refrain from implementing Stage 138 (INTELLIGENCE V1 full unified dashboard).
