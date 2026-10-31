@@ -127,3 +127,4 @@ class QuantResourceQuotaExceededError(QuantDomainError):
             code="QUANT_RESOURCE_QUOTA_EXCEEDED",
             details={"resource_type": resource_type, "requested": requested, "maximum": maximum},
         )
+

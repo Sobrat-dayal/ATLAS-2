@@ -171,3 +171,4 @@ export function StrategyScenarioMatrix({ matrixResult, isLoading = false }: Stra
     </div>
   );
 }
+

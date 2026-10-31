@@ -71,6 +71,7 @@ from .scoring import router as scoring_router
 from .gods_eye import router as gods_eye_router
 from .options import router as options_router
 from atlas.options.quant.router import router as options_quant_router
+from atlas.trading.backtesting import backtesting_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -144,3 +145,4 @@ api_router.include_router(scoring_router, prefix="")
 api_router.include_router(gods_eye_router, prefix="")
 api_router.include_router(options_router, prefix="")
 api_router.include_router(options_quant_router, prefix="")
+api_router.include_router(backtesting_router, prefix="")

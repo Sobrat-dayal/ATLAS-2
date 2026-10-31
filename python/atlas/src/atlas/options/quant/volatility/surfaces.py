@@ -104,3 +104,4 @@ class VolatilitySurfaceBuilder:
             diagnostics=warnings,
             is_calibrated=can_calibrate,
         )
+

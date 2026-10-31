@@ -110,3 +110,4 @@ describe("Stage 142 QuantLib Options Frontend Utilities", () => {
     assert.equal(item.break_even_points[0], 505.0);
   });
 });
+

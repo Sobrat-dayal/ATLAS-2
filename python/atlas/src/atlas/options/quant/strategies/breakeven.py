@@ -100,3 +100,4 @@ def calculate_breakevens_and_bounds(
     max_loss: Optional[float] = None if is_unbounded_loss else round(abs(min(0.0, min_pnl_sample)), 2)
 
     return breakevens, max_profit, max_loss, is_unbounded_profit, is_unbounded_loss
+

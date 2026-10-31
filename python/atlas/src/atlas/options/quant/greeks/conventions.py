@@ -26,3 +26,4 @@ def rho_unit_to_bp(rho_unscaled: float) -> float:
 def theta_annual_to_per_day(theta_annual: float) -> float:
     """Convert annualized theta to theta per calendar day (using Actual/365 convention)."""
     return theta_annual / 365.0
+

@@ -172,3 +172,4 @@ export interface QuantCapabilities {
     broker_order_routing_allowed: boolean;
   };
 }
+

@@ -60,3 +60,4 @@ def aggregate_strategy_greeks(
         volga=round(total_volga, 5),
         calculation_method="STRATEGY_PORTFOLIO_AGGREGATE",
     )
+

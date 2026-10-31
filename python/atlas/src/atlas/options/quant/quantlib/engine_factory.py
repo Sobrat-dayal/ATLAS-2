@@ -60,3 +60,4 @@ class QuantLibEngineFactory:
                 model_id=str(model_family),
                 reason=f"Exercise style '{exercise_style}' is not supported by standard vanilla engine factory.",
             )
+

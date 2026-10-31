@@ -91,3 +91,4 @@ def generate_expiration_payoff_curve(
         coordinates.append(PayoffCoordinate(underlying_price=p, payoff=val, is_breakeven=is_be))
 
     return coordinates
+

@@ -78,3 +78,4 @@ def build_bsm_process(
     vol_handle = build_volatility_term_structure(eval_date, volatility, dc, cal)
 
     return ql.BlackScholesMertonProcess(spot_handle, div_handle, rate_handle, vol_handle)
+

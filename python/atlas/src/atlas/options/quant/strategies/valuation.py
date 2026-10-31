@@ -129,3 +129,4 @@ def generate_pre_expiration_curve(
         curr += step_size
 
     return curve
+

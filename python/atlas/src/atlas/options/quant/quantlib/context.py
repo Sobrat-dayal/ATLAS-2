@@ -31,3 +31,4 @@ def isolated_quantlib_context(evaluation_date: ql.Date | str) -> Generator[ql.Da
             yield ql_date
         finally:
             settings.evaluationDate = prev_date
+

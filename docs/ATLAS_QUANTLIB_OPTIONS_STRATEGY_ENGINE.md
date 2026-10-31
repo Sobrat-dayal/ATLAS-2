@@ -133,3 +133,4 @@ The `ScenarioEngine` generates a 2D matrix evaluating mark-to-market portfolio v
 2. **Read-Only Quantitative Decision Support**: The engine is strictly a research and risk intelligence tool. No automated order placement, broker routing, or algorithmic execution is permitted.
 3. **Multi-Tenant Isolation**: Saved strategies and custom positions are partitioned by tenant ID and owner principal sub with RLS validation.
 4. **License Entitlements**: Options market data feeds (e.g., CBOE, OPRA) are checked for active licenses before calculation; revocation immediately blocks pricing requests.
+

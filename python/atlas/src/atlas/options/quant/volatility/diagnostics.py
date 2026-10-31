@@ -66,3 +66,4 @@ class ArbitrageDiagnostics:
                     is_valid = False
 
         return warnings, is_valid
+

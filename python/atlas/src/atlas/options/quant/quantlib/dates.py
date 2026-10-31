@@ -33,3 +33,4 @@ def get_actual365_year_fraction(start_d: ql.Date, end_d: ql.Date) -> float:
     """Compute year fraction using Actual/365 Fixed convention."""
     dc = ql.Actual365Fixed()
     return dc.yearFraction(start_d, end_d)
+

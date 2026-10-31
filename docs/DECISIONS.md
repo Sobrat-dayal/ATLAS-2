@@ -11732,5 +11732,56 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 2163. **Zero Fabrication Principle: No Fake Quotes, No Invented Greeks, No Artificial Fills**: Complete adherence to institutional truth-in-data without synthetic simulations.
 2164. **Universal Research & Educational Boundaries: Strict Ban on Automated Order Routing & Algorithmic Trading**: Rejection of order placement, paper trading, and broker sandbox routing (reserved for Stages 144 & 145).
 2165. **Options Strategy Workbench Web Integration (`OptionsStrategyWorkbench`)**: Master interactive quantitative strategy cockpit mounted at `/options` with 2D Scenario Matrix, Strategy Greeks Panel, Dual-Curve Payoff Visualizer, and Multi-Strategy Comparison. All 30 backend tests passed, all 214 regression tests passed across Stages 135–142, all 11 frontend unit tests passed, and Next.js production build verified clean. Complete Stage 142 and stop.
+2166. **Official NautilusTrader Integration (`nautilus-trader==1.231.0`)**: Direct integration of pinned official high-performance Python/Rust event-driven backtesting runtime with clean isolated kernel disposal.
+2167. **Parquet-Backed Historical Data Catalog (`AtlasDataCatalog`)**: Partitioned columnar historical bar and quote catalog supporting high-throughput memory-cached and Parquet file queries.
+2168. **Canonical Instrument Mapping (`to_nautilus_equity`, `to_nautilus_option`)**: Bidirectional conversion between ATLAS canonical financial instruments and Nautilus native `Equity`, `OptionContract`, and `CurrencyPair` domain models.
+2169. **Nanosecond Timestamp Resolution (`ts_event`, `ts_init`)**: Standardized nanosecond-precision event sequencing matching high-frequency market microstructure and exchange protocols.
+2170. **Point-in-Time Availability Enforcement (`verify_no_look_ahead_access`)**: Strict temporal isolation ensuring interval bars are strictly inaccessible before their completion timestamp.
+2171. **Prevention of Same-Bar Look-Ahead Bias**: Rejection of strategies attempting to read current-bar close prices to execute same-bar open fills.
+2172. **Historical Options Bid/Ask Quote Requirement**: Mandating genuine historical bid/ask quotes for options backtesting; strict rejection of equity OHLC proxies without quote depth.
+2173. **Standardized Options Multiplier Enforcement (`multiplier=100`)**: Multiplier scaling of 100 on contract cash flows, margin requirements, commissions, and P&L.
+2174. **Early Exercise & Out-of-the-Money Expiration Settlement**: Automated options expiration settling OTM contracts to zero without double cash deduction.
+2175. **Multi-Leg Options Spread Execution Modeling**: Exact attribution of multi-leg entries with individual leg commissions, slippage, and net debit/credit tracking.
+2176. **Fill Model Architecture: `TOUCHED_BID_ASK`**: Order fill on touch of limit price or arrival open for market orders.
+2177. **Fill Model Architecture: `CROSS_BID_ASK`**: Conservative execution requiring price to trade strictly through the limit order price.
+2178. **Fill Model Architecture: `VOLUME_CONSTRAINED`**: Liquidity-capped fills restricting execution to a maximum configurable participation percentage (e.g. 10%) of bar volume.
+2179. **Fill Model Architecture: `PROBABILISTIC`**: Queue position estimation based on volume progression within the bar.
+2180. **Intrabar Price Ambiguity Disambiguation**: Worst-case fill assumption on bars where both stop-loss and take-profit thresholds are breached.
+2181. **Slippage Engine: `NONE`**: Frictionless execution policy for theoretical baseline benchmarking.
+2182. **Slippage Engine: `FIXED_TICKS`**: Uniform adverse price displacement per minimum tick size.
+2183. **Slippage Engine: `FIXED_BPS`**: Basis-point adverse execution adjustment proportional to trade price.
+2184. **Slippage Engine: `VOLUME_WEIGHTED`**: Square-root market impact modeling scaling with order size relative to bar volume.
+2185. **Fee & Commission Engine: `ZERO_FEE`**: Frictionless fee policy for gross return analysis.
+2186. **Fee & Commission Engine: `PER_SHARE`**: Standard equity broker commission rate ($0.005 / share) with configurable order minimums.
+2187. **Fee & Commission Engine: `PER_CONTRACT`**: Options exchange and contract clearing fee ($0.65 / contract).
+2188. **Fee & Commission Engine: `MAKER_TAKER`**: Venue tiered pricing applying rebates to liquidity providers and fees to liquidity removers.
+2189. **Fee & Commission Engine: `PERCENTAGE`**: Value-based transaction levy (basis points on trade notionals).
+2190. **Latency Simulation Engine**: Configurable order transit delays (`ZERO_LATENCY`, `FIXED_MS`, `JITTER_DISTRIBUTION`).
+2191. **Account & Portfolio Accounting**: Reg-T cash and margin balance tracking with real-time mark-to-market revaluation.
+2192. **Pre-Trade Risk Controls: Buying Power Validation**: Immediate rejection of buy orders exceeding available cash or margin buying power.
+2193. **Pre-Trade Risk Controls: Max Position Sizing Cap**: Order rejection when executed quantity would breach risk limit caps.
+2194. **Pre-Trade Risk Controls: Order Rate Throttling**: Prevention of order submission bursts exceeding configurable frequency quotas.
+2195. **High-Water Mark Peak-to-Trough Drawdown Engine (`DrawdownEngine`)**: Running peak tracking, underwater equity percentage series, and recovery timeline attribution.
+2196. **Financial Return & Risk Ratios Engine (`FinancialMetricsEngine`)**: Total Return ($ and %), CAGR, and Annualized Volatility.
+2197. **Risk-Adjusted Return Metrics**: Sharpe, Sortino, and Calmar ratios with risk-free rate scaling.
+2198. **Trade Profitability Analytics**: Profit Factor, Win Rate, and Expectancy per Trade.
+2199. **Exception Safety on Degenerate Series**: Safe null/zero handling on zero-trade, flat-equity, or zero-volatility backtests without NaN or DivByZero.
+2200. **Parameter Experiment Engine**: Multi-dimensional grid sweep with combinatorial quota limits (max 500 combinations).
+2201. **Overfitting & Data Snooping Detection**: Automated flagging of parameter outliers whose performance deviates by >3 sigma from neighboring parameter sets.
+2202. **Chronological Walk-Forward Validation Engine (`WalkForwardEngine`)**: Sliding chronological in-sample training and out-of-sample testing windows.
+2203. **Walk-Forward Efficiency Ratio (WFER)**: Quantitative measure of out-of-sample vs in-sample performance robustness.
+2204. **Multi-Run Comparative Analysis Engine**: Side-by-side performance, risk, and equity curve correlation analysis.
+2205. **Complete Order Lifecycle Audit Logging**: Event recording from submission through acceptance, fill, partial fill, or risk rejection.
+2206. **Trade-by-Trade Blotter with Exit Attribution**: Full holding period duration, gross P&L, commissions, slippage, and signal attribution.
+2207. **Step-by-Step Historical Event Replay Engine (`BacktestReplay`)**: Granular trade playback with scrubber, speed multiplier, and state inspection.
+2208. **Survivorship Bias Detection & Delisted Securities Coverage**: Requirement to include delisted security history to validate survivorship-bias-free claims.
+2209. **Data Quality Validation**: OHLC sanity checks, inverted high/low rejection, negative price detection, and timestamp monotonicity verification.
+2210. **Source Entitlement & Revocation Enforcement**: Immediate blocking of backtest runs when historical dataset licenses are revoked.
+2211. **Multi-Tenant Isolated Strategy Repository**: Tenant RLS isolation preventing unauthorized access or mutation of private backtest runs.
+2212. **Deterministic Reproducibility Principle**: Identical strategy, dataset, configuration, and random seed guarantee identical equity curves and execution logs.
+2213. **Regulatory & Institutional Disclaimers (`STAGE_143_DISCLAIMERS`)**: Mandatory prominent disclosure of hypothetical backtest limitations and research-only boundaries.
+2214. **Architectural Scope Boundary Enforcement**: Strict prohibition of live broker connectivity (reserved for Stage 145) and paper trading engines (reserved for Stage 144).
+2215. **Interactive Quantitative Backtesting Lab Cockpit (`BacktestingLab`)**: Master web terminal mounted at `/trading` integrating Configuration Form, KPI Summary Dashboard, Dual SVG Equity & Drawdown Chart, Trade Blotter, Order Lifecycle Audit, Historical Replay, Parameter Optimization, and Multi-Run Comparison. All 28 backend tests passed, all 242 regression tests passed across Stages 135–143, all 6 frontend unit tests passed, and Next.js production build verified clean. Complete Stage 143 and stop.
+
 
 
