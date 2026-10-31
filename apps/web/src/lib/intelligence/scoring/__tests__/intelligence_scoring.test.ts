@@ -53,3 +53,4 @@ describe('ATLAS Intelligence Scoring Frontend Contracts (Stage 139)', () => {
     assert.ok(calculatedTotal <= 100.0);
   });
 });
+

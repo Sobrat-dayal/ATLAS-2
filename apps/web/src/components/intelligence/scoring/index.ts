@@ -8,3 +8,4 @@ export * from "./IntelligenceScoreInspector";
 export * from "./IntelligenceFactorBreakdown";
 export * from "./IntelligenceModelDetails";
 export * from "./IntelligenceScoringSettings";
+

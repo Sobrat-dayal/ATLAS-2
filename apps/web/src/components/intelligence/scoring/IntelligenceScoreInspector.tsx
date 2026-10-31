@@ -168,3 +168,4 @@ export function IntelligenceScoreInspector({ score, onClose }: IntelligenceScore
     </div>
   );
 }
+

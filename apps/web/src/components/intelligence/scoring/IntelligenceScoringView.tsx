@@ -222,3 +222,4 @@ export function IntelligenceScoringView({ asOfDate, onNavigateToView }: Intellig
     </div>
   );
 }
+

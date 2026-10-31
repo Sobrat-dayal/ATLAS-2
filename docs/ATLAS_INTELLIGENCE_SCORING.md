@@ -123,3 +123,4 @@ The scoring API is mounted at `/api/v1/intelligence/scoring`:
 - `POST /governance/models/{model_id}/activate`: Promote validated model version to production.
 - `POST /governance/models/{model_id}/rollback`: Roll back model to previous approved version.
 - `GET /governance/audit`: Retrieve immutable governance audit log.
+

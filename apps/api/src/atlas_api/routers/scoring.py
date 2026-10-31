@@ -308,3 +308,4 @@ def get_governance_audit(
 ) -> List[ScoringGovernanceAuditRecord]:
     """Retrieve immutable model governance audit trail."""
     return svc.get_governance_audit(model_id=model_id)
+
