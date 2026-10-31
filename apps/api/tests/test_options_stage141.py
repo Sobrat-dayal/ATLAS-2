@@ -460,3 +460,4 @@ def test_api_options_activity_get():
     data = resp.json()
     assert "strikes" in data
     assert data["total_call_volume"] > 0
+

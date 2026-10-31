@@ -31,3 +31,4 @@ def calculate_spread_metrics(
         "midpoint": midpoint,
         "relative_spread": rel_spread,
     }
+

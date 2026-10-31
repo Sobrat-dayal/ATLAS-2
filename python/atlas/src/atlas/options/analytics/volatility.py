@@ -92,3 +92,4 @@ class OptionsVolatilityAnalytics:
             "atm_strike": atm_strike,
             "term_structure": term_structure,
         }
+

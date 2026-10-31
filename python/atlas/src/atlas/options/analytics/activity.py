@@ -67,3 +67,4 @@ class OptionsActivityAnalytics:
             "put_call_oi_ratio": round(total_put_oi / total_call_oi, 3) if total_call_oi > 0 else None,
             "interpretation_note": "Volume reflects executed trades over the session; Open Interest reflects end-of-day clearinghouse settlement from the prior reporting date.",
         }
+

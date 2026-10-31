@@ -219,3 +219,4 @@ def execute_ai_tool(
         return service.execute_ai_options_tool(req.tool_name, req.params, principal=principal)
     except OptionsDomainError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+

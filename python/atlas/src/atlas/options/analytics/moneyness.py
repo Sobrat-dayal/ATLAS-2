@@ -37,3 +37,4 @@ def calculate_days_to_expiration(expiration_date_str: str, as_of: Optional[datet
     exp_dt = datetime.strptime(expiration_date_str, "%Y-%m-%d").date()
     ref_dt = (as_of or datetime.now(timezone.utc)).date()
     return max(0, (exp_dt - ref_dt).days)
+
