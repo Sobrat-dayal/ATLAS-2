@@ -91,3 +91,4 @@ class NetworkRegistry:
 
 
 network_registry = NetworkRegistry()
+

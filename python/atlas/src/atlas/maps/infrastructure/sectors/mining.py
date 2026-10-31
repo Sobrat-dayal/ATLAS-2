@@ -81,3 +81,4 @@ def create_mining_asset(
         source_license=source_license,
         properties=properties,
     )
+

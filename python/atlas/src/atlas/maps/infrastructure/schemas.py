@@ -124,3 +124,4 @@ class InfrastructureAssetListResponse(BaseModel):
     total_records: int
     assets: List[Dict[str, Any]]
     query_timestamp: str
+

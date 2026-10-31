@@ -92,3 +92,4 @@ def create_data_center_asset(
         source_id=source_id,
         source_license=source_license,
     )
+

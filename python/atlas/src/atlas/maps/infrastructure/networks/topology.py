@@ -57,3 +57,4 @@ def verify_crossing_separation(
             return True
 
     return False
+

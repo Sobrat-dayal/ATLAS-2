@@ -72,3 +72,4 @@ def create_rail_asset(
         source_license=source_license,
         properties=properties,
     )
+

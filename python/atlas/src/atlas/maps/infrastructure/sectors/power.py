@@ -78,3 +78,4 @@ def create_power_plant(
         source_license=source_license,
         properties=properties,
     )
+

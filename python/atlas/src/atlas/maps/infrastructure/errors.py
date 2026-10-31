@@ -120,3 +120,4 @@ class InvalidPrecisionClassError(InfrastructureDomainError):
     def __init__(self, precision: str) -> None:
         super().__init__(f"Invalid geographic precision class '{precision}'.", code="INVALID_PRECISION_CLASS")
         self.precision = precision
+

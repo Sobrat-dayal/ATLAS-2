@@ -64,3 +64,4 @@ def create_logistics_asset(
         source_id=source_id,
         source_license=source_license,
     )
+
