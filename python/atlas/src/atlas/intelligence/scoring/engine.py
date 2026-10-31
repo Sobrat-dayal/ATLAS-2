@@ -296,3 +296,4 @@ class RankingEngine:
             ranked.append(RankedItem(rank=i, score=item, tie_breaker_key=tie_key))
 
         return ranked
+

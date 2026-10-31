@@ -108,3 +108,4 @@ class ModelGovernanceManager:
         if model_id:
             return [r for r in cls._audit_log if r.model_id == model_id]
         return list(cls._audit_log)
+

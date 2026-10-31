@@ -222,3 +222,4 @@ class FeatureExtractor:
             known_as_of=known_as_of,
             generated_at=datetime.now(timezone.utc).isoformat(),
         )
+

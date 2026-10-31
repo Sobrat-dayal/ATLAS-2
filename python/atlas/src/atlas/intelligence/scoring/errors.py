@@ -122,3 +122,4 @@ class ScoringUnauthorizedActivationError(ScoringDomainError):
             code="SCORING_UNAUTHORIZED_GOVERNANCE",
             details={"user_id": user_id, "action": action},
         )
+
