@@ -92,3 +92,4 @@ Mounted on `/intelligence` with the tab `Exposure Engine (Stage 137)`:
 - **`ExposureInspector`**: Deep inspection side-drawer detailing Numerators, Denominators, Formulas, Bitemporal Timestamps, Source Manifests, and the mandatory Limitations Disclaimer.
 - **`ExposureScenarioWorkbench`**: Deterministic scenario shock workbench for simulating percentage shifts on Sectors, Securities, Countries, or Rates, featuring the mandatory `HYPOTHETICAL SCENARIO RESULT` notice.
 - **`ExposureCoverageView`**: Multi-segment visual bar comparing Covered Population vs Unallocated Residuals, detailing covered and uncovered dimensions.
+

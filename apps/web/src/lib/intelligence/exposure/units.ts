@@ -62,3 +62,4 @@ export function formatExposureAmount(
     return formatCurrencyAmount(amount, currency);
   }
 }
+

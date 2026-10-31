@@ -61,3 +61,4 @@ def calculate_fund_lookthrough(
     dfs(start_entity_id, Decimal("1.0"), [], 0)
     primary_path = found_paths[0] if found_paths else [start_entity_id]
     return total_effective_weight, primary_path
+

@@ -51,3 +51,4 @@ describe('Financial and Economic Exposure Engine Frontend Libs (Stage 137)', () 
     assert.strictEqual(formatExposureAmount(100, 'QUALITATIVE'), 'Documented Qualitative');
   });
 });
+

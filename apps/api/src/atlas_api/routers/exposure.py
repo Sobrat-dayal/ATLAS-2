@@ -310,3 +310,4 @@ def get_fixture_data(fixture_id: str) -> Dict[str, Any]:
         x = get_fixture_x_geographic_residual()
         return {"total_revenue": str(x["total_revenue"]), "segments": [{"region_name": s["region_name"], "revenue": str(s["revenue"])} for s in x["segments"]]}
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Fixture {fixture_id} not found.")
+

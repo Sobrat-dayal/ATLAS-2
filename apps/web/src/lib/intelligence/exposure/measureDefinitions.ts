@@ -107,3 +107,4 @@ export const CLIENT_MEASURE_DEFINITIONS: Record<string, ExposureMeasureDefinitio
     description: "Conditional profit/loss under user hypothetical assumptions. Explicitly disclaims market prediction."
   }
 };
+

@@ -64,3 +64,4 @@ def calculate_group_consolidated_revenue(
     raise DoubleCountingError(
         f"Parent {parent_id} is marked {parent_record.consolidation_basis.value}; cannot combine without verified intercompany elimination ledger."
     )
+

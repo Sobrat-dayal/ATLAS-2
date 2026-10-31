@@ -68,3 +68,4 @@ def convert_currency_point_in_time(
         to_currency=to_currency.upper(),
         as_of=as_of_date
     )
+
