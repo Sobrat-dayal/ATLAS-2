@@ -11527,3 +11527,56 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1964. **Production Routing (`/intelligence`)**: Clean Next.js page integration preserving standard PageHeader, fullscreen controls, and desktop AppShell.
 1965. **Stage 138 Quality Gate & Boundary Enforcement**: All 23 backend tests passed (15 canonical reference fixtures A to O), all 79 regression tests passed across Stages 135, 136, 137 (102 total backend tests), all 306 web unit tests passed, and Next.js production build cleanly succeeded. Prohibit implementing Stage 139 (Scoring) or Stage 140 (God's Eye).
 
+## Stage 139: Intelligence Scoring, Prioritization, Explainability, Validation and Governance Engine
+1966. **Intelligence Scoring Architecture (`AtlasScoringService`)**: Master service orchestrating operational review priority, entity relevance, portfolio attention, economic significance, geographic proximity, and evidence assessment without confusing relevance with financial forecasts.
+1967. **Core Semantic Invariant ("Priority Is Not Risk")**: Prioritization scores indicate order of human review within a candidate set; they must never be interpreted as probability of price movement, default risk, or portfolio loss.
+1968. **Additive Baseline Factor Decomposition**: Deterministic rule-based formula guarantees that individual factor contribution points sum identically to the final 0–100 index without residual discrepancy.
+1969. **Bitemporal Point-in-Time Availability**: Feature extraction strictly enforces that feature publication timestamps do not exceed `known_as_of`, preventing look-ahead leakage (`ScoringLookAheadViolationError`).
+1970. **Scoring Objective Registry (`ScoringObjectiveRegistry`)**: Registered institutional objectives (`EVENT_REVIEW_PRIORITY`, `EVENT_ENTITY_RELEVANCE`, `PORTFOLIO_EVENT_ATTENTION`, `ECONOMIC_EVENT_RELEVANCE`, `GEOGRAPHIC_EVENT_RELEVANCE`, `SOURCE_EVIDENCE_ASSESSMENT`).
+1971. **Anti-Syndication Duplication Guard (Fixture E)**: Syndicated news copies sharing the same root article fingerprint or original source count as 1 independent corroboration, eliminating article-count gaming.
+1972. **Source Conflict Penalty (Fixture F)**: When independent sources report conflicting values, the evidence quality score flags `has_source_conflicts: True` and applies a conflict penalty.
+1973. **Explicit Missing Data Policy (Fixture G)**: Missing features are reported explicitly with coverage ratios; silent 0 or synthetic average imputation is strictly prohibited.
+1974. **Model Governance Lifecycle (`ModelGovernanceManager`)**: Institutional version management across `DRAFT`, `VALIDATING`, `VALIDATED`, `APPROVED`, `ACTIVE`, `SHADOW`, `DISABLED`, `ROLLED_BACK`, and `RETIRED`.
+1975. **Governance Approval Gates (Fixture J)**: Only authorized roles (`ADMIN`, `RISK_ADMIN`, `QUANT_LEAD`) can promote candidate models, requiring validation manifests meeting benchmark thresholds ($\text{NDCG}@10 \ge 0.70$).
+1976. **Model Rollback Protection**: Authorized rollback restores the prior approved model version and records an immutable audit trail (`ScoringGovernanceAuditRecord`).
+1977. **Multi-Tenant Portfolio Attention Privacy (Fixture D)**: Private portfolio holdings, weights, and attention rankings belonging to Tenant A are completely shielded from Tenant B (`ScoringTenantAccessDeniedError`).
+1978. **Historical Holdings Point-in-Time Evaluation (Fixture K)**: Historical portfolio attention queries evaluate the holdings snapshot valid at the historical date, ignoring subsequent transactions.
+1979. **Geographic Proximity Damage Separation (Fixture L)**: Geographic proximity between physical events and facilities maps to a distance step function without implying physical damage or business downtime.
+1980. **Category Comparability Enforcement (Fixture M)**: Prohibits raw cross-category magnitude comparisons between incompatible event families (e.g. earthquake magnitude vs interest rate basis points).
+1981. **Probabilistic Calibration Limits (Fixture N)**: Calibration metrics (Brier score, ECE) apply strictly when evaluating against true binary outcome labels; non-probabilistic priority indices explicitly mark calibration not applicable.
+1982. **Event Retraction Invalidation (Fixture O)**: Retracted events are marked `NOT_APPLICABLE` with `score_value: None`, removing them from active priority ranking.
+1983. **Deterministic Secondary Tie-Breaking (Fixture Q)**: Identical candidate sets sort deterministically by score value, `valid_at`, and canonical `event_id`, ensuring stable pagination across runs.
+1984. **Quota and Resource Protection (Fixture P)**: Ranking queries exceeding 500 candidate events raise `ScoringQuotaExceededError`.
+1985. **Source Entitlement Invalidation (Fixture R)**: Features depending on unlicensed provider sources are omitted without leaking confidential information.
+1986. **Scoring Interpretation Semantics (Fixture S)**: Bounded index partitions (`URGENT_REVIEW_RECOMMENDED`, `ELEVATED_REVIEW_PRIORITY`, `STANDARD_INVESTIGATION`, `ROUTINE_MONITORING`) with mandatory disclaimers.
+1987. **Feature Registry (`CANONICAL_FEATURES`)**: Versioned feature catalog defining source domains, transformations, units, and availability policies.
+1988. **Domain-Specific Half-Life Exponential Decay**: Domain-specific half-life parameters: breaking alerts (24h), corporate earnings (72h), central bank decisions (168h), regulatory actions (720h).
+1989. **Feature Snapshot Immutability (`IntelligenceFeatureSnapshot`)**: Immutable snapshot capturing exact point-in-time feature values, available timestamps, and missingness.
+1990. **Scoring Policy Registry (`ScoringPolicyRegistry`)**: Versioned scoring policy catalog specifying factor weights, coverage thresholds, and missing data policies.
+1991. **Model Registry (`ModelRegistry`)**: Versioned model registry tracking active and supported versions (`v1.0.0`, `v2.0.0`).
+1992. **Quantitative Validation Metrics (`RankingMetrics`)**: Formal implementations of $\text{DCG}@K$, $\text{NDCG}@K$, and $\text{Precision}@K$.
+1993. **Model Telemetry & Drift Monitoring (`ScoringMonitor`)**: Real-time tracking of score distributions, high-priority fractions, feature missingness, and drift status alerts.
+1994. **REST Endpoint `GET /api/v1/intelligence/scoring/capabilities`**: Expose supported objectives, scales, and compliance guarantees.
+1995. **REST Endpoint `GET /api/v1/intelligence/scoring/objectives`**: Return list of registered institutional scoring objectives.
+1996. **REST Endpoint `GET /api/v1/intelligence/scoring/objectives/{id}`**: Retrieve single scoring objective definition.
+1997. **REST Endpoint `GET /api/v1/intelligence/scoring/models`**: List registered scoring models and active versions.
+1998. **REST Endpoint `GET /api/v1/intelligence/scoring/models/{id}`**: Retrieve model definition.
+1999. **REST Endpoint `GET /api/v1/intelligence/scoring/policies`**: List scoring policies and factor weights.
+2000. **REST Endpoint `GET /api/v1/intelligence/scoring/policies/{id}`**: Retrieve policy details.
+2001. **REST Endpoint `POST /api/v1/intelligence/scoring/scores/calculate`**: Calculate point-in-time score and exact factor contributions.
+2002. **REST Endpoint `POST /api/v1/intelligence/scoring/rankings/query`**: Rank candidate events with deterministic secondary tie-breaking.
+2003. **REST Endpoint `POST /api/v1/intelligence/scoring/rankings/compare`**: Side-by-side comparison between scoring model versions.
+2004. **REST Endpoint `GET /api/v1/intelligence/scoring/evaluations`**: List model historical evaluation manifests.
+2005. **REST Endpoint `GET /api/v1/intelligence/scoring/evaluations/{id}`**: Retrieve evaluation manifest by ID.
+2006. **REST Endpoint `GET /api/v1/intelligence/scoring/telemetry`**: Operational health, score distribution, and drift status.
+2007. **REST Endpoint `POST /api/v1/intelligence/scoring/governance/models/{id}/activate`**: Promote validated model version to production.
+2008. **REST Endpoint `POST /api/v1/intelligence/scoring/governance/models/{id}/rollback`**: Roll back model to previous approved version.
+2009. **REST Endpoint `GET /api/v1/intelligence/scoring/governance/audit`**: Retrieve immutable governance audit log.
+2010. **Interactive Scoring Workspace (`IntelligenceScoringView`)**: Master view coordinating ranking table, deep score inspector, model registry, and settings.
+2011. **Prioritized Event Ranking Table (`IntelligenceRankingTable`)**: Institutional table with rank badges, score pills, coverage indicators, and row inspection.
+2012. **Deep Score Inspector (`IntelligenceScoreInspector`)**: Inspection drawer displaying factor contributions, exact points, coverage ratios, conflict notices, and limitations.
+2013. **Factor Contribution Chart (`IntelligenceFactorBreakdown`)**: Proportional contribution bar chart illustrating exact factor point additions.
+2014. **Model Registry & Benchmark Viewer (`IntelligenceModelDetails`)**: Model registry cards, active versions, and benchmark evaluation metrics.
+2015. **Stage 139 Quality Gate & Boundary Enforcement**: All 24 backend tests passed (including all 19 canonical fixtures A to S), all 102 regression tests passed across Stages 135–138 (126 total backend tests), all 309 web unit tests passed, and Next.js production build succeeded cleanly. Prohibit implementing Stage 140 (God's Eye Financial Intelligence).
+
+

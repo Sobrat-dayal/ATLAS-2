@@ -60,14 +60,22 @@ export function IntelligenceOverview({
             Verified state of financial, economic, corporate, and physical world events.
           </div>
         </div>
-        <button
-          onClick={loadOverview}
-          disabled={loading}
-          className="p-1.5 rounded bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
-          title="Refresh intelligence overview"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onNavigateToView("SCORING")}
+            className="px-3 py-1 rounded bg-emerald-950/80 border border-emerald-800 hover:bg-emerald-900 text-emerald-300 font-semibold flex items-center gap-1.5 transition-colors text-xs"
+          >
+            <span>Prioritized for Review</span>
+          </button>
+          <button
+            onClick={loadOverview}
+            disabled={loading}
+            className="p-1.5 rounded bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+            title="Refresh intelligence overview"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       {/* Warnings Banner if any source is degraded */}

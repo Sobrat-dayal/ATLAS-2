@@ -11,6 +11,7 @@ import { IntelligenceHistoricalView } from "./IntelligenceHistoricalView";
 import { IntelligenceSourcesView } from "./IntelligenceSourcesView";
 import { IntelligenceInvestigationWorkspace } from "./IntelligenceInvestigationWorkspace";
 import { IntelligenceSearchModal } from "./IntelligenceSearchModal";
+import { IntelligenceScoringView } from "@/components/intelligence/scoring";
 
 // Stage 135-137 Subsystem Integrations
 import { UniversalEventExplorer } from "@/components/events/UniversalEventExplorer";
@@ -51,7 +52,10 @@ export function IntelligenceShell() {
 
   const handleNavigateToView = (view: string, entityOrEventId?: string) => {
     const upper = view.toUpperCase();
-    if (upper.includes("EVENT")) {
+    if (upper.includes("SCORE") || upper.includes("PRIOR")) {
+      setActiveView("SCORING");
+      if (entityOrEventId) setSelectedEventId(entityOrEventId);
+    } else if (upper.includes("EVENT")) {
       setActiveView("EVENTS");
       if (entityOrEventId) setSelectedEventId(entityOrEventId);
     } else if (upper.includes("ENTIT")) {
@@ -116,6 +120,13 @@ export function IntelligenceShell() {
           <div className="h-full overflow-y-auto">
             <UniversalEventExplorer />
           </div>
+        )}
+
+        {activeView === "SCORING" && (
+          <IntelligenceScoringView
+            asOfDate={asOfDate}
+            onNavigateToView={handleNavigateToView}
+          />
         )}
 
         {activeView === "ENTITIES" && (

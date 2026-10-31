@@ -35,6 +35,7 @@ export function IntelligenceToolbar({
   const views: Array<{ id: IntelligenceViewType; label: string; icon: React.ReactNode }> = [
     { id: "OVERVIEW", label: "Overview", icon: <Layers className="w-3.5 h-3.5" /> },
     { id: "EVENTS", label: "Event Monitor", icon: <Radio className="w-3.5 h-3.5" /> },
+    { id: "SCORING", label: "Priority Scoring", icon: <Sliders className="w-3.5 h-3.5" /> },
     { id: "ENTITIES", label: "Entities", icon: <Building2 className="w-3.5 h-3.5" /> },
     { id: "GRAPH", label: "Knowledge Graph", icon: <Network className="w-3.5 h-3.5" /> },
     { id: "EXPOSURE", label: "Exposure Engine", icon: <PieChart className="w-3.5 h-3.5" /> },

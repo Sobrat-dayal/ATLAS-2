@@ -67,6 +67,7 @@ from .events import router as events_router
 from .knowledge_graph import router as knowledge_graph_router
 from .exposure import router as exposure_router
 from .intelligence import router as intelligence_router
+from .scoring import router as scoring_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -136,3 +137,4 @@ api_router.include_router(events_router, prefix="")
 api_router.include_router(knowledge_graph_router, prefix="")
 api_router.include_router(exposure_router, prefix="")
 api_router.include_router(intelligence_router, prefix="")
+api_router.include_router(scoring_router, prefix="")

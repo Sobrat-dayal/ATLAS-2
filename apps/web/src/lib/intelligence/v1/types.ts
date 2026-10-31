@@ -5,6 +5,7 @@
 export type IntelligenceViewType =
   | "OVERVIEW"
   | "EVENTS"
+  | "SCORING"
   | "ENTITIES"
   | "GRAPH"
   | "EXPOSURE"

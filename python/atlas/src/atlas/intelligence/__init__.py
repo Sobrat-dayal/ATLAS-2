@@ -64,6 +64,19 @@ from atlas.intelligence.errors import (
 from atlas.intelligence.service import AtlasIntelligenceService
 from atlas.intelligence.investigations.presets import CANONICAL_INVESTIGATION_PRESETS, list_investigation_presets
 from atlas.intelligence.investigations.panels import PANEL_REGISTRY, list_panel_definitions
+from atlas.intelligence.scoring import (
+    AtlasScoringService,
+    AtlasIntelligenceScore,
+    FactorContribution,
+    ScoreObjectiveId,
+    ScoreScale,
+    ScoreStatus,
+    RankedItem,
+    ScoringEvaluationManifest,
+    ModelRegistry,
+    ScoringPolicyRegistry,
+    ScoringObjectiveRegistry,
+)
 
 __all__ = [
     # Knowledge Graph (Stage 136)
@@ -111,6 +124,18 @@ __all__ = [
     "list_investigation_presets",
     "PANEL_REGISTRY",
     "list_panel_definitions",
+    # Intelligence Scoring Engine (Stage 139)
+    "AtlasScoringService",
+    "AtlasIntelligenceScore",
+    "FactorContribution",
+    "ScoreObjectiveId",
+    "ScoreScale",
+    "ScoreStatus",
+    "RankedItem",
+    "ScoringEvaluationManifest",
+    "ModelRegistry",
+    "ScoringPolicyRegistry",
+    "ScoringObjectiveRegistry",
     # Errors
     "IntelligenceAmbiguousIdentityError",
     "IntelligenceDomainError",
