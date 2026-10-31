@@ -50,3 +50,4 @@ def analyze_commodity_mention(
             "because numerical hedging/consumption disclosures were not reported."
         )
     )
+

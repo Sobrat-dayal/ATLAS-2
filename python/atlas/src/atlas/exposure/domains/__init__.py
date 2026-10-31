@@ -25,3 +25,4 @@ __all__ = [
     "analyze_entity_sector_classification",
     "analyze_event_driven_exposure",
 ]
+

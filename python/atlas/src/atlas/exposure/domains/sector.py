@@ -71,3 +71,4 @@ def analyze_entity_sector_classification(
         uncertainty_class=UncertaintyClass.VERIFIED_DETERMINISTIC,
         explanation=f"{entity_ref.canonical_name} is classified in {taxonomy} Sector '{sector_name}'."
     )
+

@@ -267,3 +267,4 @@ class ExposureAnalysisRun(BaseModel):
     tenant_id: Optional[str] = None
     started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
+

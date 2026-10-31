@@ -43,3 +43,4 @@ def verify_period_compatibility(
         )
 
     return True, "COMPATIBLE"
+

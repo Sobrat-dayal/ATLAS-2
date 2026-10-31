@@ -59,3 +59,4 @@ def analyze_event_driven_exposure(
         explanation=explanation,
         limitations_disclaimer="Event-driven exposure measures structural connectedness only. It does not predict market price changes or damage."
     )
+

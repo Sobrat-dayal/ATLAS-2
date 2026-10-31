@@ -61,3 +61,4 @@ def analyze_option_delta_exposure(
             f"yields a delta-equivalent exposure of {delta_equiv} {currency}."
         )
     )
+

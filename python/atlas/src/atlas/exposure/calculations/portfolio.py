@@ -103,3 +103,4 @@ def calculate_portfolio_exposures(
         sector_weights=sector_weights,
         country_weights=country_weights
     )
+

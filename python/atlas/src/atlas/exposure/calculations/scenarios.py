@@ -128,3 +128,4 @@ def calculate_option_delta_equivalent(
     Formula: Contracts * Multiplier * Underlying_Price * Delta
     """
     return contracts * multiplier * underlying_price * delta
+

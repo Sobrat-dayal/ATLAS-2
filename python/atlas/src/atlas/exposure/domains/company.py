@@ -98,3 +98,4 @@ def analyze_company_geographic_revenue(
         "results": results,
         "coverage_summary": cov_summary
     }
+

@@ -112,3 +112,4 @@ def analyze_geographic_presence_vs_revenue(
         )
 
     return {"results": results}
+

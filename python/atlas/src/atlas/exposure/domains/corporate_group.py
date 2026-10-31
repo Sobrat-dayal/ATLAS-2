@@ -58,3 +58,4 @@ def analyze_corporate_group(
         "results": [result],
         "group_data": group_data
     }
+
