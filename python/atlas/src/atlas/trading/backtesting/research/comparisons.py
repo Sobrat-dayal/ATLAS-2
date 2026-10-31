@@ -35,3 +35,4 @@ def compare_backtest_runs(
         })
 
     return comparison
+
