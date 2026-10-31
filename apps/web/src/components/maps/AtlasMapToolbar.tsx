@@ -12,6 +12,7 @@ import {
   PanelRight,
   Building2,
   Factory,
+  Radio,
 } from "lucide-react";
 import { AtlasMapSearch } from "./AtlasMapSearch";
 import { AtlasMapStyleSwitcher } from "./AtlasMapStyleSwitcher";
@@ -31,6 +32,8 @@ interface AtlasMapToolbarProps {
   onToggleCorporateMode?: () => void;
   isInfrastructureModeOpen?: boolean;
   onToggleInfrastructureMode?: () => void;
+  isLiveWorldOpen?: boolean;
+  onToggleLiveWorld?: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   searchResults: GeographicSearchResult[];
@@ -63,6 +66,8 @@ export function AtlasMapToolbar({
   onToggleCorporateMode,
   isInfrastructureModeOpen = false,
   onToggleInfrastructureMode,
+  isLiveWorldOpen = false,
+  onToggleLiveWorld,
   searchQuery,
   onSearchChange,
   searchResults,
@@ -206,6 +211,23 @@ export function AtlasMapToolbar({
           >
             <Factory className="w-3.5 h-3.5 text-purple-400" />
             <span className="hidden sm:inline">Infrastructure</span>
+          </button>
+        )}
+
+        {/* Live Physical-World Intelligence (Stage 134) */}
+        {onToggleLiveWorld && (
+          <button
+            type="button"
+            onClick={onToggleLiveWorld}
+            className={`h-7 px-2 flex items-center gap-1.5 rounded border text-[11px] transition-colors ${
+              isLiveWorldOpen
+                ? "bg-emerald-600/20 text-emerald-400 border-emerald-500/40"
+                : "bg-atlas-surface-2 text-atlas-text-secondary border-atlas-border-default hover:text-atlas-text-primary"
+            }`}
+            title="Toggle Live Physical-World Intelligence"
+          >
+            <Radio className={`w-3.5 h-3.5 ${isLiveWorldOpen ? "text-emerald-400 animate-pulse" : "text-emerald-500"}`} />
+            <span className="hidden sm:inline">Live World</span>
           </button>
         )}
 

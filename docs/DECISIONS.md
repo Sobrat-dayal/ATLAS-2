@@ -11225,3 +11225,74 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1713. **Frontend Test Suite Execution**: Verify all 284 unit tests passing across 21 test suites in the web application.
 1714. **Production Build Cleanliness**: Confirm Next.js production build (`pnpm --filter web build`) completes cleanly across all 38 platform routes.
 1715. **Stage 134 Live-World Integration Foundation**: Provide authoritative static infrastructure assets and networks as the spatial anchor for Stage 134's live vessel, flight, and satellite telemetry.
+
+
+## Stage 134: Live Physical-World Intelligence and Real-Time Geospatial Observation System
+
+### Architectural Foundation & Observation Layers
+1716. **Live Physical-World Intelligence Engine**: Establish unified real-time and near-real-time ingestion, caching, and visualization across flights, vessels, satellites, weather alerts, earthquakes, and active fires.
+1717. **Canonical Data Class Separation**: Rigorously classify all geospatial telemetry into `OBSERVED` (physical sensor/transponder measurement), `PROPAGATED` (orbital propagation from Keplerian elements), `FORECAST` (numerical atmospheric/ocean model run), or `REFERENCE` (static infrastructure).
+1718. **The Four Temporal Clocks**: Maintain four distinct timestamps for every telemetry record: `observed_at`, `source_published_at`, `received_at`, and `ingested_at`.
+1719. **Physical Clock Display Age Invariant**: Calculate display age and freshness metrics strictly against the physical measurement clock (`observed_at`), never against ingestion receipt or client WebSocket arrival.
+1720. **Multi-Category Telemetry Envelope**: Standardize live observations into `AtlasGeoObservation` with explicit provider ID, product ID, source revision, geometry, timestamps, freshness state, and attribution.
+
+### Freshness Evaluation Engine
+1721. **Six-State Freshness Lifecycle**: Classify observation currency into `CURRENT`, `DELAYED`, `STALE`, `EXPIRED`, `HISTORICAL`, or `SOURCE_UNAVAILABLE`.
+1722. **Category-Specific Nominal Latency Policies**: Enforce category-tailored latency baselines (10s for aircraft ADS-B, 60s for vessel AIS, 1s for satellites, 60s for CAP alerts, 3m for earthquakes, 3h for satellite fire passes).
+1723. **Automated Stale Threshold Degradation**: Flag telemetry exceeding stale thresholds (120s for aircraft, 10m for vessels, 4h for weather alerts) to trigger downstream quantitative uncertainty discounting.
+1724. **Temporal Expiration & Hot Eviction**: Evict observations exceeding maximum shelf-life (15m for aircraft, 2h for vessels, 24h for active fires) from the active live viewport.
+1725. **Explicit Source Status Fallbacks**: Report `SOURCE_UNAVAILABLE` when upstream providers are degraded or unconfigured rather than showing stale data as current.
+
+### Watermarks, Revisioning & Temporal Invariants
+1726. **Watermark Monotonic Forward Progress**: Track physical measurement watermarks per entity; reject delayed out-of-order packets from overwriting newer verified positions in hot active state (Fixture C).
+1727. **Historical Out-of-Order Retention**: Record out-of-order delayed packets in the historical time-series buffer while preserving the newer position in active hot cache.
+1728. **Event Identity & In-Place Revisioning**: Manage ongoing natural events (e.g. USGS earthquakes) by deduplication key `(provider_id, product_id, event_id)` (Fixture A).
+1729. **Zero Event Count Inflation on Revision**: Upsert event revisions (e.g. earthquake $M5.2 \to M5.4$) in-place, incrementing `source_revision` and preserving audit history without duplicating entities or inflating counts.
+1730. **CAP Weather Alert Expiration Invariant**: Enforce automatic transition to `EXPIRED` status as soon as wall-clock UTC exceeds the alert's `expires_utc` timestamp.
+
+### Trajectory Analysis & Signal Integrity
+1731. **Trajectory Gap Splitting Invariant**: Prohibit drawing continuous interpolated straight lines across tracking blackouts, transponder reboots, or oceanic shadows (Fixture D).
+1732. **Aircraft Signal Blackout Horizon**: Split flight trajectories into distinct segments when observations are separated by more than 15 minutes.
+1733. **Vessel Terrestrial/Satellite AIS Gap Horizon**: Split marine trajectories into distinct segments when tracking reports are separated by more than 2 hours.
+1734. **Velocity Anomaly Rejection**: Detect and split trajectory segments on impossible velocity jumps (>1350 km/h for commercial aircraft, >95 km/h for cargo vessels).
+1735. **Gap Reason Annotation**: Annotate segmented trajectories with explicit audit reasons (`Tracking blackout: 45.0 min gap exceeds 15m threshold`).
+
+### SGP4 Orbital Mechanics & Satellite Ephemeris
+1736. **Analytical SGP4 Keplerian Propagator**: Compute instantaneous satellite positions from Two-Line Element (TLE) and Orbit Mean-Elements Messages (OMM) (Fixture E).
+1737. **J2 Secular Perturbations Modeling**: Incorporate Earth oblateness ($J_2$) secular rates for right ascension of ascending node regression ($\dot{\Omega}$) and argument of perigee advance ($\dot{\omega}$).
+1738. **Greenwich Mean Sidereal Time (GMST) Rotation**: Rotate Earth-Centered Inertial (ECI) coordinates to Earth-Centered Earth-Fixed (ECEF) using IAU-standard GMST.
+1739. **WGS84 Closed-Form Geodetic Transformation**: Convert ECEF coordinates to geodetic latitude, longitude, and ellipsoidal altitude using Bowring's method.
+1740. **Instantaneous Horizon Footprint Radius**: Compute circular ground footprint visibility radius on Earth's surface as $s = R_E \arccos(R_E / (R_E + h))$.
+1741. **Stale Orbital Epoch Flagging**: Flag orbital elements older than 14 days as `is_stale_epoch = true` to alert users of ephemeris accuracy degradation (Fixture F).
+1742. **Critical Ephemeris Staleness Enforcement**: Raise `LiveStaleOrbitElementsError` when attempting high-precision propagation with epoch age exceeding 30 days.
+1743. **Explicit Propagation Provenance Note**: Label all satellite states with `PROPAGATED FROM ORBITAL ELEMENTS (SGP4)` and data class `PROPAGATED`.
+
+### Provider Feeds & Zero-Fabrication Gating
+1744. **Zero Simulation Invariant**: Prohibit injecting fabricated, randomized, or simulated flights, vessels, fires, or earthquakes in production mode.
+1745. **NASA FIRMS MAP_KEY Gating**: Restrict live thermal hotspot fetching behind valid NASA FIRMS MAP_KEY authorization; report honest `UNCONFIGURED` when unkeyed (Fixture G).
+1746. **Genuine VIIRS/MODIS Thermal Detection Parsing**: Parse real Fire Radiative Power (MW), brightness temperatures, confidence levels, and day/night flags.
+1747. **NOAA/NWS CAP v1.2 Alert GeoJSON Parsing**: Extract emergency polygon boundary rings, severity classifications, and active validity periods (Fixture H).
+1748. **OpenSky & Commercial AIS Feeds Gating**: Fail closed with `UNCONFIGURED` or `SOURCE_UNAVAILABLE` when institutional API credentials are missing (Fixtures I & K).
+1749. **Attribution & Terms of Service Compliance**: Attach mandatory source attribution, license notes, and endpoint documentation links to every provider and observation.
+
+### High-Volume Aggregation & Realtime Streaming
+1750. **Live Observation H3 Spatial Indexing**: Dynamically index high-volume live observations into H3 hexagonal cells across resolutions 3 to 7 (Fixture L).
+1751. **Dual Count Reporting Invariant**: Report both `raw_observation_count` and `distinct_entity_count` per H3 cell to prevent overcounting stationary transponders.
+1752. **Hot State Store Monotonic Sequence Tracking**: Assign monotonic sequence numbers to incoming valid observations for cursor-based delta sync (Fixture J).
+1753. **Snapshot & Delta Sync Protocol**: Enable clients to retrieve full initial snapshots and subsequently poll or stream deltas using `since_sequence`.
+1754. **Historical Temporal Playback Scrubbing**: Support querying physical world snapshots as of any historical timestamp within authorized retention windows (Fixture N).
+1755. **Viewport Bounding Box Spatial Filtering**: Enforce WGS84 coordinate boundary validation on all live observation queries, rejecting invalid coordinates (Fixture O).
+
+### Infrastructure Proximity Correlation (No Damage Assertion)
+1756. **Stage 133 Infrastructure Asset Linking**: Spatially correlate live natural events (earthquakes, wildfires, CAP polygons) with Stage 133 critical infrastructure facilities (Fixture M).
+1757. **Non-Predictive Damage Invariant**: Prohibit asserting physical destruction, structural failure, or operational outage based solely on geographic proximity.
+1758. **Mandatory Unverified Proximity Classification**: Tag all proximity matches with `damage_assessment: "UNVERIFIED_PROXIMITY_ONLY"` and `damage_confirmed: false`.
+1759. **Institutional Proximity Disclaimer**: Attach mandatory legal disclaimer: *"Spatial proximity does not constitute physical damage, structural failure, or operational outage. On-site telemetry or official inspection required."*
+
+### UI, Inspection & Verification
+1760. **Bloomberg-Style Live World Mode**: Provide an interactive Live World mode in `/maps` with layer toggles, provider status dialog, playback bar, and observation inspector.
+1761. **Live Layer Selection Panel**: Enable granular toggling of Flights, Ships, Satellites, Weather Alerts, Earthquakes, and Fires with live counts.
+1762. **Observation Inspector Drawer**: Display physical measurement clocks, freshness badges, data class badges, and telemetry attributes for selected observations.
+1763. **Temporal Playback Scrubber**: Offer intuitive Live, Paused, and Historical playback modes with 1x, 5x, 15x, and 60x speed multipliers.
+1764. **Full 15-Fixture Verification**: Verify all 15 institutional test fixtures (Fixtures A through O) across backend pytest (`test_maps_stage134_v1.py`) and web tests.
+1765. **Zero Regression Gate Across All Map Stages**: Ensure 100% test pass on backend stages 129–134 (96/96 tests passing), frontend web tests (290/290 passing), and clean production build.

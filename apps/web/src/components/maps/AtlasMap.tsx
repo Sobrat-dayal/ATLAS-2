@@ -38,6 +38,7 @@ import { ScatterplotLayer } from "@deck.gl/layers";
 import { CorporateMapMode } from "./corporate/CorporateMapMode";
 import { CorporateFacility } from "@/lib/maps/corporate/types";
 import { InfrastructureMapMode } from "./infrastructure/InfrastructureMapMode";
+import { LiveWorldMode } from "./live/LiveWorldMode";
 import {
   maplibreToCesiumCamera,
   cesiumToMaplibreCamera,
@@ -136,6 +137,9 @@ export function AtlasMap({
   // Physical Infrastructure Intelligence Mode (Stage 133)
   const [isInfrastructureModeOpen, setIsInfrastructureModeOpen] = useState<boolean>(false);
   const [selectedInfrastructureAssetId, setSelectedInfrastructureAssetId] = useState<string | null>(null);
+
+  // Live Physical-World Intelligence Mode (Stage 134)
+  const [isLiveWorldOpen, setIsLiveWorldOpen] = useState<boolean>(false);
 
   // Spatial Analytics (Stage 131 deck.gl + H3)
   const analytics = useSpatialAnalytics();
@@ -441,6 +445,8 @@ export function AtlasMap({
         onToggleCorporateMode={() => setIsCorporateModeOpen((prev) => !prev)}
         isInfrastructureModeOpen={isInfrastructureModeOpen}
         onToggleInfrastructureMode={() => setIsInfrastructureModeOpen((prev) => !prev)}
+        isLiveWorldOpen={isLiveWorldOpen}
+        onToggleLiveWorld={() => setIsLiveWorldOpen((prev) => !prev)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchResults={searchResults}
@@ -495,6 +501,15 @@ export function AtlasMap({
               />
             </div>
           </div>
+        )}
+
+        {/* Live Physical-World Intelligence (Stage 134) */}
+        {isLiveWorldOpen && (
+          <LiveWorldMode
+            onNavigateToCoordinates={(lon, lat, zoom) => {
+              mapControlsRef.current?.flyTo(lon, lat, zoom || 11);
+            }}
+          />
         )}
 
         {/* Left Layer Panel */}
