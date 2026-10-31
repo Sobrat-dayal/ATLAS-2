@@ -11631,4 +11631,56 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 2064. **Deep Multi-Domain Situational Inspector (`GodsEyeInspector`)**: Deep inspection panel coordinating spatial feature properties, market context, revenue exposure, graph topology, and evidence sources.
 2065. **Stage 140 Master Command Center Integration & Roadmap Boundary Enforcement**: All 29 backend tests passed, all 126 regression tests passed (155 total backend tests), all 313 web tests passed, Next.js production build clean. Complete Stage 140 and stop without implementing Stage 141 prematurely.
 
+## Stage 141: Options Analytics Terminal
+2066. **Canonical Options Analytics Engine Architecture (`AtlasOptionsService`)**: Master institutional options analytics service coordinating contract registry, quotes, chains, volatility modeling, strategy analysis, and portfolio look-through.
+2067. **Standard OSI 21-Character Symbology Standard (`format_osi_symbol`, `parse_osi_symbol`)**: Full support for OCC standardized 21-character symbology (e.g., `SPY   240621C00100000`) with root padding, 6-digit expiration dates, and 8-digit fractional strike serialization.
+2068. **Multi-Market Contract Specifications & Indian NSE Derivatives Parser (`parse_indian_nse_symbol`)**: Specialized parsing for Indian National Stock Exchange (NSE) derivatives symbology (e.g., `NIFTY24JUN22000CE`).
+2069. **Dynamic Contract Multipliers & Lot Size Scaling (50 for NIFTY, 100 for U.S. Equities)**: Eliminates hardcoded 100-share assumptions; contract deliverables dynamically scale by canonical market multipliers (e.g., lot size 50 and INR strike currency for NIFTY).
+2070. **Non-Fabrication of Options Data: Zero Bid Integrity (`ZERO_BID`)**: Zero bid quotes are preserved with explicit zero-bid data quality flags and never replaced with artificial positive bids.
+2071. **Crossed and Locked Market Quality Flagging**: Automatically flags aberrant market conditions where Bid > Ask (`CROSSED_MARKET`) or Bid == Ask (`LOCKED_MARKET`) without dropping quotes.
+2072. **Stale Market Quote Detection & Quality Flagging (`STALE_QUOTE`)**: Identifies delayed or stale quote updates and attaches explicit data quality flags for institutional transparency.
+2073. **Open Interest Prior-Session Reporting Date Fidelity (`open_interest_as_of`)**: Open interest explicitly preserves clearinghouse prior-day settlement dates rather than claiming intraday real-time calculation.
+2074. **Non-Fabrication of Greeks: Explicit `None` Preservation**: When source market feeds omit Greeks, fields remain `None` / unavailable. Missing Greeks are strictly prohibited from being populated with fake 0.0 values.
+2075. **Provider Capabilities & Dynamic Market Data Entitlement Enforcement (`OptionsEntitlementRegistry`)**: Institutional multi-provider license management tracking authorized data vendors (e.g. `SRC_CBOE_AUTHORIZED`, `SRC_OPRA_STREAM`, `SRC_NSE_FEED`).
+2076. **Dynamic Provider Source Revocation Invalidation (`revoke_source`)**: Immediate invalidation and denial of market data access (`OptionsEntitlementRequiredError`) upon provider license revocation.
+2077. **Dual-Sided Options Chain Data Structure (`OptionChainResponse`, `OptionChainRow`)**: Institutional dual-sided calls/strikes/puts grid pairing call and put contracts by identical strike and expiration.
+2078. **Dynamic Moneyness Classification (`MoneynessState`)**: Precise classification of options into `IN_THE_MONEY`, `AT_THE_MONEY`, and `OUT_OF_THE_MONEY` relative to underlying spot prices.
+2079. **Intrinsic and Extrinsic Value Mathematical Formulations**: Exact analytical computation of intrinsic value ($\max(S - K, 0)$ for calls, $\max(K - S, 0)$ for puts) and extrinsic/time value.
+2080. **Accurate Days to Expiration Calculation (`calculate_days_to_expiration`)**: Calendar-day distance calculations between reference quote date and expiration date cutoff.
+2081. **Bid-Ask Spread Metrics & Percentage Evaluation (`calculate_spread_metrics`)**: Real-time evaluation of absolute spread, midpoint price, and percentage spread width with wide-spread warning thresholding.
+2082. **Source-Provided Implied Volatility Smile Extraction (`get_volatility_smile`)**: Accurate extraction and visualization of implied volatility across strikes without inventing synthetic volatility curves.
+2083. **25-Delta Skew and Directional Risk Reversal Analytics (`put_skew_25d`, `call_skew_25d`, `risk_reversal_25d`)**: Computation of institutional volatility skew metrics reflecting downside tail protection and upside call demand.
+2084. **At-The-Money Implied Volatility Term Structure Across Expirations (`get_volatility_term_structure`)**: ATM volatility curve tracking across expiration horizons and DTE tenors.
+2085. **Strike-by-Strike Volume and Open Interest Aggregation (`get_strike_activity`)**: Aggregation of trading volume and open interest distributions highlighting strike concentration levels.
+2086. **Put/Call Volume and Open Interest Ratio Aggregation**: Automated calculation of put/call volume and open interest ratios for underlying sentiment benchmarking.
+2087. **20 Canonical Multi-Leg Options Strategy Templates (`CANONICAL_TEMPLATES`)**: Pre-configured templates spanning Bull/Bear Spreads, Straddles, Strangles, Butterflies, Iron Condors, Collars, and Synthetic Stock.
+2088. **Corporate Action Nonstandard Deliverables Isolation (`OptionsAdjustedDeliverableUnsupportedError`)**: Strict exclusion of adjusted contracts (e.g. 150 shares + $250 cash) from vanilla 100-share expiration payoff calculations.
+2089. **Immutable Corporate Action Adjustment Registry (`OptionAdjustmentRegistry`)**: Reconciled historical registry documenting corporate action event IDs, adjustment types, and altered deliverable terms.
+2090. **Multi-Expiration Calendar and Diagonal Spread Payoff Exclusion (`OptionsMultiExpirationPayoffUnsupportedError`)**: Rejection of multi-expiration spreads from single-expiration terminal payoff curves, preserving boundary for Stage 142 QuantLib pricing.
+2091. **Net Opening Cash Flow Engine: Net Debit vs Net Credit Distinction (`calculate_opening_cash_flow`)**: Exact accounting of opening cash flow reflecting premium paid/collected scaled by lot size multipliers and exchange fees.
+2092. **Piecewise-Linear Terminal Expiration Payoff Formulation (`calculate_strategy_expiration_payoff`)**: Exact mathematical evaluation of terminal portfolio intrinsic value across underlying settlement prices $S_T$.
+2093. **High-Fidelity Expiration Payoff Curve Generation (`generate_payoff_curve`)**: High-resolution coordinate generation including strikes, breakevens, and integer step checkpoints for responsive charting.
+2094. **Analytical Breakeven Root Finding via Piecewise Linearity (`calculate_strategy_breakevens_and_bounds`)**: Analytical zero-crossing root detection identifying all exact breakeven settlement prices without numerical guessing.
+2095. **Max Profit and Max Loss Bound Classifications**: Exact mathematical classification of maximum gain and loss caps for defined-risk multi-leg strategies.
+2096. **Explicit Detection and Flagging of Unbounded Upside Losses on Naked Short Calls (`is_unbounded_loss=True`)**: Uncapped short call risk is mathematically identified, preventing false reporting of zero or finite loss.
+2097. **Severe Risk Warning Generation for Naked Short Option Positions**: Automated warning injection highlighting theoretically infinite loss exposure for short call structures.
+2098. **Read-Only Portfolio Options Holdings Integration (`OptionsPortfolioService`)**: Read-only tracking of active options positions with entry cost basis, current market value, and unrealized P&L.
+2099. **Strict Multi-Tenant Private Portfolio RLS Isolation (`OptionsTenantAccessDeniedError`)**: Complete privacy enforcement preventing cross-tenant inspection of options holdings.
+2100. **Universal Expiration Boundary Disclaimer**: Universal notice that expiration payoff models represent piecewise-linear intrinsic value at cutoff and not mark-to-market Black-Scholes pricing.
+2101. **Universal Options Risk Regulatory Warning (`OPTIONS_DISCLAIMERS["options_risk"]`)**: Mandatory disclaimer regarding options risk and requirement to review the Characteristics and Risks of Standardized Options (ODD).
+2102. **Execution Boundary Disclaimer: Read-Only Analytics with 0 Order Routing (`OPTIONS_DISCLAIMERS["execution"]`)**: Explicit confirmation that ATLAS provides research intelligence without automated trading or order execution.
+2103. **REST Endpoint `GET /api/v1/options/capabilities`**: Exposes supported markets, currencies, calculation models, and legal disclaimers.
+2104. **REST Endpoint `GET /api/v1/options/underlyings`**: Lists active underlying instruments, spot prices, and corporate action adjustment indicators.
+2105. **REST Endpoint `GET /api/v1/options/expirations/{symbol}`**: Returns listed expiration dates for an underlying.
+2106. **REST Endpoint `GET /api/v1/options/chain/{symbol}/{expiration_date}`**: Generates dual-sided options chains with moneyness and summary ratios.
+2107. **REST Endpoint `GET /api/v1/options/contract/{contract_id}`**: Retrieves comprehensive contract specifications, deliverables, and OSI standard symbols.
+2108. **REST Endpoint `GET /api/v1/options/quote/{contract_id}`**: Retrieves real-time or delayed quotes, trading volume, open interest, and source Greeks.
+2109. **REST Endpoint `GET /api/v1/options/volatility/smile/{symbol}/{expiration_date}`**: Retrieves IV smile points and 25-delta skew metrics.
+2110. **REST Endpoint `GET /api/v1/options/volatility/term-structure/{symbol}`**: Retrieves ATM implied volatility term structure across expiration dates.
+2111. **REST Endpoint `GET /api/v1/options/activity/{symbol}/{expiration_date}`**: Retrieves strike-by-strike volume and open interest distributions.
+2112. **REST Endpoint `GET /api/v1/options/strategies/templates`**: Returns metadata for 20 canonical options strategy templates.
+2113. **REST Endpoint `POST /api/v1/options/strategies/analyze`**: Performs multi-leg strategy validation, opening cash flow, breakeven root finding, and expiration payoff curve modeling.
+2114. **REST Endpoints for Portfolio Holdings and Corporate Action Adjustments**: `GET /api/v1/options/portfolios/{portfolio_id}` and `GET /api/v1/options/adjustments/{symbol}`.
+2115. **Options Terminal Web Cockpit Integration & Stage 142 Boundary Enforcement**: Master interactive cockpit (`OptionsTerminal`) mounted at `/options` with dual-sided chain, strategy builder, payoff diagrams, volatility analytics, and position tracking. All 29 backend tests passed, all 184 regression tests passed across Stages 135–141, all 8 frontend unit tests passed, and Next.js production build verified clean. Complete Stage 141 and stop without implementing Stage 142 (QuantLib & Advanced Options Pricing) prematurely.
+
 
