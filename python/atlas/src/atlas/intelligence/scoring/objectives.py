@@ -129,3 +129,4 @@ class ScoringObjectiveRegistry:
     @classmethod
     def list_objectives(cls) -> List[ScoringObjectiveDefinition]:
         return list(CANONICAL_OBJECTIVES.values())
+

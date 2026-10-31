@@ -143,3 +143,4 @@ class ScoringPolicyRegistry:
     @classmethod
     def register_policy(cls, policy: IntelligenceScoringPolicy):
         CANONICAL_POLICIES[policy.policy_id] = policy
+

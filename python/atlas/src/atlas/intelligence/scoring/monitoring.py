@@ -72,3 +72,4 @@ class ScoringMonitor:
             drift_status=drift_status,
             last_evaluated_at=datetime.now(timezone.utc).isoformat(),
         )
+
