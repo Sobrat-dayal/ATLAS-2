@@ -138,3 +138,4 @@ class SanctionsAdapter(BaseEventAdapter):
         ]
 
         return event, claims
+

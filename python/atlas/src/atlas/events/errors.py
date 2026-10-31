@@ -101,3 +101,4 @@ class EventQuarantineError(EventDomainError):
         )
         self.candidate_key = candidate_key
         self.reason = reason
+

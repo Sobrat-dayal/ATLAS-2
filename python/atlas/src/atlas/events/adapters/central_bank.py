@@ -142,3 +142,4 @@ class CentralBankAdapter(BaseEventAdapter):
             )
 
         return event, claims
+

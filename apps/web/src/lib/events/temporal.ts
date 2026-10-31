@@ -83,3 +83,4 @@ export function getActiveClockTime(event: AtlasUniversalEvent, clock: string): s
 export function computeRateChangeBps(newRate: number, prevRate: number): number {
   return Math.round((newRate - prevRate) * 100 * 100) / 100;
 }
+

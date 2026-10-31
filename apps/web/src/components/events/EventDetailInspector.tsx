@@ -424,3 +424,4 @@ export const EventDetailInspector: React.FC<EventDetailInspectorProps> = ({
     </div>
   );
 };
+

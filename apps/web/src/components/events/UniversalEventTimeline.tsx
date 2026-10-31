@@ -56,3 +56,4 @@ export const UniversalEventTimeline: React.FC<UniversalEventTimelineProps> = ({
     </div>
   );
 };
+

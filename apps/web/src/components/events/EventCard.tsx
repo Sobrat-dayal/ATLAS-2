@@ -150,3 +150,4 @@ export const EventCard: React.FC<EventCardProps> = ({
     </div>
   );
 };
+

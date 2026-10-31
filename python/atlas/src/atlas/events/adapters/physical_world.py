@@ -177,3 +177,4 @@ class PhysicalWorldAdapter(BaseEventAdapter):
             })
 
         return event, claims
+

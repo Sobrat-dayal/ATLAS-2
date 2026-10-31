@@ -100,3 +100,4 @@ CANONICAL_TAXONOMY: Dict[EventCategory, List[str]] = {
         "OTHER_VERIFIED_EVENT.GENERAL",
     ],
 }
+

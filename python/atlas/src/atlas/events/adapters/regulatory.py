@@ -142,3 +142,4 @@ class RegulatoryAdapter(BaseEventAdapter):
             })
 
         return event, claims
+

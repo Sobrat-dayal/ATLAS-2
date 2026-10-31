@@ -147,3 +147,4 @@ All endpoints are hosted under `/api/v1/events`:
 - `GET /{event_id}/claims`: Granular source claims and conflict evaluations.
 - `GET /{event_id}/revisions`: Immutable revision audit history.
 - `GET /{event_id}/sources`: Linked external source records.
+

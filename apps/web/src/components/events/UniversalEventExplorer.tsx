@@ -266,3 +266,4 @@ export const UniversalEventExplorer: React.FC = () => {
     </div>
   );
 };
+

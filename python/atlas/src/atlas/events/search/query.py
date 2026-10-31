@@ -153,3 +153,4 @@ class EventSearchEngine:
         elif "ingested" in clock_lower:
             return event.first_ingested_at
         return event.occurred_at or event.source_published_at or event.first_ingested_at
+

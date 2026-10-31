@@ -131,3 +131,4 @@ class EventTimelineEngine:
         elif "effective" in clock_lower:
             return e.effective_at or e.occurred_at
         return e.occurred_at or e.source_published_at or e.first_ingested_at
+

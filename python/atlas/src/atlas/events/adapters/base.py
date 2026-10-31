@@ -19,3 +19,4 @@ class BaseEventAdapter(ABC):
     ) -> Tuple[AtlasUniversalEvent, List[Dict[str, Any]]]:
         """Parse an external source record into a canonical AtlasUniversalEvent and claims."""
         pass
+

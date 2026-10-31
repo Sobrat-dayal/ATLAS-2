@@ -48,3 +48,4 @@ class EventReviewQueue:
         item.reviewed_at = datetime.now(timezone.utc)
         item.reviewer = reviewer
         return item
+

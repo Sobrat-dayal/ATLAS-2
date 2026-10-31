@@ -174,3 +174,4 @@ class CorporateActionAdapter(BaseEventAdapter):
             })
 
         return event, claims
+

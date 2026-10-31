@@ -123,3 +123,4 @@ class NewsEventAdapter(BaseEventAdapter):
             })
 
         return event, claims
+

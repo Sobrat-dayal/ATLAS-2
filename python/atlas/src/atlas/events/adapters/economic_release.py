@@ -105,3 +105,4 @@ class EconomicReleaseAdapter(BaseEventAdapter):
         ]
 
         return event, claims
+

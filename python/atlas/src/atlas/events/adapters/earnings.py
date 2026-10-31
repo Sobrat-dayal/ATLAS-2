@@ -117,3 +117,4 @@ class EarningsAdapter(BaseEventAdapter):
             )
 
         return event, claims
+

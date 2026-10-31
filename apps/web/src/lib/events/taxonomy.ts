@@ -127,3 +127,4 @@ export const LIFECYCLE_BADGES: Record<EventLifecycleStatus, { label: string; cla
   DISPUTED: { label: 'DISPUTED', className: 'text-rose-400 border-rose-800' },
   STATUS_UNKNOWN: { label: 'UNKNOWN', className: 'text-zinc-500 border-zinc-800' },
 };
+

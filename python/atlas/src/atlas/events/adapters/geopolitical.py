@@ -126,3 +126,4 @@ class GeopoliticalAdapter(BaseEventAdapter):
             })
 
         return event, claims
+

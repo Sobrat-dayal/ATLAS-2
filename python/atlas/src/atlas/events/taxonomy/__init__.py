@@ -26,3 +26,4 @@ __all__ = [
     "EventTaxonomyRegistry",
     "event_taxonomy_registry",
 ]
+

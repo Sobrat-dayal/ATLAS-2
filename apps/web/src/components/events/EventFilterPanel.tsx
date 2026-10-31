@@ -170,3 +170,4 @@ export const EventFilterPanel: React.FC<EventFilterPanelProps> = ({
     </div>
   );
 };
+

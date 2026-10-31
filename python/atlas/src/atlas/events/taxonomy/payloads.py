@@ -128,3 +128,4 @@ class PhysicalDisasterEventPayload(BaseModel):
     source_event_id: str
     tsunami_flag: bool = False
     stage134_observation_id: Optional[str] = None
+

@@ -72,3 +72,4 @@ def format_temporal_display(dt: Optional[datetime], precision: DatePrecision) ->
         return dt.strftime("%Y (Year-Only)")
     else:
         return "Time Unknown"
+
