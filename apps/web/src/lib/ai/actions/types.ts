@@ -222,4 +222,3 @@ export interface ActionHistoryResponse {
   history: ActionHistoryItemDTO[];
   total_count: number;
 }
-

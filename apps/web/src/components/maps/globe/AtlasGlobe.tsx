@@ -28,6 +28,8 @@ import { GlobeLayerPanel } from "./GlobeLayerPanel";
 import { GlobeFeatureInspector } from "./GlobeFeatureInspector";
 import { GlobeSourceAttribution } from "./GlobeSourceAttribution";
 import { GlobeSaveViewDialog } from "./GlobeSaveViewDialog";
+import { convertH3AggregatesToCesiumEntities } from "@/lib/maps/analytics/cesiumAdapter";
+import { AtlasH3Aggregate, ColorPalette } from "@/lib/maps/analytics/types";
 
 interface AtlasGlobeProps {
   initialCamera?: AtlasGlobeCamera;
@@ -35,6 +37,10 @@ interface AtlasGlobeProps {
   onCameraChange?: (camera: AtlasGlobeCamera) => void;
   selectedFeatureId?: string | null;
   onSelectFeature?: (featureId: string | null) => void;
+  h3Aggregates?: AtlasH3Aggregate[];
+  analyticsPalette?: ColorPalette;
+  analyticsExtruded?: boolean;
+  onSelectH3Cell?: (agg: AtlasH3Aggregate | null) => void;
   className?: string;
 }
 
@@ -44,6 +50,10 @@ export function AtlasGlobe({
   onCameraChange,
   selectedFeatureId,
   onSelectFeature,
+  h3Aggregates,
+  analyticsPalette,
+  analyticsExtruded,
+  onSelectH3Cell,
   className = "w-full h-full relative",
 }: AtlasGlobeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -131,6 +141,58 @@ export function AtlasGlobe({
   const attributionText = activeImagery
     ? activeImagery.attribution
     : "© OpenStreetMap contributors, © CARTO, © Natural Earth";
+
+  // Synchronize 3D H3 Analytics Polygons onto Cesium globe
+  useEffect(() => {
+    if (!viewer || !cesium || !h3Aggregates || h3Aggregates.length === 0) {
+      if (viewer && !viewer.isDestroyed()) {
+        const toRemove: any[] = [];
+        viewer.entities.values.forEach((e: any) => {
+          if (e.id && String(e.id).startsWith("cesium-h3-")) {
+            toRemove.push(e);
+          }
+        });
+        toRemove.forEach((e) => viewer.entities.remove(e));
+      }
+      return;
+    }
+
+    const maxVal = Math.max(...h3Aggregates.map((a) => a.value ?? 0), 100);
+    const cesiumEntities = convertH3AggregatesToCesiumEntities(h3Aggregates, {
+      palette: analyticsPalette || "viridis",
+      minVal: 0,
+      maxVal,
+      extruded: analyticsExtruded ?? false,
+      elevationScale: 50,
+      opacity: 0.85,
+    });
+
+    const toRemove: any[] = [];
+    viewer.entities.values.forEach((e: any) => {
+      if (e.id && String(e.id).startsWith("cesium-h3-")) {
+        toRemove.push(e);
+      }
+    });
+    toRemove.forEach((e) => viewer.entities.remove(e));
+
+    cesiumEntities.forEach((ce) => {
+      viewer.entities.add({
+        id: ce.id,
+        polygon: {
+          hierarchy: cesium.Cartesian3.fromDegreesArray(ce.positionsDegrees),
+          material: cesium.Color.fromBytes(
+            ce.rgbaColor[0],
+            ce.rgbaColor[1],
+            ce.rgbaColor[2],
+            ce.rgbaColor[3]
+          ),
+          extrudedHeight: ce.extrudedHeightMeters,
+          outline: true,
+          outlineColor: cesium.Color.WHITE.withAlpha(0.2),
+        },
+      });
+    });
+  }, [viewer, cesium, h3Aggregates, analyticsPalette, analyticsExtruded]);
 
   // Navigation handlers
   const handleZoomIn = () => {

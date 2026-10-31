@@ -14,6 +14,7 @@ import {
 import { AtlasMapSearch } from "./AtlasMapSearch";
 import { AtlasMapStyleSwitcher } from "./AtlasMapStyleSwitcher";
 import { GlobeModeSwitcher } from "./globe/GlobeModeSwitcher";
+import { SpatialAnalyticsToolbar } from "./analytics/SpatialAnalyticsToolbar";
 import { GeographicSearchResult, MapBasemapStyle } from "@/lib/maps/types";
 import { RendererMode } from "@/lib/maps/globe/types";
 
@@ -22,6 +23,8 @@ interface AtlasMapToolbarProps {
   onStyleSelect: (style: MapBasemapStyle) => void;
   rendererMode?: RendererMode;
   onModeChange?: (mode: RendererMode) => void;
+  isAnalyticsOpen?: boolean;
+  onToggleAnalytics?: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   searchResults: GeographicSearchResult[];
@@ -48,6 +51,8 @@ export function AtlasMapToolbar({
   onStyleSelect,
   rendererMode = "2D",
   onModeChange,
+  isAnalyticsOpen = false,
+  onToggleAnalytics,
   searchQuery,
   onSearchChange,
   searchResults,
@@ -149,6 +154,16 @@ export function AtlasMapToolbar({
         >
           <Maximize className="w-3.5 h-3.5" />
         </button>
+
+        <div className="h-4 w-px bg-atlas-border-default mx-0.5" />
+
+        {/* Spatial Analytics (deck.gl + H3) */}
+        {onToggleAnalytics && (
+          <SpatialAnalyticsToolbar
+            isOpen={isAnalyticsOpen}
+            onToggle={onToggleAnalytics}
+          />
+        )}
 
         <div className="h-4 w-px bg-atlas-border-default mx-0.5" />
 

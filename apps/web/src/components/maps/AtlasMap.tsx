@@ -1,15 +1,29 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { AtlasMapToolbar } from "./AtlasMapToolbar";
 import { AtlasMapCanvas } from "./AtlasMapCanvas";
 import { AtlasMapLayerPanel } from "./AtlasMapLayerPanel";
 import { AtlasMapFeatureInspector } from "./AtlasMapFeatureInspector";
 import { AtlasMapSaveViewDialog } from "./AtlasMapSaveViewDialog";
 import { AtlasMapViewListModal } from "./AtlasMapViewListModal";
+import { SpatialAnalyticsPanel } from "./analytics/SpatialAnalyticsPanel";
+import { SpatialLegend } from "./analytics/SpatialLegend";
+import { SpatialCellInspector } from "./analytics/SpatialCellInspector";
+import { SpatialRegionComparison } from "./analytics/SpatialRegionComparison";
+import { SpatialTimeline } from "./analytics/SpatialTimeline";
 import { useMapLayers } from "@/hooks/maps/useMapLayers";
 import { useMapSearch } from "@/hooks/maps/useMapSearch";
 import { useMapSelection } from "@/hooks/maps/useMapSelection";
+import { useSpatialAnalytics } from "@/hooks/maps/analytics/useSpatialAnalytics";
+import { AtlasDeckOverlayController } from "@/lib/maps/analytics/deckOverlay";
+import {
+  buildH3HexagonLayer,
+  buildScatterplotLayer,
+  buildHeatmapLayer,
+  buildHexagonGridLayer,
+} from "@/lib/maps/analytics/deckLayers";
+import { cellToLatLng } from "@/lib/maps/analytics/h3";
 import { PRESET_BASEMAP_STYLES, DEFAULT_CAMERA } from "@/lib/maps/styles";
 import {
   GeographicSearchResult,
@@ -107,8 +121,108 @@ export function AtlasMap({
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [isViewsModalOpen, setIsViewsModalOpen] = useState(false);
 
+  // Spatial Analytics (Stage 131 deck.gl + H3)
+  const analytics = useSpatialAnalytics();
+  const overlayControllerRef = useRef<AtlasDeckOverlayController | null>(null);
+
+  if (!overlayControllerRef.current) {
+    overlayControllerRef.current = new AtlasDeckOverlayController();
+  }
+
   // Ref to canvas map methods
   const mapControlsRef = useRef<any>(null);
+
+  // Synchronize deck.gl layers with MapLibre instance
+  useEffect(() => {
+    const mapInstance = mapControlsRef.current?.map;
+    if (!mapInstance || rendererMode !== "2D" || !overlayControllerRef.current) return;
+
+    if (!overlayControllerRef.current.getAttached()) {
+      overlayControllerRef.current.attach(mapInstance);
+    }
+
+    if (!analytics.isOpen || !analytics.result || analytics.result.aggregates.length === 0) {
+      overlayControllerRef.current.setLayers([]);
+      return;
+    }
+
+    let deckLayer: any = null;
+    const summary = analytics.result.summary;
+
+    if (analytics.visualizationType === "h3_hexagon") {
+      deckLayer = buildH3HexagonLayer(analytics.result.aggregates, {
+        palette: analytics.palette,
+        minVal: summary.min_value,
+        maxVal: summary.max_value,
+        extruded: analytics.isExtruded,
+        opacity: analytics.opacity,
+        onClick: (info: any) => {
+          if (info?.object) {
+            analytics.setSelectedCell(info.object);
+          }
+        },
+      });
+    } else if (analytics.visualizationType === "scatterplot") {
+      const pts = analytics.result.aggregates.map((a) => {
+        const [lat, lon] = cellToLatLng(a.h3_cell_id);
+        return {
+          id: a.h3_cell_id,
+          longitude: lon,
+          latitude: lat,
+          value: a.value ?? 0,
+        };
+      });
+      deckLayer = buildScatterplotLayer(pts, {
+        palette: analytics.palette,
+        minVal: summary.min_value,
+        maxVal: summary.max_value,
+        opacity: analytics.opacity,
+        onClick: (info: any) => {
+          if (info?.object) {
+            const match = analytics.result?.aggregates.find((x) => x.h3_cell_id === info.object.id);
+            if (match) analytics.setSelectedCell(match);
+          }
+        },
+      });
+    } else if (analytics.visualizationType === "heatmap") {
+      const pts = analytics.result.aggregates.map((a) => {
+        const [lat, lon] = cellToLatLng(a.h3_cell_id);
+        return { longitude: lon, latitude: lat, value: a.value ?? 1 };
+      });
+      deckLayer = buildHeatmapLayer(pts);
+    } else if (analytics.visualizationType === "hexagon_grid") {
+      const pts = analytics.result.aggregates.map((a) => {
+        const [lat, lon] = cellToLatLng(a.h3_cell_id);
+        return { longitude: lon, latitude: lat, value: a.value ?? 1 };
+      });
+      deckLayer = buildHexagonGridLayer(pts, {
+        extruded: analytics.isExtruded,
+        onClick: (info: any) => {
+          if (info?.object) {
+            // HexagonLayer object points
+          }
+        },
+      });
+    }
+
+    overlayControllerRef.current.setLayers(deckLayer ? [deckLayer] : []);
+  }, [
+    mapControlsRef,
+    rendererMode,
+    analytics.isOpen,
+    analytics.result,
+    analytics.visualizationType,
+    analytics.palette,
+    analytics.isExtruded,
+    analytics.opacity,
+  ]);
+
+  // Clean up overlay on unmount
+  useEffect(() => {
+    return () => {
+      overlayControllerRef.current?.detach();
+    };
+  }, []);
 
   // Custom hooks
   const {
@@ -219,6 +333,10 @@ export function AtlasMap({
         onCameraChange={setGlobeCamera}
         selectedFeatureId={selectedFeatureId}
         onSelectFeature={(id) => (id ? selectFeature(id) : clearSelection())}
+        h3Aggregates={analytics.isOpen ? analytics.result?.aggregates : undefined}
+        analyticsPalette={analytics.palette}
+        analyticsExtruded={analytics.isExtruded}
+        onSelectH3Cell={(agg) => analytics.setSelectedCell(agg)}
         className={className}
       />
     );
@@ -232,6 +350,8 @@ export function AtlasMap({
         onStyleSelect={setCurrentStyle}
         rendererMode={rendererMode}
         onModeChange={handleModeChange}
+        isAnalyticsOpen={analytics.isOpen}
+        onToggleAnalytics={() => analytics.setIsOpen((open) => !open)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchResults={searchResults}
@@ -277,10 +397,77 @@ export function AtlasMap({
             onFeatureClick={handleFeatureClick}
             mapInstanceRef={mapControlsRef}
           />
+
+          {/* Floating Spatial Analytics Drawer (deck.gl + H3) */}
+          <SpatialAnalyticsPanel
+            isOpen={analytics.isOpen}
+            onClose={() => analytics.setIsOpen(false)}
+            datasetId={analytics.datasetId}
+            onDatasetChange={analytics.setDatasetId}
+            metricId={analytics.metricId}
+            onMetricChange={analytics.setMetricId}
+            metrics={analytics.metrics}
+            visualizationType={analytics.visualizationType}
+            onVisualizationChange={analytics.setVisualizationType}
+            aggregation={analytics.aggregation}
+            onAggregationChange={analytics.setAggregation}
+            h3Resolution={analytics.h3Resolution}
+            onH3ResolutionChange={analytics.setH3Resolution}
+            palette={analytics.palette}
+            onPaletteChange={analytics.setPalette}
+            isExtruded={analytics.isExtruded}
+            onExtrudedChange={analytics.setIsExtruded}
+            opacity={analytics.opacity}
+            onOpacityChange={analytics.setOpacity}
+            onOpenComparison={() => analytics.setIsComparingRegions(true)}
+            isLoading={analytics.isLoading}
+            error={analytics.error}
+            className="absolute top-3 left-3 z-30"
+          />
+
+          {/* Floating Spatial Legend */}
+          {analytics.isOpen && analytics.result && (
+            <SpatialLegend
+              result={analytics.result}
+              palette={analytics.palette}
+              className="absolute bottom-6 right-3 z-20"
+            />
+          )}
+
+          {/* Floating Timeline Controls (Historical exploration) */}
+          {analytics.isOpen && (
+            <SpatialTimeline
+              timeBucket={analytics.timeBucket}
+              onTimeBucketChange={analytics.setTimeBucket}
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20"
+            />
+          )}
+
+          {/* Floating Cell Inspector */}
+          {analytics.selectedCell && (
+            <SpatialCellInspector
+              cell={analytics.selectedCell}
+              onClose={() => analytics.setSelectedCell(null)}
+              className="absolute top-3 right-3 z-30"
+            />
+          )}
+
+          {/* Regional Comparison Modal */}
+          {analytics.isComparingRegions && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+              <SpatialRegionComparison
+                datasetId={analytics.datasetId}
+                metricId={analytics.metricId}
+                aggregation={analytics.aggregation}
+                h3Resolution={analytics.h3Resolution}
+                onClose={() => analytics.setIsComparingRegions(false)}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right Feature Inspector */}
-        {isInspectorOpen && (
+        {isInspectorOpen && !analytics.selectedCell && (
           <div className="w-72 border-l border-atlas-border-default shrink-0 z-10 transition-all">
             <AtlasMapFeatureInspector
               featureDetail={featureDetail}

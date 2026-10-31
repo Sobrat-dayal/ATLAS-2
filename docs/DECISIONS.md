@@ -11085,3 +11085,70 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1613. **Frontend Unit Test Suite Coverage**: Maintains 260+ passing unit tests across maps, coordinates, camera translations, and workspace panel adapters.
 1614. **Production Build Gate Execution**: Verifies clean zero-warning Next.js production builds across all platform routes including `/maps`.
 1615. **Stage 131 Handoff Architecture**: Lays the foundation for GPU-accelerated deck.gl layers, H3 hexagonal spatial indexes, and large-scale analytical spatial point clouds.
+
+
+## Stage 131: Large-Scale Spatial Analytics Using deck.gl and H3
+
+### GPU Visualization & deck.gl Architecture
+1616. **deck.gl as Institutional GPU Visualization Engine**: Integrates deck.gl v9.4.1 to provide high-throughput WebGL/WebGPU layer rendering over Stage 129 MapLibre 2D maps.
+1617. **MapLibreOverlay Integration**: Employs `@deck.gl/maplibre`'s `MapLibreOverlay` as the authoritative integration bridge between MapLibre camera controls and deck.gl rendering.
+1618. **Overlaid Rendering Mode by Default**: Defaults to overlaid mode for `MapLibreOverlay` to ensure stable cross-browser and cross-GPU execution without WebGL context conflicts.
+1619. **Stable Overlay Lifecycle Controller (`AtlasDeckOverlayController`)**: Manages deck.gl overlay attachment, layer updates, and cleanup to prevent redundant re-renders during panning or zooming.
+1620. **Layer Persistence Across Basemap Style Changes**: Preserves active deck.gl analytical layers across basemap style switches via `handleStyleChange` synchronization.
+1621. **H3HexagonLayer for Indexed Cell Visualization**: Renders H3 hexagonal cell aggregates using `@deck.gl/geo-layers` with data-driven fill colors and borders.
+1622. **ScatterplotLayer for Discrete Geographic Points**: Uses `@deck.gl/layers` `ScatterplotLayer` for high-volume observation points with radius and opacity scaling.
+1623. **HeatmapLayer for Spatial Intensity Surfaces**: Uses `@deck.gl/aggregation-layers` `HeatmapLayer` for continuous Gaussian kernel density surfaces.
+1624. **HexagonLayer for Dynamic Viewport Binning**: Employs `@deck.gl/aggregation-layers` `HexagonLayer` for client-side GPU hexagonal binning when requested.
+1625. **Hardware Fallback & Safe Degradation**: Gracefully detects WebGL availability and falls back to CPU-computed summaries when GPU hardware acceleration is disabled.
+
+### H3 Hierarchical Indexing & Geodesic Geometry
+1626. **Uber H3 v4.5.0 Foundation**: Standardizes on H3 v4.5.0 across both Python backend (`h3==4.5.0`) and TypeScript frontend (`h3-js@4.5.0`).
+1627. **Lossless String Cell Identifier Representation**: Stores and transfers canonical H3 cell indexes as 15-character hexadecimal strings, eliminating JavaScript integer precision loss.
+1628. **H3 Resolution Domain Boundaries**: Enforces strict resolution levels $[0, 15]$ with recommended adaptive viewport defaults (Global: Res 3, Continental: Res 5, Metropolitan: Res 9).
+1629. **Sub-Millimeter Geodesic Cell Area Calculation**: Calculates exact surface areas in $km^2$ via `h3.cell_area(cell, 'km^2')`, strictly rejecting the false assumption that H3 cells are equal-area.
+1630. **H3 Pentagon Geometry Handling**: Correctly identifies the 12 pentagonal cells at each resolution level and generates 5-vertex polygon boundaries (Fixture E).
+1631. **Mathematical Modulo Antimeridian Wrapping**: Normalizes coordinates for cells crossing $\pm 180^\circ$ to prevent world-spanning polygon triangle artifacts (Fixture F).
+1632. **Closed GeoJSON LinearRing Compliance**: Formats H3 boundary coordinates as closed `[[lon, lat], ...]` rings where the first coordinate strictly matches the final coordinate.
+1633. **Centroid-Based Polygon Covering Semantics**: Uses `polygon_to_cells` with explicit disclosure that covering is based on centroid containment rather than 100% geometric inclusion (Fixture G).
+
+### Statistical Rigor, Metrics & Aggregation Rules
+1634. **Additive Observation Aggregation**: Correctly calculates additive sums and observation counts across underlying features (Fixture B).
+1635. **Weighted Mean Mathematical Correctness**: Computes parent rollups as $\frac{\sum (w_i \cdot x_i)}{\sum w_i}$, strictly rejecting unweighted averages of child averages (Fixture C).
+1636. **Distinct Count Union Tracking**: Accurately tracks unique entity identifiers to prevent duplicate counting across overlapping groupings (Fixture H).
+1637. **Area-Normalized Density Metrics**: Computes true geographic density as $\text{Density} = \frac{\text{Value}}{\text{Cell Area (km²)}}$, with units in $obs/km^2$ (Fixture D).
+1638. **Explicit Null Value Policies**: Implements `EXCLUDE` (default, removing nulls from counts and sums), `ZERO` (treating nulls as 0.0), and `WARN` (Fixture I).
+1639. **Summing Percentage & Currency Prohibition**: Rejects requests to sum percentages or mix non-normalized currency metrics via `SpatialMetricNotAllowedError`.
+1640. **Institutional Metric Registry (`SpatialMetricRegistry`)**: Centralizes approved analytical metrics, allowed aggregations, weight metrics, and contributor thresholds.
+
+### Spatial Privacy & Governance
+1641. **K-Anonymity Minimum-Contributor Threshold**: Enforces a minimum contributor threshold (default: $\ge 5$). Cells failing this are marked `is_suppressed: True`.
+1642. **Shielded Suppressed Cell Display**: Masks numeric values and densities for suppressed cells, rendering them in neutral muted gray (`[80, 80, 85, 140]`).
+1643. **Cell Drill-Down Protection**: Blocks individual record drill-down requests on suppressed cells with `PrivacySuppressionError`.
+1644. **Multi-Tenant Spatial Dataset Isolation**: Validates tenant ownership on analytical queries, rejecting cross-tenant queries with 403 Forbidden (Fixture K).
+1645. **Source Entitlement Invalidation**: Revoking a dataset source entitlement immediately purges cached aggregates and raises `SourceEntitlementRevokedError` (Fixture L).
+1646. **Permission-Aware Cache Keys**: Salts Redis/Valkey cache keys with tenant and user IDs for private datasets to prevent cross-tenant cache poisoning.
+1647. **Bounded Query Limits**: Enforces a strict maximum limit of 5,000 aggregate records per query to protect server and client memory.
+
+### Temporal Analytics & Historical Exploration
+1648. **Historical As-Of Point-in-Time Filtering**: Filters observations to timestamps $\le \text{as\_of}$, strictly eliminating look-ahead bias (Fixture J).
+1649. **Deterministic Temporal Bucketing**: Partitions observation time series into standard buckets (`1h`, `1d`, `1w`, `1m`, `1q`, `1y`).
+1650. **Accessible Timeline Scrubber (`SpatialTimeline`)**: Provides discrete time period stepping, play/pause controls, and automatic 3s intervals when reduced motion is requested.
+
+### 2D / 3D Interoperability & Workspace Integration
+1651. **CesiumJS 3D Analytics Adapter (`convertH3AggregatesToCesiumEntities`)**: Translates 2D H3 aggregates into 3D Cartesian coordinates and extruded data columns on the 3D globe.
+1652. **Non-Destructive 2D/3D Analytics State Persistence**: Preserves active dataset, metric, aggregation method, H3 resolution, and selected cell across 2D/3D mode toggles.
+1653. **Multi-Panel Workspace Isolation Invariant**: Ensures each workspace map panel maintains an independent analytics state and isolated deck.gl overlay instance (Fixture I).
+1654. **Stage 121 Global Workspace Linking Compatibility**: Publishes and subscribes to `REGION` and `INSTRUMENT` context updates to refocus analytics views.
+1655. **Stage 125 AI Context Read-Only Analytics Viewport**: Exposes active metric, aggregation method, H3 resolution, and selected cell metadata to the AI context provider.
+
+### UI Controls & Verification Gates
+1656. **Spatial Analytics Drawer (`SpatialAnalyticsPanel`)**: Provides financial terminal-grade controls for dataset, visualization, metric, aggregation, and resolution.
+1657. **Data-Driven Dynamic Legend (`SpatialLegend`)**: Displays actual min/max values, metric units, color gradient, H3 resolution, and source attribution.
+1658. **H3 Cell Inspector (`SpatialCellInspector`)**: Displays cell ID, resolution, geodetic area ($km^2$), observation count, density, and privacy status.
+1659. **Geographic Region Comparison (`SpatialRegionComparison`)**: Compares identical metrics between two bounding regions, computing deltas and area-normalized densities.
+1660. **Accessible Color Palettes**: Supports Viridis and Cividis color-blind safe palettes alongside Magma, Blues, Turbo, and Spectral.
+1661. **Comprehensive Reference Fixture Verification**: Validates all 12 Stage 131 reference fixtures (Fixtures A through L) across backend and frontend test suites.
+1662. **Zero Backend Regression**: Verifies 100% pass across Stage 129 PostGIS (21 tests) and Stage 130 CesiumJS (12 tests) alongside Stage 131 (12 tests).
+1663. **Zero Frontend Regression**: Verifies 100% pass across 272 unit tests across 19 suites in `apps/web`.
+1664. **Production Build Gate Execution**: Verifies clean zero-warning Next.js production builds across all 38 platform routes including `/maps`.
+1665. **Stage 132 Handoff Architecture**: Establishes the spatial analytics foundation for mapping corporate facilities, headquarters, and financial entities in Stage 132.

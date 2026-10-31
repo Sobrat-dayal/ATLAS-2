@@ -1,0 +1,55 @@
+"""ATLAS Spatial Analytics Engine Package (Stage 131)."""
+
+from .domain import (
+    AtlasH3Aggregate,
+    MaterializationJob,
+    MaterializationJobStatus,
+    NullValuePolicy,
+    RegionComparisonResult,
+    SpatialAggregationMethod,
+    SpatialAnalyticsQuery,
+    SpatialAnalyticsResult,
+    SpatialMetricDefinition,
+    SpatialSummaryStatistics,
+    SpatialVisualizationType,
+    TimeBucketInterval,
+)
+from .errors import (
+    ExcessiveH3ResolutionError,
+    InvalidH3CellError,
+    InvalidH3ResolutionError,
+    MaterializationJobNotFoundError,
+    PrivacySuppressionError,
+    SourceEntitlementRevokedError,
+    SpatialAnalyticsDomainError,
+    SpatialMetricNotAllowedError,
+    SpatialQueryTimeoutError,
+    UnauthorizedSpatialDatasetError,
+)
+from .service import AtlasSpatialAnalyticsService
+
+__all__ = [
+    "AtlasH3Aggregate",
+    "MaterializationJob",
+    "MaterializationJobStatus",
+    "NullValuePolicy",
+    "RegionComparisonResult",
+    "SpatialAggregationMethod",
+    "SpatialAnalyticsQuery",
+    "SpatialAnalyticsResult",
+    "SpatialMetricDefinition",
+    "SpatialSummaryStatistics",
+    "SpatialVisualizationType",
+    "TimeBucketInterval",
+    "ExcessiveH3ResolutionError",
+    "InvalidH3CellError",
+    "InvalidH3ResolutionError",
+    "MaterializationJobNotFoundError",
+    "PrivacySuppressionError",
+    "SourceEntitlementRevokedError",
+    "SpatialAnalyticsDomainError",
+    "SpatialMetricNotAllowedError",
+    "SpatialQueryTimeoutError",
+    "UnauthorizedSpatialDatasetError",
+    "AtlasSpatialAnalyticsService",
+]
