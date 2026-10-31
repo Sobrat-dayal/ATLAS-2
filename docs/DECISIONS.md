@@ -11474,3 +11474,56 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1913. **Interactive Scenario Workbench (`ExposureScenarioWorkbench`)**: Deterministic shock workbench with customizable target dimensions, shock percentages, real-time conditional P&L calculations, and mandatory assumption notices.
 1914. **Population Coverage & Residual View (`ExposureCoverageView`)**: Multi-segment visual bar comparing Covered Population vs Unallocated Residuals, detailing covered and uncovered dimensions.
 1915. **Stage 137 Quality Gate & Boundary Enforcement**: All 29 backend tests passing (including all 24 canonical fixtures A to X), all 50 Stage 135/136 tests passing, all 303 web tests passing, and Next.js production build passing cleanly. Explicitly stop and refrain from implementing Stage 138 (INTELLIGENCE V1 full unified dashboard).
+
+## Stage 138: INTELLIGENCE V1 — The Unified Institutional Financial Intelligence Workspace
+1916. **INTELLIGENCE V1 Master Architecture (`AtlasIntelligenceService`)**: Institutional master service unifying Universal Events (Stage 135), Knowledge Graph (Stage 136), Exposure Engine (Stage 137), Geospatial Infrastructure (Stages 129–134), Grounded Research (Stage 127), and Multi-Panel Workspaces (Stage 120/121) into one verified command center.
+1917. **Canonical 9-Step Investigation Sequence**: Enforce strict evidence traversal chain: `EVENT -> VERIFIED SOURCES -> RELATED ENTITIES -> KNOWLEDGE GRAPH -> DOCUMENTED EXPOSURE -> GEOGRAPHIC CONTEXT -> FINANCIAL AND ECONOMIC DATA -> RESEARCH EVIDENCE -> SAVED INVESTIGATION`.
+1918. **Strict Stage 139 Boundary Invariant**: Prohibit composite intelligence scores, predicted risk/opportunity numbers, 0–100 ratings, sentiment scores, or stock price direction forecasts; factual metrics (source count, magnitude, portfolio weight, dollar exposure) only.
+1919. **Strict Stage 140 Boundary Invariant**: Prohibit automated God's Eye intelligence bots, autonomous surveillance agents, or synthetic execution loops.
+1920. **Zero Fabricated Events or Relationships**: Every presented event and relationship must trace directly to verified sources in the Universal Event Registry or canonical Knowledge Graph.
+1921. **Zero Fabricated Financial Exposures**: Prohibit substituting synthetic zeroes or imaginary percentages when exposure data is missing; return explicit `EMPTY` / `EXPOSURE_UNAVAILABLE` status.
+1922. **Point-in-Time Bitemporal Integrity**: All queries accept `known_as_of` and `valid_at` parameters, ensuring historical research reconstructs exact point-in-time knowledge with zero look-ahead bias.
+1923. **Multi-Domain Overview Aggregation (`get_unified_overview`)**: Concurrently orchestrate cross-domain sections (`major_events`, `key_entities`, `portfolio_exposures`, `geospatial_alerts`, `macroeconomic_decisions`).
+1924. **Partial Source Outage Resilience (Fixture H)**: When one upstream source (e.g. financial news wire) suffers an outage, flag that section as `SOURCE_UNAVAILABLE` or `PARTIAL` with actionable warnings while delivering unaffected sections (SEC EDGAR, Federal Reserve) at full operational fidelity.
+1925. **Unified Fast Search Engine (`unified_search`)**: Provide sub-100ms multi-domain discovery across events, entities, and sources with explicit result typing (`EVENT`, `ENTITY`, `SOURCE`, `RESEARCH_DOCUMENT`).
+1926. **Canonical Entity Disambiguation (Fixture I & O)**: Disambiguate ticker symbols and company names to verified canonical UUIDs (`COMP_AAPL`, `COMP_ACME`), displaying legal entity details, sector classifications, and jurisdiction codes.
+1927. **Multi-Tenant Portfolio Privacy (Fixture C)**: Strictly enforce tenant boundaries; proprietary portfolios, positions, and exposures of Tenant A are inaccessible to Tenant B.
+1928. **Source Entitlement Enforcement (Fixture M)**: Enforce provider licensing; sensitive sources flag `is_entitled: false` and restrict deep lineage access for unauthorized tenants.
+1929. **Event Retraction Handling (Fixture F)**: Retracted news claims and invalid filings are marked `RETRACTED` and excluded from verified knowledge graph traversals.
+1930. **Source Disagreement Preservation (Fixture E)**: Conflicting claims across independent providers are preserved side-by-side with provenance rather than silently averaging or resolving to false consensus.
+1931. **Physical Proximity Damage Separation (Fixture D)**: Geographic proximity between an earthquake/wildfire and a facility documents distance in kilometers while explicitly setting structural damage status to `DAMAGE_ASSESSMENT_PENDING / UNKNOWN`.
+1932. **Exposure vs Loss Distinction (Fixture J)**: Documented revenue exposure (e.g. 30% of sales in a region) must never be conflated with or labeled as a 30% financial impairment or loss.
+1933. **Live vs Historical Snapshot Isolation (Fixture K)**: Ingesting new live market observations or updating current state must never alter or invalidate previously saved point-in-time investigation snapshots.
+1934. **Coordinated Multi-Panel Presets (`CLIENT_INVESTIGATION_PRESETS`)**: Ship 5 canonical presets (`preset_event_investigation`, `preset_company_intelligence`, `preset_economic_decision`, `preset_geographic_investigation`, `preset_portfolio_exposure`).
+1935. **Cross-Panel Linking Channels (Fixture L)**: Synchronize panels sharing a common link channel (e.g. `event_channel`, `entity_channel`) while preserving the state of independent unlinked panels.
+1936. **Source Freshness Registry (`SourceFreshnessRecord`)**: Real-time telemetry monitoring for SEC EDGAR, Federal Reserve, BEA, USGS Seismic, and Financial News, tracking latency, effective dates, and licensing constraints.
+1937. **Simulated Outage & Failover Controls**: Provide administrative `/sources/{id}/simulate-outage` and `/sources/{id}/restore` endpoints for resilience testing.
+1938. **Entity Context Resolution (`resolve_entity_context`)**: Deep entity intelligence resolving canonical identifiers, linked Stage 135 events, 1-hop graph neighbors, and Stage 137 exposure aggregates.
+1939. **Investigation Snapshot Persistence (`save_investigation` & `get_investigation`)**: Persist complete investigation contexts including active filters, time windows, selected entities/events, and preset configurations with tenant isolation.
+1940. **Typed Domain Error Hierarchy (`IntelligenceDomainError`)**: Provide structured error codes (`SOURCE_UNAVAILABLE`, `EVENT_NOT_FOUND`, `ENTITY_NOT_FOUND`, `EXPOSURE_UNAVAILABLE`, `LOOK_AHEAD_VIOLATION`, `TENANT_ACCESS_DENIED`, `AMBIGUOUS_IDENTITY`).
+1941. **REST Endpoint `GET /api/v1/intelligence/capabilities`**: Expose subsystem capabilities, supported views, presets, and compliance guarantees.
+1942. **REST Endpoint `GET /api/v1/intelligence/overview`**: Return multi-domain aggregated intelligence overview with resilience metadata.
+1943. **REST Endpoint `GET /api/v1/intelligence/presets`**: Return list of registered investigation presets and panel configurations.
+1944. **REST Endpoint `GET /api/v1/intelligence/panels`**: Return canonical panel descriptors, default dimensions, and linking capabilities.
+1945. **REST Endpoint `GET /api/v1/intelligence/search`**: Execute fast unified search with query limit and disambiguation.
+1946. **REST Endpoint `GET /api/v1/intelligence/sources/status`**: Return source health, dataset names, and freshness metrics.
+1947. **REST Endpoint `POST /api/v1/intelligence/sources/{id}/simulate-outage`**: Toggle simulated data source outage.
+1948. **REST Endpoint `POST /api/v1/intelligence/sources/{id}/restore`**: Restore data source to healthy operational status.
+1949. **REST Endpoint `GET /api/v1/intelligence/entities/context`**: Return consolidated entity intelligence context.
+1950. **REST Endpoints `/api/v1/intelligence/investigations`**: List and create saved investigation snapshots.
+1951. **REST Endpoint `GET /api/v1/intelligence/investigations/{id}`**: Retrieve saved investigation with tenant authorization.
+1952. **Master UI Shell (`IntelligenceShell`)**: Master container managing primary view navigation, as-of timestamps, fast search modal, and source health indicators.
+1953. **Master Toolbar (`IntelligenceToolbar`)**: View switcher tabs (`OVERVIEW`, `EVENTS`, `ENTITIES`, `GRAPH`, `EXPOSURE`, `GEOGRAPHY`, `INVESTIGATIONS`, `HISTORY`, `SOURCES`), search trigger, as-of badge, and degraded feed indicator.
+1954. **Overview Dashboard (`IntelligenceOverview`)**: Multi-domain summary with degraded source warning banners, key events, highlighted entities, portfolio exposures, and geographic alerts.
+1955. **Entity Intelligence Workspace (`IntelligenceEntityView`)**: Deep entity investigation interface showing official identifiers (CIK, LEI, FIGI), linked events, knowledge graph, and financial exposure navigation.
+1956. **Geography Intelligence Workspace (`IntelligenceGeographyView`)**: Geospatial event-to-facility co-location view with layer filters, proximity disclaimers, and links to `/maps`.
+1957. **Historical Research Workspace (`IntelligenceHistoricalView`)**: Point-in-time datetime picker, horizon status indicators, and look-ahead bias prevention controls.
+1958. **Data Quality & Sources Workspace (`IntelligenceSourcesView`)**: Real-time source freshness monitor, coverage percentages, verification capabilities, and interactive outage simulation buttons.
+1959. **Multi-Panel Investigation Workspace (`IntelligenceInvestigationWorkspace`)**: Coordinated multi-panel preset selector, grid layout, and "Save Investigation" snapshot dialog.
+1960. **Unified Search Dialog (`IntelligenceSearchModal`)**: Instant modal dialog with `Ctrl+K` shortcut, categorized search results (Events, Entities, Sources), and click-to-navigate action handlers.
+1961. **Subsystem Integration — Universal Events (`UniversalEventExplorer`)**: Embedded Stage 135 event explorer within the unified intelligence shell.
+1962. **Subsystem Integration — Knowledge Graph (`EventEntityGraphExplorer`)**: Embedded Stage 136 knowledge graph explorer within the unified intelligence shell.
+1963. **Subsystem Integration — Exposure Engine (`ExposureExplorer`)**: Embedded Stage 137 financial exposure engine within the unified intelligence shell.
+1964. **Production Routing (`/intelligence`)**: Clean Next.js page integration preserving standard PageHeader, fullscreen controls, and desktop AppShell.
+1965. **Stage 138 Quality Gate & Boundary Enforcement**: All 23 backend tests passed (15 canonical reference fixtures A to O), all 79 regression tests passed across Stages 135, 136, 137 (102 total backend tests), all 306 web unit tests passed, and Next.js production build cleanly succeeded. Prohibit implementing Stage 139 (Scoring) or Stage 140 (God's Eye).
+
