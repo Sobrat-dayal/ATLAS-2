@@ -151,3 +151,4 @@ class CanonicalEntityResolver:
     def list_all_nodes(self) -> List[CanonicalGraphNodeRef]:
         """Returns all registered canonical nodes."""
         return list(self._nodes.values())
+

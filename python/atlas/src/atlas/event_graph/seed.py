@@ -881,3 +881,4 @@ def seed_knowledge_graph_fixtures(service: EventEntityKnowledgeGraphService):
         },
     )
     service.link_event(evt_t, evidence_ids=["EVID-COLONIAL-NOTICE-20240718"])
+

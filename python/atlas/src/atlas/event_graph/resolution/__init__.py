@@ -6,3 +6,4 @@ __all__ = [
     "CanonicalEntityResolver",
     "HistoricalAliasMapping",
 ]
+
