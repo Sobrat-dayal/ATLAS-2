@@ -11296,3 +11296,68 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1763. **Temporal Playback Scrubber**: Offer intuitive Live, Paused, and Historical playback modes with 1x, 5x, 15x, and 60x speed multipliers.
 1764. **Full 15-Fixture Verification**: Verify all 15 institutional test fixtures (Fixtures A through O) across backend pytest (`test_maps_stage134_v1.py`) and web tests.
 1765. **Zero Regression Gate Across All Map Stages**: Ensure 100% test pass on backend stages 129–134 (96/96 tests passing), frontend web tests (290/290 passing), and clean production build.
+
+
+## Stage 135: Universal Event Model and Global Financial Event Foundation
+
+### Canonical Representation & Taxonomy
+1766. **Canonical Event vs. Source vs. Claim Separation**: Strictly decouple the real-world event (`AtlasUniversalEvent`) from the reporting source documents (`EventSourceRecord`), evidence links (`EventEvidence`), and individual factual assertions (`EventClaim`).
+1767. **Universal Typed Event Envelope**: Standardize all financial, economic, regulatory, and physical events into `AtlasUniversalEvent` with canonical key, multi-clock temporal model, geographic scope, payload, and audit chain.
+1768. **Twelve Universal Primary Categories**: Establish the frozen 12 primary event categories: `FINANCIAL`, `CORPORATE`, `ECONOMIC`, `MONETARY_POLICY`, `REGULATORY`, `SANCTIONS`, `GEOPOLITICAL`, `NEWS_REPORTED`, `NATURAL_DISASTER`, `PHYSICAL_WORLD`, `INFRASTRUCTURE`, and `OTHER_VERIFIED_EVENT`.
+1769. **Versioned Canonical Subtypes**: Validate event subtypes using `EventTaxonomyRegistry` with support for domain-specific taxonomy expansions.
+1770. **Discriminated Strongly-Typed Payloads**: Enforce typed payload schemas (`EarningsEventPayload`, `EconomicReleasePayload`, `CentralBankEventPayload`, `SanctionsEventPayload`, `CorporateActionEventPayload`, `RegulatoryEventPayload`, `GeopoliticalEventPayload`, `PhysicalDisasterEventPayload`).
+1771. **Orthogonal Lifecycle Status**: Track lifecycle evolution independently from verification: `SCHEDULED`, `PROPOSED`, `ANNOUNCED`, `REPORTED`, `OCCURRED`, `CONFIRMED`, `POSTPONED`, `CANCELLED`, `SUPERSEDED`, `RETRACTED`, `DISPUTED`.
+1772. **Orthogonal Verification Status**: Track evidential certainty independently from lifecycle: `OFFICIALLY_CONFIRMED`, `INDEPENDENTLY_CORROBORATED`, `SOURCE_REPORTED`, `UNVERIFIED`, `CONFLICTED`, `REJECTED`.
+
+### Multi-Clock Temporal Engine & Bitemporal History
+1773. **Multi-Clock Temporal Profile**: Preserve seven distinct timestamps per event: `occurred_at`, `source_published_at`, `announced_at`, `scheduled_for`, `effective_at`, `first_ingested_at`, and `updated_at`.
+1774. **Explicit Date Precision Tiers**: Maintain precision fidelity across `EXACT_TIMESTAMP`, `DATE_ONLY`, `MONTH_ONLY`, `YEAR_ONLY`, and `TIME_UNKNOWN`.
+1775. **Bitemporal Knowledge Separation**: Formally distinguish Valid Time (when the real-world event happened or took effect) from System Knowledge Time (when ATLAS or the source recorded it).
+1776. **Zero Look-Ahead Bias Guarantee**: In historical queries evaluated `as_of(T)`, strictly exclude any event revisions, benchmark adjustments, or retractions recorded after $T$.
+
+### Identity, Deduplication & Conflict Handling
+1777. **Prohibition of Title-Only Deduplication**: Forbid merging or deduplicating events solely on headline or title similarity to prevent conflating distinct corporate stages or geographic events.
+1778. **Deterministic Canonical Key Generation**: Formulate deterministic canonical keys from typed domain tuples (e.g. `FINANCIAL.EARNINGS:AAPL:2026:3`, `NATURAL_DISASTER.EARTHQUAKE:US7000M4WZ`).
+1779. **Preservation of Source Discrepancies**: When sources contradict each other, store each claim verbatim with attribution and flag `claim_conflict_status: CONFLICT_DETECTED`; never average conflicting figures.
+1780. **Granular Assertion Claim Registry**: Index factual claims by predicate, value, units, qualifiers, and reporting source via `EventClaimRegistry`.
+1781. **Source Evidence Registry & Licensing Policy**: Enforce source licensing metadata (`license_name`, `retention_policy`, `access_policy`) via `EventSourceRegistry`.
+1782. **Retention Policy Compliance**: Enforce permanent archiving for licensed official sources while restricting commercial wire snippets to transient caching (`verify_retention_compliance`).
+
+### Standard Validation Fixtures A through R
+1783. **Fixture A (Duplicate Earnings Deduplication)**: Multi-source reports for the same earnings release attach 3 evidence links to 1 canonical event without duplicate entity creation.
+1784. **Fixture B (Scheduled vs. Reported Results)**: Scheduled future earnings update in-place with reported results while retaining historical scheduled metadata.
+1785. **Fixture C (Macroeconomic Vintages)**: Macroeconomic indicators (e.g. US Nonfarm Payrolls) track sequential release vintages (initial vs revised benchmark) with full revision logs.
+1786. **Fixture D (Monetary Rate Change Math)**: Central bank policy decisions automatically evaluate exact basis point changes (`+25.0 bps`) from new and previous rates.
+1787. **Fixture E (Target Rate Range Bounds)**: Central bank policy target ranges (e.g., Fed Funds 5.25%–5.50%) preserve both lower and upper bounds in titles and structured payloads.
+1788. **Fixture F (Sanctions Exact Legal Match)**: Official sanctions designations match designated subjects via exact legal entity resolution, avoiding false-positive collisions with unrelated entities.
+1789. **Fixture G (Sanctions Amendment Preservation)**: Official updates to existing sanctions entries are classified as `AMENDMENT` rather than spawning duplicate initial designations.
+1790. **Fixture H (Corporate Action Milestones)**: Merger lifecycle stages (`ANNOUNCED` vs `APPROVED` vs `COMPLETED`) remain distinct canonical milestone events linked by deal context.
+1791. **Fixture I (Earthquake In-Place Revision)**: Seismologist magnitude upgrades for the same USGS event ID (M5.2 -> M5.4) apply in-place revisions rather than creating duplicate earthquakes.
+1792. **Fixture J (Separate Distinct Earthquakes)**: Separate earthquakes occurring on the same day with distinct USGS IDs remain strictly distinct events.
+1793. **Fixture K (News Wire Rumor Qualification)**: News media reports and rumors are classified as `UNVERIFIED` candidate events and never automatically confirmed as official corporate or regulatory actions.
+1794. **Fixture L (Date-Only Event Precision)**: Annual shareholder meetings and undated calendar releases preserve `DatePrecision.DATE_ONLY` without fabricating arbitrary times of day.
+1795. **Fixture M (Historical As-Of Point-in-Time Query)**: Historical as-of evaluation prior to an economic restatement returns the original unrevised figure, eliminating look-ahead bias.
+1796. **Fixture N (Conflicting Source Claims Preservation)**: Contradicting casualty figures from separate wire services are stored as distinct claims under `CONFLICT_DETECTED` with zero synthetic averaging.
+1797. **Fixture O (Event Retraction & Tombstoning)**: Erroneous or fraudulent releases are formally retracted (`is_retracted = True`) and tombstoned with reasons, excluding them from default searches.
+1798. **Fixture P (Unlicensed Source Policy Enforcement)**: Unlicensed or scraping source providers are rejected or blocked from persistent archival storage.
+1799. **Fixture Q (Multi-Tenant Isolation)**: Tenant-specific private events are strictly isolated using tenant ID authorization checks.
+1800. **Fixture R (Stage 134 Physical World Observation Bridge)**: Satellite-detected wildfires and physical observations bridge transparently using Stage 134 observation identifiers.
+
+### Administration, Search & Operations
+1801. **Non-Destructive Event Merge**: Support merging duplicate canonical events with `MergeAuditRecord` receipts and automated evidence/claims migration.
+1802. **Safe Transactional Event Splitting**: Enable splitting erroneously merged events back into distinct canonical entities with audit logging.
+1803. **Ambiguous Candidate Match Review Queue**: Route candidate matches with ambiguous similarity scores to a human analyst review queue (`ReviewItem`).
+1804. **Unified Multi-Clock Event Timeline**: Provide chronological event streaming sorted across any of the 7 supported clocks via `EventTimelineEngine`.
+1805. **Partitioned Date Bucketing**: Group timeline feeds into chronological calendar day buckets for dense terminal presentation.
+1806. **Upcoming Scheduled Events Stream**: Stream upcoming scheduled releases and monetary policy meetings (`scheduled_for >= now_utc`).
+1807. **Recent Verified Events Stream**: Stream recently verified historical events (`occurred_at <= now_utc`).
+1808. **Multi-Parameter Search Engine**: Filter events across categories, subtypes, lifecycles, verification tiers, jurisdictions, entities, and full-text queries via `EventSearchEngine`.
+1809. **Default Exclusion of Retracted Events**: Omit retracted events from general search and timeline feeds unless explicitly requested (`include_retracted=True`).
+1810. **Geographic Scope Coordinates & Jurisdiction**: Model geographic locations as points, bounding boxes, or country jurisdictions via `EventGeographicScope`.
+
+### UI & Frontend Delivery
+1811. **Institutional Event Card Component**: Render Bloomberg-terminal-grade event cards with color-coded category badges, verification badges, multi-clock timestamps, and conflict indicators.
+1812. **Institutional Event Filter Panel**: Provide multi-category selector pills, verification toggles, lifecycle filters, and time clock selector.
+1813. **Comprehensive Event Detail Inspector**: Offer four deep inspection tabs: Summary & Identity, Evidence & Sources, Claims & Conflicts, and Bitemporal Revisions.
+1814. **Interactive Historical As-Of Modal**: Enable analysts to dial any historical UTC timestamp and reconstruct the platform knowledge state with zero look-ahead bias.
+1815. **Full Test Suite & Production Build Gate**: Verify all 22 backend event tests (`test_events_stage135_v1.py`), all 118 total backend tests across Stages 129–135, all 294 web tests (`pnpm test`), and Next.js production build (`pnpm build`).
