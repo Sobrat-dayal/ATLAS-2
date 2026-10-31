@@ -143,3 +143,4 @@ class OptionsDataQualityError(OptionsDomainError):
             code="OPTIONS_DATA_QUALITY_ERROR",
             details={"contract_id": contract_id, "reason": reason},
         )
+

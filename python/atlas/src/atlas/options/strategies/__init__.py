@@ -20,3 +20,4 @@ __all__ = [
     "StrategyTemplateDefinition",
     "validate_strategy_legs",
 ]
+

@@ -126,3 +126,4 @@ def calculate_strategy_breakevens_and_bounds(
         "is_unbounded_profit": is_unbounded_profit,
         "is_unbounded_loss": is_unbounded_loss,
     }
+

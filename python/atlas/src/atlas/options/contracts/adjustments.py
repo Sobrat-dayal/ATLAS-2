@@ -46,3 +46,4 @@ class OptionAdjustmentRegistry:
             adj for adj in self._adjustments.values()
             if adj.underlying_symbol.upper() == clean
         ]
+

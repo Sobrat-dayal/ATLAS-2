@@ -22,3 +22,4 @@ __all__ = [
     "parse_osi_symbol",
     "OptionContractRegistry",
 ]
+

@@ -70,3 +70,4 @@ def make_adjusted_deliverable(
         underlying_symbol=symbol.upper(),
         summary=summary_text,
     )
+

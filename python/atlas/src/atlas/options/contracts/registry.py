@@ -214,3 +214,4 @@ class OptionContractRegistry:
             source_memo="OCC Information Memo #54321",
         )
         self.adjustment_registry.register_adjustment(adj_record)
+
