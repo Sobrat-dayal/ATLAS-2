@@ -108,3 +108,4 @@ Building directly upon the 2D foundation of **Stage 129** (MapLibre GL JS + Post
 | **Fixture J** | Historical Time Bucketing | **PASSED**: Historical as-of point-in-time filtering verified without look-ahead bias. |
 | **Fixture K** | Multi-Tenant Data Isolation | **PASSED**: Cross-tenant private dataset queries rejected with 403 Forbidden. |
 | **Fixture L** | Revoked Source Entitlements | **PASSED**: Revocation invalidates cache and raises `SourceEntitlementRevokedError`. |
+
