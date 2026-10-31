@@ -11152,3 +11152,76 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 1663. **Zero Frontend Regression**: Verifies 100% pass across 272 unit tests across 19 suites in `apps/web`.
 1664. **Production Build Gate Execution**: Verifies clean zero-warning Next.js production builds across all 38 platform routes including `/maps`.
 1665. **Stage 132 Handoff Architecture**: Establishes the spatial analytics foundation for mapping corporate facilities, headquarters, and financial entities in Stage 132.
+
+
+## Stage 133: Global Physical Infrastructure Intelligence
+
+### Roadmap Position & Scope Boundaries
+1666. **Stage 133 Infrastructure Scope Boundary**: Stage 133 strictly owns static, verified global physical infrastructure assets, authoritative capacity definitions, bounded network topologies, and corporate ownership linkages across 9 institutional sectors.
+1667. **Stage 134 Live Data Reservation**: Defer all live AIS vessel tracking, live ADS-B aircraft telemetry, dynamic satellite orbits, real-time weather feeds, and sensor telemetry to Stage 134.
+1668. **Non-Disruption and Defense Isolation**: Prohibit all operational control system commands, vulnerability probing, or critical infrastructure targeting features.
+1669. **Coordinate Reference Standard**: Enforce WGS84 (EPSG:4326) as the canonical storage coordinate system, projecting to Web Mercator (EPSG:3857) or Cartesian Earth coordinates for rendering.
+1670. **Deterministic Zero-Fabrication Principle**: Strictly prohibit generating fictional throughput, phantom airports, simulated power output, or artificial junction nodes.
+
+### Asset Domain & Hierarchy
+1671. **Stable Canonical Infrastructure Identity**: Assign durable prefixed identifiers (`INF-PRT-*`, `INF-PWR-*`, `INF-AIR-*`, etc.) mapped to verified source IDs.
+1672. **Plant vs Generating Unit Hierarchy**: Maintain parent plants and child generator units as distinct hierarchical records, rolling up capacity without double counting (Fixture A).
+1673. **Port vs Terminal Identity Separation**: Distinguish broad trade location codes (UN/LOCODE) from specific operating container/bulk terminals (Fixture E).
+1674. **Distinct Facility vs Unit Counting**: In spatial and H3 aggregations, count parent plants/facilities and operational units separately to prevent count inflation (Fixture I).
+1675. **Historical Point-in-Time Status Verification**: Track operational lifecycle transitions (`proposed`, `under_construction`, `operational`, `decommissioned`) via auditable status histories (Fixture J).
+
+### Capacity & Unit Dimensional Safety
+1676. **Strict Power vs Stored Energy Dimensional Separation**: Power (MW) represents instantaneous rate of transfer; Energy (MWh) represents stored work or output over time. Forbids adding MW and MWh (Fixture B).
+1677. **Reporting Basis Preservation**: Preserve and display reported capacity basis (`NAMEPLATE`, `NET_SUMMER`, `NET_WINTER`, `GROSS`, `DESIGN`) without conflation (Fixture F).
+1678. **Missing Data Transparency**: Missing throughput or capacity records render explicitly as "Not available", rejecting simulated or invented measurements (Fixture K).
+1679. **Data Center IT Load vs Total Facility Power**: Prohibit equating IT equipment load with total utility substation power draw.
+1680. **Mining Reserves vs Resources Distinction**: Prohibit combining Proved Reserves and Measured Resources into a unified quantity without regulatory qualification.
+
+### Sector Data & Identifiers
+1681. **Aviation ICAO vs IATA Semantics**: Maintain 4-letter ICAO location indicators and 3-letter commercial IATA codes independently without assuming 1:1 parity.
+1682. **Maritime Terminal Identifiers**: Pair UN/LOCODE trade locations with facility-specific terminal codes and berth numbers.
+1683. **Power Technology Classification**: Categorize power generation by primary fuel type, nameplate rating, and summer/winter deratings.
+1684. **Pipeline Commodity and Diameter Standards**: Store pipeline records with commodity specification, outer diameter in inches, and design throughput.
+1685. **Rail Gauge and Electrification Standards**: Track railway track segments with gauge in millimeters and electrification status.
+
+### Network Architecture & Topology Crossing Separation
+1686. **Geometric Crossing Disconnection Invariant**: Geometric intersections of pipeline routes or rail overpasses do not establish physical network connectivity without an explicit junction switch (Fixtures C & D).
+1687. **Verified Connectivity Evidence Classes**: Network edges are classified into `VERIFIED`, `CANDIDATE`, `INFERRED`, or `DISCONNECTED` evidence tiers.
+1688. **Bounded Graph Traversal Depth**: Enforce strict traversal limits (`max_hops <= 5`) with cycle prevention to protect against unbounded graph recursion.
+1689. **Dual Node-Edge Relational Graph Architecture**: Store graph nodes and directed/bidirectional edges in PostgreSQL with spatial coordinates and attributes.
+1690. **Shortest Path Verification**: BFS shortest-path queries only traverse edges with verified connectivity status.
+
+### Data Governance, Licensing & Revocation
+1691. **Multi-Source Lineage Preservation**: Maintain source provenance IDs and citation URLs for all infrastructure assets and network components.
+1692. **Commercial vs Non-Commercial Licensing Gates**: Restrict datasets designated `NON_COMMERCIAL_ONLY` from publication in commercial environments without appropriate licensing (Fixture M).
+1693. **Dynamic Entitlement Revocation**: Revoking dataset entitlements immediately suppresses individual asset records and invalidates derived H3 aggregates and cached views (Fixture N).
+1694. **Approximate Route Precision Qualification**: Mark generalized pipeline corridors with `ROUTE_CORRIDOR` precision and `is_approximate_route = true` (Fixture H).
+1695. **Deduplication Audit Trail**: Merge candidates from disparate sources using multi-signal matching while preserving source record keys.
+
+### Financial & Corporate Integration
+1696. **Stage 132 Legal Entity Alignment**: Link infrastructure assets directly to verified institutional company records from the Stage 132 entity registry.
+1697. **Distinct Ownership vs Operation Roles**: Differentiate asset Owners from operating entities, preventing false group ownership attribution (Fixture G).
+1698. **Equity-Weighted Capacity Attribution**: Calculate company capacity exposure by multiplying verified asset capacity by fractional equity ownership percentage.
+1699. **No Fabricated Asset-Level Revenues**: Prohibit allocating corporate segment revenue to individual geographic physical assets without audited facility-level filings.
+1700. **Company Infrastructure Portfolio Queries**: Expose dedicated endpoints to retrieve all owned, operated, and linked infrastructure for any corporate entity.
+
+### Security & Multi-Tenant Isolation
+1701. **Multi-Tenant Private Infrastructure Partitioning**: Private infrastructure networks and defense assets are strictly isolated by tenant ID (Fixture L).
+1702. **Critical Infrastructure Security Controls**: Mask high-consequence asset coordinates to locality centroids where mandated by national infrastructure protection directives.
+1703. **Role-Based Spatial Access Control**: Validate actor tenant and permissions on all asset detail, network query, and spatial bounding box endpoints.
+1704. **Protected Vector Tiles**: Serve infrastructure layers through authenticated endpoints with tenant filtering.
+1705. **Zero Control-Plane Exposure**: Disallow any SCADA commands, remote relay actuation, or valve control mechanisms.
+
+### 2D/3D UI & Inspection Workflows
+1706. **Bloomberg-Style Infrastructure Mode**: Provide a dedicated physical infrastructure mode bar with sector filters, status filters, and search.
+1707. **Multi-Sector Visual Design System**: Assign institutional high-contrast color codes and distinct icons to each of the 9 infrastructure sectors.
+1708. **Asset Detail Inspector Drawer**: Offer comprehensive inspection of capacity records, corporate linkages, status histories, and source evidence.
+1709. **Interactive Network Topology Explorer**: Enable point-to-point path finding, bounded reachability traversal, and crossing separation inspection.
+1710. **Side-by-Side Asset Comparison Modal**: Compare 2–5 assets simultaneously, flagging capacity reporting basis mismatches and precision differences.
+
+### Quality Gates & Handoff to Stage 134
+1711. **Comprehensive 14-Fixture Validation**: Validate all 14 Stage 133 Reference Fixtures (Fixtures A through N) across backend and frontend test suites.
+1712. **Full Maps Suite Regression Zero**: Verify 100% pass across Stages 129, 130, 131, 132, and 133 (81 backend tests passing).
+1713. **Frontend Test Suite Execution**: Verify all 284 unit tests passing across 21 test suites in the web application.
+1714. **Production Build Cleanliness**: Confirm Next.js production build (`pnpm --filter web build`) completes cleanly across all 38 platform routes.
+1715. **Stage 134 Live-World Integration Foundation**: Provide authoritative static infrastructure assets and networks as the spatial anchor for Stage 134's live vessel, flight, and satellite telemetry.

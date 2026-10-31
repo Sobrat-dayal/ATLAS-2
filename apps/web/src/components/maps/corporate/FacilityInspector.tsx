@@ -192,7 +192,7 @@ export function FacilityInspector({ facility, onClose, className = "" }: Facilit
           <div className="pt-1 border-t border-zinc-800/60 flex items-center justify-between text-[10px] font-mono text-zinc-400">
             <span>Coordinates (WGS84):</span>
             <span className="text-zinc-200">
-              {facility.longitude !== null && facility.latitude !== null
+              {facility.longitude != null && facility.latitude != null
                 ? `${facility.longitude.toFixed(4)}, ${facility.latitude.toFixed(4)}`
                 : "Unresolved"}
             </span>

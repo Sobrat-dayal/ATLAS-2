@@ -166,7 +166,7 @@ export function CompanyOverviewTab({ overview }: CompanyOverviewTabProps) {
 
             <div className="pt-2 border-t border-atlas-border-subtle">
               <a
-                href={`/maps?company=${encodeURIComponent(overview.entity_id)}`}
+                href={`/maps?company=${encodeURIComponent(overview.company_entity_id)}`}
                 className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-sky-950/40 hover:bg-sky-900/40 border border-sky-800/40 rounded text-[11px] text-sky-400 font-semibold transition-colors"
               >
                 <MapPin className="w-3 h-3" />

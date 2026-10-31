@@ -50,11 +50,13 @@ from ..auth.dependencies import get_current_user
 from .maps_analytics import router as analytics_router
 from .maps_corporate import router as corporate_router
 from .maps_globe import globe_router
+from .maps_infrastructure import router as infrastructure_router
 
 router = APIRouter(prefix="/maps", tags=["maps"])
 router.include_router(globe_router)
 router.include_router(analytics_router)
 router.include_router(corporate_router)
+router.include_router(infrastructure_router)
 
 
 @router.get("/config", response_model=MapConfigResponse)

@@ -37,6 +37,7 @@ import { useSearchParams } from "next/navigation";
 import { ScatterplotLayer } from "@deck.gl/layers";
 import { CorporateMapMode } from "./corporate/CorporateMapMode";
 import { CorporateFacility } from "@/lib/maps/corporate/types";
+import { InfrastructureMapMode } from "./infrastructure/InfrastructureMapMode";
 import {
   maplibreToCesiumCamera,
   cesiumToMaplibreCamera,
@@ -131,6 +132,10 @@ export function AtlasMap({
   const [isCorporateModeOpen, setIsCorporateModeOpen] = useState<boolean>(() => Boolean(companyParam));
   const [selectedCorporateFacility, setSelectedCorporateFacility] = useState<CorporateFacility | null>(null);
   const [corporateFacilities, setCorporateFacilities] = useState<CorporateFacility[]>([]);
+
+  // Physical Infrastructure Intelligence Mode (Stage 133)
+  const [isInfrastructureModeOpen, setIsInfrastructureModeOpen] = useState<boolean>(false);
+  const [selectedInfrastructureAssetId, setSelectedInfrastructureAssetId] = useState<string | null>(null);
 
   // Spatial Analytics (Stage 131 deck.gl + H3)
   const analytics = useSpatialAnalytics();
@@ -408,6 +413,16 @@ export function AtlasMap({
             </div>
           </div>
         )}
+        {isInfrastructureModeOpen && (
+          <div className="absolute top-10 left-0 bottom-0 z-30 pointer-events-none">
+            <div className="pointer-events-auto h-full">
+              <InfrastructureMapMode
+                selectedAssetId={selectedInfrastructureAssetId}
+                onSelectAsset={setSelectedInfrastructureAssetId}
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -424,6 +439,8 @@ export function AtlasMap({
         onToggleAnalytics={() => analytics.setIsOpen((open) => !open)}
         isCorporateModeOpen={isCorporateModeOpen}
         onToggleCorporateMode={() => setIsCorporateModeOpen((prev) => !prev)}
+        isInfrastructureModeOpen={isInfrastructureModeOpen}
+        onToggleInfrastructureMode={() => setIsInfrastructureModeOpen((prev) => !prev)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchResults={searchResults}
@@ -461,6 +478,20 @@ export function AtlasMap({
                   }
                 }}
                 onFacilitiesLoaded={setCorporateFacilities}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Global Physical Infrastructure Intelligence (Stage 133) */}
+        {isInfrastructureModeOpen && (
+          <div className="absolute top-0 left-0 bottom-0 z-30 pointer-events-none">
+            <div className="pointer-events-auto h-full">
+              <InfrastructureMapMode
+                selectedAssetId={selectedInfrastructureAssetId}
+                onSelectAsset={(aid) => {
+                  setSelectedInfrastructureAssetId(aid);
+                }}
               />
             </div>
           </div>

@@ -11,6 +11,7 @@ import {
   PanelLeft,
   PanelRight,
   Building2,
+  Factory,
 } from "lucide-react";
 import { AtlasMapSearch } from "./AtlasMapSearch";
 import { AtlasMapStyleSwitcher } from "./AtlasMapStyleSwitcher";
@@ -28,6 +29,8 @@ interface AtlasMapToolbarProps {
   onToggleAnalytics?: () => void;
   isCorporateModeOpen?: boolean;
   onToggleCorporateMode?: () => void;
+  isInfrastructureModeOpen?: boolean;
+  onToggleInfrastructureMode?: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   searchResults: GeographicSearchResult[];
@@ -58,6 +61,8 @@ export function AtlasMapToolbar({
   onToggleAnalytics,
   isCorporateModeOpen = false,
   onToggleCorporateMode,
+  isInfrastructureModeOpen = false,
+  onToggleInfrastructureMode,
   searchQuery,
   onSearchChange,
   searchResults,
@@ -184,6 +189,23 @@ export function AtlasMapToolbar({
           >
             <Building2 className="w-3.5 h-3.5 text-sky-400" />
             <span className="hidden sm:inline">Corporate</span>
+          </button>
+        )}
+
+        {/* Global Infrastructure Intelligence (Stage 133) */}
+        {onToggleInfrastructureMode && (
+          <button
+            type="button"
+            onClick={onToggleInfrastructureMode}
+            className={`h-7 px-2 flex items-center gap-1.5 rounded border text-[11px] transition-colors ${
+              isInfrastructureModeOpen
+                ? "bg-purple-600/20 text-purple-400 border-purple-500/40"
+                : "bg-atlas-surface-2 text-atlas-text-secondary border-atlas-border-default hover:text-atlas-text-primary"
+            }`}
+            title="Toggle Global Physical Infrastructure Mode"
+          >
+            <Factory className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden sm:inline">Infrastructure</span>
           </button>
         )}
 

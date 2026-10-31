@@ -190,7 +190,7 @@ export function CompanyFootprintTab({ companyId }: CompanyFootprintTabProps) {
                       <span className="font-semibold">{fac.country_code}</span>
                     </td>
                     <td className="p-3 text-right font-mono text-zinc-400 text-[11px]">
-                      {fac.longitude !== null && fac.latitude !== null
+                      {fac.longitude != null && fac.latitude != null
                         ? `${fac.longitude.toFixed(4)}, ${fac.latitude.toFixed(4)}`
                         : "Unresolved"}
                     </td>
