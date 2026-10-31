@@ -55,3 +55,4 @@ class ExposureProvenanceRegistry:
 
     def restore_source(self, source_id: str) -> None:
         self._revoked_sources.discard(source_id)
+

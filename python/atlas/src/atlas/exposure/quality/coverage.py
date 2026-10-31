@@ -62,3 +62,4 @@ def calculate_coverage_summary(
         coverage_status=status,
         notes=notes
     )
+

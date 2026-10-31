@@ -226,3 +226,4 @@ def get_measure_definition(measure_id: str) -> ExposureMeasureDefinition:
     if measure_id not in MEASURE_REGISTRY:
         raise KeyError(f"Measure definition '{measure_id}' is not registered.")
     return MEASURE_REGISTRY[measure_id]
+

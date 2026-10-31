@@ -91,3 +91,4 @@ class SourceLicenseRevokedError(ExposureDomainError):
     def __init__(self, source_id: str, message: str = "Underlying source entitlement has been revoked or expired."):
         super().__init__(message, code="SOURCE_ENTITLEMENT_REVOKED", details={"source_id": source_id})
         self.source_id = source_id
+

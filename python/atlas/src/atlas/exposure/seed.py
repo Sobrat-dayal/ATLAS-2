@@ -237,3 +237,4 @@ def get_fixture_x_geographic_residual():
             {"region_name": "Europe", "revenue": Decimal("35000000.00")}
         ]
     }
+

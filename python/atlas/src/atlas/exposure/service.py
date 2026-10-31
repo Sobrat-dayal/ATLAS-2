@@ -303,3 +303,4 @@ class AtlasExposureEngineService:
         if item.tenant_id and requesting_tenant_id and item.tenant_id != requesting_tenant_id:
             raise TenantExposureAccessDeniedError("Access to proprietary lineage record denied.")
         return item
+

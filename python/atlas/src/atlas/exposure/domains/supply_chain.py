@@ -68,3 +68,4 @@ def analyze_supply_chain_relationship(
         uncertainty_class=UncertaintyClass.VERIFIED_DETERMINISTIC if amount is not None else UncertaintyClass.SOURCE_INCOMPLETE,
         explanation=explanation
     )
+
