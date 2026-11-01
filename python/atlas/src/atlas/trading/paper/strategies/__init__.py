@@ -1,0 +1,1 @@
+# Paper Trading strategies package.
