@@ -17,6 +17,10 @@ router = APIRouter(prefix="/agents", tags=["Agents"])
 _service = AgentRegistryService()
 
 
+def get_agent_service() -> AgentRegistryService:
+    return _service
+
+
 class AgentCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(default="", max_length=2_000)

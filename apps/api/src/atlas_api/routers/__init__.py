@@ -64,6 +64,7 @@ from .ai_tools import router as ai_tools_router
 from .ai_research import router as ai_research_router
 from .ai_actions import router as ai_actions_router
 from .agents import router as agents_router
+from .agent_teams import router as agent_teams_router
 from .maps import router as maps_router
 from .events import router as events_router
 from .knowledge_graph import router as knowledge_graph_router
@@ -139,6 +140,7 @@ api_router.include_router(ai_context_router, prefix="")
 api_router.include_router(ai_tools_router, prefix="")
 api_router.include_router(ai_research_router, prefix="")
 api_router.include_router(ai_actions_router, prefix="")
+api_router.include_router(agent_teams_router, prefix="")
 api_router.include_router(agents_router, prefix="")
 api_router.include_router(maps_router, prefix="")
 api_router.include_router(events_router, prefix="")
