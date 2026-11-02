@@ -55,6 +55,7 @@ from .screeners import router as screeners_router
 from .search import router as search_router
 from .watchlists import router as watchlists_router
 from .workspaces import router as workspaces_router
+from .workflows import router as workflows_router
 from .context import router as context_router
 from .terminal import router as terminal_router
 from .ai import router as ai_router
@@ -130,6 +131,7 @@ api_router.include_router(portfolios_router, prefix="")
 api_router.include_router(risk_router, prefix="")
 api_router.include_router(saved_router, prefix="")
 api_router.include_router(workspaces_router, prefix="")
+api_router.include_router(workflows_router, prefix="")
 api_router.include_router(context_router, prefix="")
 api_router.include_router(terminal_router, prefix="")
 api_router.include_router(ai_router, prefix="")
