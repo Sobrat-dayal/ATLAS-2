@@ -61,3 +61,4 @@ class StrategyRegistry:
                 )
 
         return resolved
+

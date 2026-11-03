@@ -163,3 +163,4 @@ CANONICAL_STRATEGY_TEMPLATES: Dict[str, AtlasStrategyDefinition] = {
         is_system_template=True,
     ),
 }
+

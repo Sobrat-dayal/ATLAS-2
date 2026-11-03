@@ -291,3 +291,4 @@ def compare_completed_runs(
 ):
     """Compare multiple completed backtest runs across standardized metrics."""
     return {"comparison": service.compare_runs(req.run_ids, principal=principal)}
+

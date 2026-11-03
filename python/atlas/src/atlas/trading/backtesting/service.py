@@ -155,3 +155,4 @@ class AtlasBacktestingService:
             if run:
                 resolved.append(run)
         return compare_backtest_runs(resolved)
+

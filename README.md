@@ -7,10 +7,13 @@
 **Warning:** Production implementation has not started. This repository currently contains the structural foundation and product specification. No frontend pages, backend APIs, databases, or production functionalities are active yet.
 
 ## About
+
 ATLAS is designed as a professional, desktop-first financial operating environment combining concepts from institutional terminals, advanced geospatial platforms, and autonomous AI-agent workforces.
 
 ## Repository Structure
+
 ATLAS uses a monorepo architecture:
+
 - `apps/web`: Frontend application (Stage 3+)
 - `apps/api`: Backend application API (Stage 11+)
 - `python/atlas/`: Python domain packages (Modular Monolith)
@@ -20,15 +23,18 @@ ATLAS uses a monorepo architecture:
 - `docs/`: Full documentation
 
 ## Setup
+
 - **Python**: Use `uv` with python 3.12 (`python/atlas/pyproject.toml`, `apps/api/pyproject.toml`)
 - **Node**: Use `pnpm` workspaces (`pnpm-workspace.yaml`, `package.json`)
 
 ## Database Architecture
+
 - **PostgreSQL**: Authoritative source of truth for entities, relationships, configuration, and capabilities.
 - **ClickHouse**: High-volume, immutable analytical data (Market Data, Event Streams).
 - **Valkey**: Ephemeral low-latency state, caching, and real-time coordination.
 
 ## Run
+
 To run the full stack locally:
 
 ```bash
@@ -43,9 +49,11 @@ uv run uvicorn atlas_api.main:app --reload
 pnpm clickhouse-up
 pnpm valkey-up
 ```
+
 The full product specification is located in the `docs/` directory. Check the [Documentation Index](docs/README.md) for more details.
 
 ## Global Search (Stage 45)
+
 - Open via center search bar in AppShell TopBar.
 - Backed by PostgreSQL indexed search (`entities`, `entity_aliases`, `entity_identifiers`).
 - Searches canonical entities with deterministic exact, prefix, and trigram fuzzy matching.
@@ -53,6 +61,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - Run tests: `pytest apps/api/tests/search/test_global_search.py`
 
 ## Command Palette (Stage 46)
+
 - **Shortcut**: `Cmd + K` (macOS) / `Ctrl + K` (Windows/Linux) or click the shortcut badge in the TopBar.
 - **Commands**: Discover and execute explicitly registered navigation commands across all 20 modules, global settings, section settings, search entity handoff, and entity selection clearance.
 - **Execution**: 100% frontend-local deterministic filtering with 0 backend queries, 0 Provider calls, and 0 LLM calls.
@@ -60,6 +69,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Run tests**: `npx.cmd tsx --test apps/web/tests/commands.test.ts`
 
 ## Command Parsing (Stage 47)
+
 - **Syntax**: ATLAS Command Language v1 supports structured slash syntax and Bloomberg-style shorthand:
   - `/markets` — Module navigation
   - `/charts NVDA` or `/charts open NVDA` — Select NVDA security and navigate to Charts
@@ -76,6 +86,7 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Frontend: `npx.cmd tsx apps/web/tests/commands-parser.test.ts`
 
 ## Natural-Language Command Interpretation (Stage 48)
+
 - **Natural Phrasing**: Single-turn interpretation translating human instructions into deterministic Stage 47 syntax:
   - `"take me to markets"` -> `/markets`
   - `"show me NVDA's chart"` -> `/charts "NVDA"`
@@ -94,16 +105,20 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Frontend: `npx.cmd tsx --test apps/web/tests/commands-interpreter.test.ts`
 
 ## Persistent Notification Center (Stage 49)
+
 - **Architecture**: Secure, durable user-scoped notifications backed by PostgreSQL (`notifications` table).
 - **Update Strategy**: 30-second bounded unread-count polling while page is visible, focus refetch, center-open refetch. 0 WebSocket transport, 0 Redis keys, 0 ClickHouse tables.
 - **TopBar Trigger**: Bell icon with real unread count badge (hidden at 0, 99+ at >= 100).
 - **Notification Center**: Slide-over panel with All/Unread filter tabs, Mark all as read, and deterministic keyset pagination.
 - **Database Migration**:
+
   ```bash
   cd apps/api
   uv run alembic upgrade head
   ```
+
 - **Internal Service Creation**:
+
   ```python
   from atlas.notifications import CreateNotification, NotificationCategory, NotificationSeverity, NotificationService
 
@@ -119,6 +134,7 @@ The full product specification is located in the `docs/` directory. Check the [D
       )
   )
   ```
+
 - **APIs**:
   - `GET /api/v1/notifications` — Keyset-paginated list of owned notifications
   - `GET /api/v1/notifications/unread-count` — Lightweight unread count
@@ -131,6 +147,7 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Frontend: `npx.cmd tsx --test apps/web/tests/notifications.test.ts`
 
 ## Persistent Bottom Taskbar & Workspace Panel (Stage 50)
+
 - **Placement**: Permanently pinned at the bottom edge of the authenticated AppShell across all 20 modules.
 - **Interactions**:
   - Click any taskbar item (`Tasks`, `Agents`, `Jobs`, `Alerts`, `Downloads`, `System Health`, `Terminal`) to open or switch panels.
@@ -142,6 +159,7 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Run tests: `npx.cmd tsx --test apps/web/tests/bottom-taskbar.test.ts`
 
 ## Home Market Summary (Stage 52)
+
 - **Placement**: Integrated into the primary column of the ATLAS Home operational dashboard (`/home`, Module 1).
 - **Core Functionality**:
   - Truthful, real-time observation cards for server-owned curated benchmark instruments (S&P 500, NASDAQ 100, Dow Jones, SPY ETF, EUR/USD, USD/JPY, Bitcoin, Brent Crude).
@@ -157,6 +175,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/HOME_MARKET_SUMMARY.md`
 
 ## Home Personalized Activity (Stage 53)
+
 - **Placement**: Integrated into the primary column of the ATLAS Home operational dashboard (`/home`, Module 1) directly below Market Summary.
 - **Core Functionality**:
   - Workspace continuity helping authenticated users resume recently opened modules and selected canonical entities.
@@ -181,6 +200,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/HOME_PERSONALIZED_ACTIVITY.md`
 
 ## Home Tasks and Approvals (Stage 54)
+
 - **Placement**: Integrated into the secondary column of the ATLAS Home operational dashboard (`/home`, Module 1) alongside Quick Launch, and powering the Stage 50 Bottom Taskbar Tasks panel.
 - **Core Functionality**:
   - **Domain A — Personal Tasks**: User-managed manual work items (`user_tasks` table in PostgreSQL). Support for task creation, editing, completion, reopening, and cancellation with optimistic concurrency control (`version`). Optional UTC deadlines with derived `is_overdue` and `is_due_soon` presentation flags. Optional canonical module context and Universal Entity UUID context with safe "Open Context" navigation.
@@ -198,6 +218,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/HOME_TASKS_APPROVALS.md`
 
 ## Home Intelligence Feed Placeholder (Stage 55)
+
 - **Placement**: Integrated into the secondary column of the ATLAS Home operational dashboard (`/home`, Module 1) directly below Tasks & Approvals.
 - **Core Purpose & Presentation Foundation**:
   - Compact, professional intelligence feed presentation foundation establishing a truthful reserved state and extension point for future stages.
@@ -225,6 +246,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/HOME_INTELLIGENCE_FEED.md`
 
 ## Markets Overview V1 (Stage 56)
+
 - **Placement**: Mounted on the canonical route `/markets` (`ATLAS_MODULES.markets.route`), Module 2 of the 20 canonical ATLAS modules.
 - **Core Terminal Architecture**:
   - Professional, data-dense financial market intelligence workspace inspired by Bloomberg Terminal and OpenBB.
@@ -252,6 +274,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/MARKETS_OVERVIEW_V1.md`
 
 ## Equities Markets V1 (Stage 57)
+
 - **Placement**: Mounted on `/markets/equities`, extending Module 2 (`/markets`).
 - **Core Architecture**:
   - Global equity security discovery and inspection workspace grounded in canonical Financial Instrument records.
@@ -265,6 +288,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/EQUITIES_MARKETS_V1.md`
 
 ## ETFs & Funds Markets V1 (Stage 58)
+
 - **Placement**: Mounted on the canonical route `/markets/funds`, extending Module 2 (`/markets`).
 - **Core Architecture**:
   - Global fund vehicle discovery, ETF intelligence, and NAV-aware market data explorer.
@@ -289,6 +313,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/ETF_FUNDS_MARKETS_V1.md`
 
 ## Foreign Exchange (FX) Markets V1 (Stage 59)
+
 - **Status**: Implemented (`/markets/fx`)
 - **Capabilities**:
   - Global Foreign Exchange intelligence, currency pair discovery, spot exchange rates, bid/ask analytics, and indicative currency conversion.
@@ -313,6 +338,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/FX_MARKETS_V1.md`
 
 ## Cryptocurrency Markets V1 (Stage 60)
+
 - **Status**: Implemented (`/markets/crypto`)
 - **Capabilities**:
   - Global cryptocurrency asset discovery, exchange-aware spot markets, digital asset intelligence, and professional market terminal.
@@ -338,6 +364,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/CRYPTOCURRENCY_MARKETS_V1.md`
 
 ## Bonds & Fixed-Income Markets V1 (Stage 61)
+
 - **Status**: Implemented (`/markets/bonds`)
 - **Capabilities**:
   - Global debt security discovery, sovereign and corporate debt markets, coupon intelligence, yield observations, clean/dirty pricing, and professional fixed-income terminal.
@@ -360,6 +387,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/BONDS_FIXED_INCOME_MARKETS_V1.md`
 
 ## Futures & Commodities Markets V1 (Stage 62)
+
 - **Status**: Implemented (`/markets/futures`)
 - **Capabilities**:
   - Global Commodity Intelligence, Exchange-Traded Futures, Contract Discovery, Settlement Data, Expiration Management, and Professional Derivatives Market Terminal.
@@ -385,6 +413,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/FUTURES_COMMODITIES_MARKETS_V1.md`
 
 ## Market Movers V1 (Stage 63)
+
 - **Overview**: Dedicated market movement intelligence and professional terminal workspace located canonically at `/markets/movers` as a core subsection of Markets (Module 02).
 - **Key Features**:
   - Defined Ranking Universes: `univ_us_equities` (Covered US Equities), `univ_crypto_spot` (Supported Crypto Spot Markets), `univ_futures` (Supported Futures Contracts).
@@ -417,6 +446,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/MARKET_MOVERS_V1.md`
 
 ## Market Heatmaps V1 (Stage 64)
+
 - **Overview**: Dedicated market performance visualization, sector & industry treemaps, and real-time market intelligence workspace located canonically at `/markets/heatmaps` within Markets (Module 02).
 - **Key Features**:
   - Two Distinct Visualization Modes:
@@ -458,6 +488,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/MARKET_HEATMAPS_V1.md`
 
 ## Cross-Asset Markets V1 (Stage 65)
+
 - **Overview**: Dedicated multi-asset market intelligence and comparative terminal workspace at `/markets/cross-asset` (Markets Module 02).
 - **Core Principles & Capabilities**:
   - **Native Market Overview**: Preserves individual financial asset-class quotation conventions without conflating incompatible measurements:
@@ -483,6 +514,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/CROSS_ASSET_MARKETS_V1.md`
 
 ## Charts V1 (Stage 66)
+
 - **Overview**: Dedicated institutional financial charting workspace at `/charts` (Canonical Module 03), providing real historical candlestick rendering, close-line visualization, and canonical financial instrument exploration.
 - **Core Principles & Capabilities**:
   - **Lightweight Charts Engine**: Powered by open-source TradingView Lightweight Charts (`lightweight-charts@5.2.1`, Apache 2.0). Client-only rendering, robust SSR boundary with Suspense, auto-resize via `ResizeObserver`, theme token synchronization, and explicit cleanup to prevent leaks.
@@ -513,6 +545,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/CHARTS_V1.md`
 
 ## Live Chart Streaming V1 (Stage 67)
+
 - **Overview**: Transforms ATLAS Charts into a live-capable institutional financial charting workstation at `/charts`, integrating real-time market data streaming, Redis/Valkey latest Quote state (Stage 41), typed Market Events (Stage 42), authenticated frontend WebSockets (Stage 43), and market data freshness classification (Stage 44).
 - **Core Principles & Capabilities**:
   - **Canonical Instrument & Series Subscriptions**: Live subscriptions bound to canonical `instrument_entity_id` UUIDs and market-series dimensions, preventing cross-venue or cross-listing Quote pollution.
@@ -540,6 +573,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/LIVE_CHART_STREAMING.md`
 
 ## Advanced Chart Intervals & Chart Types V1 (Stage 68)
+
 - **Overview**: Upgrades ATLAS Charts at `/charts` to a full multi-timeframe institutional charting interface supporting 9 canonical intervals (`1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1d`, `1w`, `1M`), truthful availability discovery, mathematical & temporal Decimal OHLCV aggregation, 4 professional chart types (Candlestick, OHLC Bar, Line, Area), and multi-interval live streaming compatibility.
 - **Core Principles & Capabilities**:
   - **Canonical Multi-Timeframe Intervals**: Stable typed interval identifiers (`1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1d`, `1w`, `1M`) separating bar aggregation granularity from viewport time range.
@@ -575,6 +609,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/CHART_INTERVALS_AND_TYPES.md`
 
 ## Technical Indicator Infrastructure V1 (Stage 69)
+
 - **Mathematical Integrity**: Provides the extensible, typed, deterministic calculation engine for technical indicators in `/charts`:
   - **Indicator Registry (`IndicatorRegistry`)**: Server-controlled allowlist of versioned indicator definitions. Strictly prohibits user-submitted executable code (`eval`, `exec`).
   - **Reference Implementation (`atlas.sma` v1)**: Deterministic Simple Moving Average using $O(N)$ rolling-sum accumulation and high-precision Python `Decimal` arithmetic.
@@ -604,6 +639,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/TECHNICAL_INDICATOR_INFRASTRUCTURE.md`
 
 ## TA-Lib Technical Analysis Engine & Oscillator Panes (Stage 70)
+
 - **Institutional Technical Studies**: Extends the Stage 69 framework with the TA-Lib C-library computation backend and pure-Python reference implementations across 14 canonical studies:
   - **Trend**: SMA, EMA, WMA, DEMA, TEMA, MACD (12, 26, 9)
   - **Momentum**: RSI, Stochastic (14, 3, 3), ROC, CCI, Williams %R
@@ -619,6 +655,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/TALIB_TECHNICAL_INDICATORS.md`
 
 ## Professional Chart Drawing Tools V1 (Stage 71)
+
 - **Financial Coordinate Anchoring**: Every drawing is anchored strictly to canonical financial coordinates `{ time, price }`, never transient screen pixels or mutable bar indices. Dynamic re-projection maintains anchor stability during chart panning, zooming, and resizing.
 - **9 Canonical Interactive Drawing Tools**:
   - `trendline`: 2-anchor directional segment with endpoint and whole-line dragging.
@@ -650,6 +687,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/CHART_DRAWING_TOOLS.md`
 
 ## Professional Multi-Chart Layouts V1 (Stage 72)
+
 - **Multi-Chart Workspace Architecture**:
   - Transforms `/charts` into an institutional multi-chart financial workstation supporting up to 4 simultaneous independently configured chart panels.
   - **6 Canonical Layout Presets**:
@@ -685,6 +723,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/MULTI_CHART_LAYOUTS.md` and `docs/DECISIONS.md`.
 
 ## Professional Chart Synchronization V1 (Stage 73)
+
 - **Chart Synchronization Engine**:
   - Transforms ATLAS Multi-Chart Workspaces into an institutional-grade synchronized financial analysis workspace at `/charts`.
   - Implements a high-performance local synchronization controller (`ChartSyncController`) and session-level group store (`ChartSyncStore`) with zero external broker or server message bus overhead.
@@ -731,6 +770,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/CHART_SYNCHRONIZATION.md` and `docs/DECISIONS.md`.
 
 ## Saved Chart Layouts V1 (Stage 74)
+
 - **Persistent Professional Chart Workspaces**:
   - Full multi-chart workspace serialization and hydration across `/charts`.
   - Persists grid presets (`single`, `two-columns`, `two-rows`, `three-left-focus`, `three-top-focus`, `four-grid`), panel order, split ratios, canonical instrument UUIDs, intervals, chart types, TA-Lib indicator parameters, Stage 71 financial-coordinate drawings, and Stage 73 synchronization groups.
@@ -754,6 +794,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/SAVED_CHART_LAYOUTS.md` and `docs/DECISIONS.md`.
 
 ## Historical Chart Replay V1 (Stage 75)
+
 - **Deterministic Historical Playback Engine**:
   - Candle-by-candle historical playback inside `/charts` for studying real past market conditions.
   - Ephemeral authenticated replay sessions bound to a single Stage 72 panel (`panel_id`).
@@ -786,6 +827,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/CHART_REPLAY.md` and `docs/DECISIONS.md`.
 
 ## Watchlists V1 (Stage 76)
+
 - **Persistent Multi-Asset Financial Instrument Watchlists**:
   - Fully functional `/watchlists` module transforming the placeholder into an institutional-grade workspace.
   - PostgreSQL-backed persistent storage with versioned Alembic migration (`apps/api/migrations/versions/stage76_watchlists.py`).
@@ -810,6 +852,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/WATCHLISTS_V1.md` and `docs/DECISIONS.md`.
 
 ## Watchlists V1 — Advanced Columns (Stage 77)
+
 - **Central Typed Column Registry**:
   - 14 operational columns across 4 categories: `identity`, `market`, `quote`, `quality`.
   - Typed values (`TEXT`, `IDENTIFIER`, `ENUM`, `MONETARY`, `PERCENTAGE`, `TIMESTAMP`, `STATUS`).
@@ -837,6 +880,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/WATCHLIST_COLUMNS.md` and `docs/DECISIONS.md`.
 
 ## Watchlists V1 — Live Updates (Stage 78)
+
 - **Shared WebSocket Streaming Infrastructure**:
   - Reuses Stage 43 shared WebSocket (`SharedWebSocketClient`) with zero duplicate sockets.
   - Multi-consumer reference counting across watchlists and active Charts views.
@@ -863,6 +907,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/LIVE_WATCHLIST_UPDATES.md` and `docs/DECISIONS.md`.
 
 ## Company Earnings Intelligence (Stage 84)
+
 - **Architecture**: Institutional-grade earnings workspace inside `/companies` integrating corporate earnings announcements, actual reported results, analyst consensus expectations, decimal-safe earnings surprise calculations, corporate forward management guidance, and verified earnings call references.
 - **Strict Pre-Release Cutoff**: Consensus expectation snapshots enforce strict publication timestamps prior to earnings release ($T_{\text{consensus}} < T_{\text{announcement}}$), prohibiting look-ahead revision leakage.
 - **Pure Decimal Arithmetic**: Zero floating point inaccuracy, robust zero-estimate denominator handling ($0$ consensus produces qualified percentage `None`), and negative-estimate magnitude interpretation using absolute denominators.
@@ -876,6 +921,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/COMPANY_EARNINGS.md` and `docs/DECISIONS.md`.
 
 ## Company Ownership Intelligence (Stage 85)
+
 - **Architecture**: Institutional-grade company ownership workspace inside `/companies` integrating institutional shareholders (Form 13F), corporate insiders (Forms 3/4/5), beneficial owners (Schedules 13D/13G), macro shareholding patterns, ownership concentration, voting rights, and quarterly position changes.
 - **Strict Distinction Matrix**: Formally separates investment managers from managed investment funds, registered nominees from beneficial owners, direct from indirect holdings, economic exposure from voting control, and historical period facts from later amendments.
 - **Pure Decimal Precision**: Exact `Decimal` arithmetic for all share percentages, position changes, and percentage-point impacts with zero-division safety and negative-denominator rejection.
@@ -891,6 +937,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/COMPANY_OWNERSHIP.md` and `docs/DECISIONS.md`.
 
 ## Company Filings Intelligence (Stage 86)
+
 - **Architecture**: Institutional-grade regulatory filings intelligence workspace inside `/companies` integrating official SEC EDGAR disclosures, Annual Reports (10-K, 20-F), Quarterly Reports (10-Q), Current Material Events (8-K), Proxy Statements (DEF 14A), Ownership & Insider References (13F, Form 4), structured XBRL financial facts extraction, full-text document search, revision tracking, and side-by-side filing comparison.
 - **Regulatory Source & Fair Access Compliance**: Enforces official SEC EDGAR Fair Access policy with configured User-Agent identifying technical contact email, token-bucket shared rate limiting (<= 10 req/s), exponential retry backoff, and direct links to immutable SEC web archives.
 - **Safe Document Processing & Multi-Stage Sanitization**: Defuses script tags, inline event handlers, iframes, unsafe URL schemes, and active content from untrusted regulatory HTML. Prohibits XML external entity (XXE) attacks and quadratic expansion on XBRL instance documents.
@@ -905,6 +952,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/COMPANY_FILINGS.md` and `docs/DECISIONS.md`.
 
 ## Company Peers & Comparable Company Analysis (Stage 87)
+
 - **Architecture**: Institutional-grade comparable company analysis and peer benchmarking workspace within `/companies`. Features deterministic candidate peer discovery, verified multi-taxonomy industry classifications (GICS, ICB, NAICS, SIC), user-scoped custom peer groups with concurrency and revision control, batched cross-company financial benchmarking (Scale, Growth, Profitability, Liquidity, Solvency, Cash Flow), and relative valuation multiples.
 - **Explicit Relationship Semantics**: Enforces rigorous semantic boundaries distinguishing `COMPARABLE_CANDIDATE`, `USER_SELECTED_PEER`, `SOURCE_DEFINED_PEER`, and `VERIFIED_COMPETITOR`. A comparable company is not assumed to be a competitor, and user selections never pollute the global corporate relationship graph.
 - **Canonical Financial & Ratio Reuse**: Directly reuses Stage 82 Financial Statements and Stage 83 Financial Ratio Registry methodologies. Prevents duplicate calculation formulas and enforces non-meaningful (`N/M`) status for negative denominator ratios (e.g. negative equity P/B and ROE).
@@ -920,6 +968,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/COMPANY_PEERS.md` and `docs/DECISIONS.md`.
 
 ## Company Supply Chain Intelligence (Stage 88)
+
 - **Architecture**: Institutional-grade corporate supply chain network and commercial intelligence workspace within `/companies`. Features canonical entity resolution (UUID-based, legal entity vs. brand distinction, parent vs. subsidiary qualification, and public/private company compatibility), strictly directed commercial relationship modeling (`SUPPLIER -> CUSTOMER`), and verifiable source evidence lineage from SEC Form 10-K, 8-K, and corporate disclosures.
 - **Commercial Relationship Taxonomy**: 12 controlled commercial edge categories including component supply (`SUPPLIES_COMPONENTS_TO`), raw materials, contract manufacturing (Foundry/OSAT), OEM, ODM, retail/carrier distribution channels, and technology licensing.
 - **Verifiable Evidence & Zero-Inference Standard**: Every asserted edge is linked to traceable regulatory filings with document IDs, exact section anchors (e.g. *Item 1. Business - Supply Agreements*), filing timestamps, and quoted disclosure text. Zero LLM-hallucinated edges or speculative associations based on industry similarity.
@@ -936,6 +985,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/COMPANY_SUPPLY_CHAIN.md` and `docs/DECISIONS.md`.
 
 ## Institutional-Grade Economics V1 (Stage 89)
+
 - **Architecture**: Authoritative global macroeconomic terminal workspace within `/economics` (Module 7). Features canonical economic indicator identity, sovereign source series discovery, G6 major economies matrix (United States, Euro Area, China, India, Japan, United Kingdom), multi-vintage official estimate tracking (Advance, Second, Third), point-in-time publication filtering, versioned mathematical transformations, and high-performance interactive time-series charting.
 - **Canonical Indicator & Series Architecture**: Rigorous separation between abstract canonical indicator concepts (e.g. `GDP_GROWTH_QOQ_ANN`, `CPI_INFLATION_YOY`) and sovereign source series (e.g. BEA `A191RL1Q225SBEA`, BLS `CUUR0000SA0`, Eurostat `prc_hicp_manr`). Preserves official agency definitions, measurement units, reporting frequencies, and seasonal-adjustment policies.
 - **Strict Anti-Fabrication Rule**: Zero manufactured economic data, zero unweighted synthetic "World GDP" averages, and zero substitution of market equity/bond quotes for sovereign economic statistics. All figures carry explicit reference periods, units, and sovereign authority provenance.
@@ -951,6 +1001,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/ECONOMICS_V1.md` and `docs/DECISIONS.md`.
 
 ## Institutional-Grade Country Economics Intelligence (Stage 90)
+
 - **Architecture**: Comprehensive sovereign macroeconomic analysis workspace within `/economics` (Module 7). Transforms the canonical macroeconomic infrastructure into an institutional Country Economics workstation covering national accounts, expenditure structures, production-side Gross Value Added (GVA), inflation baskets, labor market dynamics, fiscal accounts, sovereign debt, international trade, balance of payments, and demographics for core G6 economies (United States `US`, Euro Area `EA`, China `CN`, India `IN`, Japan `JP`, United Kingdom `GB`).
 - **SNA 2008 / ESA 2010 National Accounts Rigor**:
   - Distinguishes nominal (current prices) from real (constant / chained volume) GDP.
@@ -980,6 +1031,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/COUNTRY_ECONOMICS.md` and `docs/DECISIONS.md`.
 
 ## Institutional-Grade Financial News Platform Foundation (Stage 99)
+
 - **Architecture**: Authoritative global financial news terminal workspace at `/news` (Module 8). Features canonical News Article entities, verified Publisher registry, authorized Provider adapters (`openbb_news`, `financial_wire_direct`, `regulator_announcements`, `corporate_press_wire`), idempotent ingestion pipelines with deterministic SHA-256 identity, duplicate detection, syndicated content recognition, and full revision audit trails.
 - **Canonical Entity Linking & Disambiguation**: Resolves article mentions to canonical Company Entities (Stage 18) and Financial Instrument Entities (Stage 17) with strict ticker collision filters (excluding short common English words like `IT`, `ON`, `CAN`, `ARE`, `FOR`), exchange context disambiguation, ADR vs ordinary share qualification, and zero speculative sentiment or market-impact claims.
 - **Timestamp Rigor & Provenance**: Tracks 5 distinct timestamps (`published_at`, `source_updated_at`, `first_seen_at`, `ingested_at`, `last_fetched_at`) with strict UTC guarantees and qualified calendar date precision. Ingestion timestamps are never substituted for publication timestamps.
@@ -1004,6 +1056,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/NEWS_V1.md` and `docs/DECISIONS.md`.
 
 ## Advanced Financial News Discovery, Search and Timeline System (Stage 100)
+
 - **Architecture**: Advanced financial news exploration, search, and timeline system at `/news` (Module 8). Expands the canonical Stage 99 News foundation into a multi-dimensional discovery terminal with 7 discovery modes (`ALL`, `MARKETS`, `COMPANIES`, `SECURITIES`, `TOPICS`, `INDUSTRIES`, `WATCHLIST`), quoted exact phrase search, explainable term relevance scoring, dynamic faceted search, and chronological timeline event bucketing.
 - **Canonical Topic Taxonomy & Classification**: Establishes 14 controlled topics (`EARNINGS_RELEASES`, `MERGERS_ACQUISITIONS`, `DIVIDENDS_DISTRIBUTIONS`, `SHARE_BUYBACKS`, `CAPITAL_RAISING`, `INTEREST_RATES_MONETARY_POLICY`, `INFLATION_PRICES`, `EMPLOYMENT_LABOR`, `FOREIGN_EXCHANGE_CURRENCIES`, `COMMODITIES_ENERGY`, `FINANCIAL_REGULATION_COMPLIANCE`, `CORPORATE_GOVERNANCE_BOARD`, `TECHNOLOGY_AI_INNOVATION`, `SUPPLY_CHAIN_LOGISTICS`) and GICS/ICB sector resolution (`NewsIndustrySector`) with deterministic rule-based classifiers.
 - **Advanced Search & Transparent Relevance**:
@@ -1032,6 +1085,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/NEWS_DISCOVERY_AND_TIMELINES.md` and `docs/DECISIONS.md`.
 
 ## Financial News Story Intelligence and Event Classification System (Stage 101)
+
 - **Architecture**: Institutional-grade multi-source story clustering and evidence-based financial event classification at `/news` (Module 8). Connects Stage 99 News Foundation and Stage 100 Discovery by organizing disparate articles into auditable Story Threads (`story-*`) and identifying explicitly supported Financial Event records (`fev-*`) from verified source evidence.
 - **Story Threads & Conservative Clustering**:
   - Candidate retrieval blocking on shared canonical company/instrument entities, verified event context, and bounded temporal proximity windows.
@@ -1062,6 +1116,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/NEWS_STORIES_AND_EVENTS.md` and `docs/DECISIONS.md`.
 
 ## Financial News Sentiment, Entity Relevance and Market Reaction Analytics System (Stage 102)
+
 - **Architecture**: Institutional-grade target-aware financial language sentiment, evidence-grounded relevance scoring, and descriptive market reaction context at `/news` (Module 8). Extends Stage 99 News Foundation, Stage 100 Discovery, and Stage 101 Story/Event Intelligence with source-linked evaluative tone classification, conservative entity relevance, syndication-aware aggregation, and exchange-aligned noncausal price context.
 - **Strict Noncausal & Analytical Principles**:
   - Analytical tone is strictly text framing; zero automated investment recommendations (Buy/Sell), zero predicted returns, and zero news-driven trading signals.
@@ -1096,6 +1151,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/NEWS_SENTIMENT_AND_REACTION_ANALYTICS.md` and `docs/DECISIONS.md`.
 
 ## Personalized Financial News Monitoring, Custom Feeds, Rule-Based Alerts, and News Digests (Stage 103)
+
 - **Institutional News Monitoring Rules**:
   - Persistent, user-scoped rule definitions supporting typed criteria across 7 scopes: `COMPANY` (tickers/entities), `INSTRUMENT`, `WATCHLIST`, `TOPIC`, `PUBLISHER`, `EVENT_TYPE`, and `COMPOSITE`.
   - Optimistic concurrency revisioning (`rule_revision`) and per-user quota enforcement (50 rules max).
@@ -1127,6 +1183,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/NEWS_MONITORING_ALERTS_AND_DIGESTS.md` and `docs/DECISIONS.md`.
 
 ## Institutional-Grade Financial Research Platform Foundation (Stage 104)
+
 - **Architecture**: Foundational institutional financial research infrastructure at `/research` (Module 9). Formalizes canonical research entities, verified multi-stage source libraries, structured research investigations, immutable note revisions, epistemic claim categorizations, granular evidence citations, and secure analyst workspaces.
 - **Canonical Research Entities & Lifecycles**:
   - `ResearchInvestigation`: Root research entity supporting 7 typed scopes (`COMPANY`, `INSTRUMENT`, `INDUSTRY`, `MACROECONOMIC`, `MARKET`, `FINANCIAL_EVENT`, `GENERAL_FINANCIAL`) and 5 lifecycle states (`DRAFT`, `ACTIVE`, `ON_HOLD`, `COMPLETED`, `ARCHIVED`).
@@ -1160,6 +1217,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/RESEARCH_FOUNDATION.md` and `docs/DECISIONS.md`.
 
 ## Institutional-Grade Financial Research Source Discovery, Document Intelligence and Evidence Extraction Platform (Stage 105)
+
 - **Architecture**: Advanced document intelligence, source discovery, and multi-document comparative analysis platform integrated into `/research` (Module 9). Formalizes hierarchical document outlining, character-offset text span search, financial table matrix extraction, physical evidence location anchor verification, candidate-to-evidence promotion, and mathematical financial fact variance analysis.
 - **Multi-Facet Research Source Discovery**:
   - `POST /api/v1/research/sources/search` executing multi-facet search across corporate issuers (`entity_ids`), regulatory filing types (`10-K`, `10-Q`, `8-K`), source categories, publisher classes, and reporting periods.
@@ -1197,6 +1255,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/RESEARCH_SOURCE_DISCOVERY_AND_DOCUMENT_INTELLIGENCE.md` and `docs/DECISIONS.md`.
 
 ## Institutional-Grade Financial Research Analysis, Evidence-Backed Hypothesis Evaluation, and Reproducible Analytical Workbenches (Stage 106)
+
 - **Architecture**: Institutional-grade reproducible financial calculation, cross-sectional peer benchmarking, and evidence-backed hypothesis evaluation workbench integrated into `/research` (Module 9). Extends Stage 104 Research Foundation and Stage 105 Document Intelligence by bridging verified filing observations and canonical statement facts into auditable, reproducible analytical runs.
 - **Canonical Research Analysis Domain & Controlled Analysis Types**:
   - `ResearchAnalysis` entity with stable identifiers, user ownership, investigation scoping, monotonic optimistic concurrency versioning (`revision`), and reproducible execution runs (`ResearchAnalysisRun`).
@@ -1222,6 +1281,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/RESEARCH_ANALYSIS_AND_HYPOTHESIS_EVALUATION.md` and `docs/DECISIONS.md`.
 
 ## Institutional-Grade Investment Research Thesis, Evidence-Based Research Synthesis & Professional Analyst Report Studio (Stage 107)
+
 - **Architecture**: Institutional-grade investment research report authoring studio and structured thesis synthesis workbench inside `/research` (Module 9). Transforms raw research notes, filing disclosures (SEC Forms 10-K, 10-Q, 8-K), and reproducible quantitative analysis runs into publication-grade, audited investment research memorandums and structured investment theses.
 - **Structured Investment Theses & Argument Taxonomy**:
   - Central thesis statements with explicit time horizons (`time_horizon`), target entity mapping (`primary_subject_id`), and quantifiable conviction scores (`0.0 - 1.0`).
@@ -1260,6 +1320,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/RESEARCH_THESIS_AND_REPORT_STUDIO.md` and `docs/DECISIONS.md`.
 
 ## Institutional-Grade Research Collaboration, Analyst Review, Evidence Governance and Approval Workflow Platform (Stage 108)
+
 - **Architecture**: Institutional-grade research collaboration, formal review state machine, anchored evidence governance, and controlled internal circulation platform integrated into `/research` (Module 9). Extends Stage 104-107 research workflows with the multi-analyst oversight, revision-bound sign-offs, and compliance auditing required for professional research operations.
 - **Participant Governance & Granular Access Grants**:
   - Hierarchical research roles: `OWNER` (full administration and participant management), `EDITOR` (drafting and revision authoring), `REVIEWER` (formal review decisions and change requests), `COMMENTER` (anchored discussions), and `VIEWER` (read-only audit).
@@ -1295,6 +1356,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/RESEARCH_COLLABORATION_REVIEW_AND_GOVERNANCE.md` and `docs/DECISIONS.md`.
 
 ## Institutional-Grade Research Knowledge, Continuous Evidence Monitoring and Research Lifecycle Management Platform (Stage 109)
+
 - **Architecture**: Complete, institutional-grade research knowledge organization, continuous evidence monitoring, and research lifecycle management platform at primary route `/research`. Concludes the 6-stage Research sequence (Stages 104–109), uniting investigative research, document intelligence, quantitative analyses, theses, reports, and governance into a unified, continuous operating system.
 - **Cross-Module Research Knowledge Library & Indexing**:
   - Unified repository index registering all research artifacts: `INVESTIGATION`, `NOTE`, `QUESTION`, `HYPOTHESIS`, `CLAIM`, `EVIDENCE`, `ANALYSIS`, `FINDING`, `THESIS`, `REPORT`, and `SOURCE_REFERENCE`.
@@ -1332,6 +1394,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/RESEARCH_KNOWLEDGE_MONITORING_AND_LIFECYCLE.md` and `docs/DECISIONS.md`.
 
 ## Build PORTFOLIOS V1: Accounts, Transactions, Positions, Cash and Valuation (Stage 110)
+
 - **Architecture**: Complete, institutional-grade portfolio management foundation, double-entry-inspired transaction ledger, multi-currency cash management, deterministic FIFO tax-lot matching, corporate action adjustments, valuation completeness engine, and continuous reconciliation platform at primary route `/portfolios` (Module 14).
 - **Canonical Portfolio and Multi-Account Domain**:
   - Stable UUID entities with user-level tenant ownership (`owner_user_id`), portfolio types (`TAXABLE_INDIVIDUAL`, `INSTITUTIONAL_FUND`, `CORPORATE_TREASURY`, etc.), and base reporting currencies.
@@ -1367,6 +1430,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/PORTFOLIOS_V1_ACCOUNTING_AND_VALUATION.md` and `docs/DECISIONS.md`.
 
 ## Build the Institutional-Grade Portfolio Performance Analytics Engine (Stage 111)
+
 - **Architecture**: CFA/GIPS-aligned portfolio return calculation engine supporting exact subperiod Time-Weighted Returns (TWR), Modified Dietz approximate TWR, Money-Weighted Returns (MWR / XIRR), ACT/365 bounded root solvers, multi-currency conversion, periodic returns matrices, canonical benchmark comparison, and cryptographic auditability at primary route `/portfolios` (Module 14).
 - **Time-Weighted Return (TWR) Engine**:
   - Exact subperiod segmentation bounded strictly by external investor cash flows ($R_{\text{twr}} = \prod (1 + R_i) - 1$), removing external flow distortions.
@@ -1415,6 +1479,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/PORTFOLIO_PERFORMANCE_ENGINE.md` and `docs/DECISIONS.md`.
 
 ## Portfolio Allocation, Exposure Intelligence & Concentration Analytics (Stage 112)
+
 - **Mathematical Foundations & Partition Reconciliation**:
   - Exact Python `Decimal` partition weight mathematics relative to verified Net Asset Value ($w_i = v_i / \text{NAV}$).
   - Positive NAV validation guardrails preventing divide-by-zero or non-positive NAV distortions (`PortfolioExposureNavInvalidError`).
@@ -1462,6 +1527,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/PORTFOLIO_ALLOCATION_AND_EXPOSURE_ANALYTICS.md` and `docs/DECISIONS.md`.
 
 ## Portfolio Performance Attribution Architecture (Stage 113)
+
 - **Brinson Performance Attribution Engine**:
   - Primary Brinson-Fachler (1985) arithmetic decomposition evaluating active allocation decisions relative to total benchmark return ($A_k = (w_{P,k} - w_{B,k})(R_{B,k} - R_B)$).
   - Brinson-Hood-Beebower (1986) baseline support ($A_k = (w_{P,k} - w_{B,k}) R_{B,k}$) for legacy institutional custodial compatibility.
@@ -1508,6 +1574,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/PORTFOLIO_PERFORMANCE_ATTRIBUTION_ARCHITECTURE.md` and `docs/DECISIONS.md`.
 
 ## Portfolio Optimization & Quantitative Construction Platform (Stage 114)
+
 - **Convex Portfolio Optimization Engines**:
   - SciPy `SLSQP` Sequential Least Squares Programming with analytical Jacobians for constrained quadratic optimization.
   - Mean-Variance Quadratic Utility formulation ($\min \frac{1}{2} w^T \Sigma w - \lambda w^T \mu$) with smooth risk aversion ($\lambda \in [0.1, 20.0]$) transitions.
@@ -1552,6 +1619,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/PORTFOLIO_OPTIMIZATION_ENGINE.md` and `docs/DECISIONS.md`.
 
 ## Portfolio Risk Foundation & Core Market-Risk Analytics (Stage 115)
+
 - **Universal Risk Architecture & Registries**:
   - Polymorphic `RiskSubject` supporting `PORTFOLIO`, `ACCOUNT`, `BENCHMARK`, and individual `SECURITY`.
   - Strict read-only decision support boundary: never mutates Stage 110 transactions, positions, or cash balances, and never executes live orders.
@@ -1598,6 +1666,7 @@ The full product specification is located in the `docs/` directory. Check the [D
 - **Documentation**: See `docs/PORTFOLIO_RISK_FOUNDATION.md` and `docs/DECISIONS.md`.
 
 ## The 20 Modules
+
 1. Home
 2. Markets
 3. Charts
@@ -1618,6 +1687,3 @@ The full product specification is located in the `docs/` directory. Check the [D
 18. Saved
 19. Workspaces
 20. Agents
-
-
-
