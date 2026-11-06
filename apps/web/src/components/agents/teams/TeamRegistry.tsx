@@ -137,3 +137,4 @@ export const TeamRegistry: React.FC<TeamRegistryProps> = ({
     </div>
   );
 };
+

@@ -400,3 +400,4 @@ def get_task_artifacts(
         return list(task.artifacts)
     except TaskNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Task not found") from exc
+

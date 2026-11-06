@@ -316,3 +316,4 @@ class DepartmentRegistryService:
 
     def get_templates(self) -> list[DepartmentTemplate]:
         return list(DEPARTMENT_TEMPLATES)
+

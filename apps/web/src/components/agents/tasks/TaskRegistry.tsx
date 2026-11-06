@@ -185,3 +185,4 @@ export const TaskRegistry: React.FC<TaskRegistryProps> = ({
     </div>
   );
 };
+

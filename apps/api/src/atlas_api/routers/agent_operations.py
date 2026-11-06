@@ -123,3 +123,4 @@ def resolve_approval(
         raise HTTPException(status_code=404, detail="Approval request not found") from exc
     except ApprovalExpiredError as exc:
         raise HTTPException(status_code=410, detail=str(exc)) from exc
+

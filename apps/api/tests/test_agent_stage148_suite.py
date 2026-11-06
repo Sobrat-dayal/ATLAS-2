@@ -633,3 +633,4 @@ def test_Z_version_isolation() -> None:
     v1_record = teams.get_version(team_id=team.team_id, version=1, tenant_id="t", owner_id="u")
     assert v1_record.version == 1
     assert v1_record.objective == "Ver 1"
+

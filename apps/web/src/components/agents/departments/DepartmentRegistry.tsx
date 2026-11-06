@@ -262,3 +262,4 @@ export const DepartmentRegistry: React.FC<DepartmentRegistryProps> = ({
     </div>
   );
 };
+

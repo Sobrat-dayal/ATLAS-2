@@ -221,3 +221,4 @@ def disable_department(
         return _response(service.disable(department_id=department_id, tenant_id=tenant_id, owner_id=owner_id))
     except DepartmentNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Department not found") from exc
+

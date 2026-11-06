@@ -81,3 +81,4 @@ describe("Stage 148 Frontend Domain Contracts", () => {
     assert.equal(task.artifacts[0].source_citations?.[0].verified, true);
   });
 });
+

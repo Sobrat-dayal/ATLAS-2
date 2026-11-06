@@ -53,3 +53,4 @@ class AgentGovernance:
                 f"Budget limit of ${budget_limit:.2f} reached (current spend: ${current_spend:.2f}). "
                 "Additional model calls or tool invocations blocked."
             )
+
