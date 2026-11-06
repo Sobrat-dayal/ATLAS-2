@@ -634,3 +634,4 @@ class TaskService:
 
     def list_approvals(self, *, tenant_id: str) -> list[ApprovalRequest]:
         return [a for a in self._approvals.values() if a.tenant_id == tenant_id]
+
