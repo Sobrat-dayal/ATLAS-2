@@ -11785,3 +11785,24 @@ m -rf /) returns TERMINAL_CLI_COMMAND_UNKNOWN.
 
 
 
+
+2216. **AI Department Registry (`DepartmentRegistryService`)**: Tenant-scoped institutional boundary grouping specialized multi-agent teams with explicit budget caps, status lifecycles (`DRAFT`, `READY`, `ACTIVE`, `PAUSED`, `DISABLED`, `ARCHIVED`), and domain knowledge access policies (`TENANT_SHARED`, `DEPARTMENT_ONLY`).
+2217. **15 Specialized AI Department Templates (`DEPARTMENT_TEMPLATES`)**: Preconfigured enterprise organizational starter definitions for Executive Operations, Research & Development, Software Engineering, Quality Assurance, Cybersecurity, Marketing, Content & Media, Sales & Business Development, Business Intelligence, Financial Research, Data & Analytics, Design & User Experience, Customer Operations, Finance & Operations, and Compliance & Policy Research.
+2218. **Multi-Agent Team Registry (`TeamRegistryService`)**: Governed squads containing versioned definitions, immutable release snapshots, coordinator assignments, concurrency limits, and budget thresholds.
+2219. **Strict Coordinator Assignment Rule**: Enforcement of exactly one agent designated as `TeamRole.COORDINATOR` per team to lead task decomposition, assignment, and deliverable synthesis.
+2220. **Typed Multi-Agent Roles (`TeamRole`)**: Explicit operational roles including `COORDINATOR`, `PLANNER`, `RESEARCHER`, `ANALYST`, `DEVELOPER`, `TESTER`, `REVIEWER`, `DESIGNER`, `WRITER`, `SECURITY_REVIEWER`, `PROJECT_MANAGER`, `DATA_SPECIALIST`, `FINANCIAL_ANALYST`, and `GENERAL_SPECIALIST`.
+2221. **Published Agent Prerequisite**: Requirement that an agent must be in `AgentStatus.PUBLISHED` before being assigned to an operational team.
+2222. **Immutable Team Versioning (`get_version`)**: Version incrementing upon team modification guaranteeing active task runs retain their pinned configuration.
+2223. **Durable Task Lifecycle State Machine (`TaskStatus`)**: Explicit state progression through `CREATED`, `PLANNED`, `ASSIGNED`, `RUNNING`, `WAITING`, `BLOCKED`, `REVIEW_REQUIRED`, `APPROVAL_REQUIRED`, `COMPLETED`, `FAILED`, `CANCELLED`, and `TIMED_OUT`.
+2224. **Dependency-Directed Acyclic Graph (DAG) Execution**: Enforcement that downstream child tasks are blocked from dispatch until all prerequisite tasks reach `COMPLETED`.
+2225. **Bounded Delegation Limits**: Hard ceiling restricting task decomposition to maximum delegation depth of 3 levels, maximum subtask fanout of 10 children, and maximum 50 messages per task.
+2226. **Structured Inter-Agent Messaging (`AgentMessage`)**: Standardized typed communication events (`TASK_ASSIGNMENT`, `TASK_ACCEPTED`, `TASK_PROGRESS`, `TASK_RESULT`, `REVIEW_REQUEST`, `REVIEW_RESULT`, `CLARIFICATION_REQUEST`, `BLOCKER_REPORT`, `ESCALATION_REQUEST`) with correlation IDs.
+2227. **Independent Review & Consensus Verification (`AgentTaskReview`)**: Formal evaluation of completed task outputs by designated `REVIEWER` agents with support for `APPROVED`, `REVISION_REQUESTED`, `REJECTED`, and `ESCALATED` outcomes.
+2228. **Prevention of False Completion Claims**: Strict validation preventing a task from transitioning to `COMPLETED` without verified output artifacts and execution provenance.
+2229. **Human-in-the-Loop Governance Gate (`ApprovalRequest`)**: Automated pausing (`APPROVAL_REQUIRED`) of protected actions (e.g., external publication, destructive modifications) requiring affirmative human authorization before execution proceeds.
+2230. **Safe Failure on Approval Expiration and Rejection**: Rejection or expiration of approval requests permanently halts protected actions without partial execution leaks.
+2231. **Strict Financial Safety Firewall**: Complete prohibition of real-money live broker execution within the multi-agent runtime; all executions restricted to paper or sandbox environments.
+2232. **Prompt-Injection Defense Scanner (`AgentGovernance.inspect_prompt_safety`)**: Active inspection of inputs and retrieved documents to block instruction override attempts, privilege escalation, and credential exfiltration.
+2233. **Hierarchical Budget Caps Enforcement**: Strict spending limits at department, team, and task levels that halt compute and model calls immediately upon breach (`BudgetExceededError`).
+2234. **Truthful Workforce Operations Telemetry (`OperationsService`)**: Transparent reporting of active squads, queue depth, error rates, token usage, and real dollar costs without fabricated productivity or revenue claims.
+2235. **Unified Enterprise Orchestration Cockpit (`AgentsHub`)**: Master web terminal mounted at `/agents` with dedicated views for Department Registry (`/agents/departments`), Team Builder (`/agents/teams`), Task DAGs (`/agents/tasks`), and Workforce Operations (`/agents/operations`). Complete Stage 148 and stop.

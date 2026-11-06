@@ -1,4 +1,4 @@
-"""Stage 148 team-definition API; execution remains unavailable."""
+"""Stage 148 team-definition and collaboration API."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ class TeamMemberRequest(BaseModel):
     agent_id: str
     role: TeamRole
     max_concurrency: int = Field(default=1, ge=1, le=10)
+    capability_profile_id: str | None = None
 
 
 class TeamCreateRequest(BaseModel):
@@ -28,12 +29,17 @@ class TeamCreateRequest(BaseModel):
     description: str = Field(default="", max_length=2_000)
     objective: str = Field(min_length=1, max_length=2_000)
     members: list[TeamMemberRequest] = Field(min_length=1, max_length=25)
+    department_id: str | None = None
+    budget_limit_usd: float = Field(default=100.0, ge=0)
+    max_concurrency: int = Field(default=5, ge=1, le=50)
+    review_required: bool = True
 
 
 class TeamMemberResponse(BaseModel):
     agent_id: str
     role: str
     max_concurrency: int
+    capability_profile_id: str | None = None
 
 
 class TeamResponse(BaseModel):
@@ -44,6 +50,11 @@ class TeamResponse(BaseModel):
     status: str
     version: int
     execution_enabled: bool
+    department_id: str | None = None
+    coordinator_agent_id: str = ""
+    budget_limit_usd: float = 100.0
+    max_concurrency: int = 5
+    review_required: bool = True
     members: list[TeamMemberResponse]
 
 
@@ -67,11 +78,17 @@ def _response(team: TeamDefinition) -> TeamResponse:
         status=team.status.value,
         version=team.version,
         execution_enabled=False,
+        department_id=team.department_id,
+        coordinator_agent_id=team.coordinator_agent_id,
+        budget_limit_usd=team.budget_limit_usd,
+        max_concurrency=team.max_concurrency,
+        review_required=team.review_required,
         members=[
             TeamMemberResponse(
                 agent_id=member.agent_id,
                 role=member.role.value,
                 max_concurrency=member.max_concurrency,
+                capability_profile_id=member.capability_profile_id,
             )
             for member in team.members
         ],
@@ -82,9 +99,13 @@ def _response(team: TeamDefinition) -> TeamResponse:
 def list_teams(
     current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
     service: Annotated[TeamRegistryService, Depends(get_team_service)],
+    department_id: str | None = None,
 ) -> list[TeamResponse]:
     tenant_id, owner_id = _identity(current_user)
-    return [_response(team) for team in service.list(tenant_id=tenant_id, owner_id=owner_id)]
+    return [
+        _response(team)
+        for team in service.list(tenant_id=tenant_id, owner_id=owner_id, department_id=department_id)
+    ]
 
 
 @router.post("", response_model=TeamResponse, status_code=status.HTTP_201_CREATED)
@@ -101,11 +122,16 @@ def create_team(
             name=request.name,
             description=request.description,
             objective=request.objective,
+            department_id=request.department_id,
+            budget_limit_usd=request.budget_limit_usd,
+            max_concurrency=request.max_concurrency,
+            review_required=request.review_required,
             members=[
                 TeamMember(
                     agent_id=member.agent_id,
                     role=member.role,
                     max_concurrency=member.max_concurrency,
+                    capability_profile_id=member.capability_profile_id,
                 )
                 for member in request.members
             ],
@@ -143,6 +169,34 @@ def publish_team(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.post("/{team_id}/activate", response_model=TeamResponse)
+def activate_team(
+    team_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[TeamRegistryService, Depends(get_team_service)],
+) -> TeamResponse:
+    tenant_id, owner_id = _identity(current_user)
+    try:
+        return _response(service.activate(team_id=team_id, tenant_id=tenant_id, owner_id=owner_id))
+    except AgentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Team not found") from exc
+    except AgentValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/{team_id}/pause", response_model=TeamResponse)
+def pause_team(
+    team_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[TeamRegistryService, Depends(get_team_service)],
+) -> TeamResponse:
+    tenant_id, owner_id = _identity(current_user)
+    try:
+        return _response(service.pause(team_id=team_id, tenant_id=tenant_id, owner_id=owner_id))
+    except AgentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Team not found") from exc
+
+
 @router.post("/{team_id}/disable", response_model=TeamResponse)
 def disable_team(
     team_id: str,
@@ -152,5 +206,27 @@ def disable_team(
     tenant_id, owner_id = _identity(current_user)
     try:
         return _response(service.disable(team_id=team_id, tenant_id=tenant_id, owner_id=owner_id))
+    except AgentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Team not found") from exc
+
+
+@router.get("/{team_id}/members", response_model=list[TeamMemberResponse])
+def get_team_members(
+    team_id: str,
+    current_user: Annotated[AuthPrincipal, Depends(get_current_user)],
+    service: Annotated[TeamRegistryService, Depends(get_team_service)],
+) -> list[TeamMemberResponse]:
+    tenant_id, owner_id = _identity(current_user)
+    try:
+        team = service.get(team_id=team_id, tenant_id=tenant_id, owner_id=owner_id)
+        return [
+            TeamMemberResponse(
+                agent_id=m.agent_id,
+                role=m.role.value,
+                max_concurrency=m.max_concurrency,
+                capability_profile_id=m.capability_profile_id,
+            )
+            for m in team.members
+        ]
     except AgentNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Team not found") from exc

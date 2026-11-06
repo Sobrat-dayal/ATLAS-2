@@ -1665,6 +1665,34 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Production build: `pnpm --filter web build` (38 routes compiled cleanly with Turbopack).
 - **Documentation**: See `docs/PORTFOLIO_RISK_FOUNDATION.md` and `docs/DECISIONS.md`.
 
+### Stage 148: Autonomous Multi-Agent Teams, Specialized AI Departments, and Enterprise Orchestration
+
+- **AI Department Registry (`/api/v1/agents/departments`)**:
+  - Tenant-scoped institutional boundary governing specialized multi-agent squads, domain policies, and budget thresholds.
+  - 15 specialized starter department templates: Executive Operations, Research & Development, Software Engineering, Quality Assurance, Cybersecurity, Marketing, Content & Media, Sales & Business Development, Business Intelligence, Financial Research, Data & Analytics, Design & User Experience, Customer Operations, Finance & Operations, and Compliance & Policy Research.
+- **Multi-Agent Team Registry & Versioning (`/api/v1/agents/teams`)**:
+  - Squad definitions with explicit coordinator leadership (`TeamRole.COORDINATOR`), published agent prerequisites, and immutable version history.
+  - 14 operational roles (`COORDINATOR`, `PLANNER`, `RESEARCHER`, `ANALYST`, `DEVELOPER`, `TESTER`, `REVIEWER`, `DESIGNER`, `WRITER`, `SECURITY_REVIEWER`, `PROJECT_MANAGER`, `DATA_SPECIALIST`, `FINANCIAL_ANALYST`, `GENERAL_SPECIALIST`).
+- **Durable Task Management & DAG Planning (`/api/v1/agents/tasks`)**:
+  - Task state machine (`CREATED`, `PLANNED`, `ASSIGNED`, `RUNNING`, `WAITING`, `BLOCKED`, `REVIEW_REQUIRED`, `APPROVAL_REQUIRED`, `COMPLETED`, `FAILED`, `CANCELLED`, `TIMED_OUT`).
+  - Automated task decomposition into dependency-directed acyclic graphs (DAGs) with bounded delegation limits (depth <= 3, fanout <= 10).
+  - Predecessor dependency resolution blocking execution until prerequisite outputs are verified.
+- **Structured Inter-Agent Messaging & Independent Review**:
+  - Validated typed messages between team agents with correlation tracking.
+  - Independent reviewer verification preventing false completion claims without authentic deliverables.
+- **Governance & Safety Controls**:
+  - Human-in-the-loop approval inbox for protected actions.
+  - Absolute financial safety firewall barring live-money broker trading.
+  - Active prompt-injection defense scanning untrusted inputs and retrieved documents.
+  - Hierarchical budget caps enforced across departments, teams, and tasks.
+- **Enterprise Cockpit (`/agents`, `/agents/departments`, `/agents/teams`, `/agents/tasks`, `/agents/operations`)**:
+  - Unified multi-pane workspace with workforce KPI cards, template-based department manager, squad builder, task DAG inspector, and approval inbox.
+- **Testing & Verification**:
+  - Backend tests: `test_agent_stage148_suite.py` (17/17 passed), `test_agent_teams_stage148.py` (4/4 passed).
+  - Full stage 146-148 regression: 31/31 passed.
+  - Frontend unit tests: `agents_stage148.test.ts` (3/3 passed).
+  - Production build: `pnpm --filter web build` (43 routes compiled cleanly with 0 errors).
+
 ## The 20 Modules
 
 1. Home

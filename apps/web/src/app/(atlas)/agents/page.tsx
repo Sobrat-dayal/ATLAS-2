@@ -1,13 +1,15 @@
 import { ATLAS_MODULES } from "@/config/atlas-modules";
-import { ModuleFoundation } from "@/components/modules/ModuleFoundation";
+import { AgentsHub } from "@/components/agents/AgentsHub";
 import { Metadata } from "next";
 
 export function generateMetadata(): Metadata {
   return {
-    title: `${ATLAS_MODULES.agents.label} | ATLAS`
+    title: `${ATLAS_MODULES.agents.label} | ATLAS Agents V3 Enterprise Orchestration`,
+    description:
+      "Autonomous multi-agent teams, specialized AI departments, collaborative intelligence and enterprise orchestration.",
   };
 }
 
 export default function AgentsPage() {
-  return <ModuleFoundation module={ATLAS_MODULES.agents} />;
+  return <AgentsHub />;
 }
