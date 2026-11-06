@@ -1693,6 +1693,35 @@ The full product specification is located in the `docs/` directory. Check the [D
   - Frontend unit tests: `agents_stage148.test.ts` (3/3 passed).
   - Production build: `pnpm --filter web build` (43 routes compiled cleanly with 0 errors).
 
+### Stage 149: MCP, Plugin and Agent Ecosystem Platform (Completed)
+
+- **Model Context Protocol (MCP) Registry (`/api/v1/ecosystem/mcp`)**:
+  - Full client and server infrastructure for SSE and Stdio transports with capability discovery and health monitoring.
+  - Strict SSRF defense (`validate_endpoint_security`) blocking localhost (`127.0.0.1`, `::1`), RFC 1918 private subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), and cloud metadata (`169.254.169.254`).
+- **Scoped Plugin Architecture (`/api/v1/ecosystem/plugins`)**:
+  - Sandboxed execution, permission boundary checking, side-effect safety classification, and tenant lifecycle management (`INSTALLED`, `ENABLED`, `DISABLED`, `UPDATE_AVAILABLE`, `REVOKED`, `UNINSTALLED`).
+- **The `.atlas-agent` Package Specification (`/api/v1/ecosystem/packages`)**:
+  - Secure ZIP packaging format containing manifests, agent configs, and tool schemas.
+  - Comprehensive archive defenses: Zip-Slip path traversal protection, decompression bomb limits (< 50 MB, < 100 files, < 20x ratio), and automated secret scanning/redaction.
+  - Mandatory draft-first instantiation policy with execution disabled until tenant administrator approval.
+- **Custom Tool Studio & Developer Testing Lab (`/api/v1/ecosystem/tools`)**:
+  - JSON Schema Draft 7 input/output validation, sandbox execution fixtures, latency benchmarking (`duration_ms`), and immutable versioning.
+- **Starter Templates (`/api/v1/ecosystem/templates`)**:
+  - Pre-configured agent, team, and workflow starter templates using approved canonical models (`atlas-intelligence-v1`, `atlas-reasoning-v1`, `atlas-speed-v1`).
+- **Marketplace Foundations (`/api/v1/ecosystem/marketplace`)**:
+  - Verified publisher tiers (`OFFICIAL_ATLAS`, `VERIFIED_PARTNER`, `COMMUNITY`) with transparent reviews and zero fake ratings or download counts.
+- **Developer Platform & External ATLAS MCP Server (`/api/v1/ecosystem/developers`, `/developers/api`)**:
+  - Developer app registry, SHA-256 hashed API key issuance, per-app rate limits (120 RPM), and token usage metering.
+  - External MCP server exposing read-only ATLAS research, quote, and workflow status tools.
+- **Ecosystem Cockpit & Routes**:
+  - `/agents/ecosystem`, `/agents/mcp`, `/agents/plugins`, `/agents/packages`, `/agents/developers`, `/agents/marketplace`, `/agents/templates`.
+- **Testing & Verification**:
+  - Backend tests: `test_ecosystem_stage149_suite.py` (15/15 passed).
+  - Backend regression: 31/31 passed across Stages 146–148 (46 total backend tests).
+  - Frontend unit tests: `ecosystem_stage149.test.ts` (12/12 passed).
+  - Web application tests: 382/382 passed across full web workspace.
+  - Production build: `next build` (50 routes compiled cleanly with 0 TypeScript errors).
+
 ## The 20 Modules
 
 1. Home

@@ -107,6 +107,15 @@ export const AgentsHub: React.FC<AgentsHubProps> = ({
           >
             Tasks &amp; DAG
           </button>
+          <a
+            href="/agents/ecosystem"
+            className="rounded px-3 py-1 font-medium text-sky-400 hover:text-sky-200 transition flex items-center space-x-1 border-l border-zinc-800 ml-1 pl-2"
+          >
+            <span>Ecosystem &amp; MCP</span>
+            <span className="rounded bg-sky-950 border border-sky-800 px-1 text-[9px] text-sky-300">
+              149
+            </span>
+          </a>
         </div>
       </div>
 

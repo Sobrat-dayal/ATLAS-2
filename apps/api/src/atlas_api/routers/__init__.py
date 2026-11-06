@@ -68,6 +68,7 @@ from .agent_teams import router as agent_teams_router
 from .agent_departments import router as agent_departments_router
 from .agent_tasks import router as agent_tasks_router
 from .agent_operations import router as agent_operations_router
+from .ecosystem import router as ecosystem_router
 from .maps import router as maps_router
 from .events import router as events_router
 from .knowledge_graph import router as knowledge_graph_router
@@ -147,6 +148,7 @@ api_router.include_router(agent_departments_router, prefix="")
 api_router.include_router(agent_teams_router, prefix="")
 api_router.include_router(agent_tasks_router, prefix="")
 api_router.include_router(agent_operations_router, prefix="")
+api_router.include_router(ecosystem_router, prefix="")
 api_router.include_router(agents_router, prefix="")
 api_router.include_router(maps_router, prefix="")
 api_router.include_router(events_router, prefix="")
