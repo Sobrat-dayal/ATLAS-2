@@ -79,6 +79,9 @@ from .gods_eye import router as gods_eye_router
 from .options import router as options_router
 from atlas.options.quant.router import router as options_quant_router
 from atlas.trading.backtesting import backtesting_router
+from .trading_paper import router as trading_paper_router
+from .trading_brokers import router as trading_brokers_router
+from .hardening import router as hardening_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, prefix="")
@@ -160,3 +163,6 @@ api_router.include_router(gods_eye_router, prefix="")
 api_router.include_router(options_router, prefix="")
 api_router.include_router(options_quant_router, prefix="")
 api_router.include_router(backtesting_router, prefix="")
+api_router.include_router(trading_paper_router, prefix="")
+api_router.include_router(trading_brokers_router, prefix="")
+api_router.include_router(hardening_router, prefix="")

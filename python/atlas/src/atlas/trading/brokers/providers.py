@@ -16,6 +16,7 @@ from atlas.trading.brokers.domain import (
 
 def _capabilities(provider_id: str, *, order_modify: bool = False) -> BrokerCapabilities:
     capabilities = {
+        BrokerCapability.ORDER_PREVIEW,
         BrokerCapability.ORDER_SUBMIT,
         BrokerCapability.ORDER_CANCEL,
         BrokerCapability.ORDER_READ,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from atlas.trading.brokers.adapters.base import BrokerSandboxAdapter
 from atlas.trading.brokers.domain import (
@@ -46,6 +47,20 @@ class MockBrokerAdapter(BrokerSandboxAdapter):
                 "last_verified_at": utc_now(),
             }
         )
+
+    def preview_order(self, request: NormalizedOrderRequest) -> dict[str, Any]:
+        price = request.limit_price or 100.0
+        notional = (request.quantity or 1.0) * price
+        fee = round(notional * 0.0001, 2)
+        return {
+            "symbol": request.symbol,
+            "side": request.side,
+            "quantity": request.quantity,
+            "estimated_price": price,
+            "estimated_notional": notional,
+            "estimated_fee": fee,
+            "sandbox_simulated": True,
+        }
 
     def submit_order(self, request: NormalizedOrderRequest) -> NormalizedOrder:
         if not self._capabilities.supports(BrokerCapability.ORDER_SUBMIT):
