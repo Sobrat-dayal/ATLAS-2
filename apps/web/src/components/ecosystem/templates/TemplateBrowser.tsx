@@ -118,3 +118,4 @@ export const TemplateBrowser: React.FC<TemplateBrowserProps> = ({
     </div>
   );
 };
+

@@ -355,3 +355,4 @@ export const MCPRegistry: React.FC<MCPRegistryProps> = ({
     </div>
   );
 };
+

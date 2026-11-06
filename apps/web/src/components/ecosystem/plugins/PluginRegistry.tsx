@@ -253,3 +253,4 @@ export const PluginRegistry: React.FC<PluginRegistryProps> = ({
     </div>
   );
 };
+

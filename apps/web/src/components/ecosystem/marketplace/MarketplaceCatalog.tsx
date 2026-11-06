@@ -161,3 +161,4 @@ export const MarketplaceCatalog: React.FC<MarketplaceCatalogProps> = ({
     </div>
   );
 };
+

@@ -11,3 +11,4 @@ export function generateMetadata(): Metadata {
 export default function MarketplacePage() {
   return <EcosystemCockpit defaultTab="marketplace" />;
 }
+
