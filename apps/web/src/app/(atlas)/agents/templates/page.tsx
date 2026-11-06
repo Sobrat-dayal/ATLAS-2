@@ -11,3 +11,4 @@ export function generateMetadata(): Metadata {
 export default function TemplatesPage() {
   return <EcosystemCockpit defaultTab="templates" />;
 }
+

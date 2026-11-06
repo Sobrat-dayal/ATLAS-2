@@ -431,3 +431,4 @@ export const EcosystemCockpit: React.FC<EcosystemCockpitProps> = ({
     </div>
   );
 };
+
